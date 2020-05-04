@@ -12,9 +12,11 @@ from fugue.dataframe import (
     PandasDataFrame,
 )
 from fugue.dataframe.utils import to_local_df
-from triad.collections.schema import Schema
+from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_type
+from triad.utils.iter import make_empty_aware, EmptyAwareIterable
+from fugue.dataframe.dataframes import DataFrames
 
 
 class FunctionWrapper(object):
@@ -24,6 +26,14 @@ class FunctionWrapper(object):
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self._func(*args, **kwargs)
+
+    @property
+    def input_code(self) -> str:
+        return "".join(x.code for x in self._params.values())
+
+    @property
+    def output_code(self) -> str:
+        return self._rt.code
 
     def run(  # noqa: C901
         self,
@@ -99,6 +109,8 @@ def _parse_param(  # noqa: C901
     if annotation is to_type("fugue.execution.ExecutionEngine"):
         # to prevent cyclic import
         return _ExecutionEngineParam(param)
+    if annotation is DataFrames:
+        return _DataFramesParam(param)
     if annotation is LocalDataFrame:
         return _LocalDataFrameParam(param)
     if annotation is DataFrame:
@@ -109,10 +121,14 @@ def _parse_param(  # noqa: C901
         return _ListListParam(param)
     if annotation is Iterable[List[Any]]:
         return _IterableListParam(param)
+    if annotation is EmptyAwareIterable[List[Any]]:
+        return _EmptyAwareIterableListParam(param)
     if annotation is List[Dict[str, Any]]:
         return _ListDictParam(param)
     if annotation is Iterable[Dict[str, Any]]:
         return _IterableDictParam(param)
+    if annotation is EmptyAwareIterable[Dict[str, Any]]:
+        return _EmptyAwareIterableDictParam(param)
     if param is not None and param.kind == param.VAR_POSITIONAL:
         return _PositionalParam(param)
     if param is not None and param.kind == param.VAR_KEYWORD:
@@ -137,6 +153,11 @@ class _FuncParam(object):
 class _ExecutionEngineParam(_FuncParam):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "ExecutionEngine", "e")
+
+
+class _DataFramesParam(_FuncParam):
+    def __init__(self, param: Optional[inspect.Parameter]):
+        super().__init__(param, "DataFrames", "c")
 
 
 class _DataFrameParamBase(_FuncParam):
@@ -203,6 +224,19 @@ class _IterableListParam(_DataFrameParamBase):
         return ArrayDataFrame(output, schema)
 
 
+class _EmptyAwareIterableListParam(_DataFrameParamBase):
+    def __init__(self, param: Optional[inspect.Parameter]):
+        super().__init__(param, "EmptyAwareIterable[List[Any]]", "s")
+
+    def to_input_data(self, df: DataFrame) -> EmptyAwareIterable[List[Any]]:
+        return make_empty_aware(df.as_array_iterable(type_safe=True))
+
+    def to_output_df(
+        self, output: EmptyAwareIterable[List[Any]], schema: Any
+    ) -> DataFrame:
+        return ArrayDataFrame(output, schema)
+
+
 class _ListDictParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "List[Dict[str,Any]]", "s")
@@ -228,6 +262,25 @@ class _IterableDictParam(_DataFrameParamBase):
         return df.as_dict_iterable()
 
     def to_output_df(self, output: Iterable[Dict[str, Any]], schema: Any) -> DataFrame:
+        schema = schema if isinstance(schema, Schema) else Schema(schema)
+
+        def get_all() -> Iterable[List[Any]]:
+            for row in output:
+                yield [row[x] for x in schema.names]
+
+        return IterableDataFrame(get_all(), schema)
+
+
+class _EmptyAwareIterableDictParam(_DataFrameParamBase):
+    def __init__(self, param: Optional[inspect.Parameter]):
+        super().__init__(param, "EmptyAwareIterable[Dict[str,Any]]", "s")
+
+    def to_input_data(self, df: DataFrame) -> EmptyAwareIterable[Dict[str, Any]]:
+        return make_empty_aware(df.as_dict_iterable())
+
+    def to_output_df(
+        self, output: EmptyAwareIterable[Dict[str, Any]], schema: Any
+    ) -> DataFrame:
         schema = schema if isinstance(schema, Schema) else Schema(schema)
 
         def get_all() -> Iterable[List[Any]]:

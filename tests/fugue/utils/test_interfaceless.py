@@ -1,13 +1,14 @@
 from typing import Any, Dict, Iterable, List
 
 import pandas as pd
-from fugue.dataframe import DataFrame, LocalDataFrame
+from fugue.dataframe import DataFrame, LocalDataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue.dataframe.pandas_dataframes import PandasDataFrame
 from fugue.execution import ExecutionEngine
 from fugue.utils.interfaceless import FunctionWrapper, _parse_function
-from pytest import raises
 from fugue_test.utils import df_eq
-from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from pytest import raises
+from triad.utils.iter import EmptyAwareIterable
 
 
 def test_parse_function():
@@ -22,10 +23,16 @@ def test_parse_function():
     raises(TypeError, lambda: _parse_function(f7, "^s$", "n"))
     _parse_function(f8, "^syz$", "n")
     _parse_function(f9, "^syz$", "n")
+    _parse_function(f10, "^ss$", "n")
+    _parse_function(f11, "^$", "s")
+    _parse_function(f12, "^$", "s")
+    _parse_function(f13, "^e?(c|[dl]+)x*$", "n")
+    _parse_function(f14, "^e?(c|[dl]+)x*$", "n")
+    raises(TypeError, lambda: _parse_function(f15, "^e?(c|[dl]+)x*$", "n"))
 
 
 def test_function_wrapper():
-    for f in [f20, f21, f22, f23, f24, f25, f26]:
+    for f in [f20, f21, f22, f23, f24, f25, f26, f30, f31, f32]:
         df = ArrayDataFrame([[0]], "a:int")
         w = FunctionWrapper(f, "^[ldsp][ldsp]$", "[ldsp]")
         res = w.run([df], dict(a=df), ignore_unknown=False, output_schema="a:int")
@@ -93,6 +100,30 @@ def f9(e: List[Dict[str, Any]], *k: List[Any], **a: Dict[str, Any]):
     pass
 
 
+def f10(e: EmptyAwareIterable[List[Any]], a: EmptyAwareIterable[Dict[str, Any]]):
+    pass
+
+
+def f11() -> EmptyAwareIterable[List[Any]]:
+    pass
+
+
+def f12() -> EmptyAwareIterable[Dict[str, Any]]:
+    pass
+
+
+def f13(e: ExecutionEngine, dfs: DataFrames, a, b) -> None:
+    pass
+
+
+def f14(e: ExecutionEngine, df1: DataFrame, df2: LocalDataFrame, a, b) -> None:
+    pass
+
+
+def f15(e: ExecutionEngine, dfs1: DataFrames, dfs2: DataFrames, a, b) -> None:
+    pass
+
+
 def f20(e: List[List[Any]], a: Iterable[List[Any]]) -> LocalDataFrame:
     e += list(a)
     return ArrayDataFrame(e, "a:int")
@@ -100,7 +131,7 @@ def f20(e: List[List[Any]], a: Iterable[List[Any]]) -> LocalDataFrame:
 
 def f21(e: List[Dict[str, Any]], a: Iterable[Dict[str, Any]]) -> DataFrame:
     e += list(a)
-    arr = [x["a"] for x in e]
+    arr = [[x["a"]] for x in e]
     return ArrayDataFrame(arr, "a:int")
 
 
@@ -111,13 +142,13 @@ def f22(e: List[List[Any]], a: Iterable[List[Any]]) -> List[List[Any]]:
 
 def f23(e: List[Dict[str, Any]], a: Iterable[Dict[str, Any]]) -> Iterable[List[Any]]:
     e += list(a)
-    arr = [x["a"] for x in e]
+    arr = [[x["a"]] for x in e]
     return ArrayDataFrame(arr, "a:int").as_array_iterable()
 
 
 def f24(e: List[Dict[str, Any]], a: Iterable[Dict[str, Any]]) -> pd.DataFrame:
     e += list(a)
-    arr = [x["a"] for x in e]
+    arr = [[x["a"]] for x in e]
     return ArrayDataFrame(arr, "a:int").as_pandas()
 
 
@@ -145,3 +176,23 @@ def f29(a, **args):
     for v in args.values():
         a += v
     return a
+
+
+def f30(e: EmptyAwareIterable[List[Any]], a: EmptyAwareIterable[Dict[str, Any]]) -> LocalDataFrame:
+    e.peek()
+    a.peek()
+    e = list(e)
+    e += [[x["a"]] for x in a]
+    return ArrayDataFrame(e, "a:int")
+
+
+def f31(e: List[Dict[str, Any]], a: Iterable[Dict[str, Any]]) -> EmptyAwareIterable[List[Any]]:
+    e += list(a)
+    arr = [[x["a"]] for x in e]
+    return ArrayDataFrame(arr, "a:int").as_array_iterable()
+
+
+def f32(e: List[Dict[str, Any]], a: Iterable[Dict[str, Any]]) -> EmptyAwareIterable[Dict[str, Any]]:
+    e += list(a)
+    arr = [[x["a"]] for x in e]
+    return ArrayDataFrame(arr, "a:int").as_dict_iterable()

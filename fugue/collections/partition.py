@@ -1,27 +1,35 @@
 import json
 from typing import Any, Dict, List
 
-from triad.utils.pyarrow import SchemaedDataPartitioner
 from triad.collections.dict import IndexedOrderedDict, ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw as aot
 from triad.utils.convert import to_size
+from triad.utils.pyarrow import SchemaedDataPartitioner
 
 
 class PartitionSpec(object):
     def __init__(self, *args: Any, **kwargs: Any):
         p = ParamDict()
         for a in args:
-            if isinstance(a, Dict):
+            if a is None:
+                continue
+            elif isinstance(a, PartitionSpec):
+                p.update(a.jsondict)
+            elif isinstance(a, Dict):
                 p.update(a)
             elif isinstance(a, str):
                 p.update(json.loads(a))
             else:
                 raise TypeError(f"{a} is not supported")
         p.update(kwargs)
-        self._num_partitions = p.get("num_partitions", "0")
+        self._num_partitions = (
+            p.get("num_partitions", "0") if "num_partitions" in p else p.get("num", "0")
+        )
         self._algo = p.get("algo", "").lower()
-        self._partition_by = p.get("partition_by", [])
+        self._partition_by = (
+            p.get("partition_by", []) if "partition_by" in p else p.get("by", [])
+        )
         aot(
             len(self._partition_by) == len(set(self._partition_by)),
             SyntaxError(f"{self._partition_by} has duplicated keys"),
@@ -35,6 +43,17 @@ class PartitionSpec(object):
         # TODO: currently, size limit not in use
         self._size_limit = to_size(p.get("size_limit", "0"))
         self._row_limit = p.get("row_limit", 0)
+
+    @property
+    def empty(self) -> bool:
+        return (
+            self._num_partitions == "0"
+            and self._algo == ""
+            and len(self._partition_by) == 0
+            and len(self._presort) == 0
+            and self._size_limit == 0
+            and self._row_limit == 0
+        )
 
     @property
     def num_partitions(self) -> str:
@@ -51,6 +70,25 @@ class PartitionSpec(object):
     @property
     def presort(self) -> IndexedOrderedDict[str, bool]:
         return self._presort
+
+    @property
+    def presort_expr(self) -> str:
+        return ",".join(
+            k + " " + ("ASC" if v else "DESC") for k, v in self.presort.items()
+        )
+
+    @property
+    def jsondict(self) -> ParamDict:
+        return ParamDict(
+            dict(
+                num_partitions=self._num_partitions,
+                algo=self._algo,
+                partition_by=self._partition_by,
+                presort=self.presort_expr,
+                size_limit=self._size_limit,
+                row_limit=self._row_limit,
+            )
+        )
 
     def get_sorts(self, schema: Schema) -> IndexedOrderedDict[str, bool]:
         d: IndexedOrderedDict[str, bool] = IndexedOrderedDict()

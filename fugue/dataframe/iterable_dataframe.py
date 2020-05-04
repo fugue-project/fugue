@@ -40,7 +40,7 @@ class IterableDataFrame(LocalUnboundedDataFrame):
 
     @property
     def empty(self) -> bool:
-        return self.native.empty()
+        return self.native.empty
 
     def peek_array(self) -> Any:
         return list(self.native.peek())

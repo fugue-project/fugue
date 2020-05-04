@@ -11,24 +11,41 @@ def test_partition_spec():
     "0" == p.num_partitions
     {} == p.presort
     "" == p.algo
+    assert p.empty
+
+    p = PartitionSpec(None)
+    assert p.empty
+    p2 = PartitionSpec(p)
+    assert p2.empty
 
     p = PartitionSpec(json.dumps(dict(partition_by=["a", "b", "c"], num_partitions=1)))
     assert ["a", "b", "c"] == p.partition_by
     assert "1" == p.num_partitions
     assert {} == p.presort
     assert "" == p.algo
+    assert not p.empty
 
-    p = PartitionSpec(dict(partition_by=["a", "b", "c"], presort="d asc,e desc"))
+    p = PartitionSpec(dict(by=["a", "b", "c"], presort="d asc,e desc"))
     assert ["a", "b", "c"] == p.partition_by
     assert "0" == p.num_partitions
     assert dict(d=True, e=False) == p.presort
     assert "" == p.algo
+    assert not p.empty
 
-    p = PartitionSpec(partition_by=["a", "b", "c"], presort="d,e desc", algo="EvEN")
+    p = PartitionSpec(by=["a", "b", "c"], num=5, presort="d,e desc", algo="EvEN")
     assert ["a", "b", "c"] == p.partition_by
-    assert "0" == p.num_partitions
+    assert "5" == p.num_partitions
     assert dict(d=True, e=False) == p.presort
     assert "even" == p.algo
+    assert not p.empty
+
+    p = PartitionSpec(partition_by=["a", "b", "c"], presort="d,e desc", algo="EvEN",
+                      num_partitions="ROWCOUNT*3", row_limit=4, size_limit="5k")
+    p2 = PartitionSpec(p)
+    assert p2.jsondict == p.jsondict
+    assert "d ASC,e DESC" == p2.presort_expr
+    assert not p.empty
+    assert not p2.empty
 
     # partition by overlaps with presort
     raises(SyntaxError, lambda: PartitionSpec(partition_by=[
