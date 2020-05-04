@@ -6,6 +6,7 @@ from fs.base import FS as FileSystem
 from fs.osfs import OSFS
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import (
+    ArrayDataFrame,
     DataFrame,
     IterableDataFrame,
     LocalBoundedDataFrame,
@@ -81,7 +82,7 @@ class NaiveExecutionEngine(ExecutionEngine):
                 for r in mapFunc(0, sub):
                     yield r
 
-        return IterableDataFrame(get_rows(), output_schema)
+        return ArrayDataFrame(get_rows(), output_schema)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)
