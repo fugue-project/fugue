@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import pandas as pd
 from adagio.instances import WorkflowContext
-from fugue.dag.workflow import WorkflowBuilder
+from fugue.dag.workflow import FugueWorkflow
 from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.execution.execution_engine import ExecutionEngine
@@ -72,7 +72,7 @@ class BuiltInTests(object):
                 dag.df([[1, 2], [3, 4]], "a:double,b:int").assert_eq(c)
 
 
-class DagTester(WorkflowBuilder):
+class DagTester(FugueWorkflow):
     def __init__(self, engine: ExecutionEngine):
         super().__init__(engine)
         self.engine = engine

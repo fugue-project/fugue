@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TypeVar
 
 from adagio.specs import WorkflowSpec
 from fugue.builtins import CreateData, Show
@@ -12,18 +12,24 @@ from triad.utils.assertion import assert_or_throw
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
+TDF = TypeVar("TDF", bound="WorkflowDataFrame")
 
-class WorkflowCursor(object):
+
+class WorkflowDataFrame(object):
     def __init__(
-        self, builder: "WorkflowBuilder", task: FugueTask, metadata: Any = None
+        self, workflow: "FugueWorkflow", task: FugueTask, metadata: Any = None
     ):
-        self._builder = builder
+        self._workflow = workflow
         self._task = task
         self._metadata = ParamDict(metadata)
 
     @property
     def execution_engine(self) -> ExecutionEngine:
-        return self._builder.execution_engine
+        return self.workflow.execution_engine
+
+    @property
+    def workflow(self) -> "FugueWorkflow":
+        return self._workflow
 
     def show(self, rows: int = 10, count: bool = False, title: str = "") -> None:
         task = Output(
@@ -33,20 +39,20 @@ class WorkflowCursor(object):
             pre_partition=None,
             params=dict(rows=rows, count=count, title=title),
         )
-        self._builder.add(task, self)
+        self.workflow.add(task, self)
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
-        self._builder.assert_eq(self, *dfs, **params)
+        self.workflow.assert_eq(self, *dfs, **params)
 
     def transform(
-        self,
+        self: TDF,
         using: Any,
         schema: Any = None,
         params: Any = None,
         partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
         lazy: bool = True,
-    ) -> "WorkflowCursor":
+    ) -> TDF:
         if partition is None:
             partition = self._metadata.get("pre_partition", PartitionSpec())
         task = Process(
@@ -63,23 +69,30 @@ class WorkflowCursor(object):
             pre_partition=partition,
             lazy=lazy,
         )
-        return self._builder.add(task, self)
+        return self.to_self_type(self.workflow.add(task, self))
 
-    def persist(self, level: Any = None) -> "WorkflowCursor":
+    def persist(self: TDF, level: Any = None) -> TDF:
         self._task.persist("" if level is None else level)
         return self
 
-    def broadcast(self) -> "WorkflowCursor":
+    def broadcast(self: TDF) -> TDF:
         self._task.broadcast()
         return self
 
-    def partition(self, *args, **kwargs) -> "WorkflowCursor":
-        return WorkflowCursor(
-            self._builder, self._task, {"pre_partition": PartitionSpec(*args, **kwargs)}
+    def partition(self: TDF, *args, **kwargs) -> TDF:
+        return self.to_self_type(
+            WorkflowDataFrame(
+                self.workflow,
+                self._task,
+                {"pre_partition": PartitionSpec(*args, **kwargs)},
+            )
         )
 
+    def to_self_type(self: TDF, df: "WorkflowDataFrame") -> TDF:
+        return df  # type: ignore
 
-class WorkflowBuilder(object):
+
+class FugueWorkflow(object):
     def __init__(self, execution_engine: ExecutionEngine):
         self._spec = WorkflowSpec()
         self._execution_engine = execution_engine
@@ -90,7 +103,7 @@ class WorkflowBuilder(object):
 
     def create_data(
         self, data: Any, schema: Any = None, metadata: Any = None, partition: Any = None
-    ) -> WorkflowCursor:
+    ) -> WorkflowDataFrame:
         task = Create(
             self.execution_engine,
             creator=CreateData,
@@ -100,7 +113,7 @@ class WorkflowBuilder(object):
 
     def df(
         self, data: Any, schema: Any = None, metadata: Any = None, partition: Any = None
-    ) -> WorkflowCursor:
+    ) -> WorkflowDataFrame:
         return self.create_data(data, schema, metadata, partition)
 
     def show(
@@ -121,24 +134,24 @@ class WorkflowBuilder(object):
         )
         self.add(task, *dfs)
 
-    def add(self, task: FugueTask, *args: Any, **kwargs: Any) -> WorkflowCursor:
+    def add(self, task: FugueTask, *args: Any, **kwargs: Any) -> WorkflowDataFrame:
         task = task.copy()
         dep = _Dependencies(self, task, {}, *args, **kwargs)
         name = "_" + str(len(self._spec.tasks))
         self._spec.add_task(name, task, dep.dependency)
-        return WorkflowCursor(self, task)
+        return WorkflowDataFrame(self, task)
 
 
 class _Dependencies(object):
     def __init__(
         self,
-        builder: "WorkflowBuilder",
+        workflow: "FugueWorkflow",
         task: FugueTask,
         local_vars: Dict[str, Any],
         *args: Any,
         **kwargs: Any,
     ):
-        self._builder = builder
+        self.workflow = workflow
         self._local_vars = local_vars
         self.dependency: Dict[str, str] = {}
         for i in range(len(args)):
@@ -153,14 +166,14 @@ class _Dependencies(object):
             return cursor._task.name + "." + dep[1]
         return self._parse_cursor(dep)._task.single_output_expression
 
-    def _parse_cursor(self, dep: Any) -> WorkflowCursor:
-        if isinstance(dep, WorkflowCursor):
+    def _parse_cursor(self, dep: Any) -> WorkflowDataFrame:
+        if isinstance(dep, WorkflowDataFrame):
             return dep
         if isinstance(dep, str):
             assert_or_throw(
                 dep in self._local_vars, KeyError(f"{dep} is not a local variable")
             )
-            if isinstance(self._local_vars[dep], WorkflowCursor):
+            if isinstance(self._local_vars[dep], WorkflowDataFrame):
                 return self._local_vars[dep]
             # TODO: should also accept dataframe?
             raise TypeError(f"{self._local_vars[dep]} is not a valid dependency type")

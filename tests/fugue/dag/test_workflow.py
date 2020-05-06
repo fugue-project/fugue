@@ -2,14 +2,14 @@ from typing import Any, Dict, Iterable, List
 
 from adagio.instances import WorkflowContext
 from fugue.collections.partition import PartitionSpec
-from fugue.dag.workflow import WorkflowBuilder
+from fugue.dag.workflow import FugueWorkflow
 from fugue.execution import NaiveExecutionEngine
 from fugue.transformer.convert import transformer
 
 
 def test_builder():
     e = NaiveExecutionEngine()
-    builder = WorkflowBuilder(e)
+    builder = FugueWorkflow(e)
     ctx = WorkflowContext()
 
     a = builder.create_data([[0], [0], [1]], "a:int")
