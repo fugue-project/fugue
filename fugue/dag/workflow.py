@@ -1,12 +1,14 @@
 from typing import Any, Dict, List
 
 from adagio.specs import WorkflowSpec
+from fugue.builtins import CreateData, Show
+from fugue.builtins import AssertEqual
+from fugue.builtins.processors import RunTransformer
 from fugue.collections.partition import PartitionSpec
-from fugue.dag.tasks import Create, FugueTask, Transform, Output
+from fugue.dag.tasks import Create, FugueTask, Output, Process
 from fugue.execution.execution_engine import ExecutionEngine
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
-from fugue.builtins import Show, CreateData
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -27,31 +29,39 @@ class WorkflowCursor(object):
         task = Output(
             1,
             self.execution_engine,
-            dict(
-                outputter=Show,
-                partition=None,
-                params=dict(rows=rows, count=count, title=title),
-            ),
+            outputter=Show,
+            pre_partition=None,
+            params=dict(rows=rows, count=count, title=title),
         )
         self._builder.add(task, self)
+
+    def assert_eq(self, *dfs: Any, **params: Any) -> None:
+        self._builder.assert_eq(self, *dfs, **params)
 
     def transform(
         self,
         using: Any,
         schema: Any = None,
+        params: Any = None,
         partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
+        lazy: bool = True,
     ) -> "WorkflowCursor":
         if partition is None:
             partition = self._metadata.get("pre_partition", PartitionSpec())
-        task = Transform(
+        task = Process(
+            1,
             self.execution_engine,
-            dict(
+            RunTransformer,
+            schema=None,
+            params=dict(
                 transformer=using,
                 schema=schema,
                 ignore_errors=ignore_errors,
-                partition=partition,
+                params=params,
             ),
+            pre_partition=partition,
+            lazy=lazy,
         )
         return self._builder.add(task, self)
 
@@ -79,17 +89,19 @@ class WorkflowBuilder(object):
         return self._execution_engine
 
     def create_data(
-        self, data: List[List[Any]], schema: Any, partition: Any = None
+        self, data: Any, schema: Any = None, metadata: Any = None, partition: Any = None
     ) -> WorkflowCursor:
         task = Create(
             self.execution_engine,
-            dict(
-                creator=CreateData,
-                partition=PartitionSpec(partition),
-                params=dict(data=data, schema=schema),
-            ),
+            creator=CreateData,
+            params=dict(data=data, schema=schema, metadata=metadata),
         )
         return self.add(task)
+
+    def df(
+        self, data: Any, schema: Any = None, metadata: Any = None, partition: Any = None
+    ) -> WorkflowCursor:
+        return self.create_data(data, schema, metadata, partition)
 
     def show(
         self, *dfs: Any, rows: int = 10, count: bool = False, title: str = ""
@@ -97,11 +109,15 @@ class WorkflowBuilder(object):
         task = Output(
             len(dfs),
             self.execution_engine,
-            dict(
-                outputter=Show,
-                partition=None,
-                params=dict(rows=rows, count=count, title=title),
-            ),
+            outputter=Show,
+            pre_partition=None,
+            params=dict(rows=rows, count=count, title=title),
+        )
+        self.add(task, *dfs)
+
+    def assert_eq(self, *dfs: Any, **params: Any) -> None:
+        task = Output(
+            len(dfs), self.execution_engine, outputter=AssertEqual, params=params
         )
         self.add(task, *dfs)
 

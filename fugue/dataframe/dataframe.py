@@ -164,6 +164,12 @@ class DataFrame(ABC):
             }
         )
 
+    def __copy__(self) -> "DataFrame":
+        return self
+
+    def __deepcopy__(self, memo: Any) -> "DataFrame":
+        return self
+
 
 class LocalDataFrame(DataFrame):
     def __init__(self, schema: Any = None, metadata: Any = None):

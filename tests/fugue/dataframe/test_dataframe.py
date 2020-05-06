@@ -1,5 +1,6 @@
 from fugue.dataframe import ArrayDataFrame, DataFrame
 from triad.collections.schema import Schema
+import copy
 
 
 def test_show():
@@ -43,6 +44,12 @@ def test_get_info_str():
     df = ArrayDataFrame([["a", 1], ["b", 2]], "a:str,b:str")
     assert '{"schema": "a:str,b:str", "type": '
     '"tests.collections.dataframe.test_dataframe.MockDF", "metadata": {}}' == df.get_info_str()
+
+
+def test_copy():
+    df = ArrayDataFrame([["a", 1], ["b", 2]], "a:str,b:str")
+    assert copy.copy(df) is df
+    assert copy.deepcopy(df) is df
 
 
 class MockDF(ArrayDataFrame):

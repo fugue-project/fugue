@@ -1,5 +1,5 @@
 from fugue.outputter import Outputter
-from fugue.dataframe import DataFrames
+from fugue.dataframe import DataFrames, df_eq
 
 
 class Show(Outputter):
@@ -11,3 +11,11 @@ class Show(Outputter):
                 self.params.get("count", False),
                 title=self.params.get("title", ""),
             )
+
+
+class AssertEqual(Outputter):
+    def process(self, dfs: DataFrames) -> None:
+        assert len(dfs) > 1
+        expected = dfs[0]
+        for i in range(1, len(dfs)):
+            df_eq(expected, dfs[i], throw=True, **self.params)

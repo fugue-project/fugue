@@ -15,7 +15,7 @@ def test_builder():
     a = builder.create_data([[0], [0], [1]], "a:int")
     a.show()
     a.show()
-    b = a.transform(mock_tf1, "*,b:int", dict(partition_by=["a"]))
+    b = a.transform(mock_tf1, "*,b:int", partition=dict(by=["a"]))
     b.show()
     builder.create_data([[0], [1]], "b:int").show()
     builder.show(a, b)

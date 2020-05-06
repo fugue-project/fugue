@@ -11,10 +11,8 @@ from fugue.exceptions import FugueWorkflowError
 from fugue.execution import ExecutionEngine
 from fugue.outputter.convert import to_outputter
 from fugue.processor.convert import to_processor
-from fugue.transformer.convert import to_transformer
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import to_type
 
 
 class FugueTask(TaskSpec, ABC):
@@ -115,15 +113,14 @@ class Create(FugueTask):
     def __init__(
         self,
         execution_engine: ExecutionEngine,
-        params: Any,
+        creator: Any,
+        schema: Any = None,
+        params: Any = None,
         deterministic: bool = True,
-        lazy: bool = False,
+        lazy: bool = True,
     ):
-        params = ParamDict(params)
-        self._creator = to_creator(
-            params.get_or_throw("creator", object), params.get_or_none("schema", object)
-        )
-        self._creator._params = params.get("params", ParamDict())
+        self._creator = to_creator(creator, schema)
+        self._creator._params = ParamDict(params)
         self._creator._execution_engine = execution_engine
         super().__init__(
             execution_engine,
@@ -142,71 +139,27 @@ class Create(FugueTask):
         ctx.outputs["_0"] = df
 
 
-class Transform(FugueTask):
-    @no_type_check
-    def __init__(
-        self,
-        execution_engine: ExecutionEngine,
-        params: Any,
-        deterministic: bool = True,
-        lazy: bool = False,
-    ):
-        params = ParamDict(params)
-        self._transformer = to_transformer(
-            params.get_or_throw("transformer", object),
-            params.get_or_none("schema", object),
-        )
-        self._transformer_params = params.get("params", ParamDict())
-        self._partition_spec = params.get_or_throw("partition", PartitionSpec)
-        self._ignore_errors = [
-            to_type(x, Exception) for x in params.get("ignore_errors", [])
-        ]
-        super().__init__(
-            execution_engine,
-            params=params,
-            input_n=1,
-            output_n=1,
-            deterministic=deterministic,
-            lazy=lazy,
-        )
-
-    @no_type_check
-    def execute(self, ctx: TaskContext) -> None:
-        dfs = DataFrames(ctx.inputs)
-        df = self.execution_engine.transform(
-            dfs[0],
-            self._transformer,
-            self._transformer_params,
-            self._partition_spec,
-            self._ignore_errors,
-        )
-        df = self.handle_persist(df)
-        df = self.handle_broadcast(df)
-        ctx.outputs["_0"] = df
-
-
 class Process(FugueTask):
     @no_type_check
     def __init__(
         self,
-        n: int,
+        input_n: int,
         execution_engine: ExecutionEngine,
+        processor: Any,
+        schema: Any,
         params: Any,
+        pre_partition: Any = None,
         deterministic: bool = True,
         lazy: bool = False,
     ):
-        params = ParamDict(params)
-        self._processor = to_processor(
-            params.get_or_throw("processor", object),
-            params.get_or_none("schema", object),
-        )
-        self._processor._params = params.get("params", ParamDict())
-        self._processor._pre_partition = params.get("partition", PartitionSpec)
+        self._processor = to_processor(processor, schema)
+        self._processor._params = ParamDict(params)
+        self._processor._pre_partition = PartitionSpec(pre_partition)
         self._processor._execution_engine = execution_engine
         super().__init__(
             execution_engine,
             params=params,
-            input_n=n,
+            input_n=input_n,
             output_n=1,
             deterministic=deterministic,
             lazy=lazy,
@@ -224,21 +177,22 @@ class Output(FugueTask):
     @no_type_check
     def __init__(
         self,
-        n: int,
+        input_n: int,
         execution_engine: ExecutionEngine,
+        outputter: Any,
         params: Any,
+        pre_partition: Any = None,
         deterministic: bool = True,
         lazy: bool = False,
     ):
-        params = ParamDict(params)
-        self._outputter = to_outputter(params.get_or_throw("outputter", object))
-        self._outputter._params = params.get("params", ParamDict())
-        self._outputter._pre_partition = params.get("partition", PartitionSpec)
+        self._outputter = to_outputter(outputter)
+        self._outputter._params = ParamDict(params)
+        self._outputter._pre_partition = PartitionSpec(pre_partition)
         self._outputter._execution_engine = execution_engine
         super().__init__(
             execution_engine,
             params=params,
-            input_n=n,
+            input_n=input_n,
             deterministic=deterministic,
             lazy=lazy,
         )
