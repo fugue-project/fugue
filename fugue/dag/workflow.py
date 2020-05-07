@@ -1,13 +1,13 @@
-from typing import Any, Dict, List, TypeVar
+from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 from adagio.specs import WorkflowSpec
-from fugue.builtins import CreateData, Show
-from fugue.builtins import AssertEqual
-from fugue.builtins.processors import RunTransformer
+from fugue.builtins import AssertEqual, CreateData, RunJoin, RunTransformer, Show
 from fugue.collections.partition import PartitionSpec
 from fugue.dag.tasks import Create, FugueTask, Output, Process
+from fugue.dataframe import DataFrame
+from fugue.dataframe.dataframes import DataFrames
 from fugue.execution.execution_engine import ExecutionEngine
-from triad.collections.dict import ParamDict
+from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
@@ -15,13 +15,13 @@ _DEFAULT_IGNORE_ERRORS: List[Any] = []
 TDF = TypeVar("TDF", bound="WorkflowDataFrame")
 
 
-class WorkflowDataFrame(object):
+class WorkflowDataFrame(DataFrame):
     def __init__(
         self, workflow: "FugueWorkflow", task: FugueTask, metadata: Any = None
     ):
+        super().__init__("_0:int", metadata)
         self._workflow = workflow
         self._task = task
-        self._metadata = ParamDict(metadata)
 
     @property
     def execution_engine(self) -> ExecutionEngine:
@@ -31,13 +31,21 @@ class WorkflowDataFrame(object):
     def workflow(self) -> "FugueWorkflow":
         return self._workflow
 
-    def show(self, rows: int = 10, count: bool = False, title: str = "") -> None:
+    def show(
+        self,
+        rows: int = 10,
+        show_count: bool = False,
+        title: Optional[str] = None,
+        best_width: int = 100,
+    ) -> None:
         task = Output(
             1,
             self.execution_engine,
             outputter=Show,
             pre_partition=None,
-            params=dict(rows=rows, count=count, title=title),
+            params=dict(
+                rows=rows, count=show_count, title=title, best_width=best_width
+            ),
         )
         self.workflow.add(task, self)
 
@@ -51,14 +59,12 @@ class WorkflowDataFrame(object):
         params: Any = None,
         partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
-        lazy: bool = True,
     ) -> TDF:
         if partition is None:
             partition = self._metadata.get("pre_partition", PartitionSpec())
-        task = Process(
-            1,
-            self.execution_engine,
-            RunTransformer,
+        df = self.workflow.process(
+            self,
+            using=RunTransformer,
             schema=None,
             params=dict(
                 transformer=using,
@@ -67,9 +73,14 @@ class WorkflowDataFrame(object):
                 params=params,
             ),
             pre_partition=partition,
-            lazy=lazy,
         )
-        return self.to_self_type(self.workflow.add(task, self))
+        return self.to_self_type(df)
+
+    def join(
+        self: TDF, *dfs: Any, how: str, keys: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        df = self.workflow.join(self, *dfs, how=how, keys=keys)
+        return self.to_self_type(df)
 
     def persist(self: TDF, level: Any = None) -> TDF:
         self._task.persist("" if level is None else level)
@@ -91,6 +102,44 @@ class WorkflowDataFrame(object):
     def to_self_type(self: TDF, df: "WorkflowDataFrame") -> TDF:
         return df  # type: ignore
 
+    @property
+    def schema(self) -> Schema:
+        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+
+    @property
+    def is_local(self) -> bool:  # pragma: no cover
+        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+
+    def as_local(self) -> DataFrame:  # type: ignore  # pragma: no cover
+        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+
+    @property
+    def is_bounded(self) -> bool:  # pragma: no cover
+        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+
+    @property
+    def empty(self) -> bool:  # pragma: no cover
+        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+
+    def peek_array(self) -> Any:  # pragma: no cover
+        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+
+    def count(self, persist: bool = False) -> int:  # pragma: no cover
+        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+
+    def as_array(
+        self, columns: Optional[List[str]] = None, type_safe: bool = False
+    ) -> List[Any]:  # pragma: no cover
+        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+
+    def as_array_iterable(
+        self, columns: Optional[List[str]] = None, type_safe: bool = False
+    ) -> Iterable[Any]:  # pragma: no cover
+        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+
+    def drop(self, cols: List[str]) -> "DataFrame":  # pragma: no cover
+        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+
 
 class FugueWorkflow(object):
     def __init__(self, execution_engine: ExecutionEngine):
@@ -101,15 +150,63 @@ class FugueWorkflow(object):
     def execution_engine(self) -> ExecutionEngine:
         return self._execution_engine
 
+    def create(
+        self, using: Any, schema: Any = None, params: Any = None
+    ) -> WorkflowDataFrame:
+        task = Create(
+            self.execution_engine, creator=using, schema=schema, params=params
+        )
+        return self.add(task)
+
+    def process(
+        self,
+        *dfs: Any,
+        using: Any,
+        schema: Any = None,
+        params: Any = None,
+        pre_partition: Any = None,
+    ) -> WorkflowDataFrame:
+        dfs = self._to_dfs(*dfs)
+        task = Process(
+            len(dfs),
+            self.execution_engine,
+            processor=using,
+            schema=schema,
+            params=params,
+            pre_partition=pre_partition,
+        )
+        if dfs.has_key:
+            return self.add(task, **dfs)
+        else:
+            return self.add(task, *dfs.values())
+
+    def output(
+        self, *dfs: Any, using: Any, params: Any = None, pre_partition: Any = None
+    ) -> None:
+        dfs = self._to_dfs(*dfs)
+        task = Output(
+            len(dfs),
+            self.execution_engine,
+            outputter=using,
+            params=params,
+            pre_partition=pre_partition,
+        )
+        if dfs.has_key:
+            self.add(task, **dfs)
+        else:
+            self.add(task, *dfs.values())
+
     def create_data(
         self, data: Any, schema: Any = None, metadata: Any = None, partition: Any = None
     ) -> WorkflowDataFrame:
-        task = Create(
-            self.execution_engine,
-            creator=CreateData,
-            params=dict(data=data, schema=schema, metadata=metadata),
+        if isinstance(data, WorkflowDataFrame):
+            assert_or_throw(
+                data.workflow is self, f"{data} does not belong to this workflow"
+            )
+            return data
+        return self.create(
+            using=CreateData, params=dict(data=data, schema=schema, metadata=metadata)
         )
-        return self.add(task)
 
     def df(
         self, data: Any, schema: Any = None, metadata: Any = None, partition: Any = None
@@ -117,22 +214,22 @@ class FugueWorkflow(object):
         return self.create_data(data, schema, metadata, partition)
 
     def show(
-        self, *dfs: Any, rows: int = 10, count: bool = False, title: str = ""
+        self,
+        *dfs: Any,
+        rows: int = 10,
+        count: bool = False,
+        title: Optional[str] = None,
     ) -> None:
-        task = Output(
-            len(dfs),
-            self.execution_engine,
-            outputter=Show,
-            pre_partition=None,
-            params=dict(rows=rows, count=count, title=title),
-        )
-        self.add(task, *dfs)
+        self.output(*dfs, using=Show, params=dict(rows=rows, count=count, title=title))
+
+    def join(
+        self, *dfs: Any, how: str, keys: Optional[Iterable[str]] = None
+    ) -> WorkflowDataFrame:  # pragma: no cover
+        _keys: List[str] = list(keys) if keys is not None else []
+        return self.process(*dfs, using=RunJoin, params=dict(how=how, keys=_keys))
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
-        task = Output(
-            len(dfs), self.execution_engine, outputter=AssertEqual, params=params
-        )
-        self.add(task, *dfs)
+        self.output(*dfs, using=AssertEqual, params=params)
 
     def add(self, task: FugueTask, *args: Any, **kwargs: Any) -> WorkflowDataFrame:
         task = task.copy()
@@ -140,6 +237,9 @@ class FugueWorkflow(object):
         name = "_" + str(len(self._spec.tasks))
         self._spec.add_task(name, task, dep.dependency)
         return WorkflowDataFrame(self, task)
+
+    def _to_dfs(self, *args: Any, **kwargs: Any) -> DataFrames:
+        return DataFrames(*args, **kwargs).convert(self.create_data)
 
 
 class _Dependencies(object):
@@ -169,6 +269,8 @@ class _Dependencies(object):
     def _parse_cursor(self, dep: Any) -> WorkflowDataFrame:
         if isinstance(dep, WorkflowDataFrame):
             return dep
+        if isinstance(dep, DataFrame):
+            return self.workflow.create_data(dep)
         if isinstance(dep, str):
             assert_or_throw(
                 dep in self._local_vars, KeyError(f"{dep} is not a local variable")

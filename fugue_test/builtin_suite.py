@@ -32,7 +32,7 @@ class BuiltInTests(object):
 
         def test_create_show(self):
             with self.dag() as dag:
-                dag.df([[0]], "a:int").show()
+                dag.df([[0]], "a:int").partition(num=2).show()
                 dag.df(ArrayDataFrame([[0]], "a:int")).show()
 
         def test_transform(self):
@@ -70,6 +70,16 @@ class BuiltInTests(object):
                     mock_tf2_except, schema="*", ignore_errors=[NotImplementedError]
                 )
                 dag.df([[1, 2], [3, 4]], "a:double,b:int").assert_eq(c)
+
+        def test_join(self):
+            with self.dag() as dag:
+                a = dag.df([[1, 10], [2, 20], [3, 30]], "a:int,b:int")
+                dag.join(a, how="inner").assert_eq(a)
+
+                b = ArrayDataFrame([[2, 200], [3, 300]], "a:int,c:int")
+                c = ArrayDataFrame([[2, 2000]], "a:int,d:int")
+                d = a.join(b, c, how="inner", keys=["a"])
+                dag.df([[2, 20, 200, 2000]], "a:int,b:int,c:int,d:int").assert_eq(d)
 
 
 class DagTester(FugueWorkflow):

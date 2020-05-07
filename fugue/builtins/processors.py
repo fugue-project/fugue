@@ -31,6 +31,18 @@ class RunTransformer(Processor):
         )
 
 
+class RunJoin(Processor):
+    def process(self, dfs: DataFrames) -> DataFrame:
+        if len(dfs) == 1:
+            return dfs[0]
+        how = self.params.get_or_throw("how", str)
+        keys = self.params.get("keys", [])
+        df = dfs[0]
+        for i in range(1, len(dfs)):
+            df = self.execution_engine.join(df, dfs[i], how=how, keys=keys)
+        return df
+
+
 class _TransformerRunner(object):
     def __init__(
         self, df: DataFrame, transformer: Transformer, ignore_errors: List[type]

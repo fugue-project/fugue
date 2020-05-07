@@ -2,7 +2,12 @@ from typing import Any, Iterable, List, Optional, Tuple
 
 import pandas as pd
 import pyarrow as pa
-from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
+from fugue.dataframe.dataframe import (
+    DataFrame,
+    LocalBoundedDataFrame,
+    _enforce_type,
+    _input_schema,
+)
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
@@ -18,6 +23,7 @@ class PandasDataFrame(LocalBoundedDataFrame):
             pdf = pd.DataFrame([], columns=schema.names)
             pdf = pdf.astype(dtype=schema.pd_dtype)
         elif isinstance(df, PandasDataFrame):
+            # TODO: This is useless if in this way and wrong
             pdf = df.native
             schema = None
         elif isinstance(df, (pd.DataFrame, pd.Series)):
@@ -29,7 +35,10 @@ class PandasDataFrame(LocalBoundedDataFrame):
             assert_arg_not_none(schema, msg=f"schema can't be None for iterable input")
             schema = _input_schema(schema).assert_not_empty()
             pdf = pd.DataFrame(df, columns=schema.names)
-            pdf = pdf.astype(dtype=schema.pd_dtype)
+            pdf = _enforce_type(pdf, schema)
+            super().__init__(schema, metadata)
+            self._native = pdf
+            return
         else:
             raise ValueError(f"{df} is incompatible with PandasDataFrame")
         pdf, schema = self._apply_schema(pdf, schema)
@@ -108,5 +117,4 @@ class PandasDataFrame(LocalBoundedDataFrame):
                 ValueError(f"Pandas datafame column count doesn't match {schema}"),
             )
             pdf.columns = schema.names
-        pdf = pdf.astype(dtype=schema.pd_dtype)
-        return pdf, schema
+        return _enforce_type(pdf, schema), schema

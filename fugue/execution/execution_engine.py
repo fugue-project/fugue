@@ -1,13 +1,15 @@
 import logging
 from abc import ABC, abstractmethod
 from threading import RLock
-from typing import Any, Callable, Dict, Iterable
+from typing import Any, Callable, Dict, Iterable, List
 
 from fs.base import FS as FileSystem
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame
 from triad.collections.dict import ParamDict
 from triad.utils.convert import to_instance
+
+_DEFAULT_JOIN_KEYS: List[str] = []
 
 
 class DatabaseEngine(ABC):
@@ -85,5 +87,15 @@ class ExecutionEngine(ABC):
     @abstractmethod
     def persist(
         self, df: DataFrame, level: Any = None
+    ) -> DataFrame:  # pragma: no cover
+        raise NotImplementedError
+
+    @abstractmethod
+    def join(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        how: str,
+        keys: List[str] = _DEFAULT_JOIN_KEYS,
     ) -> DataFrame:  # pragma: no cover
         raise NotImplementedError

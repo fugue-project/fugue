@@ -1,7 +1,9 @@
 import logging
 from threading import RLock
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, List
 
+import pandas as pd
+import pyarrow as pa
 from fs.base import FS as FileSystem
 from fs.osfs import OSFS
 from fugue.collections.partition import PartitionSpec
@@ -13,9 +15,9 @@ from fugue.dataframe import (
     PandasDataFrame,
     to_local_bounded_df,
 )
-from fugue.dataframe.utils import to_local_df
-from fugue.execution.execution_engine import ExecutionEngine
-from triad.collections.dict import ParamDict
+from fugue.dataframe.utils import get_join_schemas, to_local_df
+from fugue.execution.execution_engine import _DEFAULT_JOIN_KEYS, ExecutionEngine
+from triad.collections import ParamDict, Schema
 
 
 class NaiveExecutionEngine(ExecutionEngine):
@@ -89,3 +91,81 @@ class NaiveExecutionEngine(ExecutionEngine):
 
     def persist(self, df: DataFrame, level: Any = None) -> DataFrame:
         return self.to_df(df)
+
+    def join(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        how: str,
+        keys: List[str] = _DEFAULT_JOIN_KEYS,
+    ) -> DataFrame:
+        key_schema, output_schema = get_join_schemas(df1, df2, how=how, keys=keys)
+        how = how.lower().replace("_", "").replace(" ", "")
+        if how == "cross":
+            d1 = df1.as_pandas()
+            d2 = df2.as_pandas()
+            d1["__cross_join_index__"] = 1
+            d2["__cross_join_index__"] = 1
+            d = d1.merge(d2, on=("__cross_join_index__")).drop(
+                "__cross_join_index__", axis=1
+            )
+            return PandasDataFrame(d.reset_index(drop=True), output_schema)
+        if how in ["semi", "leftsemi"]:
+            d1 = df1.as_pandas()
+            d2 = df2.as_pandas()[key_schema.names]
+            d = d1.merge(d2, on=key_schema.names, how="inner")
+            return PandasDataFrame(d.reset_index(drop=True), output_schema)
+        if how in ["anti", "leftanti"]:
+            d1 = df1.as_pandas()
+            d2 = df2.as_pandas()[key_schema.names]
+            d2["__anti_join_dummy__"] = 1.0
+            d = d1.merge(d2, on=key_schema.names, how="left")
+            d = d[d.iloc[:, -1].isnull()]
+            return PandasDataFrame(
+                d.drop(["__anti_join_dummy__"], axis=1).reset_index(drop=True),
+                output_schema,
+            )
+        fix_left, fix_right = False, False
+        if how in ["leftouter"]:
+            how = "left"
+            self._validate_outer_joinable(df2.schema, key_schema)
+            fix_right = True
+        if how in ["rightouter"]:
+            how = "right"
+            self._validate_outer_joinable(df1.schema, key_schema)
+            fix_left = True
+        if how in ["fullouter"]:
+            how = "outer"
+            self._validate_outer_joinable(df1.schema, key_schema)
+            self._validate_outer_joinable(df2.schema, key_schema)
+            fix_left, fix_right = True, True
+        d1 = df1.as_pandas()
+        d2 = df2.as_pandas()
+        d = d1.merge(d2, on=key_schema.names, how=how)
+        if fix_left:
+            d = self._fix_nan(
+                d, output_schema, df1.schema.exclude(list(df2.schema.keys())).keys()
+            )
+        if fix_right:
+            d = self._fix_nan(
+                d, output_schema, df2.schema.exclude(list(df1.schema.keys())).keys()
+            )
+        return PandasDataFrame(d.reset_index(drop=True), output_schema)
+
+    def _validate_outer_joinable(self, schema: Schema, key_schema: Schema) -> None:
+        # TODO: this is to prevent wrong behavior of pandas, we may not need it
+        # s = schema - key_schema
+        # if any(pa.types.is_boolean(v) or pa.types.is_integer(v) for v in s.types):
+        #    raise NotImplementedError(
+        #        f"{schema} excluding {key_schema} is not outer joinable"
+        #    )
+        return
+
+    def _fix_nan(
+        self, df: pd.DataFrame, schema: Schema, keys: Iterable[str]
+    ) -> pd.DataFrame:
+        for key in keys:
+            if pa.types.is_floating(schema[key].type):
+                continue
+            df[key] = df[key].where(pd.notna(df[key]), None)
+        return df

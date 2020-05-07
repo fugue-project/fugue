@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Callable
 
 from fugue.dataframe.dataframe import DataFrame
 from triad.collections.dict import IndexedOrderedDict
@@ -57,6 +57,12 @@ class DataFrames(IndexedOrderedDict[str, DataFrame]):
         if isinstance(key, int):
             key = self.get_key_by_index(key)
         return super().__getitem__(key)  # type: ignore
+
+    def convert(self, func: Callable[["DataFrame"], DataFrame]) -> "DataFrames":
+        if self.has_key:
+            return DataFrames([(k, func(v)) for k, v in self.items()])
+        else:
+            return DataFrames([func(v) for v in self.values()])
 
     def _append(self, value: Any):
         assert_or_throw(

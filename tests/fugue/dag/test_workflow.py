@@ -3,6 +3,7 @@ from typing import Any, Dict, Iterable, List
 from adagio.instances import WorkflowContext
 from fugue.collections.partition import PartitionSpec
 from fugue.dag.workflow import FugueWorkflow
+from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.execution import NaiveExecutionEngine
 from fugue.transformer.convert import transformer
 
@@ -18,7 +19,8 @@ def test_builder():
     b = a.transform(mock_tf1, "*,b:int", partition=dict(by=["a"]))
     b.show()
     builder.create_data([[0], [1]], "b:int").show()
-    builder.show(a, b)
+    c = ArrayDataFrame([[100]], "a:int")
+    builder.show(a, b, c)
     b = a.partition(by=["a"]).transform(mock_tf2).persist().broadcast()
     b.show()
     ctx.run(builder._spec, {})

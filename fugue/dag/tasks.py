@@ -63,14 +63,6 @@ class FugueTask(TaskSpec, ABC):
         return self.metadata
 
     @property
-    def has_single_input(self) -> bool:
-        return len(self.inputs) == 1
-
-    @property
-    def has_single_output(self) -> bool:
-        return len(self.outputs) == 1
-
-    @property
     def single_output_expression(self) -> str:
         assert_or_throw(
             len(self.outputs) == 1,
@@ -84,7 +76,7 @@ class FugueTask(TaskSpec, ABC):
         return t
 
     def persist(self, level: Any) -> "FugueTask":
-        self._persist = level
+        self._persist = "" if level is None else level
         return self
 
     def handle_persist(self, df: DataFrame) -> DataFrame:
@@ -152,6 +144,7 @@ class Process(FugueTask):
         deterministic: bool = True,
         lazy: bool = False,
     ):
+        assert_or_throw(input_n > 0, FugueWorkflowError("must have at least one input"))
         self._processor = to_processor(processor, schema)
         self._processor._params = ParamDict(params)
         self._processor._pre_partition = PartitionSpec(pre_partition)
@@ -185,6 +178,7 @@ class Output(FugueTask):
         deterministic: bool = True,
         lazy: bool = False,
     ):
+        assert_or_throw(input_n > 0, FugueWorkflowError("must have at least one input"))
         self._outputter = to_outputter(outputter)
         self._outputter._params = ParamDict(params)
         self._outputter._pre_partition = PartitionSpec(pre_partition)

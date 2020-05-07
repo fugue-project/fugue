@@ -1,5 +1,6 @@
 from fugue.outputter import Outputter
-from fugue.dataframe import DataFrames, df_eq
+from fugue.dataframe import DataFrames
+from fugue.dataframe.utils import _df_eq as df_eq
 
 
 class Show(Outputter):
