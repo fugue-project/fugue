@@ -1,11 +1,16 @@
 from typing import Any, Iterable, List, Tuple
 
-from fugue.dataframe import DataFrame, DataFrames, IterableDataFrame
-from fugue.dataframe.utils import to_local_bounded_df
+from fugue.dataframe import (
+    DataFrame,
+    DataFrames,
+    IterableDataFrame,
+    to_local_bounded_df,
+)
+from fugue.execution import SQLEngine
 from fugue.processor import Processor
 from fugue.transformer import Transformer, to_transformer
 from triad.collections import ParamDict
-from triad.utils.convert import to_type
+from triad.utils.convert import to_instance, to_type
 from triad.utils.iter import EmptyAwareIterable
 
 
@@ -41,6 +46,17 @@ class RunJoin(Processor):
         for i in range(1, len(dfs)):
             df = self.execution_engine.join(df, dfs[i], how=how, keys=keys)
         return df
+
+
+class RunSQLSelect(Processor):
+    def process(self, dfs: DataFrames) -> DataFrame:
+        statement = self.params.get_or_throw("statement", str)
+        engine = self.params.get_or_none("sql_engine", object)
+        if engine is None:
+            engine = self.execution_engine.default_sql_engine
+        elif not isinstance(engine, SQLEngine):
+            engine = to_instance(engine, SQLEngine, args=[self.execution_engine])
+        return engine.select(dfs, statement)
 
 
 class _TransformerRunner(object):

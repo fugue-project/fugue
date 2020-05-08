@@ -2,6 +2,7 @@ from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 from adagio.specs import WorkflowSpec
 from fugue.builtins import AssertEqual, CreateData, RunJoin, RunTransformer, Show
+from fugue.builtins.processors import RunSQLSelect
 from fugue.collections.partition import PartitionSpec
 from fugue.dag.tasks import Create, FugueTask, Output, Process
 from fugue.dataframe import DataFrame
@@ -22,6 +23,10 @@ class WorkflowDataFrame(DataFrame):
         super().__init__("_0:int", metadata)
         self._workflow = workflow
         self._task = task
+
+    @property
+    def name(self) -> str:
+        return self._task.name
 
     @property
     def execution_engine(self) -> ExecutionEngine:
@@ -227,6 +232,25 @@ class FugueWorkflow(object):
     ) -> WorkflowDataFrame:  # pragma: no cover
         _keys: List[str] = list(keys) if keys is not None else []
         return self.process(*dfs, using=RunJoin, params=dict(how=how, keys=_keys))
+
+    def select(self, *statements: Any, sql_engine: Any = None) -> WorkflowDataFrame:
+        s_str: List[str] = []
+        dfs: Dict[str, DataFrame] = {}
+        for s in statements:
+            if isinstance(s, str):
+                s_str.append(s)
+            if isinstance(s, DataFrame):
+                ws = self.df(s)
+                dfs[ws.name] = ws
+                s_str.append(ws.name)
+        sql = " ".join(s_str).strip()
+        if not sql.upper().startswith("SELECT"):
+            sql = "SELECT " + sql
+        return self.process(
+            self._to_dfs(dfs),
+            using=RunSQLSelect,
+            params=dict(statement=sql, sql_engine=sql_engine),
+        )
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
         self.output(*dfs, using=AssertEqual, params=params)

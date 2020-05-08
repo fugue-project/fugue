@@ -144,7 +144,6 @@ class Process(FugueTask):
         deterministic: bool = True,
         lazy: bool = False,
     ):
-        assert_or_throw(input_n > 0, FugueWorkflowError("must have at least one input"))
         self._processor = to_processor(processor, schema)
         self._processor._params = ParamDict(params)
         self._processor._pre_partition = PartitionSpec(pre_partition)

@@ -6,7 +6,8 @@ from adagio.instances import WorkflowContext
 from fugue.dag.workflow import FugueWorkflow
 from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.execution.execution_engine import ExecutionEngine
+from fugue.execution import ExecutionEngine
+from fugue.execution.naive_execution_engine import SqliteEngine
 from fugue.transformer import Transformer, transformer
 
 
@@ -80,6 +81,49 @@ class BuiltInTests(object):
                 c = ArrayDataFrame([[2, 2000]], "a:int,d:int")
                 d = a.join(b, c, how="inner", keys=["a"])
                 dag.df([[2, 20, 200, 2000]], "a:int,b:int,c:int,d:int").assert_eq(d)
+
+        def test_select(self):
+            with self.dag() as dag:
+                a = dag.df([[1, 10], [2, 20], [3, 30]], "x:long,y:long")
+                b = dag.df([[2, 20, 40], [3, 30, 90]], "x:long,y:long,z:long")
+                dag.select("SELECT *,x*y AS z FROM", a, "WHERE x>=2").assert_eq(b)
+
+                c = ArrayDataFrame([[2, 20, 40], [3, 30, 90]], "x:long,y:long,zb:long")
+                dag.select(
+                    "  SELECT t1.*,z AS zb FROM ",
+                    a,
+                    "AS t1 INNER JOIN",
+                    b,
+                    "AS t2 ON t1.x=t2.x  ",
+                ).assert_eq(c)
+
+                # no select
+                dag.select(
+                    "t1.*,z AS zb FROM ", a, "AS t1 INNER JOIN", b, "AS t2 ON t1.x=t2.x"
+                ).assert_eq(c)
+
+                # specify sql engine
+                dag.select(
+                    "SELECT t1.*,z AS zb FROM ",
+                    a,
+                    "AS t1 INNER JOIN",
+                    b,
+                    "AS t2 ON t1.x=t2.x",
+                    sql_engine=SqliteEngine,
+                ).assert_eq(c)
+
+                # specify sql engine
+                dag.select(
+                    "SELECT t1.*,z AS zb FROM ",
+                    a,
+                    "AS t1 INNER JOIN",
+                    b,
+                    "AS t2 ON t1.x=t2.x",
+                    sql_engine="SqliteEngine",
+                ).assert_eq(c)
+
+                # no input
+                dag.select("1 AS a").assert_eq(ArrayDataFrame([[1]], "a:long"))
 
 
 class DagTester(FugueWorkflow):

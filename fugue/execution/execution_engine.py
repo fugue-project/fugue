@@ -1,23 +1,18 @@
 import logging
 from abc import ABC, abstractmethod
-from threading import RLock
-from typing import Any, Callable, Dict, Iterable, List
+from typing import Any, Callable, Iterable, List
 
 from fs.base import FS as FileSystem
 from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import DataFrame
+from fugue.dataframe import DataFrame, DataFrames
 from triad.collections.dict import ParamDict
-from triad.utils.convert import to_instance
 
 _DEFAULT_JOIN_KEYS: List[str] = []
 
 
-class DatabaseEngine(ABC):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self._execution_engine: "ExecutionEngine" = to_instance(
-            kwargs["execution_engine"], ExecutionEngine
-        )
-        self._conf: ParamDict = to_instance(kwargs["conf"], ParamDict)
+class SQLEngine(ABC):
+    def __init__(self, execution_engine: "ExecutionEngine") -> None:
+        self._execution_engine = execution_engine
 
     @property
     def execution_engine(self) -> "ExecutionEngine":
@@ -25,18 +20,14 @@ class DatabaseEngine(ABC):
 
     @property
     def conf(self) -> ParamDict:
-        return self._conf
+        return self.execution_engine.conf
 
     @abstractmethod
-    def select(
-        self, dfs: Dict[str, DataFrame], statement: str
-    ) -> DataFrame:  # pragma: no cover
+    def select(self, dfs: DataFrames, statement: str) -> DataFrame:  # pragma: no cover
         raise NotImplementedError
 
 
 class ExecutionEngine(ABC):
-    OPLOCK = RLock()
-
     def __init__(self, conf: Any):
         self._conf = ParamDict(conf)
 
@@ -52,6 +43,11 @@ class ExecutionEngine(ABC):
     @property
     @abstractmethod
     def fs(self) -> FileSystem:  # pragma: no cover
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def default_sql_engine(self) -> SQLEngine:  # pragma: no cover
         raise NotImplementedError
 
     @abstractmethod
@@ -99,3 +95,26 @@ class ExecutionEngine(ABC):
         keys: List[str] = _DEFAULT_JOIN_KEYS,
     ) -> DataFrame:  # pragma: no cover
         raise NotImplementedError
+
+    # @abstractmethod
+    # def load_df(
+    #     self, path: str, format_hint: Any = None, **kwargs: Any
+    # ) -> DataFrame:  # pragma: no cover
+    #     raise NotImplementedError
+
+    # @abstractmethod
+    # def save_df(
+    #     self,
+    #     df: DataFrame,
+    #     path: str,
+    #     overwrite: bool,
+    #     format_hint: Any = None,
+    #     **kwargs: Any,
+    # ) -> None:  # pragma: no cover
+    #     raise NotImplementedError
+
+    def __copy__(self) -> "ExecutionEngine":
+        return self
+
+    def __deepcopy__(self, memo: Any) -> "ExecutionEngine":
+        return self

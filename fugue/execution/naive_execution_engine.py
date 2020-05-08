@@ -1,5 +1,4 @@
 import logging
-from threading import RLock
 from typing import Any, Callable, Iterable, List
 
 import pandas as pd
@@ -10,23 +9,40 @@ from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import (
     ArrayDataFrame,
     DataFrame,
+    DataFrames,
     IterableDataFrame,
     LocalBoundedDataFrame,
     PandasDataFrame,
     to_local_bounded_df,
 )
 from fugue.dataframe.utils import get_join_schemas, to_local_df
-from fugue.execution.execution_engine import _DEFAULT_JOIN_KEYS, ExecutionEngine
+from fugue.execution.execution_engine import (
+    _DEFAULT_JOIN_KEYS,
+    SQLEngine,
+    ExecutionEngine,
+)
+from sqlalchemy import create_engine
 from triad.collections import ParamDict, Schema
 
 
-class NaiveExecutionEngine(ExecutionEngine):
-    OPLOCK = RLock()
+class SqliteEngine(SQLEngine):
+    def __init__(self, execution_engine: ExecutionEngine) -> None:
+        return super().__init__(execution_engine)
 
+    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
+        sql_engine = create_engine("sqlite:///:memory:")
+        for k, v in dfs.items():
+            v.as_pandas().to_sql(k, sql_engine, if_exists="replace", index=False)
+        df = pd.read_sql_query(statement, sql_engine)
+        return PandasDataFrame(df)
+
+
+class NaiveExecutionEngine(ExecutionEngine):
     def __init__(self, conf: Any = None):
         self._conf = ParamDict(conf)
         self._fs = OSFS("/")
         self._log = logging.getLogger()
+        self._default_sql_engine = SqliteEngine(self)
 
     def __repr__(self) -> str:
         return "NaiveExecutionEngine"
@@ -38,6 +54,10 @@ class NaiveExecutionEngine(ExecutionEngine):
     @property
     def fs(self) -> FileSystem:
         return self._fs
+
+    @property
+    def default_sql_engine(self) -> SQLEngine:
+        return self._default_sql_engine
 
     def stop(self) -> None:  # pragma: no cover
         return
