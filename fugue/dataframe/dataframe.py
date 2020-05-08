@@ -4,6 +4,7 @@ from threading import RLock
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import pandas as pd
+import pyarrow as pa
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
@@ -86,7 +87,7 @@ class DataFrame(ABC):
 
     def as_pandas(self) -> pd.DataFrame:
         pdf = pd.DataFrame(self.as_array(), columns=self.schema.names)
-        return pdf.astype(dtype=self.schema.pd_dtype)
+        return _enforce_type(pdf, self.schema)
 
     # @abstractmethod
     # def as_pyarrow(self) -> pa.Table:  # pragma: no cover
@@ -163,6 +164,12 @@ class DataFrame(ABC):
                 "metadata": self.metadata,
             }
         )
+
+    def __copy__(self) -> "DataFrame":
+        return self
+
+    def __deepcopy__(self, memo: Any) -> "DataFrame":
+        return self
 
 
 class LocalDataFrame(DataFrame):
@@ -309,3 +316,21 @@ def _get_schema_change(
 
 def _input_schema(schema: Any) -> Schema:
     return schema if isinstance(schema, Schema) else Schema(schema)
+
+
+def _enforce_type(df: pd.DataFrame, schema: Schema) -> pd.DataFrame:
+    # TODO: does this have higher latency?
+    for k, v in schema.items():
+        s = df[k]
+        if pa.types.is_string(v.type):
+            ns = s.isnull()
+            s = s.astype(str)
+            s[ns] = None
+        elif pa.types.is_integer(v.type) or pa.types.is_boolean(v.type):
+            ns = s.isnull()
+            s = s.fillna(0).astype(v.type.to_pandas_dtype())
+            s[ns] = None
+        else:
+            s = s.astype(v.type.to_pandas_dtype())
+        df[k] = s
+    return df

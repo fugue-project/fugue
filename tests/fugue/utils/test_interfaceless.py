@@ -1,12 +1,12 @@
 from typing import Any, Dict, Iterable, List
 
 import pandas as pd
-from fugue.dataframe import DataFrame, LocalDataFrame, DataFrames
+from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution import ExecutionEngine
 from fugue.utils.interfaceless import FunctionWrapper, _parse_function
-from fugue_test.utils import df_eq
 from pytest import raises
 from triad.utils.iter import EmptyAwareIterable
 

@@ -3,10 +3,12 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from pytest import raises
 from fugue.dataframe import PandasDataFrame
+from fugue.dataframe.array_dataframe import ArrayDataFrame
+from pytest import raises
 from triad.collections.schema import Schema, SchemaError
 from triad.exceptions import InvalidOperationError
+import math
 
 
 def test_init():
@@ -143,6 +145,24 @@ def test_as_dict_iterable():
     assert [dict(a=pd.NaT, b=1)] == list(df.as_dict_iterable())
     df = PandasDataFrame([["2020-01-01", 1.1]], "a:datetime,b:int")
     assert [dict(a=datetime(2020, 1, 1), b=1)] == list(df.as_dict_iterable())
+
+
+def test_nan_none():
+    df = ArrayDataFrame([[None, None]], "b:str,c:double")
+    assert df.as_pandas().iloc[0, 0] is None
+    arr = PandasDataFrame(df.as_pandas(), df.schema).as_array()[0]
+    assert arr[0] is None
+    assert math.isnan(arr[1])
+
+    df = ArrayDataFrame([[None, None]], "b:int,c:bool")
+    arr = PandasDataFrame(df.as_pandas(), df.schema).as_array(type_safe=True)[0]
+    assert np.isnan(arr[0])  # TODO: this will cause inconsistent behavior cross engine
+    assert np.isnan(arr[1])  # TODO: this will cause inconsistent behavior cross engine
+
+    df = ArrayDataFrame([["a", 1.1], [None, None]], "b:str,c:double")
+    arr = PandasDataFrame(df.as_pandas(), df.schema).as_array()[1]
+    assert arr[0] is None
+    assert math.isnan(arr[1])
 
 
 def _test_as_array_perf():

@@ -1,25 +1,18 @@
 import logging
 from abc import ABC, abstractmethod
-from threading import RLock
-from typing import Any, Callable, Dict, Iterable, List
+from typing import Any, Callable, Iterable, List
 
 from fs.base import FS as FileSystem
 from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import DataFrame
-from fugue.dataframe.iterable_dataframe import IterableDataFrame
-from fugue.transformer import Transformer
-from fugue.transformer.convert import to_transformer
+from fugue.dataframe import DataFrame, DataFrames
 from triad.collections.dict import ParamDict
-from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import to_instance
+
+_DEFAULT_JOIN_KEYS: List[str] = []
 
 
-class DatabaseEngine(ABC):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self._execution_engine: "ExecutionEngine" = to_instance(
-            kwargs["execution_engine"], ExecutionEngine
-        )
-        self._conf: ParamDict = to_instance(kwargs["conf"], ParamDict)
+class SQLEngine(ABC):
+    def __init__(self, execution_engine: "ExecutionEngine") -> None:
+        self._execution_engine = execution_engine
 
     @property
     def execution_engine(self) -> "ExecutionEngine":
@@ -27,18 +20,14 @@ class DatabaseEngine(ABC):
 
     @property
     def conf(self) -> ParamDict:
-        return self._conf
+        return self.execution_engine.conf
 
     @abstractmethod
-    def select(
-        self, dfs: Dict[str, DataFrame], statement: str
-    ) -> DataFrame:  # pragma: no cover
+    def select(self, dfs: DataFrames, statement: str) -> DataFrame:  # pragma: no cover
         raise NotImplementedError
 
 
 class ExecutionEngine(ABC):
-    OPLOCK = RLock()
-
     def __init__(self, conf: Any):
         self._conf = ParamDict(conf)
 
@@ -54,6 +43,11 @@ class ExecutionEngine(ABC):
     @property
     @abstractmethod
     def fs(self) -> FileSystem:  # pragma: no cover
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def default_sql_engine(self) -> SQLEngine:  # pragma: no cover
         raise NotImplementedError
 
     @abstractmethod
@@ -92,64 +86,35 @@ class ExecutionEngine(ABC):
     ) -> DataFrame:  # pragma: no cover
         raise NotImplementedError
 
-    def transform(
+    @abstractmethod
+    def join(
         self,
-        df: DataFrame,
-        transformer: Any,
-        params: Any,
-        partition_spec: PartitionSpec,
-        ignore_errors: List[type],
-    ) -> DataFrame:
-        # for interfaceless functions, you must do to_transformer
-        # before calling transform.
-        tf = to_transformer(transformer, None)
-        assert_or_throw(isinstance(tf, Transformer), f"{tf} is not Transformer")
-        tf._params = ParamDict(params)  # type: ignore
-        tf._partition_spec = partition_spec  # type: ignore
-        tf._key_schema = partition_spec.get_key_schema(df.schema)  # type: ignore
-        tf._output_schema = tf.get_output_schema(df)  # type: ignore
-        tr = _TransformerRunner(df, tf, ignore_errors)  # type: ignore
-        return self.map_partitions(
-            df=df,
-            mapFunc=tr.run,
-            output_schema=tf.output_schema,  # type: ignore
-            partition_spec=partition_spec,
-        )
+        df1: DataFrame,
+        df2: DataFrame,
+        how: str,
+        keys: List[str] = _DEFAULT_JOIN_KEYS,
+    ) -> DataFrame:  # pragma: no cover
+        raise NotImplementedError
 
+    # @abstractmethod
+    # def load_df(
+    #     self, path: str, format_hint: Any = None, **kwargs: Any
+    # ) -> DataFrame:  # pragma: no cover
+    #     raise NotImplementedError
 
-class _TransformerRunner(object):
-    def __init__(
-        self, df: DataFrame, transformer: Transformer, ignore_errors: List[type]
-    ):
-        self.schema = df.schema
-        self.metadata = df.metadata
-        self.transformer = transformer
-        self.ignore_errors = ignore_errors
+    # @abstractmethod
+    # def save_df(
+    #     self,
+    #     df: DataFrame,
+    #     path: str,
+    #     overwrite: bool,
+    #     format_hint: Any = None,
+    #     **kwargs: Any,
+    # ) -> None:  # pragma: no cover
+    #     raise NotImplementedError
 
-    def run(self, no: int, data: Iterable[Any]) -> Iterable[Any]:
-        df = IterableDataFrame(data, self.schema, self.metadata)
-        if df.empty:
-            return
-        spec = self.transformer.partition_spec
-        self.transformer._cursor = spec.get_cursor(  # type: ignore
-            self.schema, no
-        )
-        partitioner = spec.get_partitioner(self.schema)
-        self.transformer.init_physical_partition(df)
-        for pn, sn, sub in partitioner.partition(df.native):
-            self.transformer.cursor.set(sub.peek(), pn, sn)
-            sub_df = IterableDataFrame(sub, self.schema)
-            sub_df._metadata = self.metadata
-            self.transformer.init_logical_partition(sub_df)
-            good = True
-            try:
-                res = self.transformer.transform(sub_df)
-            except Exception as e:
-                if isinstance(e, tuple(self.ignore_errors)):
-                    good = False
-                else:
-                    raise e
-            if not good:
-                continue
-            for r in res.as_array_iterable(type_safe=True):
-                yield r
+    def __copy__(self) -> "ExecutionEngine":
+        return self
+
+    def __deepcopy__(self, memo: Any) -> "ExecutionEngine":
+        return self

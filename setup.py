@@ -17,7 +17,7 @@ setup(
     author_email="goodwanghan@gmail.com",
     keywords="distributed spark sql",
     url="http://github.com/goodwanghan/fugue",
-    install_requires=["triad>=0.1.9", "adagio>=0.1.1", "fs"],
+    install_requires=["triad>=0.2.0", "adagio>=0.1.2", "fs", "sqlalchemy"],
     extras_require={},
     classifiers=[
         # "3 - Alpha", "4 - Beta" or "5 - Production/Stable"

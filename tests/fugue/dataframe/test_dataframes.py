@@ -1,5 +1,6 @@
 from fugue.dataframe import DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue.dataframe.pandas_dataframes import PandasDataFrame
 from pytest import raises
 from triad.exceptions import InvalidOperationError
 
@@ -59,3 +60,17 @@ def test_dataframes():
     assert dfs2.has_key
     assert dfs2[0] is df1
     assert dfs2[1] is df2
+
+    dfs1 = DataFrames(a=df1, b=df2)
+    dfs2 = dfs1.convert(lambda x: PandasDataFrame(x.as_array(), x.schema))
+    assert len(dfs1) == len(dfs2)
+    assert dfs2.has_key
+    assert isinstance(dfs2["a"], PandasDataFrame)
+    assert isinstance(dfs2["b"], PandasDataFrame)
+
+    dfs1 = DataFrames(df1, df2)
+    dfs2 = dfs1.convert(lambda x: PandasDataFrame(x.as_array(), x.schema))
+    assert len(dfs1) == len(dfs2)
+    assert not dfs2.has_key
+    assert isinstance(dfs2[0], PandasDataFrame)
+    assert isinstance(dfs2[1], PandasDataFrame)
