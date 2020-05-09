@@ -7,6 +7,7 @@ from pytest import raises
 from fugue.dataframe import IterableDataFrame, PandasDataFrame
 from triad.collections.schema import Schema, SchemaError
 from triad.exceptions import InvalidOperationError
+from fugue.dataframe.utils import _df_eq as df_eq
 
 
 def test_init():
@@ -106,6 +107,13 @@ def test_drop():
     raises(InvalidOperationError, lambda: df.drop(["b"]))  # can't be empty
     raises(InvalidOperationError, lambda: df.drop(["x"]))  # cols must exist
     assert [[1]] == df.as_array(type_safe=True)
+
+
+def test_rename():
+    df = IterableDataFrame([["a", 1]], "a:str,b:int")
+    df2 = df.rename(columns=dict(a="aa"))
+    assert isinstance(df, IterableDataFrame)
+    df_eq(df2, [["a", 1]], "aa:str,b:int", throw=True)
 
 
 def test_as_array():

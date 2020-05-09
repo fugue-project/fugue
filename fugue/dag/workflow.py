@@ -1,8 +1,17 @@
 from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 from adagio.specs import WorkflowSpec
-from fugue.builtins import AssertEqual, CreateData, RunJoin, RunTransformer, Show
-from fugue.builtins.processors import RunSQLSelect
+from fugue.builtins import (
+    AssertEqual,
+    CreateData,
+    DropColumns,
+    Rename,
+    RunJoin,
+    RunSQLSelect,
+    RunTransformer,
+    SelectColumns,
+    Show,
+)
 from fugue.collections.partition import PartitionSpec
 from fugue.dag.tasks import Create, FugueTask, Output, Process
 from fugue.dataframe import DataFrame
@@ -107,8 +116,30 @@ class WorkflowDataFrame(DataFrame):
     def to_self_type(self: TDF, df: "WorkflowDataFrame") -> TDF:
         return df  # type: ignore
 
+    def drop(  # type: ignore
+        self: TDF, columns: Dict[str, str], if_exists: bool = False
+    ) -> TDF:
+        df = self.workflow.process(
+            self, using=DropColumns, params=dict(columns=columns, if_exists=if_exists)
+        )
+        return self.to_self_type(df)
+
+    def rename(self: TDF, *args: Any, **kwargs: Any) -> TDF:
+        m: Dict[str, str] = {}
+        for a in args:
+            m.update(a)
+        m.update(kwargs)
+        df = self.workflow.process(self, using=Rename, params=dict(columns=m))
+        return self.to_self_type(df)
+
+    def __getitem__(self: TDF, columns: List[Any]) -> TDF:
+        df = self.workflow.process(
+            self, using=SelectColumns, params=dict(columns=columns)
+        )
+        return self.to_self_type(df)
+
     @property
-    def schema(self) -> Schema:
+    def schema(self) -> Schema:  # pragma: no cover
         raise NotImplementedError(f"WorkflowDataFrame does not support this method")
 
     @property
@@ -140,9 +171,6 @@ class WorkflowDataFrame(DataFrame):
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
-
-    def drop(self, cols: List[str]) -> "DataFrame":  # pragma: no cover
         raise NotImplementedError(f"WorkflowDataFrame does not support this method")
 
 
@@ -179,6 +207,7 @@ class FugueWorkflow(object):
             schema=schema,
             params=params,
             pre_partition=pre_partition,
+            input_names=None if not dfs.has_key else list(dfs.keys()),
         )
         if dfs.has_key:
             return self.add(task, **dfs)
@@ -195,6 +224,7 @@ class FugueWorkflow(object):
             outputter=using,
             params=params,
             pre_partition=pre_partition,
+            input_names=None if not dfs.has_key else list(dfs.keys()),
         )
         if dfs.has_key:
             self.add(task, **dfs)
@@ -247,9 +277,7 @@ class FugueWorkflow(object):
         if not sql.upper().startswith("SELECT"):
             sql = "SELECT " + sql
         return self.process(
-            self._to_dfs(dfs),
-            using=RunSQLSelect,
-            params=dict(statement=sql, sql_engine=sql_engine),
+            dfs, using=RunSQLSelect, params=dict(statement=sql, sql_engine=sql_engine)
         )
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:

@@ -3,8 +3,9 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from pytest import raises
 from fugue.dataframe import ArrayDataFrame, PandasDataFrame
+from fugue.dataframe.utils import _df_eq as df_eq
+from pytest import raises
 from triad.collections.schema import Schema, SchemaError
 from triad.exceptions import InvalidOperationError
 
@@ -106,6 +107,20 @@ def test_drop():
     raises(InvalidOperationError, lambda: df.drop(["b"]))  # can't be empty
     raises(InvalidOperationError, lambda: df.drop(["x"]))  # cols must exist
     assert [[1]] == df.as_array(type_safe=True)
+
+    df = ArrayDataFrame([["a", 1, 2]], "a:str,b:int,c:int")
+    df_eq(df[["a", "c"]], [["a", 2]], "a:str,c:int")
+    assert isinstance(df[["a", "c"]], ArrayDataFrame)
+
+    with raises(SchemaError):
+        df[["a", "x"]]
+
+
+def test_rename():
+    df = ArrayDataFrame([["a", 1]], "a:str,b:int")
+    df2 = df.rename(columns=dict(a="aa"))
+    df_eq(df2, [["a", 1]], "aa:str,b:int", throw=True)
+    df_eq(df, [["a", 1]], "a:str,b:int", throw=True)
 
 
 def test_as_array():

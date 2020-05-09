@@ -6,10 +6,12 @@ from fugue.dataframe import (
     IterableDataFrame,
     to_local_bounded_df,
 )
+from fugue.exceptions import FugueWorkflowError
 from fugue.execution import SQLEngine
 from fugue.processor import Processor
 from fugue.transformer import Transformer, to_transformer
 from triad.collections import ParamDict
+from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_instance, to_type
 from triad.utils.iter import EmptyAwareIterable
 
@@ -57,6 +59,30 @@ class RunSQLSelect(Processor):
         elif not isinstance(engine, SQLEngine):
             engine = to_instance(engine, SQLEngine, args=[self.execution_engine])
         return engine.select(dfs, statement)
+
+
+class Rename(Processor):
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        columns = self.params.get_or_throw("columns", dict)
+        return dfs[0].rename(columns)
+
+
+class DropColumns(Processor):
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        if_exists = self.params.get("if_exists", False)
+        columns = self.params.get_or_throw("columns", list)
+        if if_exists:
+            columns = set(columns).intersection(dfs[0].schema.keys())
+        return dfs[0].drop(list(columns))
+
+
+class SelectColumns(Processor):
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        columns = self.params.get_or_throw("columns", list)
+        return dfs[0][columns]
 
 
 class _TransformerRunner(object):

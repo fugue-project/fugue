@@ -1,4 +1,4 @@
-from typing import Any, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from fugue.dataframe.dataframe import (
     DataFrame,
@@ -53,6 +53,10 @@ class IterableDataFrame(LocalUnboundedDataFrame):
         if len(schema) == 0:
             raise InvalidOperationError("Can't remove all columns of a dataframe")
         return IterableDataFrame(self, schema)
+
+    def rename(self, columns: Dict[str, str]) -> "DataFrame":
+        schema = self.schema.rename(columns)
+        return IterableDataFrame(self.native, schema)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False

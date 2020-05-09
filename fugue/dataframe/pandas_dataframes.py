@@ -1,4 +1,4 @@
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 import pyarrow as pa
@@ -70,6 +70,11 @@ class PandasDataFrame(LocalBoundedDataFrame):
         if len(schema) == 0:
             raise InvalidOperationError("Can't remove all columns of a dataframe")
         return PandasDataFrame(self.native.drop(cols, axis=1), schema)
+
+    def rename(self, columns: Dict[str, str]) -> "DataFrame":
+        df = self.native.rename(columns=columns)
+        schema = self.schema.rename(columns)
+        return PandasDataFrame(df, schema)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
