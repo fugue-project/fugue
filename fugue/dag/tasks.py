@@ -1,6 +1,6 @@
 import copy
 from abc import ABC, abstractmethod
-from typing import Any, Dict, no_type_check
+from typing import Any, Dict, no_type_check, Optional, List
 
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
@@ -25,14 +25,22 @@ class FugueTask(TaskSpec, ABC):
         params: Any = None,
         deterministic: bool = True,
         lazy: bool = False,
+        input_names: Optional[List[str]] = None,
     ):
         assert_or_throw(
             output_n <= 1,  # TODO: for now we don't support multi output
             NotImplementedError("Fugue doesn't support multiple output tasks"),
         )
-        inputs = [
-            InputSpec("_" + str(i), DataFrame, nullable=False) for i in range(input_n)
-        ]
+        if input_names is None:
+            inputs = [
+                InputSpec("_" + str(i), DataFrame, nullable=False)
+                for i in range(input_n)
+            ]
+        else:
+            inputs = [
+                InputSpec(input_names[i], DataFrame, nullable=False)
+                for i in range(input_n)
+            ]
         outputs = [
             OutputSpec("_" + str(i), DataFrame, nullable=False) for i in range(output_n)
         ]
@@ -143,6 +151,7 @@ class Process(FugueTask):
         pre_partition: Any = None,
         deterministic: bool = True,
         lazy: bool = False,
+        input_names: Optional[List[str]] = None,
     ):
         self._processor = to_processor(processor, schema)
         self._processor._params = ParamDict(params)
@@ -155,6 +164,7 @@ class Process(FugueTask):
             output_n=1,
             deterministic=deterministic,
             lazy=lazy,
+            input_names=input_names,
         )
 
     @no_type_check
@@ -176,6 +186,7 @@ class Output(FugueTask):
         pre_partition: Any = None,
         deterministic: bool = True,
         lazy: bool = False,
+        input_names: Optional[List[str]] = None,
     ):
         assert_or_throw(input_n > 0, FugueWorkflowError("must have at least one input"))
         self._outputter = to_outputter(outputter)
@@ -188,6 +199,7 @@ class Output(FugueTask):
             input_n=input_n,
             deterministic=deterministic,
             lazy=lazy,
+            input_names=input_names,
         )
 
     @no_type_check

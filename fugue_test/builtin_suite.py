@@ -86,6 +86,7 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:long,y:long")
                 b = dag.df([[2, 20, 40], [3, 30, 90]], "x:long,y:long,z:long")
+                dag.select("* FROM", a).assert_eq(a)
                 dag.select("SELECT *,x*y AS z FROM", a, "WHERE x>=2").assert_eq(b)
 
                 c = ArrayDataFrame([[2, 20, 40], [3, 30, 90]], "x:long,y:long,zb:long")
@@ -124,6 +125,25 @@ class BuiltInTests(object):
 
                 # no input
                 dag.select("1 AS a").assert_eq(ArrayDataFrame([[1]], "a:long"))
+
+                # make sure transform -> select works
+                b = a.transform(mock_tf1)
+                a = a.transform(mock_tf1)
+                aa = dag.select("* FROM", a)
+                dag.select("* FROM", b).assert_eq(aa)
+
+        def test_col_ops(self):
+            with self.dag() as dag:
+                a = dag.df([[1, 10], [2, 20]], "x:long,y:long")
+                aa = dag.df([[1, 10], [2, 20]], "xx:long,y:long")
+                a.rename({"x": "xx"}).assert_eq(aa)
+                a[["x"]].assert_eq(ArrayDataFrame([[1], [2]], "x:long"))
+
+                a.drop(["y", "yy"], if_exists=True).assert_eq(
+                    ArrayDataFrame([[1], [2]], "x:long")
+                )
+
+                a[["x"]].rename(x="xx").assert_eq(ArrayDataFrame([[1], [2]], "xx:long"))
 
 
 class DagTester(FugueWorkflow):

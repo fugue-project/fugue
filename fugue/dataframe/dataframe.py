@@ -109,6 +109,14 @@ class DataFrame(ABC):
     def drop(self, cols: List[str]) -> "DataFrame":  # pragma: no cover
         raise NotImplementedError
 
+    @abstractmethod
+    def rename(self, columns: Dict[str, str]) -> "DataFrame":  # pragma: no cover
+        raise NotImplementedError
+
+    def __getitem__(self, keys: List[Any]) -> "DataFrame":
+        cols = list((self.schema - keys).keys())
+        return self.drop(cols)
+
     def show(
         self,
         n: int = 10,

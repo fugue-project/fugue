@@ -1,14 +1,15 @@
 import json
+import math
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 from fugue.dataframe import PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue.dataframe.utils import _df_eq as df_eq
 from pytest import raises
 from triad.collections.schema import Schema, SchemaError
 from triad.exceptions import InvalidOperationError
-import math
 
 
 def test_init():
@@ -96,6 +97,14 @@ def test_drop():
     raises(InvalidOperationError, lambda: df.drop(["b"]))  # can't be empty
     raises(InvalidOperationError, lambda: df.drop(["x"]))  # cols must exist
     assert [[1]] == df.as_pandas().values.tolist()
+
+
+def test_rename():
+    df = PandasDataFrame([["a", 1]], "a:str,b:int")
+    df2 = df.rename(columns=dict(a="aa"))
+    assert isinstance(df, PandasDataFrame)
+    df_eq(df2, [["a", 1]], "aa:str,b:int", throw=True)
+    df_eq(df, [["a", 1]], "a:str,b:int", throw=True)
 
 
 def test_as_array():
