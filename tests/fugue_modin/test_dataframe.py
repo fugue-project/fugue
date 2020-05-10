@@ -1,3 +1,6 @@
+import os
+os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
+
 from fugue.dataframe.pandas_dataframes import PandasDataFrame
 from triad.exceptions import InvalidOperationError
 from triad.collections.schema import Schema, SchemaError
@@ -11,8 +14,6 @@ import modin.pandas as pd
 from datetime import datetime
 import json
 import math
-import os
-os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
 
 
 def test_init():

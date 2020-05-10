@@ -1,3 +1,6 @@
+import os
+os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
+
 from fugue_modin.execution_engine import ModinExecutionEngine
 from fugue_test.execution_suite import ExecutionEngineTests
 from fugue_test.builtin_suite import BuiltInTests
