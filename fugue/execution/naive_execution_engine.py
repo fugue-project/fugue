@@ -22,8 +22,8 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
 )
 from sqlalchemy import create_engine
-from triad.collections import ParamDict, Schema
-from triad.utils.pandas_like import as_array_iterable, safe_groupby_apply
+from triad.collections import Schema
+from triad.utils.pandas_like import PD_UTILS
 
 
 class SqliteEngine(SQLEngine):
@@ -40,7 +40,7 @@ class SqliteEngine(SQLEngine):
 
 class NaiveExecutionEngine(ExecutionEngine):
     def __init__(self, conf: Any = None):
-        self._conf = ParamDict(conf)
+        super().__init__(conf)
         self._fs = OSFS("/")
         self._log = logging.getLogger()
         self._default_sql_engine = SqliteEngine(self)
@@ -68,7 +68,9 @@ class NaiveExecutionEngine(ExecutionEngine):
     ) -> LocalBoundedDataFrame:
         return to_local_bounded_df(df, schema, metadata)
 
-    def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
+    def repartition(
+        self, df: DataFrame, partition_spec: PartitionSpec
+    ) -> DataFrame:  # pragma: no cover
         self.log.warning(f"{self} doesn't respect repartition")
         return df
 
@@ -78,7 +80,7 @@ class NaiveExecutionEngine(ExecutionEngine):
         mapFunc: Callable[[int, Iterable[Any]], Iterable[Any]],
         output_schema: Any,
         partition_spec: PartitionSpec,
-    ) -> DataFrame:  # pragma: no cover
+    ) -> DataFrame:
         if partition_spec.num_partitions != "0":
             self.log.warning(
                 f"{self} doesn't respect num_partitions {partition_spec.num_partitions}"
@@ -98,11 +100,15 @@ class NaiveExecutionEngine(ExecutionEngine):
             if len(presort_keys) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             data = list(
-                mapFunc(0, as_array_iterable(pdf, type_safe=True, null_safe=False))
+                mapFunc(
+                    0, PD_UTILS.as_array_iterable(pdf, type_safe=True, null_safe=False)
+                )
             )
             return pd.DataFrame(data, columns=names)
 
-        result = safe_groupby_apply(df.as_pandas(), partition_spec.partition_by, _map)
+        result = PD_UTILS.safe_groupby_apply(
+            df.as_pandas(), partition_spec.partition_by, _map
+        )
         return PandasDataFrame(result, output_schema)
 
     # TODO: remove this

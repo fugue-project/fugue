@@ -157,6 +157,10 @@ class WorkflowDataFrame(DataFrame):
     def empty(self) -> bool:  # pragma: no cover
         raise NotImplementedError(f"WorkflowDataFrame does not support this method")
 
+    @property
+    def num_partitions(self) -> int:  # pragma: no cover
+        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+
     def peek_array(self) -> Any:  # pragma: no cover
         raise NotImplementedError(f"WorkflowDataFrame does not support this method")
 
@@ -284,11 +288,11 @@ class FugueWorkflow(object):
         self.output(*dfs, using=AssertEqual, params=params)
 
     def add(self, task: FugueTask, *args: Any, **kwargs: Any) -> WorkflowDataFrame:
-        task = task.copy()
+        assert_or_throw(task._node_spec is None, f"can't reuse {task}")
         dep = _Dependencies(self, task, {}, *args, **kwargs)
         name = "_" + str(len(self._spec.tasks))
-        self._spec.add_task(name, task, dep.dependency)
-        return WorkflowDataFrame(self, task)
+        wt = self._spec.add_task(name, task, dep.dependency)
+        return WorkflowDataFrame(self, wt)
 
     def _to_dfs(self, *args: Any, **kwargs: Any) -> DataFrames:
         return DataFrames(*args, **kwargs).convert(self.create_data)

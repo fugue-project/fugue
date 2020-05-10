@@ -1,5 +1,6 @@
 .
 .[modin]
+.[dask]
 
 # test requirements
 pre-commit

@@ -2,45 +2,49 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import dask.dataframe as pd
 import pandas
-import pyarrow as pa
 from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.dataframe import _input_schema
-from fugue_dask.utils import get_schema
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
-from triad.utils.pyarrow import apply_schema
-from triad.utils.pandas_like import enforce_type
+from fugue_dask.utils import DASK_UTILS
 
 
 class DaskDataFrame(DataFrame):
     def __init__(  # noqa: C901
-        self, df: Any = None, schema: Any = None, metadata: Any = None
+        self,
+        df: Any = None,
+        schema: Any = None,
+        metadata: Any = None,
+        num_partitions: int = 2,
+        type_safe=True,
     ):
         if df is None:
             schema = _input_schema(schema).assert_not_empty()
             df = []
-        if isinstance(df, (pd.DataFrame, pd.Series)):
+        if isinstance(df, DaskDataFrame):
+            super().__init__(df.schema, df.metadata)
+            self._native: pd.DataFrame = df._native
+            return
+        elif isinstance(df, (pd.DataFrame, pd.Series)):
             if isinstance(df, pd.Series):
                 df = df.to_frame()
-            pdf = pd.from_pandas()
+            pdf = df
             schema = None if schema is None else _input_schema(schema)
         elif isinstance(df, (pandas.DataFrame, pandas.Series)):
             if isinstance(df, pandas.Series):
                 df = df.to_frame()
-            pdf = pd.DataFrame(df)
+            pdf = pd.from_pandas(df, npartitions=num_partitions)
             schema = None if schema is None else _input_schema(schema)
         elif isinstance(df, Iterable):
             assert_arg_not_none(schema, msg=f"schema can't be None for iterable input")
             schema = _input_schema(schema).assert_not_empty()
-            pdf = pd.DataFrame(df, columns=schema.names)
-            pdf = enforce_type(pdf, schema.pa_schema, null_safe=True)
-            super().__init__(schema, metadata)
-            self._native = pdf
-            return
+            t = PandasDataFrame(df, schema)
+            pdf = pd.from_pandas(t.native, npartitions=num_partitions)
+            type_safe = False
         else:
             raise ValueError(f"{df} is incompatible with DaskDataFrame")
-        pdf, schema = self._apply_schema(pdf, schema)
+        pdf, schema = self._apply_schema(pdf, schema, type_safe)
         super().__init__(schema, metadata)
         self._native = pdf
 
@@ -61,16 +65,20 @@ class DaskDataFrame(DataFrame):
 
     @property
     def empty(self) -> bool:
-        return self.native.empty
+        return DASK_UTILS.empty(self.native)
+
+    @property
+    def num_partitions(self) -> int:  # pragma: no cover
+        return self.native.npartitions
 
     def peek_array(self) -> Any:
-        return self.native.iloc[0].values.tolist()
+        return self.as_pandas().iloc[0].values.tolist()
 
     def count(self, persist: bool = False) -> int:
-        return self.native.shape[0]
+        return self.as_pandas().shape[0]
 
     def as_pandas(self) -> pandas.DataFrame:
-        return self._native._to_pandas()
+        return self.native.compute().reset_index(drop=True)
 
     def drop(self, cols: List[str]) -> DataFrame:
         try:
@@ -79,12 +87,12 @@ class DaskDataFrame(DataFrame):
             raise InvalidOperationError(str(e))
         if len(schema) == 0:
             raise InvalidOperationError("Can't remove all columns of a dataframe")
-        return DaskDataFrame(self.native.drop(cols, axis=1), schema)
+        return DaskDataFrame(self.native.drop(cols, axis=1), schema, type_safe=False)
 
     def rename(self, columns: Dict[str, str]) -> "DataFrame":
         df = self.native.rename(columns=columns)
         schema = self.schema.rename(columns)
-        return DaskDataFrame(df, schema)
+        return DaskDataFrame(df, schema, type_safe=False)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
@@ -94,34 +102,21 @@ class DaskDataFrame(DataFrame):
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
-        if self._native.shape[0] == 0:
-            return
-        sub = self.schema if columns is None else self.schema.extract(columns)
-        df = self._native[sub.names]
-        if not type_safe or all(
-            not isinstance(x, (pa.StructType, pa.ListType)) for x in self.schema.types
-        ):
-            for arr in df.itertuples(index=False, name=None):
-                yield list(arr)
-        else:  # TODO: If schema has nested types, the conversion will be much slower
-            for arr in apply_schema(
-                self.schema.pa_schema,
-                df.itertuples(index=False, name=None),
-                copy=True,
-                deep=True,
-                str_as_json=True,
-            ):
-                yield arr
+        sub = None if columns is None else self.schema.extract(columns).pa_schema
+        return DASK_UTILS.as_array_iterable(
+            self.native.compute(), sub, type_safe=type_safe, null_safe=True
+        )
 
     def _apply_schema(
-        self, pdf: pd.DataFrame, schema: Optional[Schema]
+        self, pdf: pd.DataFrame, schema: Optional[Schema], type_safe: bool = True
     ) -> Tuple[pd.DataFrame, Schema]:
-        assert_or_throw(
-            pdf.empty or type(pdf.index) == pd.RangeIndex,
-            ValueError("Pandas datafame must have default index"),
-        )
+        if not type_safe:
+            assert_arg_not_none(pdf, "pdf")
+            assert_arg_not_none(schema, "schema")
+            return pdf, schema
+        DASK_UTILS.ensure_compatible(pdf)
         if pdf.columns.dtype == "object":  # pdf has named schema
-            pschema = get_schema(pdf)
+            pschema = Schema(DASK_UTILS.to_schema(pdf))
             if schema is None or pschema == schema:
                 return pdf, pschema.assert_not_empty()
             pdf = pdf[schema.assert_not_empty().names]
@@ -132,4 +127,4 @@ class DaskDataFrame(DataFrame):
                 ValueError(f"Pandas datafame column count doesn't match {schema}"),
             )
             pdf.columns = schema.names
-        return enforce_type(pdf, schema.pa_schema, null_safe=True), schema
+        return DASK_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True), schema

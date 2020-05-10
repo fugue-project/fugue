@@ -64,9 +64,10 @@ class DataFrame(ABC):
     # def apply_schema(self, schema: Any) -> None:  # pragma: no cover
     #    raise NotImplementedError
 
-    # @abstractmethod
-    # def num_partitions(self) -> int:  # pragma: no cover
-    #    raise NotImplementedError
+    @property
+    @abstractmethod
+    def num_partitions(self) -> int:  # pragma: no cover
+        raise NotImplementedError
 
     @property
     @abstractmethod
@@ -190,6 +191,10 @@ class LocalDataFrame(DataFrame):
 
     def as_local(self) -> "LocalDataFrame":
         return self
+
+    @property
+    def num_partitions(self) -> int:  # pragma: no cover
+        return 1
 
 
 class LocalBoundedDataFrame(LocalDataFrame):

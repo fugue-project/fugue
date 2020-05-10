@@ -33,24 +33,22 @@ class BuiltInTests(object):
 
         def test_create_show(self):
             with self.dag() as dag:
-                dag.df([[0]], "a:int").partition(num=2).show()
-                dag.df(ArrayDataFrame([[0]], "a:int")).persist().broadcast().show()
+                dag.df([[0]], "a:int").persist(123).partition(num=2).show()
+                dag.df(ArrayDataFrame([[0]], "a:int")).persist(456).broadcast().show()
 
         def test_transform(self):
             with self.dag() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:double,b:int", dict(x=1))
-                c = a.transform(MockTransform1)
-                dag.df(
-                    [[1, 2, 2, 1], [3, 4, 2, 1]], "a:double,b:int,ct:int,p:int"
-                ).assert_eq(c)
+                c = a.transform(mock_tf0)
+                dag.df([[1, 2, 1], [3, 4, 1]], "a:double,b:int,p:int").assert_eq(c)
 
                 a = dag.df(
                     [[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int", dict(x=1)
                 )
-                c = a.transform(MockTransform1, params=dict(p="10"))
+                c = a.transform(mock_tf0, params=dict(p="10"))
                 dag.df(
-                    [[1, 2, 4, 10], [None, 1, 4, 10], [3, 4, 4, 10], [None, 4, 4, 10]],
-                    "a:double,b:int,ct:int,p:int",
+                    [[1, 2, 10], [None, 1, 10], [3, 4, 10], [None, 4, 10]],
+                    "a:double,b:int,p:int",
                 ).assert_eq(c)
 
         def test_transform_by(self):
@@ -190,6 +188,12 @@ class MockTransform1(Transformer):
         pdf["p"] = self.params.get("p", 1)
         pdf["ct"] = pdf.shape[0]
         return PandasDataFrame(pdf, self.output_schema)
+
+
+@transformer("*,p:int")
+def mock_tf0(df: pd.DataFrame, p=1) -> pd.DataFrame:
+    df["p"] = p
+    return df
 
 
 @transformer("*,ct:int,p:int")

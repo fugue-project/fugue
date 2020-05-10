@@ -1,6 +1,7 @@
 import json
 
 from fugue.collections.partition import PartitionSpec
+from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
 from pytest import raises
 from triad.collections.schema import Schema
 
@@ -87,3 +88,19 @@ def test_partition_cursor():
     assert 5 == c.partition_no
     assert 2 == c.physical_partition_no
     assert 6 == c.slice_no
+
+
+def test_get_num_partitions():
+    p = PartitionSpec(dict(partition_by=["b", "a"]))
+    assert 0 == p.get_num_partitions()
+
+    p = PartitionSpec(dict(partition_by=["b", "a"], num=123))
+    assert 123 == p.get_num_partitions()
+
+    p = PartitionSpec(dict(partition_by=["b", "a"], num="(x + Y) * 2"))
+    assert 6 == p.get_num_partitions(x=lambda: 1, Y=lambda: 2)
+    raises(Exception, lambda: p.get_num_partitions(x=lambda: 1))
+
+    p = PartitionSpec(dict(partition_by=["b", "a"], num="min(ROWCOUNT,CORECOUNT)"))
+    assert 90 == p.get_num_partitions(
+        **{KEYWORD_ROWCOUNT: lambda: 100, KEYWORD_CORECOUNT: lambda: 90})

@@ -4,6 +4,7 @@ from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import ArrayDataFrame
 from fugue.execution.execution_engine import ExecutionEngine
 from fugue.dataframe.utils import _df_eq as df_eq
+import copy
 
 
 class ExecutionEngineTests(object):
@@ -23,7 +24,18 @@ class ExecutionEngineTests(object):
         def make_engine(self) -> ExecutionEngine:  # pragma: no cover
             raise NotImplementedError
 
+        def test_init(self):
+            print(self.engine)
+            assert self.engine.log is not None
+            assert self.engine.fs is not None
+            assert copy.copy(self.engine) is self.engine
+            assert copy.deepcopy(self.engine) is self.engine
+
         def test_map_partitions(self):
+            def noop(no, data):
+                for xx in data:
+                    yield xx
+
             def select_top(no, data):
                 for x in data:
                     yield x
@@ -33,8 +45,8 @@ class ExecutionEngineTests(object):
             a = e.to_df(
                 ArrayDataFrame([[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int")
             )
-            c = e.map_partitions(a, select_top, a.schema, PartitionSpec())
-            df_eq(c, [[1, 2]], "a:double,b:int", throw=True)
+            c = e.map_partitions(a, noop, a.schema, PartitionSpec())
+            df_eq(c, a, throw=True)
             c = e.map_partitions(
                 a, select_top, a.schema, PartitionSpec(partition_by=["a"])
             )
@@ -116,7 +128,7 @@ class ExecutionEngineTests(object):
                 c, [[1, "2", 6.0], [3, "4", None]], "a:int,b:str,c:double", throw=True
             )
             c = e.join(b, a, how="left_outer", keys=["a"])
-            assert c.native.values.tolist()[1][2] is None
+            assert c.as_pandas().values.tolist()[1][2] is None
             df_eq(
                 c, [[6.0, 1, "2"], [2.0, 7, None]], "c:double,a:int,b:str", throw=True
             )
@@ -124,7 +136,7 @@ class ExecutionEngineTests(object):
             a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
             b = e.to_df([["6", 1], ["2", 7]], "c:str,a:int")
             c = e.join(a, b, how="right_outer", keys=["a"])
-            assert c.native.values.tolist()[1][1] is None
+            assert c.as_pandas().values.tolist()[1][1] is None
             df_eq(c, [[1, "2", "6"], [7, None, "2"]], "a:int,b:str,c:str", throw=True)
 
             c = e.join(a, b, how="full_outer", keys=["a"])

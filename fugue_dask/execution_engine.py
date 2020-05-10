@@ -1,36 +1,37 @@
 import logging
 from typing import Any, Callable, Iterable, List
 
-import modin.pandas as pd
+import dask.dataframe as pd
 import pandas
 import pyarrow as pa
 from fs.base import FS as FileSystem
 from fs.osfs import OSFS
 from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import DataFrame, IterableDataFrame
+from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
+from fugue.dataframe import DataFrame
 from fugue.dataframe.pandas_dataframes import PandasDataFrame
-from fugue.dataframe.utils import get_join_schemas, to_local_df
+from fugue.dataframe.utils import get_join_schemas
 from fugue.execution import SqliteEngine
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
     ExecutionEngine,
     SQLEngine,
 )
-from fugue_modin.dataframe import ModinDataFrame
-from triad.collections import ParamDict, Schema
+from fugue_dask.dataframe import DaskDataFrame
+from fugue_dask.utils import DASK_UTILS
+from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
-from triad.utils.pandas_like import as_array_iterable, safe_groupby_apply
 
 
-class ModinExecutionEngine(ExecutionEngine):
+class DaskExecutionEngine(ExecutionEngine):
     def __init__(self, conf: Any = None):
-        self._conf = ParamDict(conf)
+        super().__init__(conf)
         self._fs = OSFS("/")
         self._log = logging.getLogger()
         self._default_sql_engine = SqliteEngine(self)
 
     def __repr__(self) -> str:
-        return "ModinExecutionEngine"
+        return "DaskExecutionEngine"
 
     @property
     def log(self) -> logging.Logger:
@@ -47,25 +48,40 @@ class ModinExecutionEngine(ExecutionEngine):
     def stop(self) -> None:  # pragma: no cover
         return
 
-    def to_df(
-        self, df: Any, schema: Any = None, metadata: Any = None
-    ) -> ModinDataFrame:
+    def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DaskDataFrame:
         if isinstance(df, DataFrame):
             assert_or_throw(
                 schema is None and metadata is None,
                 ValueError("schema and metadata must be None when df is a DataFrame"),
             )
-            if isinstance(df, ModinDataFrame):
+            if isinstance(df, DaskDataFrame):
                 return df
             if isinstance(df, PandasDataFrame):
-                return ModinDataFrame(df.native, df.schema, df.metadata)
-            return ModinDataFrame(df.as_array(type_safe=True), df.schema, df.metadata)
-        return ModinDataFrame(df, schema, metadata)
+                return DaskDataFrame(df.native, df.schema, df.metadata)
+            return DaskDataFrame(df.as_array(type_safe=True), df.schema, df.metadata)
+        return DaskDataFrame(df, schema, metadata)
 
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
-    ) -> DataFrame:  # pragma: no cover
-        self.log.warning(f"{self} doesn't respect repartition")
+    ) -> DaskDataFrame:
+        df = self.to_df(df)
+        if partition_spec.empty:
+            return df
+        if len(partition_spec.partition_by) > 0:
+            return df
+        p = partition_spec.get_num_partitions(
+            **{
+                KEYWORD_ROWCOUNT: lambda: df.count(persist=True),
+                KEYWORD_CORECOUNT: lambda: 2,
+            }
+        )
+        if p > 0:
+            return DaskDataFrame(
+                df.native.repartition(npartitions=p),
+                schema=df.schema,
+                metadata=df.metadata,
+                type_safe=False,
+            )
         return df
 
     def map_partitions(
@@ -74,17 +90,7 @@ class ModinExecutionEngine(ExecutionEngine):
         mapFunc: Callable[[int, Iterable[Any]], Iterable[Any]],
         output_schema: Any,
         partition_spec: PartitionSpec,
-    ) -> DataFrame:  # pragma: no cover
-        if partition_spec.num_partitions != "0":
-            self.log.warning(
-                f"{self} doesn't respect num_partitions {partition_spec.num_partitions}"
-            )
-        if len(partition_spec.partition_by) == 0:  # no partition
-            # TODO: is there a better way?
-            df = to_local_df(df)
-            return IterableDataFrame(
-                mapFunc(0, df.as_array_iterable(type_safe=True)), output_schema
-            )
+    ) -> DataFrame:
         presort = partition_spec.presort
         presort_keys = list(presort.keys())
         presort_asc = list(presort.values())
@@ -95,19 +101,29 @@ class ModinExecutionEngine(ExecutionEngine):
             if len(presort_keys) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             data = list(
-                mapFunc(0, as_array_iterable(pdf, type_safe=True, null_safe=False))
+                mapFunc(
+                    0,
+                    DASK_UTILS.as_array_iterable(pdf, type_safe=True, null_safe=False),
+                )
             )
             return pandas.DataFrame(data, columns=names)
 
         df = self.to_df(df)
-        result = safe_groupby_apply(df.native, partition_spec.partition_by, _map)
-        return ModinDataFrame(result, output_schema)
+        if len(partition_spec.partition_by) == 0:
+            pdf = self.repartition(df, partition_spec)
+            result = pdf.native.map_partitions(_map, meta=output_schema.pandas_dtype)
+        else:
+            result = DASK_UTILS.safe_groupby_apply(
+                df.native, partition_spec.partition_by, _map
+            )
+        return DaskDataFrame(result, output_schema)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)
 
     def persist(self, df: DataFrame, level: Any = None) -> DataFrame:
-        return self.to_df(df)
+        pdf = self.to_df(df).native.persist()
+        return DaskDataFrame(pdf, df.schema, type_safe=False)
 
     def join(
         self,
@@ -126,21 +142,21 @@ class ModinExecutionEngine(ExecutionEngine):
             d = d1.merge(d2, on=("__cross_join_index__")).drop(
                 "__cross_join_index__", axis=1
             )
-            return ModinDataFrame(d.reset_index(drop=True), output_schema)
+            return DaskDataFrame(d.reset_index(drop=True), output_schema)
         if how in ["semi", "leftsemi"]:
             d1 = self.to_df(df1).native
             d2 = self.to_df(df2).native[key_schema.names]
             d = d1.merge(d2, on=key_schema.names, how="inner")
-            return ModinDataFrame(d.reset_index(drop=True), output_schema)
+            return DaskDataFrame(d.reset_index(drop=True), output_schema)
         if how in ["anti", "leftanti"]:
             d1 = self.to_df(df1).native
             d2 = self.to_df(df2).native[key_schema.names]
-            if d1.empty or d2.empty:
+            if DASK_UTILS.empty(d1) or DASK_UTILS.empty(d2):
                 return df1
             d2["__anti_join_dummy__"] = 1.0
             d = d1.merge(d2, on=key_schema.names, how="left")
             d = d[d["__anti_join_dummy__"].isnull()]
-            return ModinDataFrame(
+            return DaskDataFrame(
                 d.drop(["__anti_join_dummy__"], axis=1).reset_index(drop=True),
                 output_schema,
             )
@@ -169,7 +185,7 @@ class ModinExecutionEngine(ExecutionEngine):
             d = self._fix_nan(
                 d, output_schema, df2.schema.exclude(list(df1.schema.keys())).keys()
             )
-        return ModinDataFrame(d.reset_index(drop=True), output_schema)
+        return DaskDataFrame(d.reset_index(drop=True), output_schema)
 
     def _validate_outer_joinable(self, schema: Schema, key_schema: Schema) -> None:
         # TODO: this is to prevent wrong behavior of pandas, we may not need it
@@ -183,10 +199,10 @@ class ModinExecutionEngine(ExecutionEngine):
     def _fix_nan(
         self, df: pd.DataFrame, schema: Schema, keys: Iterable[str]
     ) -> pd.DataFrame:
-        if df.empty:
+        if DASK_UTILS.empty(df):
             return df
         for key in keys:
             if pa.types.is_floating(schema[key].type):
                 continue
-            df[key] = df[key].where(pd.notna(df[key]), None)
+            df[key] = df[key].where(df[key].notnull(), None)
         return df

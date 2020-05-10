@@ -126,5 +126,5 @@ class Transformer(ABC):
 
 class MultiInputTransformer(object):
     @property
-    def partition_spec(self) -> PartitionSpec:
+    def partition_spec(self) -> PartitionSpec:  # pragma: no cover
         return self._partition_spec  # type: ignore
