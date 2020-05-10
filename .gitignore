@@ -133,3 +133,6 @@ tmp
 
 # Antlr
 .antlr
+
+# dask
+dask-worker-space
