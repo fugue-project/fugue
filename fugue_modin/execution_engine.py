@@ -1,44 +1,28 @@
 import logging
 from typing import Any, Callable, Iterable, List
 
-import pandas as pd
+import modin.pandas as pd
+import pandas
 import pyarrow as pa
 from fs.base import FS as FileSystem
 from fs.osfs import OSFS
 from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import (
-    ArrayDataFrame,
-    DataFrame,
-    DataFrames,
-    IterableDataFrame,
-    LocalBoundedDataFrame,
-    PandasDataFrame,
-    to_local_bounded_df,
-)
+from fugue.dataframe import DataFrame, IterableDataFrame
+from fugue.dataframe.pandas_dataframes import PandasDataFrame
 from fugue.dataframe.utils import get_join_schemas, to_local_df
+from fugue.execution import SqliteEngine
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
-    SQLEngine,
     ExecutionEngine,
+    SQLEngine,
 )
-from sqlalchemy import create_engine
+from fugue_modin.dataframe import ModinDataFrame
 from triad.collections import ParamDict, Schema
+from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import as_array_iterable, safe_groupby_apply
 
 
-class SqliteEngine(SQLEngine):
-    def __init__(self, execution_engine: ExecutionEngine) -> None:
-        return super().__init__(execution_engine)
-
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
-        sql_engine = create_engine("sqlite:///:memory:")
-        for k, v in dfs.items():
-            v.as_pandas().to_sql(k, sql_engine, if_exists="replace", index=False)
-        df = pd.read_sql_query(statement, sql_engine)
-        return PandasDataFrame(df)
-
-
-class NaiveExecutionEngine(ExecutionEngine):
+class ModinExecutionEngine(ExecutionEngine):
     def __init__(self, conf: Any = None):
         self._conf = ParamDict(conf)
         self._fs = OSFS("/")
@@ -46,7 +30,7 @@ class NaiveExecutionEngine(ExecutionEngine):
         self._default_sql_engine = SqliteEngine(self)
 
     def __repr__(self) -> str:
-        return "NaiveExecutionEngine"
+        return "ModinExecutionEngine"
 
     @property
     def log(self) -> logging.Logger:
@@ -65,10 +49,22 @@ class NaiveExecutionEngine(ExecutionEngine):
 
     def to_df(
         self, df: Any, schema: Any = None, metadata: Any = None
-    ) -> LocalBoundedDataFrame:
-        return to_local_bounded_df(df, schema, metadata)
+    ) -> ModinDataFrame:
+        if isinstance(df, DataFrame):
+            assert_or_throw(
+                schema is None and metadata is None,
+                ValueError("schema and metadata must be None when df is a DataFrame"),
+            )
+            if isinstance(df, ModinDataFrame):
+                return df
+            if isinstance(df, PandasDataFrame):
+                return ModinDataFrame(df.native, df.schema, df.metadata)
+            return ModinDataFrame(df.as_array(type_safe=True), df.schema, df.metadata)
+        return ModinDataFrame(df, schema, metadata)
 
-    def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
+    def repartition(
+        self, df: DataFrame, partition_spec: PartitionSpec
+    ) -> DataFrame:  # pragma: no cover
         self.log.warning(f"{self} doesn't respect repartition")
         return df
 
@@ -84,6 +80,7 @@ class NaiveExecutionEngine(ExecutionEngine):
                 f"{self} doesn't respect num_partitions {partition_spec.num_partitions}"
             )
         if len(partition_spec.partition_by) == 0:  # no partition
+            # TODO: is there a better way?
             df = to_local_df(df)
             return IterableDataFrame(
                 mapFunc(0, df.as_array_iterable(type_safe=True)), output_schema
@@ -100,45 +97,11 @@ class NaiveExecutionEngine(ExecutionEngine):
             data = list(
                 mapFunc(0, as_array_iterable(pdf, type_safe=True, null_safe=False))
             )
-            return pd.DataFrame(data, columns=names)
+            return pandas.DataFrame(data, columns=names)
 
-        result = safe_groupby_apply(df.as_pandas(), partition_spec.partition_by, _map)
-        return PandasDataFrame(result, output_schema)
-
-    # TODO: remove this
-    def _map_partitions(
-        self,
-        df: DataFrame,
-        mapFunc: Callable[[int, Iterable[Any]], Iterable[Any]],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-    ) -> DataFrame:  # pragma: no cover
-        df = to_local_df(df)
-        if partition_spec.num_partitions != "0":
-            self.log.warning(
-                f"{self} doesn't respect num_partitions {partition_spec.num_partitions}"
-            )
-        partitioner = partition_spec.get_partitioner(df.schema)
-        if len(partition_spec.partition_by) == 0:  # no partition
-            return IterableDataFrame(
-                mapFunc(0, df.as_array_iterable(type_safe=True)), output_schema
-            )
-        pdf = df.as_pandas()
-        sorts = partition_spec.get_sorts(df.schema)
-        if len(sorts) > 0:
-            pdf = pdf.sort_values(
-                list(sorts.keys()), ascending=list(sorts.values()), na_position="first"
-            ).reset_index(drop=True)
-        df = PandasDataFrame(pdf, df.schema)
-
-        def get_rows() -> Iterable[Any]:
-            for _, _, sub in partitioner.partition(
-                df.as_array_iterable(type_safe=True)
-            ):
-                for r in mapFunc(0, sub):
-                    yield r
-
-        return ArrayDataFrame(get_rows(), output_schema)
+        df = self.to_df(df)
+        result = safe_groupby_apply(df.native, partition_spec.partition_by, _map)
+        return ModinDataFrame(result, output_schema)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)
@@ -156,26 +119,28 @@ class NaiveExecutionEngine(ExecutionEngine):
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, keys=keys)
         how = how.lower().replace("_", "").replace(" ", "")
         if how == "cross":
-            d1 = df1.as_pandas()
-            d2 = df2.as_pandas()
+            d1 = self.to_df(df1).native
+            d2 = self.to_df(df2).native
             d1["__cross_join_index__"] = 1
             d2["__cross_join_index__"] = 1
             d = d1.merge(d2, on=("__cross_join_index__")).drop(
                 "__cross_join_index__", axis=1
             )
-            return PandasDataFrame(d.reset_index(drop=True), output_schema)
+            return ModinDataFrame(d.reset_index(drop=True), output_schema)
         if how in ["semi", "leftsemi"]:
-            d1 = df1.as_pandas()
-            d2 = df2.as_pandas()[key_schema.names]
+            d1 = self.to_df(df1).native
+            d2 = self.to_df(df2).native[key_schema.names]
             d = d1.merge(d2, on=key_schema.names, how="inner")
-            return PandasDataFrame(d.reset_index(drop=True), output_schema)
+            return ModinDataFrame(d.reset_index(drop=True), output_schema)
         if how in ["anti", "leftanti"]:
-            d1 = df1.as_pandas()
-            d2 = df2.as_pandas()[key_schema.names]
+            d1 = self.to_df(df1).native
+            d2 = self.to_df(df2).native[key_schema.names]
+            if d1.empty or d2.empty:
+                return df1
             d2["__anti_join_dummy__"] = 1.0
             d = d1.merge(d2, on=key_schema.names, how="left")
-            d = d[d.iloc[:, -1].isnull()]
-            return PandasDataFrame(
+            d = d[d["__anti_join_dummy__"].isnull()]
+            return ModinDataFrame(
                 d.drop(["__anti_join_dummy__"], axis=1).reset_index(drop=True),
                 output_schema,
             )
@@ -193,8 +158,8 @@ class NaiveExecutionEngine(ExecutionEngine):
             self._validate_outer_joinable(df1.schema, key_schema)
             self._validate_outer_joinable(df2.schema, key_schema)
             fix_left, fix_right = True, True
-        d1 = df1.as_pandas()
-        d2 = df2.as_pandas()
+        d1 = self.to_df(df1).native
+        d2 = self.to_df(df2).native
         d = d1.merge(d2, on=key_schema.names, how=how)
         if fix_left:
             d = self._fix_nan(
@@ -204,7 +169,7 @@ class NaiveExecutionEngine(ExecutionEngine):
             d = self._fix_nan(
                 d, output_schema, df2.schema.exclude(list(df1.schema.keys())).keys()
             )
-        return PandasDataFrame(d.reset_index(drop=True), output_schema)
+        return ModinDataFrame(d.reset_index(drop=True), output_schema)
 
     def _validate_outer_joinable(self, schema: Schema, key_schema: Schema) -> None:
         # TODO: this is to prevent wrong behavior of pandas, we may not need it
@@ -218,6 +183,8 @@ class NaiveExecutionEngine(ExecutionEngine):
     def _fix_nan(
         self, df: pd.DataFrame, schema: Schema, keys: Iterable[str]
     ) -> pd.DataFrame:
+        if df.empty:
+            return df
         for key in keys:
             if pa.types.is_floating(schema[key].type):
                 continue

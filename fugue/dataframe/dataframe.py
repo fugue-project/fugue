@@ -185,7 +185,7 @@ class LocalDataFrame(DataFrame):
         super().__init__(schema=schema, metadata=metadata)
 
     @property
-    def is_local(self):
+    def is_local(self) -> bool:
         return True
 
     def as_local(self) -> "LocalDataFrame":
@@ -197,7 +197,7 @@ class LocalBoundedDataFrame(LocalDataFrame):
         super().__init__(schema=schema, metadata=metadata)
 
     @property
-    def is_bounded(self):
+    def is_bounded(self) -> bool:
         return True
 
 

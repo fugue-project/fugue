@@ -27,7 +27,7 @@ class ExecutionEngineTests(object):
             def select_top(no, data):
                 for x in data:
                     yield x
-                    break
+                    return
 
             e = self.engine
             a = e.to_df(
@@ -116,9 +116,27 @@ class ExecutionEngineTests(object):
                 c, [[1, "2", 6.0], [3, "4", None]], "a:int,b:str,c:double", throw=True
             )
             c = e.join(b, a, how="left_outer", keys=["a"])
+            assert c.native.values.tolist()[1][2] is None
             df_eq(
                 c, [[6.0, 1, "2"], [2.0, 7, None]], "c:double,a:int,b:str", throw=True
             )
+
+            a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
+            b = e.to_df([["6", 1], ["2", 7]], "c:str,a:int")
+            c = e.join(a, b, how="right_outer", keys=["a"])
+            assert c.native.values.tolist()[1][1] is None
+            df_eq(c, [[1, "2", "6"], [7, None, "2"]], "a:int,b:str,c:str", throw=True)
+
+            c = e.join(a, b, how="full_outer", keys=["a"])
+            df_eq(
+                c,
+                [[1, "2", "6"], [3, "4", None], [7, None, "2"]],
+                "a:int,b:str,c:str",
+                throw=True,
+            )
+
+        def test__join_outer_pandas_incompatible(self):
+            e = self.engine
 
             a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
             b = e.to_df([["6", 1], ["2", 7]], "c:int,a:int")
@@ -134,19 +152,6 @@ class ExecutionEngineTests(object):
             c = e.join(b, a, how="left_outer", keys=["a"])
             df_eq(
                 c, [[True, 1, "2"], [False, 7, None]], "c:bool,a:int,b:str", throw=True
-            )
-
-            a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
-            b = e.to_df([["6", 1], ["2", 7]], "c:str,a:int")
-            c = e.join(a, b, how="right_outer", keys=["a"])
-            df_eq(c, [[1, "2", "6"], [7, None, "2"]], "a:int,b:str,c:str", throw=True)
-
-            c = e.join(a, b, how="full_outer", keys=["a"])
-            df_eq(
-                c,
-                [[1, "2", "6"], [3, "4", None], [7, None, "2"]],
-                "a:int,b:str,c:str",
-                throw=True,
             )
 
         def test__join_semi(self):

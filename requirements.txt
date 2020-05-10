@@ -1,4 +1,5 @@
 .
+.[modin]
 
 # test requirements
 pre-commit

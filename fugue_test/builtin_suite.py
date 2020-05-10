@@ -34,10 +34,16 @@ class BuiltInTests(object):
         def test_create_show(self):
             with self.dag() as dag:
                 dag.df([[0]], "a:int").partition(num=2).show()
-                dag.df(ArrayDataFrame([[0]], "a:int")).show()
+                dag.df(ArrayDataFrame([[0]], "a:int")).persist().broadcast().show()
 
         def test_transform(self):
             with self.dag() as dag:
+                a = dag.df([[1, 2], [3, 4]], "a:double,b:int", dict(x=1))
+                c = a.transform(MockTransform1)
+                dag.df(
+                    [[1, 2, 2, 1], [3, 4, 2, 1]], "a:double,b:int,ct:int,p:int"
+                ).assert_eq(c)
+
                 a = dag.df(
                     [[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int", dict(x=1)
                 )
@@ -47,6 +53,11 @@ class BuiltInTests(object):
                     "a:double,b:int,ct:int,p:int",
                 ).assert_eq(c)
 
+        def test_transform_by(self):
+            with self.dag() as dag:
+                a = dag.df(
+                    [[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int", dict(x=1)
+                )
                 c = a.transform(MockTransform1, partition={"by": ["a"]})
                 dag.df(
                     [[None, 1, 2, 1], [None, 4, 2, 1], [1, 2, 1, 1], [3, 4, 1, 1]],
@@ -67,7 +78,7 @@ class BuiltInTests(object):
                 )
                 dag.df([[1, 2], [3, 4]], "a:double,b:int").assert_eq(c)
 
-                c = a.partition(by="a", presort="b DESC").transform(
+                c = a.partition(by=["a"], presort="b DESC").transform(
                     mock_tf2_except, schema="*", ignore_errors=[NotImplementedError]
                 )
                 dag.df([[1, 2], [3, 4]], "a:double,b:int").assert_eq(c)

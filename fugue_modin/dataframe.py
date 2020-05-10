@@ -1,27 +1,26 @@
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-import pandas as pd
+import modin.pandas as pd
+import pandas
 import pyarrow as pa
-from fugue.dataframe.dataframe import (
-    DataFrame,
-    LocalBoundedDataFrame,
-    _enforce_type,
-    _input_schema,
-)
+from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
+from fugue.dataframe.dataframe import _input_schema
+from fugue_modin.utils import get_schema
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.pyarrow import apply_schema
+from triad.utils.pandas_like import enforce_type
 
 
-class PandasDataFrame(LocalBoundedDataFrame):
+class ModinDataFrame(DataFrame):
     def __init__(  # noqa: C901
         self, df: Any = None, schema: Any = None, metadata: Any = None
     ):
         if df is None:
             schema = _input_schema(schema).assert_not_empty()
             df = []
-        if isinstance(df, PandasDataFrame):
+        if isinstance(df, ModinDataFrame):
             # TODO: This is useless if in this way and wrong
             pdf = df.native
             schema = None
@@ -30,16 +29,21 @@ class PandasDataFrame(LocalBoundedDataFrame):
                 df = df.to_frame()
             pdf = df
             schema = None if schema is None else _input_schema(schema)
+        elif isinstance(df, (pandas.DataFrame, pandas.Series)):
+            if isinstance(df, pandas.Series):
+                df = df.to_frame()
+            pdf = pd.DataFrame(df)
+            schema = None if schema is None else _input_schema(schema)
         elif isinstance(df, Iterable):
             assert_arg_not_none(schema, msg=f"schema can't be None for iterable input")
             schema = _input_schema(schema).assert_not_empty()
             pdf = pd.DataFrame(df, columns=schema.names)
-            pdf = _enforce_type(pdf, schema)
+            pdf = enforce_type(pdf, schema.pa_schema, null_safe=True)
             super().__init__(schema, metadata)
             self._native = pdf
             return
         else:
-            raise ValueError(f"{df} is incompatible with PandasDataFrame")
+            raise ValueError(f"{df} is incompatible with ModinDataFrame")
         pdf, schema = self._apply_schema(pdf, schema)
         super().__init__(schema, metadata)
         self._native = pdf
@@ -47,6 +51,17 @@ class PandasDataFrame(LocalBoundedDataFrame):
     @property
     def native(self) -> pd.DataFrame:
         return self._native
+
+    @property
+    def is_local(self) -> bool:
+        return False
+
+    def as_local(self) -> LocalDataFrame:
+        return PandasDataFrame(self.as_pandas(), self.schema)
+
+    @property
+    def is_bounded(self) -> bool:
+        return True
 
     @property
     def empty(self) -> bool:
@@ -58,8 +73,8 @@ class PandasDataFrame(LocalBoundedDataFrame):
     def count(self, persist: bool = False) -> int:
         return self.native.shape[0]
 
-    def as_pandas(self) -> pd.DataFrame:
-        return self._native
+    def as_pandas(self) -> pandas.DataFrame:
+        return self._native._to_pandas()
 
     def drop(self, cols: List[str]) -> DataFrame:
         try:
@@ -68,12 +83,12 @@ class PandasDataFrame(LocalBoundedDataFrame):
             raise InvalidOperationError(str(e))
         if len(schema) == 0:
             raise InvalidOperationError("Can't remove all columns of a dataframe")
-        return PandasDataFrame(self.native.drop(cols, axis=1), schema)
+        return ModinDataFrame(self.native.drop(cols, axis=1), schema)
 
     def rename(self, columns: Dict[str, str]) -> "DataFrame":
         df = self.native.rename(columns=columns)
         schema = self.schema.rename(columns)
-        return PandasDataFrame(df, schema)
+        return ModinDataFrame(df, schema)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
@@ -110,7 +125,7 @@ class PandasDataFrame(LocalBoundedDataFrame):
             ValueError("Pandas datafame must have default index"),
         )
         if pdf.columns.dtype == "object":  # pdf has named schema
-            pschema = _input_schema(pdf)
+            pschema = get_schema(pdf)
             if schema is None or pschema == schema:
                 return pdf, pschema.assert_not_empty()
             pdf = pdf[schema.assert_not_empty().names]
@@ -121,4 +136,4 @@ class PandasDataFrame(LocalBoundedDataFrame):
                 ValueError(f"Pandas datafame column count doesn't match {schema}"),
             )
             pdf.columns = schema.names
-        return _enforce_type(pdf, schema), schema
+        return enforce_type(pdf, schema.pa_schema, null_safe=True), schema
