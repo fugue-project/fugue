@@ -59,6 +59,14 @@ class PartitionSpec(object):
     def num_partitions(self) -> str:
         return self._num_partitions
 
+    def get_num_partitions(self, **expr_map_funcs: Any) -> int:
+        expr = self.num_partitions
+        for k, v in expr_map_funcs.items():
+            if k in expr:
+                value = str(v())
+                expr = expr.replace(k, value)
+        return int(eval(expr))
+
     @property
     def algo(self) -> str:
         return self._algo

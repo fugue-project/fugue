@@ -64,9 +64,10 @@ class DataFrame(ABC):
     # def apply_schema(self, schema: Any) -> None:  # pragma: no cover
     #    raise NotImplementedError
 
-    # @abstractmethod
-    # def num_partitions(self) -> int:  # pragma: no cover
-    #    raise NotImplementedError
+    @property
+    @abstractmethod
+    def num_partitions(self) -> int:  # pragma: no cover
+        raise NotImplementedError
 
     @property
     @abstractmethod
@@ -185,11 +186,15 @@ class LocalDataFrame(DataFrame):
         super().__init__(schema=schema, metadata=metadata)
 
     @property
-    def is_local(self):
+    def is_local(self) -> bool:
         return True
 
     def as_local(self) -> "LocalDataFrame":
         return self
+
+    @property
+    def num_partitions(self) -> int:  # pragma: no cover
+        return 1
 
 
 class LocalBoundedDataFrame(LocalDataFrame):
@@ -197,7 +202,7 @@ class LocalBoundedDataFrame(LocalDataFrame):
         super().__init__(schema=schema, metadata=metadata)
 
     @property
-    def is_bounded(self):
+    def is_bounded(self) -> bool:
         return True
 
 

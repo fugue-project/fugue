@@ -1,6 +1,6 @@
 import copy
 from abc import ABC, abstractmethod
-from typing import Any, Dict, no_type_check, Optional, List
+from typing import Any, no_type_check, Optional, List
 
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
@@ -204,11 +204,4 @@ class Output(FugueTask):
 
     @no_type_check
     def execute(self, ctx: TaskContext) -> None:
-        dfs: Dict[str, DataFrame] = {}
-        for k, df in ctx.inputs.items():
-            if not self._outputter.pre_partition.empty:
-                df = self.execution_engine.repartition(
-                    df, self._outputter.pre_partition
-                )
-            dfs[k] = df
-        self._outputter.process(DataFrames(dfs))
+        self._outputter.process(DataFrames(ctx.inputs))

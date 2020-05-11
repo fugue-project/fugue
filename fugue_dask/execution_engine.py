@@ -1,44 +1,29 @@
 import logging
 from typing import Any, Callable, Iterable, List
 
-import pandas as pd
+import dask.dataframe as pd
+import pandas
 import pyarrow as pa
 from fs.base import FS as FileSystem
 from fs.osfs import OSFS
 from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import (
-    ArrayDataFrame,
-    DataFrame,
-    DataFrames,
-    IterableDataFrame,
-    LocalBoundedDataFrame,
-    PandasDataFrame,
-    to_local_bounded_df,
-)
-from fugue.dataframe.utils import get_join_schemas, to_local_df
+from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
+from fugue.dataframe import DataFrame
+from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from fugue.dataframe.utils import get_join_schemas
+from fugue.execution import SqliteEngine
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
-    SQLEngine,
     ExecutionEngine,
+    SQLEngine,
 )
-from sqlalchemy import create_engine
+from fugue_dask.dataframe import DaskDataFrame
+from fugue_dask.utils import DASK_UTILS
 from triad.collections import Schema
-from triad.utils.pandas_like import PD_UTILS
+from triad.utils.assertion import assert_or_throw
 
 
-class SqliteEngine(SQLEngine):
-    def __init__(self, execution_engine: ExecutionEngine) -> None:
-        return super().__init__(execution_engine)
-
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
-        sql_engine = create_engine("sqlite:///:memory:")
-        for k, v in dfs.items():
-            v.as_pandas().to_sql(k, sql_engine, if_exists="replace", index=False)
-        df = pd.read_sql_query(statement, sql_engine)
-        return PandasDataFrame(df)
-
-
-class NaiveExecutionEngine(ExecutionEngine):
+class DaskExecutionEngine(ExecutionEngine):
     def __init__(self, conf: Any = None):
         super().__init__(conf)
         self._fs = OSFS("/")
@@ -46,7 +31,7 @@ class NaiveExecutionEngine(ExecutionEngine):
         self._default_sql_engine = SqliteEngine(self)
 
     def __repr__(self) -> str:
-        return "NaiveExecutionEngine"
+        return "DaskExecutionEngine"
 
     @property
     def log(self) -> logging.Logger:
@@ -63,15 +48,40 @@ class NaiveExecutionEngine(ExecutionEngine):
     def stop(self) -> None:  # pragma: no cover
         return
 
-    def to_df(
-        self, df: Any, schema: Any = None, metadata: Any = None
-    ) -> LocalBoundedDataFrame:
-        return to_local_bounded_df(df, schema, metadata)
+    def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DaskDataFrame:
+        if isinstance(df, DataFrame):
+            assert_or_throw(
+                schema is None and metadata is None,
+                ValueError("schema and metadata must be None when df is a DataFrame"),
+            )
+            if isinstance(df, DaskDataFrame):
+                return df
+            if isinstance(df, PandasDataFrame):
+                return DaskDataFrame(df.native, df.schema, df.metadata)
+            return DaskDataFrame(df.as_array(type_safe=True), df.schema, df.metadata)
+        return DaskDataFrame(df, schema, metadata)
 
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
-    ) -> DataFrame:  # pragma: no cover
-        self.log.warning(f"{self} doesn't respect repartition")
+    ) -> DaskDataFrame:
+        df = self.to_df(df)
+        if partition_spec.empty:
+            return df
+        if len(partition_spec.partition_by) > 0:
+            return df
+        p = partition_spec.get_num_partitions(
+            **{
+                KEYWORD_ROWCOUNT: lambda: df.count(persist=True),
+                KEYWORD_CORECOUNT: lambda: 2,
+            }
+        )
+        if p > 0:
+            return DaskDataFrame(
+                df.native.repartition(npartitions=p),
+                schema=df.schema,
+                metadata=df.metadata,
+                type_safe=False,
+            )
         return df
 
     def map_partitions(
@@ -81,15 +91,6 @@ class NaiveExecutionEngine(ExecutionEngine):
         output_schema: Any,
         partition_spec: PartitionSpec,
     ) -> DataFrame:
-        if partition_spec.num_partitions != "0":
-            self.log.warning(
-                f"{self} doesn't respect num_partitions {partition_spec.num_partitions}"
-            )
-        if len(partition_spec.partition_by) == 0:  # no partition
-            df = to_local_df(df)
-            return IterableDataFrame(
-                mapFunc(0, df.as_array_iterable(type_safe=True)), output_schema
-            )
         presort = partition_spec.presort
         presort_keys = list(presort.keys())
         presort_asc = list(presort.values())
@@ -101,56 +102,28 @@ class NaiveExecutionEngine(ExecutionEngine):
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             data = list(
                 mapFunc(
-                    0, PD_UTILS.as_array_iterable(pdf, type_safe=True, null_safe=False)
+                    0,
+                    DASK_UTILS.as_array_iterable(pdf, type_safe=True, null_safe=False),
                 )
             )
-            return pd.DataFrame(data, columns=names)
+            return pandas.DataFrame(data, columns=names)
 
-        result = PD_UTILS.safe_groupby_apply(
-            df.as_pandas(), partition_spec.partition_by, _map
-        )
-        return PandasDataFrame(result, output_schema)
-
-    # TODO: remove this
-    def _map_partitions(
-        self,
-        df: DataFrame,
-        mapFunc: Callable[[int, Iterable[Any]], Iterable[Any]],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-    ) -> DataFrame:  # pragma: no cover
-        df = to_local_df(df)
-        if partition_spec.num_partitions != "0":
-            self.log.warning(
-                f"{self} doesn't respect num_partitions {partition_spec.num_partitions}"
+        df = self.to_df(df)
+        if len(partition_spec.partition_by) == 0:
+            pdf = self.repartition(df, partition_spec)
+            result = pdf.native.map_partitions(_map, meta=output_schema.pandas_dtype)
+        else:
+            result = DASK_UTILS.safe_groupby_apply(
+                df.native, partition_spec.partition_by, _map
             )
-        partitioner = partition_spec.get_partitioner(df.schema)
-        if len(partition_spec.partition_by) == 0:  # no partition
-            return IterableDataFrame(
-                mapFunc(0, df.as_array_iterable(type_safe=True)), output_schema
-            )
-        pdf = df.as_pandas()
-        sorts = partition_spec.get_sorts(df.schema)
-        if len(sorts) > 0:
-            pdf = pdf.sort_values(
-                list(sorts.keys()), ascending=list(sorts.values()), na_position="first"
-            ).reset_index(drop=True)
-        df = PandasDataFrame(pdf, df.schema)
-
-        def get_rows() -> Iterable[Any]:
-            for _, _, sub in partitioner.partition(
-                df.as_array_iterable(type_safe=True)
-            ):
-                for r in mapFunc(0, sub):
-                    yield r
-
-        return ArrayDataFrame(get_rows(), output_schema)
+        return DaskDataFrame(result, output_schema)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)
 
     def persist(self, df: DataFrame, level: Any = None) -> DataFrame:
-        return self.to_df(df)
+        pdf = self.to_df(df).native.persist()
+        return DaskDataFrame(pdf, df.schema, type_safe=False)
 
     def join(
         self,
@@ -162,26 +135,28 @@ class NaiveExecutionEngine(ExecutionEngine):
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, keys=keys)
         how = how.lower().replace("_", "").replace(" ", "")
         if how == "cross":
-            d1 = df1.as_pandas()
-            d2 = df2.as_pandas()
+            d1 = self.to_df(df1).native
+            d2 = self.to_df(df2).native
             d1["__cross_join_index__"] = 1
             d2["__cross_join_index__"] = 1
             d = d1.merge(d2, on=("__cross_join_index__")).drop(
                 "__cross_join_index__", axis=1
             )
-            return PandasDataFrame(d.reset_index(drop=True), output_schema)
+            return DaskDataFrame(d.reset_index(drop=True), output_schema)
         if how in ["semi", "leftsemi"]:
-            d1 = df1.as_pandas()
-            d2 = df2.as_pandas()[key_schema.names]
+            d1 = self.to_df(df1).native
+            d2 = self.to_df(df2).native[key_schema.names]
             d = d1.merge(d2, on=key_schema.names, how="inner")
-            return PandasDataFrame(d.reset_index(drop=True), output_schema)
+            return DaskDataFrame(d.reset_index(drop=True), output_schema)
         if how in ["anti", "leftanti"]:
-            d1 = df1.as_pandas()
-            d2 = df2.as_pandas()[key_schema.names]
+            d1 = self.to_df(df1).native
+            d2 = self.to_df(df2).native[key_schema.names]
+            if DASK_UTILS.empty(d1) or DASK_UTILS.empty(d2):
+                return df1
             d2["__anti_join_dummy__"] = 1.0
             d = d1.merge(d2, on=key_schema.names, how="left")
-            d = d[d.iloc[:, -1].isnull()]
-            return PandasDataFrame(
+            d = d[d["__anti_join_dummy__"].isnull()]
+            return DaskDataFrame(
                 d.drop(["__anti_join_dummy__"], axis=1).reset_index(drop=True),
                 output_schema,
             )
@@ -199,8 +174,8 @@ class NaiveExecutionEngine(ExecutionEngine):
             self._validate_outer_joinable(df1.schema, key_schema)
             self._validate_outer_joinable(df2.schema, key_schema)
             fix_left, fix_right = True, True
-        d1 = df1.as_pandas()
-        d2 = df2.as_pandas()
+        d1 = self.to_df(df1).native
+        d2 = self.to_df(df2).native
         d = d1.merge(d2, on=key_schema.names, how=how)
         if fix_left:
             d = self._fix_nan(
@@ -210,7 +185,7 @@ class NaiveExecutionEngine(ExecutionEngine):
             d = self._fix_nan(
                 d, output_schema, df2.schema.exclude(list(df1.schema.keys())).keys()
             )
-        return PandasDataFrame(d.reset_index(drop=True), output_schema)
+        return DaskDataFrame(d.reset_index(drop=True), output_schema)
 
     def _validate_outer_joinable(self, schema: Schema, key_schema: Schema) -> None:
         # TODO: this is to prevent wrong behavior of pandas, we may not need it
@@ -224,8 +199,10 @@ class NaiveExecutionEngine(ExecutionEngine):
     def _fix_nan(
         self, df: pd.DataFrame, schema: Schema, keys: Iterable[str]
     ) -> pd.DataFrame:
+        if DASK_UTILS.empty(df):
+            return df
         for key in keys:
             if pa.types.is_floating(schema[key].type):
                 continue
-            df[key] = df[key].where(pd.notna(df[key]), None)
+            df[key] = df[key].where(df[key].notnull(), None)
         return df
