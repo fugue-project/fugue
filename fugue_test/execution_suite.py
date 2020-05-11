@@ -48,7 +48,7 @@ class ExecutionEngineTests(object):
             c = e.map_partitions(a, noop, a.schema, PartitionSpec())
             df_eq(c, a, throw=True)
             c = e.map_partitions(
-                a, select_top, a.schema, PartitionSpec(partition_by=["a"])
+                a, select_top, a.schema, PartitionSpec(by=["a"], presort="b")
             )
             df_eq(c, [[None, 1], [1, 2], [3, 4]], "a:double,b:int", throw=True)
             c = e.map_partitions(
