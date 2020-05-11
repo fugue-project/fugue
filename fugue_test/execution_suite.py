@@ -43,7 +43,9 @@ class ExecutionEngineTests(object):
 
             e = self.engine
             a = e.to_df(
-                ArrayDataFrame([[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int")
+                ArrayDataFrame(
+                    [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
+                )
             )
             c = e.map_partitions(a, noop, a.schema, PartitionSpec())
             df_eq(c, a, throw=True)
