@@ -17,15 +17,18 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
-from fugue_dask.dataframe import DaskDataFrame
+from fugue_dask.dataframe import DEFAULT_CONFIG, DaskDataFrame
 from fugue_dask.utils import DASK_UTILS
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
+from triad.collections.dict import ParamDict
 
 
 class DaskExecutionEngine(ExecutionEngine):
     def __init__(self, conf: Any = None):
-        super().__init__(conf)
+        p = ParamDict(DEFAULT_CONFIG)
+        p.update(ParamDict(conf))
+        super().__init__(p)
         self._fs = OSFS("/")
         self._log = logging.getLogger()
         self._default_sql_engine = SqliteEngine(self)
@@ -49,6 +52,9 @@ class DaskExecutionEngine(ExecutionEngine):
         return
 
     def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DaskDataFrame:
+        default_partitions = self.conf.get_or_throw(
+            "fugue.dask.dataframe.default.partitions", int
+        )
         if isinstance(df, DataFrame):
             assert_or_throw(
                 schema is None and metadata is None,
@@ -57,9 +63,16 @@ class DaskExecutionEngine(ExecutionEngine):
             if isinstance(df, DaskDataFrame):
                 return df
             if isinstance(df, PandasDataFrame):
-                return DaskDataFrame(df.native, df.schema, df.metadata)
-            return DaskDataFrame(df.as_array(type_safe=True), df.schema, df.metadata)
-        return DaskDataFrame(df, schema, metadata)
+                return DaskDataFrame(
+                    df.native, df.schema, df.metadata, num_partitions=default_partitions
+                )
+            return DaskDataFrame(
+                df.as_array(type_safe=True),
+                df.schema,
+                df.metadata,
+                num_partitions=default_partitions,
+            )
+        return DaskDataFrame(df, schema, metadata, num_partitions=default_partitions)
 
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
@@ -71,8 +84,8 @@ class DaskExecutionEngine(ExecutionEngine):
             return df
         p = partition_spec.get_num_partitions(
             **{
-                KEYWORD_ROWCOUNT: lambda: df.count(persist=True),
-                KEYWORD_CORECOUNT: lambda: 2,
+                KEYWORD_ROWCOUNT: lambda: df.persist().count(),  # type: ignore
+                KEYWORD_CORECOUNT: lambda: 2,  # TODO: remove this hard code
             }
         )
         if p > 0:
@@ -114,7 +127,10 @@ class DaskExecutionEngine(ExecutionEngine):
             result = pdf.native.map_partitions(_map, meta=output_schema.pandas_dtype)
         else:
             result = DASK_UTILS.safe_groupby_apply(
-                df.native, partition_spec.partition_by, _map
+                df.native,
+                partition_spec.partition_by,
+                _map,
+                meta=output_schema.pandas_dtype,
             )
         return DaskDataFrame(result, output_schema)
 
@@ -122,8 +138,7 @@ class DaskExecutionEngine(ExecutionEngine):
         return self.to_df(df)
 
     def persist(self, df: DataFrame, level: Any = None) -> DataFrame:
-        pdf = self.to_df(df).native.persist()
-        return DaskDataFrame(pdf, df.schema, type_safe=False)
+        return self.to_df(df).persist()
 
     def join(
         self,
