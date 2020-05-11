@@ -126,6 +126,7 @@ class DaskExecutionEngine(ExecutionEngine):
             pdf = self.repartition(df, partition_spec)
             result = pdf.native.map_partitions(_map, meta=output_schema.pandas_dtype)
         else:
+            df = self.repartition(df, PartitionSpec(num=partition_spec.num_partitions))
             result = DASK_UTILS.safe_groupby_apply(
                 df.native,
                 partition_spec.partition_by,

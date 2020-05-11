@@ -33,8 +33,8 @@ class BuiltInTests(object):
 
         def test_create_show(self):
             with self.dag() as dag:
-                dag.df([[0]], "a:int").persist(123).partition(num=2).show()
-                dag.df(ArrayDataFrame([[0]], "a:int")).persist(456).broadcast().show()
+                dag.df([[0]], "a:int").persist().partition(num=2).show()
+                dag.df(ArrayDataFrame([[0]], "a:int")).persist().broadcast().show()
 
         def test_transform(self):
             with self.dag() as dag:
