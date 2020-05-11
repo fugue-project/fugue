@@ -67,6 +67,10 @@ class ModinDataFrame(DataFrame):
     def empty(self) -> bool:
         return self.native.empty
 
+    @property
+    def num_partitions(self) -> int:
+        raise NotImplementedError
+
     def peek_array(self) -> Any:
         return self.native.iloc[0].values.tolist()
 

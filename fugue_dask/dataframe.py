@@ -68,7 +68,7 @@ class DaskDataFrame(DataFrame):
         return DASK_UTILS.empty(self.native)
 
     @property
-    def num_partitions(self) -> int:  # pragma: no cover
+    def num_partitions(self) -> int:
         return self.native.npartitions
 
     def peek_array(self) -> Any:
