@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = "0.1.2"
+VERSION = "0.1.5"
 
 with open("README.md") as f:
     LONG_DESCRIPTION = f.read()
@@ -17,8 +17,11 @@ setup(
     author_email="goodwanghan@gmail.com",
     keywords="distributed spark sql",
     url="http://github.com/goodwanghan/fugue",
-    install_requires=["triad>=0.2.7", "adagio>=0.1.2", "fs", "sqlalchemy"],
-    extras_require={"modin": ["modin[ray]"], "dask": ["dask[dataframe]"]},
+    install_requires=["triad>=0.2.8", "adagio>=0.1.2", "fs", "sqlalchemy"],
+    extras_require={
+        "modin": ["modin[ray]"],
+        "dask": ["dask[dataframe]", "cloudpickle>1.4.0"],
+    },
     classifiers=[
         # "3 - Alpha", "4 - Beta" or "5 - Production/Stable"
         "Development Status :: 3 - Alpha",

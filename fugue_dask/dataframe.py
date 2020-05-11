@@ -8,6 +8,7 @@ from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from fugue_dask.utils import DASK_UTILS
+from fugue_dask.constants import DEFAULT_CONFIG
 
 
 class DaskDataFrame(DataFrame):
@@ -16,9 +17,13 @@ class DaskDataFrame(DataFrame):
         df: Any = None,
         schema: Any = None,
         metadata: Any = None,
-        num_partitions: int = 2,
+        num_partitions: int = 0,
         type_safe=True,
     ):
+        if num_partitions <= 0:
+            num_partitions = DEFAULT_CONFIG.get_or_throw(
+                "fugue.dask.dataframe.default.partitions", int
+            )
         if df is None:
             schema = _input_schema(schema).assert_not_empty()
             df = []
@@ -73,6 +78,10 @@ class DaskDataFrame(DataFrame):
 
     def peek_array(self) -> Any:
         return self.as_pandas().iloc[0].values.tolist()
+
+    def persist(self, **kwargs: Any) -> "DaskDataFrame":
+        self._native = self.native.persist(**kwargs)
+        return self
 
     def count(self, persist: bool = False) -> int:
         return self.as_pandas().shape[0]
