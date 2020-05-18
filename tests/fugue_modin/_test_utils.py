@@ -1,8 +1,11 @@
 import os
-os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
+import random
 
-from fugue_modin.utils import get_schema
 import modin.pandas as pd
+import numpy as np
+from fugue_modin.utils import get_schema
+
+os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
 
 
 def test_get_schema():

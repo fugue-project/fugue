@@ -11,6 +11,8 @@ pylint
 pytest
 pytest-cov
 pytest-mock
+sphinx
+sphinx-rtd-theme
 
 # publish to pypi
 wheel

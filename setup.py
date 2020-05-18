@@ -1,13 +1,13 @@
 from setuptools import setup, find_packages
+from fugue import __version__
 
-VERSION = "0.1.6"
 
 with open("README.md") as f:
     LONG_DESCRIPTION = f.read()
 
 setup(
     name="fugue",
-    version=VERSION,
+    version=__version__,
     packages=find_packages(),
     description="An abstraction layer for distributed computation",
     long_description=LONG_DESCRIPTION,
@@ -17,7 +17,7 @@ setup(
     author_email="goodwanghan@gmail.com",
     keywords="distributed spark sql",
     url="http://github.com/goodwanghan/fugue",
-    install_requires=["triad>=0.2.8", "adagio>=0.1.2", "fs", "sqlalchemy"],
+    install_requires=["triad>=0.3.1", "adagio>=0.1.2", "fs", "sqlalchemy"],
     extras_require={
         "modin": ["modin[ray]"],
         "dask": ["dask[dataframe]", "cloudpickle>1.4.0"],

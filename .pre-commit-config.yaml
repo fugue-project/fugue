@@ -1,7 +1,11 @@
 default_language_version:
     python: python3
 
-exclude: ^tests/
+exclude: |
+    (?x)(
+        ^tests/|
+        ^docs/
+    )
 repos:
     - repo: https://github.com/pre-commit/pre-commit-hooks
       rev: v2.5.0
