@@ -15,7 +15,7 @@ setup(
     license="MIT",
     author="Han Wang",
     author_email="goodwanghan@gmail.com",
-    keywords="distributed spark sql",
+    keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
     install_requires=["triad>=0.3.1", "adagio>=0.1.2", "fs", "sqlalchemy"],
     extras_require={

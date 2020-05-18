@@ -1,27 +1,27 @@
-fugue.builtins 
+fugue.extensions.builtins 
 ===============
 
 
-fugue.builtins.creators
+fugue.extensions.builtins.creators
 -----------------------
 
-.. automodule:: fugue.builtins.creators
+.. automodule:: fugue.extensions.builtins.creators
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.builtins.outputters
+fugue.extensions.builtins.outputters
 -------------------------
 
-.. automodule:: fugue.builtins.outputters
+.. automodule:: fugue.extensions.builtins.outputters
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.builtins.processors
+fugue.extensions.builtins.processors
 -------------------------
 
-.. automodule:: fugue.builtins.processors
+.. automodule:: fugue.extensions.builtins.processors
    :members:
    :undoc-members:
    :show-inheritance:

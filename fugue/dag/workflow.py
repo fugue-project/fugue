@@ -1,7 +1,7 @@
 from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 from adagio.specs import WorkflowSpec
-from fugue.builtins import (
+from fugue.extensions.builtins import (
     AssertEqual,
     CreateData,
     DropColumns,

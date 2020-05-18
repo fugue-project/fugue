@@ -1,19 +1,19 @@
-fugue.outputter 
+fugue.extensions.outputter 
 ================
 
 
-fugue.outputter.convert
+fugue.extensions.outputter.convert
 -----------------------
 
-.. automodule:: fugue.outputter.convert
+.. automodule:: fugue.extensions.outputter.convert
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.outputter.outputter
+fugue.extensions.outputter.outputter
 -------------------------
 
-.. automodule:: fugue.outputter.outputter
+.. automodule:: fugue.extensions.outputter.outputter
    :members:
    :undoc-members:
    :show-inheritance:

@@ -1,19 +1,19 @@
-fugue.transformer 
+fugue.extensions.transformer 
 ==================
 
 
-fugue.transformer.convert
+fugue.extensions.transformer.convert
 -------------------------
 
-.. automodule:: fugue.transformer.convert
+.. automodule:: fugue.extensions.transformer.convert
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.transformer.transformer
+fugue.extensions.transformer.transformer
 -----------------------------
 
-.. automodule:: fugue.transformer.transformer
+.. automodule:: fugue.extensions.transformer.transformer
    :members:
    :undoc-members:
    :show-inheritance:

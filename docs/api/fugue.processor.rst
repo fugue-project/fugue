@@ -1,19 +1,19 @@
-fugue.processor 
+fugue.extensions.processor 
 ================
 
 
-fugue.processor.convert
+fugue.extensions.processor.convert
 -----------------------
 
-.. automodule:: fugue.processor.convert
+.. automodule:: fugue.extensions.processor.convert
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.processor.processor
+fugue.extensions.processor.processor
 -------------------------
 
-.. automodule:: fugue.processor.processor
+.. automodule:: fugue.extensions.processor.processor
    :members:
    :undoc-members:
    :show-inheritance:

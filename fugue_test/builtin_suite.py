@@ -8,7 +8,7 @@ from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.execution import ExecutionEngine
 from fugue.execution.naive_execution_engine import SqliteEngine
-from fugue.transformer import Transformer, transformer
+from fugue.extensions.transformer import Transformer, transformer
 
 
 class BuiltInTests(object):

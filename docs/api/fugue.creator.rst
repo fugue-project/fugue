@@ -1,19 +1,19 @@
-fugue.creator 
+fugue.extensions.creator 
 ==============
 
 
-fugue.creator.convert
+fugue.extensions.creator.convert
 ---------------------
 
-.. automodule:: fugue.creator.convert
+.. automodule:: fugue.extensions.creator.convert
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.creator.creator
+fugue.extensions.creator.creator
 ---------------------
 
-.. automodule:: fugue.creator.creator
+.. automodule:: fugue.extensions.creator.creator
    :members:
    :undoc-members:
    :show-inheritance:
