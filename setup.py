@@ -16,11 +16,11 @@ setup(
     author="Han Wang",
     author_email="goodwanghan@gmail.com",
     keywords="distributed spark sql",
-    url="http://github.com/goodwanghan/fugue",
+    url="http://github.com/fugue-project/fugue",
     install_requires=["triad>=0.3.1", "adagio>=0.1.2", "fs", "sqlalchemy"],
     extras_require={
         "modin": ["modin[ray]"],
-        "dask": ["dask[dataframe]", "cloudpickle>1.4.0"],
+        "dask": ["dask[dataframe]", "cloudpickle>=1.4.0"],
     },
     classifiers=[
         # "3 - Alpha", "4 - Beta" or "5 - Production/Stable"
@@ -29,11 +29,10 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3 :: Only",
     ],
-    python_requires=">=3",
+    python_requires=">=3.6",
 )
