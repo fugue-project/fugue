@@ -80,6 +80,7 @@ class NaiveExecutionEngine(ExecutionEngine):
         mapFunc: Callable[[int, Iterable[Any]], Iterable[Any]],
         output_schema: Any,
         partition_spec: PartitionSpec,
+        metadata: Any = None,
     ) -> DataFrame:
         if partition_spec.num_partitions != "0":
             self.log.warning(
@@ -88,7 +89,9 @@ class NaiveExecutionEngine(ExecutionEngine):
         if len(partition_spec.partition_by) == 0:  # no partition
             df = to_local_df(df)
             return IterableDataFrame(
-                mapFunc(0, df.as_array_iterable(type_safe=True)), output_schema
+                mapFunc(0, df.as_array_iterable(type_safe=True)),
+                output_schema,
+                metadata,
             )
         presort = partition_spec.presort
         presort_keys = list(presort.keys())
@@ -109,7 +112,7 @@ class NaiveExecutionEngine(ExecutionEngine):
         result = PD_UTILS.safe_groupby_apply(
             df.as_pandas(), partition_spec.partition_by, _map
         )
-        return PandasDataFrame(result, output_schema)
+        return PandasDataFrame(result, output_schema, metadata)
 
     # TODO: remove this
     def _map_partitions(
@@ -157,9 +160,10 @@ class NaiveExecutionEngine(ExecutionEngine):
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        keys: List[str] = _DEFAULT_JOIN_KEYS,
+        on: List[str] = _DEFAULT_JOIN_KEYS,
+        metadata: Any = None,
     ) -> DataFrame:
-        key_schema, output_schema = get_join_schemas(df1, df2, how=how, keys=keys)
+        key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         how = how.lower().replace("_", "").replace(" ", "")
         if how == "cross":
             d1 = df1.as_pandas()
@@ -169,12 +173,12 @@ class NaiveExecutionEngine(ExecutionEngine):
             d = d1.merge(d2, on=("__cross_join_index__")).drop(
                 "__cross_join_index__", axis=1
             )
-            return PandasDataFrame(d.reset_index(drop=True), output_schema)
+            return PandasDataFrame(d.reset_index(drop=True), output_schema, metadata)
         if how in ["semi", "leftsemi"]:
             d1 = df1.as_pandas()
             d2 = df2.as_pandas()[key_schema.names]
             d = d1.merge(d2, on=key_schema.names, how="inner")
-            return PandasDataFrame(d.reset_index(drop=True), output_schema)
+            return PandasDataFrame(d.reset_index(drop=True), output_schema, metadata)
         if how in ["anti", "leftanti"]:
             d1 = df1.as_pandas()
             d2 = df2.as_pandas()[key_schema.names]
@@ -184,6 +188,7 @@ class NaiveExecutionEngine(ExecutionEngine):
             return PandasDataFrame(
                 d.drop(["__anti_join_dummy__"], axis=1).reset_index(drop=True),
                 output_schema,
+                metadata,
             )
         fix_left, fix_right = False, False
         if how in ["leftouter"]:
@@ -210,7 +215,7 @@ class NaiveExecutionEngine(ExecutionEngine):
             d = self._fix_nan(
                 d, output_schema, df2.schema.exclude(list(df1.schema.keys())).keys()
             )
-        return PandasDataFrame(d.reset_index(drop=True), output_schema)
+        return PandasDataFrame(d.reset_index(drop=True), output_schema, metadata)
 
     def _validate_outer_joinable(self, schema: Schema, key_schema: Schema) -> None:
         # TODO: this is to prevent wrong behavior of pandas, we may not need it

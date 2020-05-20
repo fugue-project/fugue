@@ -1,12 +1,20 @@
-from typing import Any, Iterable, List, Tuple
+import base64
+import json
+import pickle
+from typing import Any, Iterable, List, Optional, Tuple
 
 import pandas as pd
+from fs.base import FS as FileSystem
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, LocalDataFrame
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
 from fugue.dataframe.pandas_dataframes import PandasDataFrame
 from triad.collections import Schema
-from triad.utils.assertion import assert_arg_not_none, assert_or_throw as aot
+from triad.exceptions import InvalidOperationError
+from triad.utils.assertion import assert_arg_not_none
+from triad.utils.assertion import assert_or_throw as aot
+from fs import open_fs
+import os
 
 
 def _df_eq(
@@ -81,8 +89,74 @@ def to_local_bounded_df(
     return ArrayDataFrame(df.as_array(), df.schema, df.metadata)
 
 
+def pickle_df(df: DataFrame) -> bytes:
+    df = to_local_bounded_df(df)
+    o: List[Any] = [df.schema]
+    if isinstance(df, PandasDataFrame):
+        o.append("p")
+        o.append(df.native)
+    else:
+        o.append("a")
+        o.append(df.as_array())
+    return pickle.dumps(o)
+
+
+def serialize_df(
+    df: Optional[DataFrame],
+    threshold: int = -1,
+    file_path: Optional[str] = None,
+    fs: Optional[FileSystem] = None,
+) -> str:
+    if df is None:
+        return json.dumps(dict())
+    data = pickle_df(df)
+    size = len(data)
+    if threshold < 0 or size <= threshold:
+        res = dict(data=base64.b64encode(data).decode())
+    else:
+        if file_path is None:
+            raise InvalidOperationError("file_path is not provided")
+        if fs is None:
+            with open_fs(
+                os.path.dirname(file_path), writeable=True, create=False
+            ) as fs:
+                fs.writebytes(os.path.basename(file_path), data)
+        else:
+            fs.writebytes(file_path, data)
+        res = dict(path=file_path)
+    return json.dumps(res)
+
+
+def unpickle_df(stream: bytes) -> LocalBoundedDataFrame:
+    o = pickle.loads(stream)
+    schema = o[0]
+    if o[1] == "p":
+        return PandasDataFrame(o[2], schema)
+    if o[1] == "a":
+        return ArrayDataFrame(o[2], schema)
+    raise NotImplementedError(  # pragma: no cover
+        f"{o[1]} is not supported for unpickle"
+    )
+
+
+def deserialize_df(
+    json_str: str, fs: Optional[FileSystem] = None
+) -> Optional[LocalBoundedDataFrame]:
+    d = json.loads(json_str)
+    if len(d) == 0:
+        return None
+    if "data" in d:
+        return unpickle_df(base64.b64decode(d["data"].encode()))
+    elif "path" in d:
+        if fs is None:
+            with open_fs(os.path.dirname(d["path"]), create=False) as fs:
+                return unpickle_df(fs.readbytes(os.path.basename(d["path"])))
+        return unpickle_df(fs.readbytes(d["path"]))
+    raise ValueError(f"{json_str} is invalid")
+
+
 def get_join_schemas(
-    df1: DataFrame, df2: DataFrame, how: str, keys: Iterable[str]
+    df1: DataFrame, df2: DataFrame, how: str, on: Iterable[str]
 ) -> Tuple[Schema, Schema]:
     assert_arg_not_none(how, "how")
     how = how.lower()
@@ -101,8 +175,8 @@ def get_join_schemas(
         ],
         ValueError(f"{how} is not a valid join type"),
     )
-    keys = list(keys)
-    aot(len(keys) == len(set(keys)), f"{keys} has duplication")
+    on = list(on)
+    aot(len(on) == len(set(on)), f"{on} has duplication")
     schema2 = df2.schema
     aot(
         how != "outer",
@@ -111,17 +185,17 @@ def get_join_schemas(
         ),
     )
     if how in ["semi", "left_semi", "anti", "left_anti"]:
-        schema2 = schema2.extract(keys)
+        schema2 = schema2.extract(on)
     aot(
-        keys in df1.schema and keys in schema2,
-        KeyError(f"{keys} is not the intersection of {df1.schema} & {df2.schema}"),
+        on in df1.schema and on in schema2,
+        KeyError(f"{on} is not the intersection of {df1.schema} & {df2.schema}"),
     )
-    cm = df1.schema.intersect(keys)
+    cm = df1.schema.intersect(on)
     if how == "cross":
         aot(
             len(df1.schema.intersect(schema2)) == 0,
-            KeyError("can't specify keys for cross join"),
+            KeyError("can't specify on for cross join"),
         )
     else:
-        aot(len(keys) > 0, KeyError("keys must be specified"))
+        aot(len(on) > 0, KeyError("on must be specified"))
     return cm, (df1.schema.union(schema2))

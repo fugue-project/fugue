@@ -1,9 +1,9 @@
 fugue.extensions.outputter 
-================
+===========================
 
 
 fugue.extensions.outputter.convert
------------------------
+----------------------------------
 
 .. automodule:: fugue.extensions.outputter.convert
    :members:
@@ -11,7 +11,7 @@ fugue.extensions.outputter.convert
    :show-inheritance:
 
 fugue.extensions.outputter.outputter
--------------------------
+------------------------------------
 
 .. automodule:: fugue.extensions.outputter.outputter
    :members:

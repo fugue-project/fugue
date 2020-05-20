@@ -74,6 +74,7 @@ class ModinExecutionEngine(ExecutionEngine):
         mapFunc: Callable[[int, Iterable[Any]], Iterable[Any]],
         output_schema: Any,
         partition_spec: PartitionSpec,
+        metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
         if partition_spec.num_partitions != "0":
             self.log.warning(
@@ -114,9 +115,10 @@ class ModinExecutionEngine(ExecutionEngine):
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        keys: List[str] = _DEFAULT_JOIN_KEYS,
+        on: List[str] = _DEFAULT_JOIN_KEYS,
+        metadata: Any = None,
     ) -> DataFrame:
-        key_schema, output_schema = get_join_schemas(df1, df2, how=how, keys=keys)
+        key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         how = how.lower().replace("_", "").replace(" ", "")
         if how == "cross":
             d1 = self.to_df(df1).native

@@ -15,26 +15,22 @@ class PartitionSpec(object):
             if a is None:
                 continue
             elif isinstance(a, PartitionSpec):
-                p.update(a.jsondict)
+                self._update_dict(p, a.jsondict)
             elif isinstance(a, Dict):
-                p.update(a)
+                self._update_dict(p, a)
             elif isinstance(a, str):
-                p.update(json.loads(a))
+                self._update_dict(p, json.loads(a))
             else:
                 raise TypeError(f"{a} is not supported")
-        p.update(kwargs)
-        self._num_partitions = (
-            p.get("num_partitions", "0") if "num_partitions" in p else p.get("num", "0")
-        )
+        self._update_dict(p, kwargs)
+        self._num_partitions = p.get("num_partitions", "0")
         self._algo = p.get("algo", "").lower()
-        self._partition_by = (
-            p.get("partition_by", []) if "partition_by" in p else p.get("by", [])
-        )
+        self._partition_by = p.get("partition_by", [])
         aot(
             len(self._partition_by) == len(set(self._partition_by)),
             SyntaxError(f"{self._partition_by} has duplicated keys"),
         )
-        self._presort = self._parse_presort_exp(p.get("presort", ""))
+        self._presort = self._parse_presort_exp(p.get_or_none("presort", object))
         if any(x in self._presort for x in self._partition_by):
             raise SyntaxError(
                 "partition by overlap with presort: "
@@ -126,7 +122,13 @@ class PartitionSpec(object):
             size_limit=self._size_limit,
         )
 
-    def _parse_presort_exp(self, presort: str) -> IndexedOrderedDict[str, bool]:
+    def _parse_presort_exp(  # noqa: C901
+        self, presort: Any
+    ) -> IndexedOrderedDict[str, bool]:
+        if presort is None:
+            presort = ""
+        if not isinstance(presort, str):
+            return IndexedOrderedDict(presort)
         presort = presort.strip()
         res: IndexedOrderedDict[str, bool] = IndexedOrderedDict()
         if presort == "":
@@ -149,6 +151,17 @@ class PartitionSpec(object):
                 raise SyntaxError(f"Invalid expression {presort} duplicated key {key}")
             res[key] = value
         return res
+
+    def _update_dict(self, d: Dict[str, Any], u: Dict[str, Any]) -> None:
+        for k, v in u.items():
+            if k == "by":
+                k = "partition_by"
+            if k == "num":
+                k = "num_partitions"
+            d[k] = v
+
+
+EMPTY_PARTITION_SPEC = PartitionSpec()
 
 
 class PartitionCursor(object):
@@ -196,7 +209,7 @@ class PartitionCursor(object):
         return {self.row_schema.names[i]: self._row[i] for i in self._key_index}
 
     @property
-    def key_value_array(self) -> List[str]:
+    def key_value_array(self) -> List[Any]:
         return [self._row[i] for i in self._key_index]
 
     def __getitem__(self, key: str) -> Any:

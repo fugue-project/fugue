@@ -28,7 +28,7 @@ class DaskDataFrame(DataFrame):
             schema = _input_schema(schema).assert_not_empty()
             df = []
         if isinstance(df, DaskDataFrame):
-            super().__init__(df.schema, df.metadata)
+            super().__init__(df.schema, df.metadata if metadata is None else metadata)
             self._native: pd.DataFrame = df._native
             return
         elif isinstance(df, (pd.DataFrame, pd.Series)):
@@ -62,7 +62,7 @@ class DaskDataFrame(DataFrame):
         return False
 
     def as_local(self) -> LocalDataFrame:
-        return PandasDataFrame(self.as_pandas(), self.schema)
+        return PandasDataFrame(self.as_pandas(), self.schema, self.metadata)
 
     @property
     def is_bounded(self) -> bool:

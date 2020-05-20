@@ -6,7 +6,7 @@ from fugue.collections.partition import PartitionSpec
 
 class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
     def make_engine(self):
-        e = DaskExecutionEngine()
+        e = DaskExecutionEngine(dict(test=True))
         return e
 
     def test__join_outer_pandas_incompatible(self):
@@ -31,5 +31,5 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
 
 class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
     def make_engine(self):
-        e = DaskExecutionEngine()
+        e = DaskExecutionEngine(dict(test=True))
         return e

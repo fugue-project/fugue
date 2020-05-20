@@ -1,9 +1,9 @@
 fugue.extensions.builtins 
-===============
+==========================
 
 
 fugue.extensions.builtins.creators
------------------------
+----------------------------------
 
 .. automodule:: fugue.extensions.builtins.creators
    :members:
@@ -11,7 +11,7 @@ fugue.extensions.builtins.creators
    :show-inheritance:
 
 fugue.extensions.builtins.outputters
--------------------------
+------------------------------------
 
 .. automodule:: fugue.extensions.builtins.outputters
    :members:
@@ -19,7 +19,7 @@ fugue.extensions.builtins.outputters
    :show-inheritance:
 
 fugue.extensions.builtins.processors
--------------------------
+------------------------------------
 
 .. automodule:: fugue.extensions.builtins.processors
    :members:

@@ -103,6 +103,7 @@ class DaskExecutionEngine(ExecutionEngine):
         mapFunc: Callable[[int, Iterable[Any]], Iterable[Any]],
         output_schema: Any,
         partition_spec: PartitionSpec,
+        metadata: Any = None,
     ) -> DataFrame:
         presort = partition_spec.presort
         presort_keys = list(presort.keys())
@@ -133,7 +134,7 @@ class DaskExecutionEngine(ExecutionEngine):
                 _map,
                 meta=output_schema.pandas_dtype,
             )
-        return DaskDataFrame(result, output_schema)
+        return DaskDataFrame(result, output_schema, metadata)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)
@@ -146,9 +147,10 @@ class DaskExecutionEngine(ExecutionEngine):
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        keys: List[str] = _DEFAULT_JOIN_KEYS,
+        on: List[str] = _DEFAULT_JOIN_KEYS,
+        metadata: Any = None,
     ) -> DataFrame:
-        key_schema, output_schema = get_join_schemas(df1, df2, how=how, keys=keys)
+        key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         how = how.lower().replace("_", "").replace(" ", "")
         if how == "cross":
             d1 = self.to_df(df1).native
@@ -158,12 +160,12 @@ class DaskExecutionEngine(ExecutionEngine):
             d = d1.merge(d2, on=("__cross_join_index__")).drop(
                 "__cross_join_index__", axis=1
             )
-            return DaskDataFrame(d.reset_index(drop=True), output_schema)
+            return DaskDataFrame(d.reset_index(drop=True), output_schema, metadata)
         if how in ["semi", "leftsemi"]:
             d1 = self.to_df(df1).native
             d2 = self.to_df(df2).native[key_schema.names]
             d = d1.merge(d2, on=key_schema.names, how="inner")
-            return DaskDataFrame(d.reset_index(drop=True), output_schema)
+            return DaskDataFrame(d.reset_index(drop=True), output_schema, metadata)
         if how in ["anti", "leftanti"]:
             d1 = self.to_df(df1).native
             d2 = self.to_df(df2).native[key_schema.names]
@@ -175,6 +177,7 @@ class DaskExecutionEngine(ExecutionEngine):
             return DaskDataFrame(
                 d.drop(["__anti_join_dummy__"], axis=1).reset_index(drop=True),
                 output_schema,
+                metadata,
             )
         fix_left, fix_right = False, False
         if how in ["leftouter"]:
@@ -201,7 +204,7 @@ class DaskExecutionEngine(ExecutionEngine):
             d = self._fix_nan(
                 d, output_schema, df2.schema.exclude(list(df1.schema.keys())).keys()
             )
-        return DaskDataFrame(d.reset_index(drop=True), output_schema)
+        return DaskDataFrame(d.reset_index(drop=True), output_schema, metadata)
 
     def _validate_outer_joinable(self, schema: Schema, key_schema: Schema) -> None:
         # TODO: this is to prevent wrong behavior of pandas, we may not need it

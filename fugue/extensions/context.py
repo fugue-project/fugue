@@ -9,8 +9,10 @@ class ExtensionContext(object):
         return self._params  # type: ignore
 
     @property
-    def workflow_params(self) -> ParamDict:
-        return self._workflow_params  # type: ignore
+    def workflow_conf(self) -> ParamDict:
+        if "_workflow_conf" in self.__dict__:
+            return self._workflow_conf  # type: ignore
+        return self.execution_engine.conf
 
     @property
     def execution_engine(self) -> ExecutionEngine:

@@ -4,15 +4,11 @@ fugue
 .. toctree::
    :maxdepth: 4
 
-   fugue.extensions.builtins
    fugue.collections
-   fugue.extensions.creator
    fugue.dag
    fugue.dataframe
    fugue.execution
-   fugue.extensions.outputter
-   fugue.extensions.processor
-   fugue.extensions.transformer
+   fugue.extensions
    fugue.utils
 
 

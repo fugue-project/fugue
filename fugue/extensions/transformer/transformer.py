@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from fugue.dataframe import DataFrame, LocalDataFrame
+from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.extensions.context import ExtensionContext
 
 
@@ -40,7 +40,7 @@ class Transformer(ExtensionContext, ABC):
         :Notice:
         * This is the only in this interface running on driver
         * This is the only function in this interface that is facing the entire
-        DataFrame that is not necessarily local, for example a SparkDataFrame
+          DataFrame that is not necessarily local, for example a SparkDataFrame
         * Normally, you should not consumer this dataframe, and you should only use its
         schema and metadata
         * You can access all properties except for `cursor`
@@ -58,10 +58,10 @@ class Transformer(ExtensionContext, ABC):
 
         :Notice:
         * This call can be on a random machine (depending on the ExecutionEngine you
-        use), you should get the context from the properties of this class
+          use), you should get the context from the properties of this class
         * The input dataframe may be unbounded, but must be empty aware. That means you
-        must not consume the df by any means, and you can not count. However you can
-        safely peek the first row of the dataframe for multiple times.
+          must not consume the df by any means, and you can not count. However you can
+          safely peek the first row of the dataframe for multiple times.
         * The input dataframe is never empty. Empty dataframes are skipped
 
         :param df: entire dataframe of this physical partition
@@ -75,10 +75,10 @@ class Transformer(ExtensionContext, ABC):
 
         :Notice:
         * This call can be on a random machine (depending on the ExecutionEngine you
-        use), you should get the context from the properties of this class
+          use), you should get the context from the properties of this class
         * The input dataframe may be unbounded, but must be empty aware. That means you
-        must not consume the df by any means, and you can not count. However you can
-        safely peek the first row of the dataframe for multiple times.
+          must not consume the df by any means, and you can not count. However you can
+          safely peek the first row of the dataframe for multiple times.
         * The input dataframe is never empty. Empty dataframes are skipped
 
         :param df: first slice LocalDataFrame of this logical partition
@@ -90,10 +90,11 @@ class Transformer(ExtensionContext, ABC):
         """Custom logic to transform from one local dataframe to another local dataframe.
 
         :Notice:
+        * This function operates on slice level
         * This call can be on a random machine (depending on the ExecutionEngine you
-        use), you should get the context from the properties of this class
+          use), you should get the context from the properties of this class
         * The input dataframe may be unbounded, but must be empty aware. It's safe to
-        consume it for only once
+          consume it for only once
         * The input dataframe is never empty. Empty dataframes are skipped
 
         :param df: one slice of logical partition as LocalDataFrame to transform on
@@ -102,5 +103,73 @@ class Transformer(ExtensionContext, ABC):
         raise NotImplementedError
 
 
-class MultiInputTransformer(ExtensionContext):
-    pass
+class CoTransformer(ExtensionContext, ABC):
+    """The interface to process one physical partition of cogrouped dataframes on one
+    machine. A dataframe such as SparkDataFrame can be distributed. But this one is to
+    tell the system how to process each partition locally.
+
+    For partitioning levels, read
+    :func:`~fugue.extensions.transformer.transformer.Transformer`
+
+    To implement this class, you should not have __init__, please directly implement
+    the interface functions.
+
+    :Notice:
+    Before implementing this class, do you really need to implement this
+    interface? Do you know the interfaceless feature of Fugue? Commonly, if you don't
+    need to implement `init_physical_partition` and `init_logical_partition` and you
+    don't need to slice logcial partition (row_limit=0), you can choose the
+    interfaceless approach which may decouple your code from Fugue.
+    """
+
+    @abstractmethod
+    def get_output_schema(self, dfs: DataFrames) -> Any:  # pragma: no cover
+        """Generate the output schema on the driver side.
+
+        :Notice:
+        * This is the only in this interface running on driver
+        * Currently, `dfs` is a collection of empty dataframes with the correspondent
+          schemas
+        * Normally, you should not consumer this dataframe, and you should only use its
+          schema and metadata
+        * You can access all properties except for `cursor`
+
+        :param dfs: the collection of dataframes you are going to transform.
+        :return: Schema like object, should not be None or empty
+        """
+        return None
+
+    def init_physical_partition(self, dfs: DataFrames) -> None:  # pragma: no cover
+        """Initialize physical partition that contains one or multiple logical partitions.
+        You may put expensive initialization logic that is specific for this physical
+        partition here so you will not have to repeat that in `transform` function
+
+        :Notice:
+        * This call can be on a random machine (depending on the ExecutionEngine you
+          use), you should get the context from the properties of this class
+        * The input dataframes may be unbounded, but must be empty aware. That means you
+          must not consume the df by any means, and you can not count. However you can
+          safely peek the first row of the dataframe for multiple times.
+
+        :param dfs: the first cogrouped dataframes on this physical partition
+        """
+        pass
+
+    @abstractmethod
+    def transform(self, dfs: DataFrames) -> LocalDataFrame:  # pragma: no cover
+        """Custom logic to transform from one local dataframe to another local dataframe.
+
+        :Notice:
+        * This function operates on logical partition level, it is different from
+          :func:`~fugue.extensions.transformer.transformer.Transformer.transform`
+        * This call can be on a random machine (depending on the ExecutionEngine you
+          use), you should get the context from the properties of this class
+        * The input dataframe may be unbounded, but must be empty aware. It's safe to
+          consume it for only once
+        * `dfs` may not include all dataframes, because in a outter joined cogroup,
+          there can be NULL dataframes, and they will not appear in dfs.
+
+        :param dfs: one cogrouped dataframes to transform on
+        :return: new LocalDataFrame
+        """
+        raise NotImplementedError

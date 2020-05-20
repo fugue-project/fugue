@@ -8,4 +8,5 @@ from fugue.extensions.builtins.processors import (
     Rename,
     DropColumns,
     SelectColumns,
+    Zip,
 )

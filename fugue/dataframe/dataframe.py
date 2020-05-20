@@ -22,7 +22,12 @@ class DataFrame(ABC):
         else:
             self._schema: Union[Schema, Callable[[], Schema]] = schema  # type: ignore
             self._schema_discovered = False
-        self._metadata = ParamDict(metadata, deep=True)
+        self._metadata = (
+            metadata
+            if isinstance(metadata, ParamDict)
+            else ParamDict(metadata, deep=True)
+        )
+        self._metadata.set_readonly
         self._lazy_schema_lock = RLock()
 
     @property
