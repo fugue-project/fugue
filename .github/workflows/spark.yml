@@ -21,8 +21,6 @@ jobs:
     - uses: olafurpg/setup-scala@v5
     - name: Install spark
       run: |
-        apt-get update
-        apt-get install -y wget
         wget http://mirror.reverse.net/pub/apache/spark/spark-2.4.5/spark-2.4.5-bin-hadoop2.7.tgz -O spark.tgz
         mkdir -p /opt/spark
         tar -xvf spark.tgz -C /opt/spark --strip-components 1
