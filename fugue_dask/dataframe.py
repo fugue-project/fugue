@@ -42,7 +42,7 @@ class DaskDataFrame(DataFrame):
             pdf = pd.from_pandas(df, npartitions=num_partitions)
             schema = None if schema is None else _input_schema(schema)
         elif isinstance(df, Iterable):
-            assert_arg_not_none(schema, msg=f"schema can't be None for iterable input")
+            assert_arg_not_none(schema, msg="schema can't be None for iterable input")
             schema = _input_schema(schema).assert_not_empty()
             t = PandasDataFrame(df, schema)
             pdf = pd.from_pandas(t.native, npartitions=num_partitions)
