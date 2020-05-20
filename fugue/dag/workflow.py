@@ -157,18 +157,18 @@ class WorkflowDataFrame(DataFrame):
 
     @property
     def schema(self) -> Schema:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     @property
     def is_local(self) -> bool:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def as_local(self) -> DataFrame:  # type: ignore  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     @property
     def is_bounded(self) -> bool:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     @property
     def empty(self) -> bool:  # pragma: no cover
