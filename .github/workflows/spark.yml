@@ -1,7 +1,7 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: Test
+name: Lint
 
 on:
   push:
@@ -14,15 +14,22 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.8]
 
     steps:
     - uses: actions/checkout@v2
+    - uses: olafurpg/setup-scala@v5
+    - name: Install spark
+      run: |
+        apt-get update
+        apt-get install -y wget
+        wget http://mirror.reverse.net/pub/apache/spark/spark-2.4.5/spark-2.4.5-bin-hadoop2.7.tgz -O spark.tgz
+        mkdir -p /opt/spark
+        tar -xvf spark.tgz -C /opt/spark --strip-components 1
+        ls /opt/spark
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: make devenv
-    - name: Test
-      run: make test
