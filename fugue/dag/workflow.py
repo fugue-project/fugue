@@ -172,27 +172,27 @@ class WorkflowDataFrame(DataFrame):
 
     @property
     def empty(self) -> bool:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     @property
     def num_partitions(self) -> int:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def peek_array(self) -> Any:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def count(self, persist: bool = False) -> int:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
 
 class FugueWorkflow(object):

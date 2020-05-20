@@ -98,7 +98,7 @@ def _parse_function(
 def _parse_param(  # noqa: C901
     annotation: Any, param: Optional[inspect.Parameter], none_as_other: bool = True
 ) -> "_FuncParam":
-    if annotation is type(None):  # noqa: E701
+    if annotation is type(None):  # noqa: E721
         return _NoneParam(param)
     if annotation == inspect.Parameter.empty:
         if param is not None and param.kind == param.VAR_POSITIONAL:
