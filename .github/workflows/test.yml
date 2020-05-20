@@ -23,8 +23,13 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Show
-      run: export
+    - name: Install spark
+      run: |
+        apt-get install -y wget
+        wget http://mirror.reverse.net/pub/apache/spark/spark-2.4.5/spark-2.4.5-bin-hadoop2.7.tgz -O /tmp/spark.tgz
+        mkdir -p /opt/spark
+        tar -xvf /tmp/spark-dist.tgz -C /opt/spark --strip-components 1
+        ls /opt/spark
     - name: Install dependencies
       run: make devenv
     - name: Test
