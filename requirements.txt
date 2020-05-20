@@ -1,4 +1,5 @@
 .
+.[spark]
 .[modin]
 .[dask]
 

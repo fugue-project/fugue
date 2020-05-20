@@ -19,6 +19,7 @@ setup(
     url="http://github.com/fugue-project/fugue",
     install_requires=["triad>=0.3.1", "adagio>=0.1.2", "fs", "sqlalchemy"],
     extras_require={
+        "spark": ["pyspark"],
         "modin": ["modin[ray]"],
         "dask": ["dask[dataframe]", "cloudpickle>=1.4.0"],
     },
