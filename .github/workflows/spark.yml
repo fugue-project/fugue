@@ -31,3 +31,5 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: make devenv
+    - name: Test
+      run: make test
