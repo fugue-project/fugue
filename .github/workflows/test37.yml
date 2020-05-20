@@ -1,7 +1,7 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: Spark
+name: Test 3.7
 
 on:
   push:
@@ -18,7 +18,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - uses: olafurpg/setup-scala@v5
     - name: Install spark
       run: |
         wget http://mirror.reverse.net/pub/apache/spark/spark-2.4.5/spark-2.4.5-bin-hadoop2.7.tgz -O spark.tgz
