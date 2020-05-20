@@ -43,7 +43,7 @@ class DataFrames(IndexedOrderedDict[str, DataFrame]):
         assert isinstance(key, str)
         assert_or_throw(
             len(self) == 0 or self.has_key,
-            InvalidOperationError(f"this DataFrames can's have key"),
+            InvalidOperationError("this DataFrames can's have key"),
         )
         assert_or_throw(
             isinstance(value, DataFrame), ValueError(f"{key} has non DataFrame value")
@@ -66,7 +66,7 @@ class DataFrames(IndexedOrderedDict[str, DataFrame]):
 
     def _append(self, value: Any):
         assert_or_throw(
-            not self.has_key, InvalidOperationError(f"this DataFrames must have key")
+            not self.has_key, InvalidOperationError("this DataFrames must have key")
         )
         assert_or_throw(
             isinstance(value, DataFrame), ValueError(f"{value} is not a DataFrame")

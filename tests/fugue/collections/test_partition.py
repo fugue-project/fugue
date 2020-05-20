@@ -72,6 +72,22 @@ def test_partition_spec():
     p = PartitionSpec(dict(partition_by=["e", "a"], presort="d asc"))
     assert p.get_key_schema(Schema("a:int,b:int,d:int,e:int")) == "e:int,a:int"
 
+    # modification
+    a = PartitionSpec(by=["a", "b"])
+    b = PartitionSpec(a, by=["a"], num=2)
+    assert ["a", "b"] == a.partition_by
+    assert '0' == a.num_partitions
+    assert ["a"] == b.partition_by
+    assert '2' == b.num_partitions
+
+    a = PartitionSpec(by=["a"], presort="b DESC, c")
+    b = PartitionSpec(by=["a"], presort="c,b DESC")
+    assert a.presort != b.presort
+    c = PartitionSpec(b, presort=a.presort)
+    assert a.presort == c.presort
+    c = PartitionSpec(b, presort=[("b", False), ("c", True)])
+    assert a.presort == c.presort
+
 
 def test_partition_cursor():
     p = PartitionSpec(dict(partition_by=["b", "a"]))

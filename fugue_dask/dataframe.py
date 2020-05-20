@@ -28,7 +28,7 @@ class DaskDataFrame(DataFrame):
             schema = _input_schema(schema).assert_not_empty()
             df = []
         if isinstance(df, DaskDataFrame):
-            super().__init__(df.schema, df.metadata)
+            super().__init__(df.schema, df.metadata if metadata is None else metadata)
             self._native: pd.DataFrame = df._native
             return
         elif isinstance(df, (pd.DataFrame, pd.Series)):
@@ -42,7 +42,7 @@ class DaskDataFrame(DataFrame):
             pdf = pd.from_pandas(df, npartitions=num_partitions)
             schema = None if schema is None else _input_schema(schema)
         elif isinstance(df, Iterable):
-            assert_arg_not_none(schema, msg=f"schema can't be None for iterable input")
+            assert_arg_not_none(schema, msg="schema can't be None for iterable input")
             schema = _input_schema(schema).assert_not_empty()
             t = PandasDataFrame(df, schema)
             pdf = pd.from_pandas(t.native, npartitions=num_partitions)
@@ -62,7 +62,7 @@ class DaskDataFrame(DataFrame):
         return False
 
     def as_local(self) -> LocalDataFrame:
-        return PandasDataFrame(self.as_pandas(), self.schema)
+        return PandasDataFrame(self.as_pandas(), self.schema, self.metadata)
 
     @property
     def is_bounded(self) -> bool:

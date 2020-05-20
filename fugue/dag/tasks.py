@@ -5,12 +5,12 @@ from typing import Any, no_type_check, Optional, List
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
 from fugue.collections.partition import PartitionSpec
-from fugue.creator.convert import to_creator
+from fugue.extensions.creator.convert import to_creator
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution import ExecutionEngine
-from fugue.outputter.convert import to_outputter
-from fugue.processor.convert import to_processor
+from fugue.extensions.outputter.convert import to_outputter
+from fugue.extensions.processor.convert import to_processor
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
 
@@ -44,6 +44,7 @@ class FugueTask(TaskSpec, ABC):
         outputs = [
             OutputSpec("_" + str(i), DataFrame, nullable=False) for i in range(output_n)
         ]
+        self._input_has_key = input_names is not None
         self._execution_engine = execution_engine
         super().__init__(
             configs=configs,
@@ -155,7 +156,7 @@ class Process(FugueTask):
     ):
         self._processor = to_processor(processor, schema)
         self._processor._params = ParamDict(params)
-        self._processor._pre_partition = PartitionSpec(pre_partition)
+        self._processor._partition_spec = PartitionSpec(pre_partition)
         self._processor._execution_engine = execution_engine
         super().__init__(
             execution_engine,
@@ -169,7 +170,10 @@ class Process(FugueTask):
 
     @no_type_check
     def execute(self, ctx: TaskContext) -> None:
-        df = self._processor.process(DataFrames(ctx.inputs))
+        if self._input_has_key:
+            df = self._processor.process(DataFrames(ctx.inputs))
+        else:
+            df = self._processor.process(DataFrames(ctx.inputs.values()))
         df = self.handle_persist(df)
         df = self.handle_broadcast(df)
         ctx.outputs["_0"] = df
@@ -191,7 +195,7 @@ class Output(FugueTask):
         assert_or_throw(input_n > 0, FugueWorkflowError("must have at least one input"))
         self._outputter = to_outputter(outputter)
         self._outputter._params = ParamDict(params)
-        self._outputter._pre_partition = PartitionSpec(pre_partition)
+        self._outputter._partition_spec = PartitionSpec(pre_partition)
         self._outputter._execution_engine = execution_engine
         super().__init__(
             execution_engine,
@@ -204,4 +208,7 @@ class Output(FugueTask):
 
     @no_type_check
     def execute(self, ctx: TaskContext) -> None:
-        self._outputter.process(DataFrames(ctx.inputs))
+        if self._input_has_key:
+            self._outputter.process(DataFrames(ctx.inputs))
+        else:
+            self._outputter.process(DataFrames(ctx.inputs.values()))

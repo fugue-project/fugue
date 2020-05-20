@@ -1,7 +1,11 @@
 default_language_version:
     python: python3
 
-exclude: ^tests/
+exclude: |
+    (?x)(
+        ^tests/|
+        ^docs/
+    )
 repos:
     - repo: https://github.com/pre-commit/pre-commit-hooks
       rev: v2.5.0
@@ -16,6 +20,9 @@ repos:
           - id: end-of-file-fixer
           - id: trailing-whitespace
           - id: check-vcs-permalinks
+    - repo: https://gitlab.com/pycqa/flake8
+      rev: '3.7.9'
+      hooks:
           - id: flake8
             types: [python]
             additional_dependencies:

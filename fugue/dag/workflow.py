@@ -1,7 +1,12 @@
 from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 from adagio.specs import WorkflowSpec
-from fugue.builtins import (
+from fugue.collections.partition import PartitionSpec
+from fugue.dag.tasks import Create, FugueTask, Output, Process
+from fugue.dataframe import DataFrame
+from fugue.dataframe.dataframes import DataFrames
+from fugue.execution.execution_engine import ExecutionEngine
+from fugue.extensions.builtins import (
     AssertEqual,
     CreateData,
     DropColumns,
@@ -11,12 +16,8 @@ from fugue.builtins import (
     RunTransformer,
     SelectColumns,
     Show,
+    Zip,
 )
-from fugue.collections.partition import PartitionSpec
-from fugue.dag.tasks import Create, FugueTask, Output, Process
-from fugue.dataframe import DataFrame
-from fugue.dataframe.dataframes import DataFrames
-from fugue.execution.execution_engine import ExecutionEngine
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 
@@ -76,24 +77,20 @@ class WorkflowDataFrame(DataFrame):
     ) -> TDF:
         if partition is None:
             partition = self._metadata.get("pre_partition", PartitionSpec())
-        df = self.workflow.process(
+        df = self.workflow.transform(
             self,
-            using=RunTransformer,
-            schema=None,
-            params=dict(
-                transformer=using,
-                schema=schema,
-                ignore_errors=ignore_errors,
-                params=params,
-            ),
-            pre_partition=partition,
+            using=using,
+            schema=schema,
+            params=params,
+            partition=partition,
+            ignore_errors=ignore_errors,
         )
         return self.to_self_type(df)
 
     def join(
-        self: TDF, *dfs: Any, how: str, keys: Optional[Iterable[str]] = None
+        self: TDF, *dfs: Any, how: str, on: Optional[Iterable[str]] = None
     ) -> TDF:  # pragma: no cover
-        df = self.workflow.join(self, *dfs, how=how, keys=keys)
+        df = self.workflow.join(self, *dfs, how=how, on=on)
         return self.to_self_type(df)
 
     def persist(self: TDF, level: Any = None) -> TDF:
@@ -132,6 +129,26 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(self, using=Rename, params=dict(columns=m))
         return self.to_self_type(df)
 
+    def zip(
+        self: TDF,
+        *dfs: Any,
+        how: str = "inner",
+        partition: Any = None,
+        temp_path: Optional[str] = None,
+        to_file_threshold: Any = -1,
+    ) -> TDF:
+        if partition is None:
+            partition = self._metadata.get("pre_partition", PartitionSpec())
+        df = self.workflow.zip(
+            self,
+            *dfs,
+            how=how,
+            partition=partition,
+            temp_path=temp_path,
+            to_file_threshold=to_file_threshold,
+        )
+        return self.to_self_type(df)
+
     def __getitem__(self: TDF, columns: List[Any]) -> TDF:
         df = self.workflow.process(
             self, using=SelectColumns, params=dict(columns=columns)
@@ -140,42 +157,42 @@ class WorkflowDataFrame(DataFrame):
 
     @property
     def schema(self) -> Schema:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     @property
     def is_local(self) -> bool:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def as_local(self) -> DataFrame:  # type: ignore  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     @property
     def is_bounded(self) -> bool:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     @property
     def empty(self) -> bool:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     @property
     def num_partitions(self) -> int:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def peek_array(self) -> Any:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def count(self, persist: bool = False) -> int:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:  # pragma: no cover
-        raise NotImplementedError(f"WorkflowDataFrame does not support this method")
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
 
 
 class FugueWorkflow(object):
@@ -262,10 +279,53 @@ class FugueWorkflow(object):
         self.output(*dfs, using=Show, params=dict(rows=rows, count=count, title=title))
 
     def join(
-        self, *dfs: Any, how: str, keys: Optional[Iterable[str]] = None
+        self, *dfs: Any, how: str, on: Optional[Iterable[str]] = None
     ) -> WorkflowDataFrame:  # pragma: no cover
-        _keys: List[str] = list(keys) if keys is not None else []
-        return self.process(*dfs, using=RunJoin, params=dict(how=how, keys=_keys))
+        _on: List[str] = list(on) if on is not None else []
+        return self.process(*dfs, using=RunJoin, params=dict(how=how, on=_on))
+
+    def zip(
+        self,
+        *dfs: Any,
+        how: str = "inner",
+        partition: Any = None,
+        temp_path: Optional[str] = None,
+        to_file_threshold: Any = -1,
+    ) -> WorkflowDataFrame:
+        return self.process(
+            *dfs,
+            using=Zip,
+            params=dict(
+                how=how, temp_path=temp_path, to_file_threshold=to_file_threshold
+            ),
+            pre_partition=partition,
+        )
+
+    def transform(
+        self,
+        *dfs: Any,
+        using: Any,
+        schema: Any = None,
+        params: Any = None,
+        partition: Any = None,
+        ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
+    ) -> WorkflowDataFrame:
+        assert_or_throw(
+            len(dfs) == 1,
+            NotImplementedError("transform supports only single dataframe"),
+        )
+        return self.process(
+            *dfs,
+            using=RunTransformer,
+            schema=None,
+            params=dict(
+                transformer=using,
+                schema=schema,
+                ignore_errors=ignore_errors,
+                params=params,
+            ),
+            pre_partition=partition,
+        )
 
     def select(self, *statements: Any, sql_engine: Any = None) -> WorkflowDataFrame:
         s_str: List[str] = []

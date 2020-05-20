@@ -5,7 +5,7 @@ from fugue.collections.partition import PartitionSpec
 from fugue.dag.workflow import FugueWorkflow
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.execution import NaiveExecutionEngine
-from fugue.transformer.convert import transformer
+from fugue.extensions.transformer.convert import transformer
 
 
 def test_builder():
