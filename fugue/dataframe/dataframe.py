@@ -8,6 +8,7 @@ import pyarrow as pa
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
+from triad.utils.assertion import assert_arg_not_none
 
 
 class DataFrame(ABC):
@@ -88,7 +89,7 @@ class DataFrame(ABC):
         return {self.schema.names[i]: arr[i] for i in range(len(self.schema))}
 
     @abstractmethod
-    def count(self, persist: bool = False) -> int:  # pragma: no cover
+    def count(self) -> int:  # pragma: no cover
         raise NotImplementedError
 
     def as_pandas(self) -> pd.DataFrame:
@@ -120,6 +121,7 @@ class DataFrame(ABC):
         raise NotImplementedError
 
     def __getitem__(self, keys: List[Any]) -> "DataFrame":
+        assert_arg_not_none(keys, "keys")
         cols = list((self.schema - keys).keys())
         return self.drop(cols)
 
@@ -219,7 +221,7 @@ class LocalUnboundedDataFrame(LocalDataFrame):
     def is_bounded(self):
         return False
 
-    def count(self, persist: bool = False) -> int:
+    def count(self) -> int:
         raise InvalidOperationError("Impossible to count an LocalUnboundedDataFrame")
 
 

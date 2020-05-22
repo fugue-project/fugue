@@ -159,6 +159,9 @@ def test_as_array():
     df = IterableDataFrame([[pd.NaT, 1.1]], "a:datetime,b:int")
     assert [[pd.NaT, 1]] == df.as_array(type_safe=True)
 
+    df = IterableDataFrame([[None, 1.1]], "a:datetime,b:int")
+    assert [[pd.NaT, 1]] == df.as_array(type_safe=True)
+
 
 def test_as_dict_iterable():
     df = IterableDataFrame([[pd.NaT, 1.1]], "a:datetime,b:int")

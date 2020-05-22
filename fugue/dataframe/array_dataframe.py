@@ -41,7 +41,7 @@ class ArrayDataFrame(LocalBoundedDataFrame):
     def peek_array(self) -> Any:
         return list(self.native[0])
 
-    def count(self, persist: bool = False) -> int:
+    def count(self) -> int:
         return len(self.native)
 
     def drop(self, cols: List[str]) -> DataFrame:

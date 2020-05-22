@@ -181,7 +181,7 @@ class WorkflowDataFrame(DataFrame):
     def peek_array(self) -> Any:  # pragma: no cover
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
-    def count(self, persist: bool = False) -> int:  # pragma: no cover
+    def count(self) -> int:  # pragma: no cover
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def as_array(

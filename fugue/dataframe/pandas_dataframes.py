@@ -55,7 +55,7 @@ class PandasDataFrame(LocalBoundedDataFrame):
     def peek_array(self) -> Any:
         return self.native.iloc[0].values.tolist()
 
-    def count(self, persist: bool = False) -> int:
+    def count(self) -> int:
         return self.native.shape[0]
 
     def as_pandas(self) -> pd.DataFrame:

@@ -83,7 +83,7 @@ class DaskDataFrame(DataFrame):
         self._native = self.native.persist(**kwargs)
         return self
 
-    def count(self, persist: bool = False) -> int:
+    def count(self) -> int:
         return self.as_pandas().shape[0]
 
     def as_pandas(self) -> pandas.DataFrame:

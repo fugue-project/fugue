@@ -12,6 +12,7 @@ pylint
 pytest
 pytest-cov
 pytest-mock
+pytest-spark
 sphinx
 sphinx-rtd-theme
 
