@@ -25,7 +25,7 @@ jobs:
     - name: Install dependencies
       run: make devenv
     - name: Uninstall pytest-spark
-      run: pip uninstall pytest-spark
+      run: pip uninstall -y pytest-spark
     - name: Test
       run: make testcore
     - name: Lint
