@@ -24,6 +24,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: make devenv
+    - name: Uninstall pytest-spark
+      run: pip uninstall pytest-spark
     - name: Test
       run: make testcore
     - name: Lint
