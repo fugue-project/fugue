@@ -20,7 +20,6 @@ setup(
     install_requires=["triad>=0.3.3", "adagio>=0.1.2", "fs", "sqlalchemy"],
     extras_require={
         "spark": ["pyspark"],
-        "modin": ["modin[ray]"],
         "dask": ["dask[dataframe]", "cloudpickle>=1.4.0"],
     },
     classifiers=[

@@ -1,6 +1,5 @@
 .
 .[spark]
-.[modin]
 .[dask]
 
 # test requirements
