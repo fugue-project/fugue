@@ -65,7 +65,7 @@ class PartitionSpec(object):
 
     @property
     def algo(self) -> str:
-        return self._algo
+        return self._algo if self._algo != "" else "hash"
 
     @property
     def partition_by(self) -> List[str]:

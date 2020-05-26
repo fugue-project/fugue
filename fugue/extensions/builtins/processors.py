@@ -43,7 +43,7 @@ class RunTransformer(Processor):
         tr = _TransformerRunner(df, tf, self._ignore_errors)  # type: ignore
         return self.execution_engine.map(
             df=df,
-            mapFunc=tr.run,
+            map_func=tr.run,
             output_schema=tf.output_schema,  # type: ignore
             partition_spec=tf.partition_spec,
             on_init=tr.on_init,
@@ -59,12 +59,12 @@ class RunTransformer(Processor):
         empty_dfs = DataFrames(
             {k: ArrayDataFrame([], v) for k, v in df.metadata["schemas"].items()}
         )
-        tf._output_schema = Schema(tf.get_output_schema(empty_dfs))  # type: ignore
-        tr = _CoTransformerRunner(df, tf, self._ignore_errors)  # type: ignore
+        tf._output_schema = Schema(tf.get_output_schema(empty_dfs))
+        tr = _CoTransformerRunner(df, tf, self._ignore_errors)
         return self.execution_engine.comap(
             df=df,
-            mapFunc=tr.run,
-            output_schema=tf.output_schema,  # type: ignore
+            map_func=tr.run,
+            output_schema=tf.output_schema,
             partition_spec=tf.partition_spec,
             on_init=tr.on_init,
         )

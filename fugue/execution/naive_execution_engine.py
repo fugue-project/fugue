@@ -78,7 +78,7 @@ class NaiveExecutionEngine(ExecutionEngine):
     def map(
         self,
         df: DataFrame,
-        mapFunc: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
         metadata: Any = None,
@@ -94,7 +94,7 @@ class NaiveExecutionEngine(ExecutionEngine):
         if len(partition_spec.partition_by) == 0:  # no partition
             df = to_local_df(df)
             cursor.set(df.peek_array(), 0, 0)
-            output_df = mapFunc(cursor, df)
+            output_df = map_func(cursor, df)
             assert_or_throw(
                 output_df.schema == output_schema,
                 f"map output {output_df.schema} mismatches given {output_schema}",
@@ -114,7 +114,7 @@ class NaiveExecutionEngine(ExecutionEngine):
                 pdf.reset_index(drop=True), df.schema, pandas_df_wrapper=True
             )
             cursor.set(input_df.peek_array(), cursor.partition_no + 1, 0)
-            output_df = mapFunc(cursor, input_df)
+            output_df = map_func(cursor, input_df)
             return output_df.as_pandas()
 
         result = PD_UTILS.safe_groupby_apply(

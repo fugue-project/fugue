@@ -80,7 +80,7 @@ class ExecutionEngine(ABC):
     def map(
         self,
         df: DataFrame,
-        mapFunc: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
         metadata: Any = None,
@@ -197,14 +197,14 @@ class ExecutionEngine(ABC):
     def comap(
         self,
         df: DataFrame,
-        mapFunc: Callable[[PartitionCursor, DataFrames], LocalDataFrame],
+        map_func: Callable[[PartitionCursor, DataFrames], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
         metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrames], Any]] = None,
     ):
         assert_or_throw(df.metadata["serialized"], ValueError("df is not serilaized"))
-        cs = _Comap(df, mapFunc, on_init)
+        cs = _Comap(df, map_func, on_init)
         if partition_spec.empty:
             key_schema = df.schema - list(df.metadata["serialized_cols"].values())
             partition_spec = PartitionSpec(by=list(key_schema.keys()))

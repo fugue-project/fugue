@@ -5,6 +5,7 @@ import pyspark.sql as ps
 from fs.base import FS as FileSystem
 from fs.osfs import OSFS
 from fugue.collections.partition import PartitionCursor, PartitionSpec
+from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe import (
     DataFrame,
     DataFrames,
@@ -20,10 +21,15 @@ from fugue.execution.execution_engine import (
 )
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.utils.convert import to_schema, to_spark_schema
+from fugue_spark.utils.partition import (
+    even_repartition,
+    hash_repartition,
+    rand_repartition,
+)
 from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import broadcast, col, lit
+from pyspark.sql.functions import broadcast, col
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.iter import EmptyAwareIterable
@@ -129,13 +135,30 @@ class SparkExecutionEngine(ExecutionEngine):
         )
         return SparkDataFrame(sdf, pdf.schema, metadata)
 
-    def repartition(
-        self, df: DataFrame, partition_spec: PartitionSpec
-    ) -> DataFrame:  # pragma: no cover
+    def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
+        def _persist_and_count(df: DataFrame) -> int:
+            df = self.persist(df)
+            return df.count()
+
         df = self.to_df(df)
-        sdf = df.native
-        if len(partition_spec.partition_by) > 0:
-            sdf = sdf.repartition(*partition_spec.partition_by)
+        num_funcs = {KEYWORD_ROWCOUNT: lambda: _persist_and_count(df)}
+        num = partition_spec.get_num_partitions(**num_funcs)
+
+        if partition_spec.algo == "hash":
+            sdf = hash_repartition(
+                self.spark_session, df.native, num, partition_spec.partition_by
+            )
+        elif partition_spec.algo == "rand":
+            sdf = rand_repartition(
+                self.spark_session, df.native, num, partition_spec.partition_by
+            )
+        elif partition_spec.algo == "even":
+            df = self.persist(df)
+            sdf = even_repartition(
+                self.spark_session, df.native, num, partition_spec.partition_by
+            )
+        else:  # pragma: no cover
+            raise NotImplementedError(partition_spec.algo + " is not supported")
         sorts = partition_spec.get_sorts(df.schema)
         if len(sorts) > 0:
             sdf = sdf.sortWithinPartitions(
@@ -146,59 +169,24 @@ class SparkExecutionEngine(ExecutionEngine):
     def map(
         self,
         df: DataFrame,
-        mapFunc: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
         metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
         df = self.to_df(self.repartition(df, partition_spec))
-        mapper = _Mapper(df, mapFunc, partition_spec, on_init)
+        mapper = _Mapper(df, map_func, partition_spec, on_init)
         sdf = df.native.rdd.mapPartitionsWithIndex(mapper.run, True)
         return self.to_df(sdf, output_schema, metadata)
 
-    def serialize_by_partition(
-        self,
-        df: DataFrame,
-        partition_spec: PartitionSpec,
-        df_name: str,
-        temp_path: Optional[str] = None,
-        to_file_threshold: int = -1,
-    ) -> DataFrame:
-        if any(k in df.schema for k in partition_spec.partition_by):
-            return super().serialize_by_partition(
-                df=df,
-                partition_spec=partition_spec,
-                df_name=df_name,
-                temp_path=temp_path,
-                to_file_threshold=to_file_threshold,
-            )
-        presort = list(
-            filter(lambda p: p[0] in df.schema, partition_spec.presort.items())
-        )
-        sdf = self.to_df(df).native
-        sdf = sdf.withColumn(_NO_PARTITION_SERIALIZATION_KEY, lit(0))
-        tdf = self.repartition(
-            self.to_df(sdf),
-            PartitionSpec(
-                partition_spec, by=[_NO_PARTITION_SERIALIZATION_KEY], presort=presort
-            ),
-        ).drop([_NO_PARTITION_SERIALIZATION_KEY])
-        return super().serialize_by_partition(
-            df=tdf,
-            partition_spec=PartitionSpec(),
-            df_name=df_name,
-            temp_path=temp_path,
-            to_file_threshold=to_file_threshold,
-        )
-
-    def broadcast(self, df: DataFrame) -> DataFrame:
+    def broadcast(self, df: DataFrame) -> SparkDataFrame:
         return self._broadcast_func(self.to_df(df))
 
-    def persist(self, df: DataFrame, level: Any = None) -> DataFrame:
+    def persist(self, df: DataFrame, level: Any = None) -> SparkDataFrame:
         return self._persist_func(self.to_df(df), level)
 
-    def register(self, df: DataFrame, name: str) -> DataFrame:
+    def register(self, df: DataFrame, name: str) -> SparkDataFrame:
         return self._register_func(self.to_df(df), name)
 
     def join(
@@ -249,7 +237,7 @@ class _Mapper(object):
     def __init__(
         self,
         df: DataFrame,
-        mapFunc: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]],
     ):
@@ -257,7 +245,7 @@ class _Mapper(object):
         self.schema = df.schema
         self.metadata = df.metadata
         self.partition_spec = partition_spec
-        self.mapFunc = mapFunc
+        self.map_func = map_func
         self.on_init = on_init
 
     def run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
@@ -278,6 +266,6 @@ class _Mapper(object):
             cursor.set(sub.peek(), pn, sn)
             sub_df = IterableDataFrame(sub, self.schema)
             sub_df._metadata = self.metadata
-            res = self.mapFunc(cursor, sub_df)
+            res = self.map_func(cursor, sub_df)
             for r in res.as_array_iterable(type_safe=True):
                 yield r

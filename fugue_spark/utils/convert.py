@@ -4,7 +4,6 @@ import pyarrow as pa
 import pyspark.sql as ps
 import pyspark.sql.types as pt
 from pyarrow.types import is_struct
-from pyspark.sql import SparkSession
 from triad.collections import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
@@ -68,16 +67,8 @@ def to_select_expression(schema_from: Any, schema_to: Any) -> List[str]:
     return expr
 
 
-def to_spark_df(
-    session: SparkSession, data: Any, schema: Any = None, metadata: Any = None
-) -> ps.DataFrame:
-    pass
-
-
 # TODO: the following function always set nullable to true,
 # but should we use field.nullable?
-
-
 def _to_arrow_type(dt: pt.DataType) -> pa.DataType:
     if isinstance(dt, pt.TimestampType):
         return TRIAD_DEFAULT_TIMESTAMP

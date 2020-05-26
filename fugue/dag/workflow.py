@@ -397,14 +397,14 @@ class _Dependencies(object):
     def _parse_cursor(self, dep: Any) -> WorkflowDataFrame:
         if isinstance(dep, WorkflowDataFrame):
             return dep
-        if isinstance(dep, DataFrame):
-            return self.workflow.create_data(dep)
-        if isinstance(dep, str):
-            assert_or_throw(
-                dep in self._local_vars, KeyError(f"{dep} is not a local variable")
-            )
-            if isinstance(self._local_vars[dep], WorkflowDataFrame):
-                return self._local_vars[dep]
-            # TODO: should also accept dataframe?
-            raise TypeError(f"{self._local_vars[dep]} is not a valid dependency type")
-        raise TypeError(f"{dep} is not a valid dependency type")
+        # if isinstance(dep, DataFrame):
+        #     return self.workflow.create_data(dep)
+        # if isinstance(dep, str):
+        #     assert_or_throw(
+        #         dep in self._local_vars, KeyError(f"{dep} is not a local variable")
+        #     )
+        #     if isinstance(self._local_vars[dep], WorkflowDataFrame):
+        #         return self._local_vars[dep]
+        #     # TODO: should also accept dataframe?
+        #     raise TypeError(f"{self._local_vars[dep]} is not a valid dependency type")
+        raise TypeError(f"{dep} is not a valid dependency type")  # pragma: no cover
