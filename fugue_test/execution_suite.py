@@ -33,31 +33,38 @@ class ExecutionEngineTests(object):
             assert copy.copy(self.engine) is self.engine
             assert copy.deepcopy(self.engine) is self.engine
 
-        def test_map_partitions(self):
-            def noop(no, data):
-                for xx in data:
-                    yield xx
+        def test_map(self):
+            def noop(cursor, data):
+                return data
 
-            def select_top(no, data):
-                for x in data:
-                    yield x
-                    return
+            def select_top(cursor, data):
+                return ArrayDataFrame([cursor.row], cursor.row_schema)
+
+            def on_init(partition_no, data):
+                # TODO: this test is not sufficient
+                assert partition_no >= 0
+                data.peek_array()
 
             e = self.engine
-            a = e.to_df(
-                ArrayDataFrame(
-                    [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
-                    "a:double,b:int",
-                    dict(a=1),
-                )
+            o = ArrayDataFrame(
+                [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
+                "a:double,b:int",
+                dict(a=1),
             )
-            c = e.map_partitions(a, noop, a.schema, PartitionSpec(), dict(a=1))
-            df_eq(c, a, throw=True)
-            c = e.map_partitions(
-                a, select_top, a.schema, PartitionSpec(by=["a"], presort="b")
+            a = e.to_df(o)
+            # no partition
+            c = e.map(a, noop, a.schema, PartitionSpec(), dict(a=1))
+            df_eq(c, o, throw=True)
+            # with key partition
+            c = e.map(
+                a, noop, a.schema, PartitionSpec(by=["a"], presort="b"), dict(a=1)
             )
+            df_eq(c, o, throw=True)
+            # select top
+            c = e.map(a, select_top, a.schema, PartitionSpec(by=["a"], presort="b"))
             df_eq(c, [[None, 1], [1, 2], [3, 4]], "a:double,b:int", throw=True)
-            c = e.map_partitions(
+            # select top with another order
+            c = e.map(
                 a,
                 select_top,
                 a.schema,
@@ -71,11 +78,13 @@ class ExecutionEngineTests(object):
                 metadata=dict(a=1),
                 throw=True,
             )
-            c = e.map_partitions(
+            # add num_partitions, on_init should not matter
+            c = e.map(
                 a,
                 select_top,
                 a.schema,
                 PartitionSpec(partition_by=["a"], presort="b DESC", num_partitions=3),
+                on_init=on_init,
             )
             df_eq(c, [[None, 4], [1, 2], [3, 4]], "a:double,b:int", throw=True)
 
@@ -234,6 +243,7 @@ class ExecutionEngineTests(object):
             )
             assert s.count() == 2
             s = e.persist(e.serialize_by_partition(a, PartitionSpec(), df_name="_0"))
+            print(s.count())
             assert s.count() == 1
             s = e.persist(
                 e.serialize_by_partition(a, PartitionSpec(by=["x"]), df_name="_0")
@@ -281,18 +291,18 @@ class ExecutionEngineTests(object):
 
             # test zip_dataframes with unserialized dfs
             z3 = e.persist(e.zip_dataframes(a, b, partition_spec=ps))
-            df_eq(z1, z3, throw=True)
+            df_eq(z1, z3, throw=True, check_metadata=False)
             z3 = e.persist(e.zip_dataframes(a, sb, partition_spec=ps))
-            df_eq(z1, z3, throw=True)
+            df_eq(z1, z3, throw=True, check_metadata=False)
             z3 = e.persist(e.zip_dataframes(sa, b, partition_spec=ps))
-            df_eq(z1, z3, throw=True)
+            df_eq(z1, z3, throw=True, check_metadata=False)
 
             z4 = e.persist(e.zip_dataframes(a, b, how="left_outer", partition_spec=ps))
-            df_eq(z2, z4, throw=True)
+            df_eq(z2, z4, throw=True, check_metadata=False)
             z4 = e.persist(e.zip_dataframes(a, sb, how="left_outer", partition_spec=ps))
-            df_eq(z2, z4, throw=True)
+            df_eq(z2, z4, throw=True, check_metadata=False)
             z4 = e.persist(e.zip_dataframes(sa, b, how="left_outer", partition_spec=ps))
-            df_eq(z2, z4, throw=True)
+            df_eq(z2, z4, throw=True, check_metadata=False)
 
             z5 = e.persist(e.zip_dataframes(a, b, how="cross"))
             assert z5.count() == 1
@@ -301,7 +311,7 @@ class ExecutionEngineTests(object):
             assert z6.count() == 2
             assert len(z6.schema) == 3
 
-        def test_comap_serialized(self):
+        def test_comap(self):
             ps = PartitionSpec(presort="b,c")
             e = self.engine
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
@@ -315,17 +325,26 @@ class ExecutionEngineTests(object):
                 assert not dfs.has_key
                 v = ",".join([k + str(v.count()) for k, v in dfs.items()])
                 keys = cursor.key_value_array
-                yield keys + [v]
+                if len(keys) == 0:
+                    return ArrayDataFrame([[v]], "v:str")
+                return ArrayDataFrame([keys + [v]], cursor.key_schema + "v:str")
 
-            res = e.comap_serialized(
-                z1, comap, "a:int,v:str", PartitionSpec(), metadata=dict(a=1)
+            def on_init(partition_no, dfs):
+                assert partition_no >= 0
+                assert len(dfs) > 0
+
+            res = e.comap(
+                z1,
+                comap,
+                "a:int,v:str",
+                PartitionSpec(),
+                metadata=dict(a=1),
+                on_init=on_init,
             )
             df_eq(res, [[1, "_02,_11"]], "a:int,v:str", metadata=dict(a=1), throw=True)
 
             # for outer joins, the NULL will be filled with empty dataframe
-            res = e.comap_serialized(
-                z2, comap, "a:int,v:str", PartitionSpec(), metadata=dict(a=1)
-            )
+            res = e.comap(z2, comap, "a:int,v:str", PartitionSpec(), metadata=dict(a=1))
             df_eq(
                 res,
                 [[1, "_02,_11"], [3, "_01,_10"]],
@@ -334,12 +353,8 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
 
-            res = e.comap_serialized(
-                z3, comap, "v:str", PartitionSpec(), metadata=dict(a=1)
-            )
+            res = e.comap(z3, comap, "v:str", PartitionSpec(), metadata=dict(a=1))
             df_eq(res, [["_03"]], "v:str", metadata=dict(a=1), throw=True)
 
-            res = e.comap_serialized(
-                z4, comap, "v:str", PartitionSpec(), metadata=dict(a=1)
-            )
+            res = e.comap(z4, comap, "v:str", PartitionSpec(), metadata=dict(a=1))
             df_eq(res, [["_03,_12"]], "v:str", metadata=dict(a=1), throw=True)

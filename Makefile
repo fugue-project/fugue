@@ -34,3 +34,6 @@ package:
 
 test:
 	python3 -bb -m pytest tests/
+
+testcore:
+	python3 -bb -m pytest tests/ --ignore=tests/fugue_spark

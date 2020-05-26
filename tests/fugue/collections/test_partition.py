@@ -11,7 +11,7 @@ def test_partition_spec():
     assert [] == p.partition_by
     "0" == p.num_partitions
     {} == p.presort
-    "" == p.algo
+    "hash" == p.algo
     assert p.empty
 
     p = PartitionSpec(None)
@@ -23,14 +23,14 @@ def test_partition_spec():
     assert ["a", "b", "c"] == p.partition_by
     assert "1" == p.num_partitions
     assert {} == p.presort
-    assert "" == p.algo
+    assert "hash" == p.algo
     assert not p.empty
 
     p = PartitionSpec(dict(by=["a", "b", "c"], presort="d asc,e desc"))
     assert ["a", "b", "c"] == p.partition_by
     assert "0" == p.num_partitions
     assert dict(d=True, e=False) == p.presort
-    assert "" == p.algo
+    assert "hash" == p.algo
     assert not p.empty
 
     p = PartitionSpec(by=["a", "b", "c"], num=5, presort="d,e desc", algo="EvEN")

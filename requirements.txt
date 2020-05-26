@@ -1,5 +1,5 @@
 .
-.[modin]
+.[spark]
 .[dask]
 
 # test requirements
@@ -11,6 +11,7 @@ pylint
 pytest
 pytest-cov
 pytest-mock
+pytest-spark
 sphinx
 sphinx-rtd-theme
 

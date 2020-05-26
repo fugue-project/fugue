@@ -62,7 +62,7 @@ class DaskDataFrame(DataFrame):
         return False
 
     def as_local(self) -> LocalDataFrame:
-        return PandasDataFrame(self.as_pandas(), self.schema, self.metadata)
+        return PandasDataFrame(self.as_pandas(), self.schema)
 
     @property
     def is_bounded(self) -> bool:
@@ -83,7 +83,7 @@ class DaskDataFrame(DataFrame):
         self._native = self.native.persist(**kwargs)
         return self
 
-    def count(self, persist: bool = False) -> int:
+    def count(self) -> int:
         return self.as_pandas().shape[0]
 
     def as_pandas(self) -> pandas.DataFrame:

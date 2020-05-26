@@ -133,9 +133,10 @@ def test_as_array():
     assert isinstance(df.as_array()[0][1], int)
 
     df = PandasDataFrame([[pd.Timestamp("2020-01-01"), 1.1]], "a:datetime,b:int")
-    df.native["a"] = pd.to_datetime(df.native["a"])
+    # df.native["a"] = pd.to_datetime(df.native["a"])
     assert [[datetime(2020, 1, 1), 1]] == df.as_array()
     assert isinstance(df.as_array()[0][0], datetime)
+    # assert not isinstance(df.as_array()[0][0], pd.Timestamp)
     assert isinstance(df.as_array()[0][1], int)
 
     df = PandasDataFrame([[pd.NaT, 1.1]], "a:datetime,b:int")

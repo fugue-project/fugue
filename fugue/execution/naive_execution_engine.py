@@ -1,29 +1,30 @@
 import logging
-from typing import Any, Callable, Iterable, List
+from typing import Any, Callable, Iterable, List, Optional
 
 import pandas as pd
 import pyarrow as pa
 from fs.base import FS as FileSystem
 from fs.osfs import OSFS
-from fugue.collections.partition import PartitionSpec
+from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.dataframe import (
-    ArrayDataFrame,
     DataFrame,
     DataFrames,
-    IterableDataFrame,
     LocalBoundedDataFrame,
+    LocalDataFrame,
     PandasDataFrame,
     to_local_bounded_df,
 )
 from fugue.dataframe.utils import get_join_schemas, to_local_df
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
-    SQLEngine,
     ExecutionEngine,
+    SQLEngine,
 )
 from sqlalchemy import create_engine
 from triad.collections import Schema
+from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
+from triad.collections.dict import ParamDict
 
 
 class SqliteEngine(SQLEngine):
@@ -74,80 +75,52 @@ class NaiveExecutionEngine(ExecutionEngine):
         self.log.warning(f"{self} doesn't respect repartition")
         return df
 
-    def map_partitions(
+    def map(
         self,
         df: DataFrame,
-        mapFunc: Callable[[int, Iterable[Any]], Iterable[Any]],
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
         metadata: Any = None,
+        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
         if partition_spec.num_partitions != "0":
             self.log.warning(
                 f"{self} doesn't respect num_partitions {partition_spec.num_partitions}"
             )
+        cursor = partition_spec.get_cursor(df.schema, 0)
+        if on_init is not None:
+            on_init(0, df)
         if len(partition_spec.partition_by) == 0:  # no partition
             df = to_local_df(df)
-            return IterableDataFrame(
-                mapFunc(0, df.as_array_iterable(type_safe=True)),
-                output_schema,
-                metadata,
+            cursor.set(df.peek_array(), 0, 0)
+            output_df = map_func(cursor, df)
+            assert_or_throw(
+                output_df.schema == output_schema,
+                f"map output {output_df.schema} mismatches given {output_schema}",
             )
+            output_df._metadata = ParamDict(metadata, deep=True)
+            output_df._metadata.set_readonly()
+            return output_df
         presort = partition_spec.presort
         presort_keys = list(presort.keys())
         presort_asc = list(presort.values())
         output_schema = Schema(output_schema)
-        names = output_schema.names
 
-        def _map(pdf: Any) -> pd.DataFrame:
+        def _map(pdf: pd.DataFrame) -> pd.DataFrame:
             if len(presort_keys) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
-            data = list(
-                mapFunc(
-                    0, PD_UTILS.as_array_iterable(pdf, type_safe=True, null_safe=False)
-                )
+            input_df = PandasDataFrame(
+                pdf.reset_index(drop=True), df.schema, pandas_df_wrapper=True
             )
-            return pd.DataFrame(data, columns=names)
+            cursor.set(input_df.peek_array(), cursor.partition_no + 1, 0)
+            output_df = map_func(cursor, input_df)
+            return output_df.as_pandas()
 
         result = PD_UTILS.safe_groupby_apply(
             df.as_pandas(), partition_spec.partition_by, _map
         )
         return PandasDataFrame(result, output_schema, metadata)
-
-    # TODO: remove this
-    def _map_partitions(
-        self,
-        df: DataFrame,
-        mapFunc: Callable[[int, Iterable[Any]], Iterable[Any]],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-    ) -> DataFrame:  # pragma: no cover
-        df = to_local_df(df)
-        if partition_spec.num_partitions != "0":
-            self.log.warning(
-                f"{self} doesn't respect num_partitions {partition_spec.num_partitions}"
-            )
-        partitioner = partition_spec.get_partitioner(df.schema)
-        if len(partition_spec.partition_by) == 0:  # no partition
-            return IterableDataFrame(
-                mapFunc(0, df.as_array_iterable(type_safe=True)), output_schema
-            )
-        pdf = df.as_pandas()
-        sorts = partition_spec.get_sorts(df.schema)
-        if len(sorts) > 0:
-            pdf = pdf.sort_values(
-                list(sorts.keys()), ascending=list(sorts.values()), na_position="first"
-            ).reset_index(drop=True)
-        df = PandasDataFrame(pdf, df.schema)
-
-        def get_rows() -> Iterable[Any]:
-            for _, _, sub in partitioner.partition(
-                df.as_array_iterable(type_safe=True)
-            ):
-                for r in mapFunc(0, sub):
-                    yield r
-
-        return ArrayDataFrame(get_rows(), output_schema)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)

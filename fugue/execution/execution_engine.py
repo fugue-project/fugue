@@ -4,18 +4,19 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from fs.base import FS as FileSystem
 from fugue.collections.partition import (
+    EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
-    EMPTY_PARTITION_SPEC,
 )
 from fugue.dataframe import DataFrame, DataFrames
-from fugue.dataframe.iterable_dataframe import IterableDataFrame
+from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
+from fugue.exceptions import FugueBug
 from triad.collections import ParamDict, Schema
+from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_size
-from triad.exceptions import InvalidOperationError
-from fugue.dataframe.array_dataframe import ArrayDataFrame
 
 _DEFAULT_JOIN_KEYS: List[str] = []
 
@@ -76,14 +77,14 @@ class ExecutionEngine(ABC):
     ) -> DataFrame:  # pragma: no cover
         raise NotImplementedError
 
-    @abstractmethod
-    def map_partitions(
+    def map(
         self,
         df: DataFrame,
-        mapFunc: Callable[[int, Iterable[Any]], Any],
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
         metadata: Any = None,
+        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:  # pragma: no cover
         raise NotImplementedError
 
@@ -129,15 +130,13 @@ class ExecutionEngine(ABC):
         else:
             partition_spec = PartitionSpec(partition_spec, by=on, presort=presort)
             output_schema = partition_spec.get_key_schema(df.schema) + f"{col_name}:str"
-        s = _PartitionSerializer(
-            df.schema, partition_spec.partition_by, temp_path, to_file_threshold
-        )
+        s = _PartitionSerializer(output_schema, temp_path, to_file_threshold)
         metadata = dict(
             serialized=True,
             serialized_cols={df_name: col_name},
             schemas={df_name: df.schema},
         )
-        return self.map_partitions(df, s.run, output_schema, partition_spec, metadata)
+        return self.map(df, s.run, output_schema, partition_spec, metadata)
 
     def zip_dataframes(
         self,
@@ -195,16 +194,23 @@ class ExecutionEngine(ABC):
         )
         return self.join(df1, df2, how=how, on=on, metadata=metadata)
 
-    def comap_serialized(
+    def comap(
         self,
         df: DataFrame,
-        mapFunc: Callable[[PartitionCursor, DataFrames], Iterable[Any]],
+        map_func: Callable[[PartitionCursor, DataFrames], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
         metadata: Any = None,
+        on_init: Optional[Callable[[int, DataFrames], Any]] = None,
     ):
-        cs = _ComapSerialized(df, mapFunc)
-        return self.map_partitions(df, cs.run, output_schema, partition_spec, metadata)
+        assert_or_throw(df.metadata["serialized"], ValueError("df is not serilaized"))
+        cs = _Comap(df, map_func, on_init)
+        if partition_spec.empty:
+            key_schema = df.schema - list(df.metadata["serialized_cols"].values())
+            partition_spec = PartitionSpec(by=list(key_schema.keys()))
+        return self.map(
+            df, cs.run, output_schema, partition_spec, metadata, on_init=cs.on_init
+        )
 
     # @abstractmethod
     # def load_df(
@@ -237,46 +243,50 @@ def _df_name_to_serialize_col(name: str):
 
 class _PartitionSerializer(object):
     def __init__(
-        self,
-        schema: Schema,
-        keys: List[str],
-        temp_path: Optional[str],
-        to_file_threshold: int,
+        self, output_schema: Schema, temp_path: Optional[str], to_file_threshold: int
     ):
-        self.schema = schema
-        self.index = [schema.index_of_key(key) for key in keys]
+        self.output_schema = output_schema
         self.temp_path = temp_path
         self.to_file_threshold = to_file_threshold
 
-    def run(self, pn: int, data: Iterable[Any]) -> Iterable[Any]:
-        df = IterableDataFrame(data, self.schema)
-        arr = df.peek_array()
-        row = [arr[i] for i in self.index]
-        row.append(serialize_df(df, self.to_file_threshold, self.temp_path))
-        yield row
+    def run(self, cursor: PartitionCursor, df: LocalDataFrame) -> LocalDataFrame:
+        data = serialize_df(df, self.to_file_threshold, self.temp_path)
+        row = cursor.key_value_array + [data]
+        return ArrayDataFrame([row], self.output_schema)
 
 
-class _ComapSerialized(object):
-    def __init__(self, df: DataFrame, func: Callable):
-        assert_or_throw(df.metadata["serialized"], ValueError("df is not serilaized"))
-        self.schema = df.schema
-        self.key_schema = df.schema - list(df.metadata["serialized_cols"].values())
-        self.partition_spec = PartitionSpec(by=list(self.key_schema.keys()))
+class _Comap(object):
+    def __init__(
+        self,
+        df: DataFrame,
+        func: Callable,
+        on_init: Optional[Callable[[int, DataFrames], Any]],
+    ):
+        self.schemas = df.metadata["schemas"]
         self.df_idx = [
-            (df.schema.index_of_key(v), df.metadata["schemas"][k])
+            (df.schema.index_of_key(v), self.schemas[k])
             for k, v in df.metadata["serialized_cols"].items()
         ]
         self.func = func
+        self._on_init = on_init
 
-    def run(self, no: int, data: Iterable[Any]) -> Iterable[Any]:
-        cursor = self.partition_spec.get_cursor(self.schema, no)
-        n = 0
-        for row in data:
-            dfs = DataFrames(list(self._get_dfs(row)))
-            cursor.set(row, n, 0)
-            for r in self.func(cursor, dfs):
-                yield r
-            n += 1
+    def on_init(self, partition_no, df: DataFrame) -> None:
+        if self._on_init is None:
+            return
+        # TODO: currently, get_output_schema only gets empty dataframes
+        empty_dfs = DataFrames(
+            {k: ArrayDataFrame([], v) for k, v in self.schemas.items()}
+        )
+        self._on_init(partition_no, empty_dfs)
+
+    def run(self, cursor: PartitionCursor, df: LocalDataFrame) -> LocalDataFrame:
+        data = df.as_array(type_safe=True)
+        assert_or_throw(
+            len(data) == 1,
+            FugueBug("each comap partition can have one and only one row"),
+        )
+        dfs = DataFrames(list(self._get_dfs(data[0])))
+        return self.func(cursor, dfs)
 
     def _get_dfs(self, row: Any) -> Iterable[DataFrame]:
         for k, v in self.df_idx:

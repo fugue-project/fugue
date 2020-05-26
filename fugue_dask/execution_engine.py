@@ -1,15 +1,13 @@
 import logging
-from typing import Any, Callable, Iterable, List
+from typing import Any, Callable, Iterable, List, Optional
 
 import dask.dataframe as pd
-import pandas
 import pyarrow as pa
 from fs.base import FS as FileSystem
 from fs.osfs import OSFS
-from fugue.collections.partition import PartitionSpec
+from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
-from fugue.dataframe import DataFrame
-from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution import SqliteEngine
 from fugue.execution.execution_engine import (
@@ -20,8 +18,10 @@ from fugue.execution.execution_engine import (
 from fugue_dask.dataframe import DEFAULT_CONFIG, DaskDataFrame
 from fugue_dask.utils import DASK_UTILS
 from triad.collections import Schema
-from triad.utils.assertion import assert_or_throw
 from triad.collections.dict import ParamDict
+from triad.utils.assertion import assert_or_throw
+from triad.utils.hash import to_uuid
+from triad.utils.threading import RunOnce
 
 
 class DaskExecutionEngine(ExecutionEngine):
@@ -97,30 +97,35 @@ class DaskExecutionEngine(ExecutionEngine):
             )
         return df
 
-    def map_partitions(
+    def map(
         self,
         df: DataFrame,
-        mapFunc: Callable[[int, Iterable[Any]], Iterable[Any]],
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
         metadata: Any = None,
+        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
         presort = partition_spec.presort
         presort_keys = list(presort.keys())
         presort_asc = list(presort.values())
         output_schema = Schema(output_schema)
-        names = output_schema.names
+        on_init_once: Any = None if on_init is None else RunOnce(
+            on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
+        )
 
         def _map(pdf: Any) -> pd.DataFrame:
             if len(presort_keys) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
-            data = list(
-                mapFunc(
-                    0,
-                    DASK_UTILS.as_array_iterable(pdf, type_safe=True, null_safe=False),
-                )
+            input_df = PandasDataFrame(
+                pdf.reset_index(drop=True), df.schema, pandas_df_wrapper=True
             )
-            return pandas.DataFrame(data, columns=names)
+            if on_init_once is not None:
+                on_init_once(0, input_df)
+            cursor = partition_spec.get_cursor(df.schema, 0)
+            cursor.set(input_df.peek_array(), 0, 0)
+            output_df = map_func(cursor, input_df)
+            return output_df.as_pandas()
 
         df = self.to_df(df)
         if len(partition_spec.partition_by) == 0:

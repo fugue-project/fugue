@@ -1,17 +1,17 @@
-import copy
 from abc import ABC, abstractmethod
-from typing import Any, no_type_check, Optional, List
+from typing import Any, List, Optional, no_type_check
 
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
 from fugue.collections.partition import PartitionSpec
-from fugue.extensions.creator.convert import to_creator
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution import ExecutionEngine
+from fugue.extensions.creator.convert import to_creator
 from fugue.extensions.outputter.convert import to_outputter
 from fugue.extensions.processor.convert import to_processor
 from triad.collections.dict import ParamDict
+from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 
 
@@ -56,7 +56,7 @@ class FugueTask(TaskSpec, ABC):
             lazy=lazy,
         )
         self._persist: Any = self.params.get_or_none("persist", object)
-        self._broadcast = self.params.get("broadcast", bool)
+        self._broadcast = self.params.get("broadcast", False)
         self._partition = self.params.get_or_none("partition", PartitionSpec)
 
     @abstractmethod
@@ -80,9 +80,13 @@ class FugueTask(TaskSpec, ABC):
         return self.name + "." + self.outputs.get_key_by_index(0)
 
     def copy(self) -> "FugueTask":
-        t = copy.copy(self)
-        t._node_spec = None
-        return t
+        raise InvalidOperationError("can't copy")
+
+    def __copy__(self) -> "FugueTask":
+        raise InvalidOperationError("can't copy")
+
+    def __deepcopy__(self, memo: Any) -> "FugueTask":
+        raise InvalidOperationError("can't copy")
 
     def persist(self, level: Any) -> "FugueTask":
         self._persist = "" if level is None else level

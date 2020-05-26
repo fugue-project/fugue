@@ -9,8 +9,16 @@ class FugueError(Exception):
         super().__init__(*args)
 
 
+class FugueBug(FugueError):
+    """Fugue internal bug
+    """
+
+    def __init__(self, *args: Any):
+        super().__init__(*args)
+
+
 class FugueWorkflowError(FugueError):
-    """Fugue exceptions
+    """Fugue workflow exceptions
     """
 
     def __init__(self, *args: Any):
@@ -18,7 +26,7 @@ class FugueWorkflowError(FugueError):
 
 
 class FugueInterfacelessError(FugueError):
-    """Fugue exceptions
+    """Fugue interfaceless exceptions
     """
 
     def __init__(self, *args: Any):

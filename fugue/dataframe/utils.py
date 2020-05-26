@@ -1,9 +1,11 @@
 import base64
 import json
+import os
 import pickle
 from typing import Any, Iterable, List, Optional, Tuple
 
 import pandas as pd
+from fs import open_fs
 from fs.base import FS as FileSystem
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, LocalDataFrame
@@ -13,8 +15,6 @@ from triad.collections import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.assertion import assert_or_throw as aot
-from fs import open_fs
-import os
 
 
 def _df_eq(
@@ -39,11 +39,11 @@ def _df_eq(
             df1.count() == df2.count()
         ), f"count mismatch {df1.count()}, {df2.count()}"
         assert (
-            not check_schema or df1.schema == df2.schema
-        ), f"schema mismatch {df1.schema}, {df2.schema}"
+            not check_schema or df.schema == df2.schema
+        ), f"schema mismatch {df.schema.pa_schema}, {df2.schema.pa_schema}"
         assert (
-            not check_metadata or df1.metadata == df2.metadata
-        ), f"metadata mismatch {df1.metadata}, {df2.metadata}"
+            not check_metadata or df.metadata == df2.metadata
+        ), f"metadata mismatch {df.metadata}, {df2.metadata}"
         if not check_content:
             return True
         d1 = df1.as_pandas()

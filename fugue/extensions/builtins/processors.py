@@ -1,11 +1,11 @@
-from typing import Any, Iterable, List, Tuple, no_type_check
+from typing import List, no_type_check
 
 from fugue.collections.partition import PartitionCursor
 from fugue.dataframe import (
     ArrayDataFrame,
     DataFrame,
     DataFrames,
-    IterableDataFrame,
+    LocalDataFrame,
     to_local_bounded_df,
 )
 from fugue.exceptions import FugueWorkflowError
@@ -16,7 +16,6 @@ from triad.collections import ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_instance, to_type
-from triad.utils.iter import EmptyAwareIterable
 
 
 class RunTransformer(Processor):
@@ -42,11 +41,12 @@ class RunTransformer(Processor):
         tf._key_schema = self.partition_spec.get_key_schema(df.schema)  # type: ignore
         tf._output_schema = Schema(tf.get_output_schema(df))  # type: ignore
         tr = _TransformerRunner(df, tf, self._ignore_errors)  # type: ignore
-        return self.execution_engine.map_partitions(
+        return self.execution_engine.map(
             df=df,
-            mapFunc=tr.run,
+            map_func=tr.run,
             output_schema=tf.output_schema,  # type: ignore
             partition_spec=tf.partition_spec,
+            on_init=tr.on_init,
         )
 
     @no_type_check
@@ -59,13 +59,14 @@ class RunTransformer(Processor):
         empty_dfs = DataFrames(
             {k: ArrayDataFrame([], v) for k, v in df.metadata["schemas"].items()}
         )
-        tf._output_schema = Schema(tf.get_output_schema(empty_dfs))  # type: ignore
-        tr = _CoTransformerRunner(df, tf, self._ignore_errors)  # type: ignore
-        return self.execution_engine.comap_serialized(
+        tf._output_schema = Schema(tf.get_output_schema(empty_dfs))
+        tr = _CoTransformerRunner(df, tf, self._ignore_errors)
+        return self.execution_engine.comap(
             df=df,
-            mapFunc=tr.run,
-            output_schema=tf.output_schema,  # type: ignore
+            map_func=tr.run,
+            output_schema=tf.output_schema,
             partition_spec=tf.partition_spec,
+            on_init=tr.on_init,
         )
 
 
@@ -158,38 +159,24 @@ class _TransformerRunner(object):
         self.transformer = transformer
         self.ignore_errors = tuple(ignore_errors)
 
-    def run(self, no: int, data: Iterable[Any]) -> Iterable[Any]:
-        df = IterableDataFrame(data, self.schema, self.metadata)
-        if df.empty:  # pragma: no cover
-            return
-        spec = self.transformer.partition_spec
-        self.transformer._cursor = spec.get_cursor(  # type: ignore
-            self.schema, no
-        )
-        self.transformer.init_physical_partition(df)
-        if spec.empty:
-            partitions: Iterable[Tuple[int, int, EmptyAwareIterable]] = [
-                (0, 0, df.native)
-            ]
+    def run(self, cursor: PartitionCursor, df: LocalDataFrame) -> LocalDataFrame:
+        self.transformer._cursor = cursor  # type: ignore
+        df._metadata = self.metadata
+        if len(self.ignore_errors) == 0:
+            return self.transformer.transform(df)
         else:
-            partitioner = spec.get_partitioner(self.schema)
-            partitions = partitioner.partition(df.native)
-        for pn, sn, sub in partitions:
-            self.transformer.cursor.set(sub.peek(), pn, sn)
-            sub_df = IterableDataFrame(sub, self.schema)
-            sub_df._metadata = self.metadata
-            self.transformer.init_logical_partition(sub_df)
-            if len(self.ignore_errors) == 0:
-                res = self.transformer.transform(sub_df)
-                for r in res.as_array_iterable(type_safe=True):
-                    yield r
-            else:
-                try:
-                    res = to_local_bounded_df(self.transformer.transform(sub_df))
-                except self.ignore_errors:  # type: ignore
-                    continue
-                for r in res.as_array_iterable(type_safe=True):
-                    yield r
+            try:
+                return to_local_bounded_df(self.transformer.transform(df))
+            except self.ignore_errors:  # type: ignore
+                return ArrayDataFrame([], self.transformer.output_schema)
+
+    def on_init(self, partition_no: int, df: DataFrame) -> None:
+        s = self.transformer.partition_spec
+        self.transformer._cursor = s.get_cursor(  # type: ignore
+            self.schema, partition_no
+        )
+        df._metadata = self.metadata
+        self.transformer.on_init(df)
 
 
 class _CoTransformerRunner(object):
@@ -201,17 +188,20 @@ class _CoTransformerRunner(object):
         self.transformer = transformer
         self.ignore_errors = tuple(ignore_errors)
 
-    def run(self, cursor: PartitionCursor, dfs: DataFrames) -> Iterable[Any]:
+    def run(self, cursor: PartitionCursor, dfs: DataFrames) -> LocalDataFrame:
         self.transformer._cursor = cursor  # type: ignore
-        self.transformer.init_physical_partition(dfs)
         if len(self.ignore_errors) == 0:
-            res = self.transformer.transform(dfs)
-            for r in res.as_array_iterable(type_safe=True):
-                yield r
+            return self.transformer.transform(dfs)
+
         else:
             try:
-                res = to_local_bounded_df(self.transformer.transform(dfs))
+                return to_local_bounded_df(self.transformer.transform(dfs))
             except self.ignore_errors:  # type: ignore
-                return
-            for r in res.as_array_iterable(type_safe=True):
-                yield r
+                return ArrayDataFrame([], self.transformer.output_schema)
+
+    def on_init(self, partition_no: int, dfs: DataFrames) -> None:
+        s = self.transformer.partition_spec
+        self.transformer._cursor = s.get_cursor(  # type: ignore
+            self.schema, partition_no
+        )
+        self.transformer.on_init(dfs)

@@ -16,8 +16,13 @@ from triad.utils.pyarrow import apply_schema
 
 class PandasDataFrame(LocalBoundedDataFrame):
     def __init__(  # noqa: C901
-        self, df: Any = None, schema: Any = None, metadata: Any = None
+        self,
+        df: Any = None,
+        schema: Any = None,
+        metadata: Any = None,
+        pandas_df_wrapper: bool = False,
     ):
+        apply_schema = True
         if df is None:
             schema = _input_schema(schema).assert_not_empty()
             df = []
@@ -30,17 +35,18 @@ class PandasDataFrame(LocalBoundedDataFrame):
                 df = df.to_frame()
             pdf = df
             schema = None if schema is None else _input_schema(schema)
+            if pandas_df_wrapper and schema is not None:
+                apply_schema = False
         elif isinstance(df, Iterable):
             assert_arg_not_none(schema, msg="schema can't be None for iterable input")
             schema = _input_schema(schema).assert_not_empty()
             pdf = pd.DataFrame(df, columns=schema.names)
             pdf = _enforce_type(pdf, schema)
-            super().__init__(schema, metadata)
-            self._native = pdf
-            return
+            apply_schema = False
         else:
             raise ValueError(f"{df} is incompatible with PandasDataFrame")
-        pdf, schema = self._apply_schema(pdf, schema)
+        if apply_schema:
+            pdf, schema = self._apply_schema(pdf, schema)
         super().__init__(schema, metadata)
         self._native = pdf
 
@@ -55,7 +61,7 @@ class PandasDataFrame(LocalBoundedDataFrame):
     def peek_array(self) -> Any:
         return self.native.iloc[0].values.tolist()
 
-    def count(self, persist: bool = False) -> int:
+    def count(self) -> int:
         return self.native.shape[0]
 
     def as_pandas(self) -> pd.DataFrame:
@@ -68,12 +74,14 @@ class PandasDataFrame(LocalBoundedDataFrame):
             raise InvalidOperationError(str(e))
         if len(schema) == 0:
             raise InvalidOperationError("Can't remove all columns of a dataframe")
-        return PandasDataFrame(self.native.drop(cols, axis=1), schema)
+        return PandasDataFrame(
+            self.native.drop(cols, axis=1), schema, pandas_df_wrapper=True
+        )
 
     def rename(self, columns: Dict[str, str]) -> "DataFrame":
         df = self.native.rename(columns=columns)
         schema = self.schema.rename(columns)
-        return PandasDataFrame(df, schema)
+        return PandasDataFrame(df, schema, pandas_df_wrapper=True)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False

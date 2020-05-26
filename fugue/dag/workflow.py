@@ -46,6 +46,18 @@ class WorkflowDataFrame(DataFrame):
     def workflow(self) -> "FugueWorkflow":
         return self._workflow
 
+    def process(
+        self: TDF,
+        using: Any,
+        schema: Any = None,
+        params: Any = None,
+        pre_partition: Any = None,
+    ) -> TDF:
+        df = self.workflow.process(
+            self, using=using, schema=schema, params=params, pre_partition=pre_partition
+        )
+        return self.to_self_type(df)
+
     def show(
         self,
         rows: int = 10,
@@ -181,7 +193,7 @@ class WorkflowDataFrame(DataFrame):
     def peek_array(self) -> Any:  # pragma: no cover
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
-    def count(self, persist: bool = False) -> int:  # pragma: no cover
+    def count(self) -> int:  # pragma: no cover
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def as_array(
@@ -385,14 +397,14 @@ class _Dependencies(object):
     def _parse_cursor(self, dep: Any) -> WorkflowDataFrame:
         if isinstance(dep, WorkflowDataFrame):
             return dep
-        if isinstance(dep, DataFrame):
-            return self.workflow.create_data(dep)
-        if isinstance(dep, str):
-            assert_or_throw(
-                dep in self._local_vars, KeyError(f"{dep} is not a local variable")
-            )
-            if isinstance(self._local_vars[dep], WorkflowDataFrame):
-                return self._local_vars[dep]
-            # TODO: should also accept dataframe?
-            raise TypeError(f"{self._local_vars[dep]} is not a valid dependency type")
-        raise TypeError(f"{dep} is not a valid dependency type")
+        # if isinstance(dep, DataFrame):
+        #     return self.workflow.create_data(dep)
+        # if isinstance(dep, str):
+        #     assert_or_throw(
+        #         dep in self._local_vars, KeyError(f"{dep} is not a local variable")
+        #     )
+        #     if isinstance(self._local_vars[dep], WorkflowDataFrame):
+        #         return self._local_vars[dep]
+        #     # TODO: should also accept dataframe?
+        #     raise TypeError(f"{self._local_vars[dep]} is not a valid dependency type")
+        raise TypeError(f"{dep} is not a valid dependency type")  # pragma: no cover

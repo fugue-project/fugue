@@ -1,7 +1,7 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: Lint
+name: Test 3.8 & Lint
 
 on:
   push:
@@ -24,5 +24,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: make devenv
+    - name: Uninstall pytest-spark
+      run: pip uninstall -y pytest-spark
+    - name: Test
+      run: make testcore
     - name: Lint
       run: make lint
