@@ -1,15 +1,14 @@
 import logging
-from typing import Any, Callable, Iterable, List
+from typing import Any, Iterable, List
 
 import modin.pandas as pd
-import pandas
 import pyarrow as pa
 from fs.base import FS as FileSystem
 from fs.osfs import OSFS
 from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import DataFrame, IterableDataFrame
+from fugue.dataframe import DataFrame
 from fugue.dataframe.pandas_dataframes import PandasDataFrame
-from fugue.dataframe.utils import get_join_schemas, to_local_df
+from fugue.dataframe.utils import get_join_schemas
 from fugue.execution import SqliteEngine
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
@@ -19,7 +18,6 @@ from fugue.execution.execution_engine import (
 from fugue_modin.dataframe import ModinDataFrame
 from triad.collections import ParamDict, Schema
 from triad.utils.assertion import assert_or_throw
-from triad.utils.pandas_like import as_array_iterable, safe_groupby_apply
 
 
 class ModinExecutionEngine(ExecutionEngine):
@@ -67,42 +65,6 @@ class ModinExecutionEngine(ExecutionEngine):
     ) -> DataFrame:  # pragma: no cover
         self.log.warning(f"{self} doesn't respect repartition")
         return df
-
-    def map_partitions(
-        self,
-        df: DataFrame,
-        mapFunc: Callable[[int, Iterable[Any]], Iterable[Any]],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-        metadata: Any = None,
-    ) -> DataFrame:  # pragma: no cover
-        if partition_spec.num_partitions != "0":
-            self.log.warning(
-                f"{self} doesn't respect num_partitions {partition_spec.num_partitions}"
-            )
-        if len(partition_spec.partition_by) == 0:  # no partition
-            # TODO: is there a better way?
-            df = to_local_df(df)
-            return IterableDataFrame(
-                mapFunc(0, df.as_array_iterable(type_safe=True)), output_schema
-            )
-        presort = partition_spec.presort
-        presort_keys = list(presort.keys())
-        presort_asc = list(presort.values())
-        output_schema = Schema(output_schema)
-        names = output_schema.names
-
-        def _map(pdf: Any) -> pd.DataFrame:
-            if len(presort_keys) > 0:
-                pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
-            data = list(
-                mapFunc(0, as_array_iterable(pdf, type_safe=True, null_safe=False))
-            )
-            return pandas.DataFrame(data, columns=names)
-
-        df = self.to_df(df)
-        result = safe_groupby_apply(df.native, partition_spec.partition_by, _map)
-        return ModinDataFrame(result, output_schema)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)

@@ -221,7 +221,7 @@ class _IterableListParam(_DataFrameParamBase):
         return df.as_array_iterable(type_safe=True)
 
     def to_output_df(self, output: Iterable[List[Any]], schema: Any) -> DataFrame:
-        return ArrayDataFrame(output, schema)
+        return IterableDataFrame(output, schema)
 
 
 class _EmptyAwareIterableListParam(_DataFrameParamBase):
@@ -234,7 +234,7 @@ class _EmptyAwareIterableListParam(_DataFrameParamBase):
     def to_output_df(
         self, output: EmptyAwareIterable[List[Any]], schema: Any
     ) -> DataFrame:
-        return ArrayDataFrame(output, schema)
+        return IterableDataFrame(output, schema)
 
 
 class _ListDictParam(_DataFrameParamBase):

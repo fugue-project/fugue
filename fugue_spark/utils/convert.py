@@ -4,9 +4,10 @@ import pyarrow as pa
 import pyspark.sql as ps
 import pyspark.sql.types as pt
 from pyarrow.types import is_struct
+from pyspark.sql import SparkSession
 from triad.collections import Schema
-from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
+from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
 
 
 def to_spark_schema(obj: Any) -> pt.StructType:
@@ -67,13 +68,26 @@ def to_select_expression(schema_from: Any, schema_to: Any) -> List[str]:
     return expr
 
 
+def to_spark_df(
+    session: SparkSession, data: Any, schema: Any = None, metadata: Any = None
+) -> ps.DataFrame:
+    pass
+
+
+# TODO: the following function always set nullable to true,
+# but should we use field.nullable?
+
+
 def _to_arrow_type(dt: pt.DataType) -> pa.DataType:
     if isinstance(dt, pt.TimestampType):
         return TRIAD_DEFAULT_TIMESTAMP
     if isinstance(dt, pt.StructType):
         fields = [
             pa.field(
-                field.name, _to_arrow_type(field.dataType), nullable=field.nullable
+                # field.name, _to_arrow_type(field.dataType), nullable=field.nullable
+                field.name,
+                _to_arrow_type(field.dataType),
+                nullable=True,
             )
             for field in dt
         ]
@@ -83,7 +97,8 @@ def _to_arrow_type(dt: pt.DataType) -> pa.DataType:
 
 def _to_arrow_schema(schema: pt.StructType) -> pa.Schema:
     fields = [
-        pa.field(field.name, _to_arrow_type(field.dataType), nullable=field.nullable)
+        # pa.field(field.name, _to_arrow_type(field.dataType), nullable=field.nullable)
+        pa.field(field.name, _to_arrow_type(field.dataType), nullable=True)
         for field in schema
     ]
     return pa.schema(fields)
@@ -94,7 +109,10 @@ def _from_arrow_type(dt: pa.DataType) -> pt.DataType:
         return pt.StructType(
             [
                 pt.StructField(
-                    field.name, _from_arrow_type(field.type), nullable=field.nullable
+                    # field.name, _from_arrow_type(field.type), nullable=field.nullable
+                    field.name,
+                    _from_arrow_type(field.type),
+                    nullable=True,
                 )
                 for field in dt
             ]
@@ -106,7 +124,10 @@ def _from_arrow_schema(schema: pa.Schema) -> pt.StructType:
     return pt.StructType(
         [
             pt.StructField(
-                field.name, _from_arrow_type(field.type), nullable=field.nullable
+                # field.name, _from_arrow_type(field.type), nullable=field.nullable
+                field.name,
+                _from_arrow_type(field.type),
+                nullable=True,
             )
             for field in schema
         ]

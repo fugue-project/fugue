@@ -1,4 +1,9 @@
+import concurrent.futures
+import os
+from threading import RLock
+
 import numpy as np
+from fs.osfs import OSFS
 from fugue.dataframe import to_local_bounded_df, to_local_df
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
@@ -8,8 +13,7 @@ from fugue.dataframe.utils import (deserialize_df, get_join_schemas, pickle_df,
                                    serialize_df, unpickle_df)
 from pytest import raises
 from triad.exceptions import InvalidOperationError, NoneArgumentError
-import os
-from fs.osfs import OSFS
+from triad.utils.assertion import assert_or_throw
 
 
 def test_to_local_df():

@@ -28,7 +28,7 @@ class DataFrame(ABC):
             if isinstance(metadata, ParamDict)
             else ParamDict(metadata, deep=True)
         )
-        self._metadata.set_readonly
+        self._metadata.set_readonly()
         self._lazy_schema_lock = RLock()
 
     @property

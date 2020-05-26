@@ -40,7 +40,7 @@ class BuiltInTests(object):
         def test_create_show(self):
             with self.dag() as dag:
                 dag.df([[0]], "a:int").persist().partition(num=2).show()
-                dag.df(ArrayDataFrame([[0]], "a:int")).persist().broadcast().show()
+                dag.df(dag.df([[0]], "a:int")).persist().broadcast().show()
 
         def test_create_process_output(self):
             with self.dag() as dag:
@@ -60,7 +60,7 @@ class BuiltInTests(object):
                 b = dag.df([[1, 3]], "a:int,c:int")
                 c1 = a.zip(b)
                 c2 = dag.zip(a, b)
-                c1.assert_eq(c2)
+                c1.assert_eq(c2, check_metadata=False)
 
                 a = dag.df([[1, 2], [2, 3], [2, 5]], "a:int,b:int")
                 b = dag.df([[1, 3]], "a:int,c:int")
@@ -68,13 +68,13 @@ class BuiltInTests(object):
                 c2 = dag.zip(
                     a, b, how="left_outer", partition=dict(presort="b DESC, c ASC")
                 )
-                c1.assert_eq(c2)
+                c1.assert_eq(c2, check_metadata=False)
 
                 a = dag.df([[1, 2, 0], [1, 3, 1]], "a:int,b:int,c:int")
                 b = dag.df([[1, 2, 1], [1, 3, 2]], "a:int,b:int,d:int")
                 c = dag.df([[1, 4]], "a:int,e:int")
                 e = dag.df([[1, 2], [1, 3]], "a:int,b:int")
-                dag.zip(a, b, c)[["a", "b"]].assert_eq(e)
+                dag.zip(a, b, c)[["a", "b"]].assert_eq(e, check_metadata=False)
 
         def test_transform(self):
             with self.dag() as dag:
@@ -169,8 +169,8 @@ class BuiltInTests(object):
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "a:int,b:int")
                 dag.join(a, how="inner").assert_eq(a)
 
-                b = ArrayDataFrame([[2, 200], [3, 300]], "a:int,c:int")
-                c = ArrayDataFrame([[2, 2000]], "a:int,d:int")
+                b = dag.df([[2, 200], [3, 300]], "a:int,c:int")
+                c = dag.df([[2, 2000]], "a:int,d:int")
                 d = a.join(b, c, how="inner", on=["a"])
                 dag.df([[2, 20, 200, 2000]], "a:int,b:int,c:int,d:int").assert_eq(d)
 
@@ -181,7 +181,7 @@ class BuiltInTests(object):
                 dag.select("* FROM", a).assert_eq(a)
                 dag.select("SELECT *,x*y AS z FROM", a, "WHERE x>=2").assert_eq(b)
 
-                c = ArrayDataFrame([[2, 20, 40], [3, 30, 90]], "x:long,y:long,zb:long")
+                c = dag.df([[2, 20, 40], [3, 30, 90]], "x:long,y:long,zb:long")
                 dag.select(
                     "  SELECT t1.*,z AS zb FROM ",
                     a,
@@ -216,7 +216,9 @@ class BuiltInTests(object):
                 ).assert_eq(c)
 
                 # no input
-                dag.select("1 AS a").assert_eq(ArrayDataFrame([[1]], "a:long"))
+                dag.select("9223372036854775807 AS a").assert_eq(
+                    dag.df([[9223372036854775807]], "a:long")
+                )
 
                 # make sure transform -> select works
                 b = a.transform(mock_tf1)
@@ -280,18 +282,18 @@ class MockTransform1(Transformer):
         assert "x" in df.metadata
         return [df.schema, "ct:int,p:int"]
 
-    def init_physical_partition(self, df: LocalDataFrame) -> None:
+    def on_init(self, df: DataFrame) -> None:
         assert "test" in self.workflow_conf
         assert "x" in df.metadata
         self.pn = self.cursor.physical_partition_no
         self.ks = self.key_schema
-
-    def init_logical_partition(self, df: LocalDataFrame) -> None:
-        assert "test" in self.workflow_conf
-        assert "x" in df.metadata
-        self.ln = self.cursor.partition_no
+        if "on_init_called" not in self.__dict__:
+            self.on_init_called = 1
+        else:
+            self.on_init_called += 1
 
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:
+        assert 1 == self.on_init_called
         assert "test" in self.workflow_conf
         assert "x" in df.metadata
         pdf = df.as_pandas()
@@ -328,13 +330,18 @@ class MockCoTransform1(CoTransformer):
         assert 2 == len(dfs)
         return [self.key_schema, "ct1:int,ct2:int,p:int"]
 
-    def init_physical_partition(self, dfs: DataFrames) -> None:
+    def on_init(self, dfs: DataFrames) -> None:
         assert "test" in self.workflow_conf
         assert 2 == len(dfs)
         self.pn = self.cursor.physical_partition_no
         self.ks = self.key_schema
+        if "on_init_called" not in self.__dict__:
+            self.on_init_called = 1
+        else:
+            self.on_init_called += 1
 
     def transform(self, dfs: DataFrames) -> LocalDataFrame:
+        assert 1 == self.on_init_called
         assert "test" in self.workflow_conf
         assert 2 == len(dfs)
         row = self.cursor.key_value_array + [

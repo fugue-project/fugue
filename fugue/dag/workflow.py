@@ -46,6 +46,18 @@ class WorkflowDataFrame(DataFrame):
     def workflow(self) -> "FugueWorkflow":
         return self._workflow
 
+    def process(
+        self: TDF,
+        using: Any,
+        schema: Any = None,
+        params: Any = None,
+        pre_partition: Any = None,
+    ) -> TDF:
+        df = self.workflow.process(
+            self, using=using, schema=schema, params=params, pre_partition=pre_partition
+        )
+        return self.to_self_type(df)
+
     def show(
         self,
         rows: int = 10,
