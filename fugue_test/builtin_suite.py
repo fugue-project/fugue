@@ -289,7 +289,7 @@ class MockTransform1(Transformer):
         self.ks = self.key_schema
         if "on_init_called" not in self.__dict__:
             self.on_init_called = 1
-        else:
+        else:  # pragma: no cover
             self.on_init_called += 1
 
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:
@@ -337,7 +337,7 @@ class MockCoTransform1(CoTransformer):
         self.ks = self.key_schema
         if "on_init_called" not in self.__dict__:
             self.on_init_called = 1
-        else:
+        else:  # pragma: no cover
             self.on_init_called += 1
 
     def transform(self, dfs: DataFrames) -> LocalDataFrame:
