@@ -93,6 +93,7 @@ def test_partition_cursor():
     p = PartitionSpec(dict(partition_by=["b", "a"]))
     s = Schema("a:int,b:int,c:int,d:int")
     c = p.get_cursor(s, 2)
+    pt = p.get_partitioner(s)  # this part is well covered in spark section
     assert c.row_schema == s
     assert c.key_schema == "b:int,a:int"
 

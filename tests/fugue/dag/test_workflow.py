@@ -6,6 +6,9 @@ from fugue.dag.workflow import FugueWorkflow
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.execution import NaiveExecutionEngine
 from fugue.extensions.transformer.convert import transformer
+from triad.exceptions import InvalidOperationError
+from pytest import raises
+import copy
 
 
 def test_builder():
@@ -14,6 +17,9 @@ def test_builder():
     ctx = WorkflowContext()
 
     a = builder.create_data([[0], [0], [1]], "a:int")
+    raises(InvalidOperationError, lambda: a._task.copy())
+    raises(InvalidOperationError, lambda: copy.copy(a._task))
+    raises(InvalidOperationError, lambda: copy.deepcopy(a._task))
     a.show()
     a.show()
     b = a.transform(mock_tf1, "*,b:int", partition=dict(by=["a"]))

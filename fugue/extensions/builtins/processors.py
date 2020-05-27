@@ -106,7 +106,7 @@ class Zip(Processor):
             return self.execution_engine.serialize_by_partition(
                 dfs[0], partition_spec, "_0", temp_path, to_file_threshold
             )
-        df = self.execution_engine.zip_dataframes(
+        df = self.execution_engine.zip(
             dfs[0],
             dfs[1],
             how=how,
@@ -115,7 +115,7 @@ class Zip(Processor):
             to_file_threshold=to_file_threshold,
         )
         for i in range(2, len(dfs)):
-            df = self.execution_engine.zip_dataframes(
+            df = self.execution_engine.zip(
                 df,
                 dfs[i],
                 how=how,

@@ -18,6 +18,19 @@ from triad.utils.convert import to_type
 from triad.utils.iter import make_empty_aware, EmptyAwareIterable
 from fugue.dataframe.dataframes import DataFrames
 
+_COMMENT_SCHEMA_ANNOTATION = "schema:"
+
+
+def parse_output_schema_from_comment(func: Callable) -> Optional[str]:
+    for comment in reversed((inspect.getcomments(func) or "").splitlines()):
+        comment = comment.replace(" ", "").replace("#", "")
+        if not comment.startswith(_COMMENT_SCHEMA_ANNOTATION):
+            continue
+        s = comment[len(_COMMENT_SCHEMA_ANNOTATION) :]
+        if s != "":
+            return s
+    return None
+
 
 class FunctionWrapper(object):
     def __init__(self, func: Callable, params_re: str = ".*", return_re: str = ".*"):

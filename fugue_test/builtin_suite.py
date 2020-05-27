@@ -8,13 +8,14 @@ from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFra
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.execution import ExecutionEngine
 from fugue.execution.naive_execution_engine import SqliteEngine
+from fugue.extensions.outputter import Outputter
+from fugue.extensions.processor import Processor
 from fugue.extensions.transformer import (
     CoTransformer,
     Transformer,
-    transformer,
     cotransformer,
+    transformer,
 )
-from fugue.extensions.processor import Processor
 
 
 class BuiltInTests(object):
@@ -53,6 +54,10 @@ class BuiltInTests(object):
                 b2.assert_eq(ArrayDataFrame([[3]], "a:int"))
                 b2 = dag.process(a, a, a, using=MockProcessor3)
                 b2.assert_eq(ArrayDataFrame([[3]], "a:int"))
+                a.process(mock_processor2).assert_eq(ArrayDataFrame([[1]], "a:int"))
+                a.output(mock_outputter2)
+                a.partition(num=3).output(MockOutputter3)
+                dag.output(dict(aa=a, bb=b), using=MockOutputter4)
 
         def test_zip(self):
             with self.dag() as dag:
@@ -274,6 +279,22 @@ class MockProcessor3(Processor):
 
 def mock_outputter(df1: List[List[Any]], df2: List[List[Any]]) -> None:
     assert len(df1) == len(df2)
+
+
+def mock_outputter2(df: List[List[Any]]) -> None:
+    print(df)
+
+
+class MockOutputter3(Outputter):
+    def process(self, dfs):
+        assert "3" == self.partition_spec.num_partitions
+
+
+class MockOutputter4(Outputter):
+    def process(self, dfs):
+        for k, v in dfs.items():
+            print(k)
+            v.show()
 
 
 class MockTransform1(Transformer):

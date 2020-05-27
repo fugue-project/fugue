@@ -77,6 +77,7 @@ class ExecutionEngine(ABC):
     ) -> DataFrame:  # pragma: no cover
         raise NotImplementedError
 
+    @abstractmethod
     def map(
         self,
         df: DataFrame,
@@ -138,7 +139,7 @@ class ExecutionEngine(ABC):
         )
         return self.map(df, s.run, output_schema, partition_spec, metadata)
 
-    def zip_dataframes(
+    def zip(
         self,
         df1: DataFrame,
         df2: DataFrame,
@@ -151,7 +152,7 @@ class ExecutionEngine(ABC):
         how = how.lower()
         assert_or_throw(
             "semi" not in how and "anti" not in how,
-            InvalidOperationError("zip_dataframes does not support semi or anti joins"),
+            InvalidOperationError("zip does not support semi or anti joins"),
         )
         to_file_threshold = (
             -1 if to_file_threshold == -1 else to_size(to_file_threshold)

@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple
+from typing import Any, Iterable, List, Tuple
 
 import pyarrow as pa
 import pyspark.sql as ps
@@ -65,6 +65,20 @@ def to_select_expression(schema_from: Any, schema_to: Any) -> List[str]:
     sub = pt.StructType([schema1[x.name] for x in schema2.fields])
     _, expr = to_cast_expression(sub, schema2, allow_name_mismatch=False)
     return expr
+
+
+def to_type_safe_input(rows: Iterable[ps.Row], schema: Schema) -> Iterable[List[Any]]:
+    idx = [p for p, t in enumerate(schema.types) if pa.types.is_struct(t)]
+    if len(idx) == 0:
+        for row in rows:
+            yield list(row)
+    else:
+        for row in rows:
+            r = list(row)
+            for i in idx:
+                if r[i] is not None:
+                    r[i] = r[i].asDict()
+            yield r
 
 
 # TODO: the following function always set nullable to true,

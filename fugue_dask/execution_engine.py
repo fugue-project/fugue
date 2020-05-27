@@ -115,6 +115,8 @@ class DaskExecutionEngine(ExecutionEngine):
         )
 
         def _map(pdf: Any) -> pd.DataFrame:
+            if pdf.shape[0] == 0:
+                return PandasDataFrame([], output_schema).as_pandas()
             if len(presort_keys) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             input_df = PandasDataFrame(

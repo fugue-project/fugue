@@ -350,7 +350,7 @@ def _enforce_type(df: pd.DataFrame, schema: Schema) -> pd.DataFrame:
             ns = s.isnull()
             s = s.fillna(0).astype(v.type.to_pandas_dtype())
             s[ns] = None
-        else:
+        elif not pa.types.is_struct(v.type):
             s = s.astype(v.type.to_pandas_dtype())
         df[k] = s
     return df

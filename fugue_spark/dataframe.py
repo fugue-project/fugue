@@ -11,9 +11,7 @@ from fugue.dataframe import (
     LocalDataFrame,
     PandasDataFrame,
 )
-from fugue_spark.utils.convert import to_cast_expression, to_schema
-from pyspark.sql import Row
-from triad.collections import Schema
+from fugue_spark.utils.convert import to_cast_expression, to_schema, to_type_safe_input
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 
@@ -49,8 +47,9 @@ class SparkDataFrame(DataFrame):
         return True
 
     def as_local(self) -> LocalDataFrame:
+        # TODO: does it make sense to also include the metadata?
         if any(pa.types.is_nested(t) for t in self.schema.types):
-            data = list(self._convert(self.native.collect(), self.schema))
+            data = list(to_type_safe_input(self.native.collect(), self.schema))
             return ArrayDataFrame(data, self.schema)
         return PandasDataFrame(self.native.toPandas(), self.schema)
 
@@ -104,7 +103,7 @@ class SparkDataFrame(DataFrame):
     ) -> Iterable[Any]:
         sdf = self._withColumns(columns)
         if not type_safe:
-            for row in self._convert(sdf.native.rdd.toLocalIterator(), sdf.schema):
+            for row in to_type_safe_input(sdf.native.rdd.toLocalIterator(), sdf.schema):
                 yield row
         else:
             df = IterableDataFrame(sdf.as_array_iterable(type_safe=False), sdf.schema)
@@ -129,16 +128,3 @@ class SparkDataFrame(DataFrame):
         if columns is None:
             return self
         return SparkDataFrame(self.native.select(*columns))
-
-    def _convert(self, rows: Iterable[Row], schema: Schema) -> Iterable[List[Any]]:
-        idx = [p for p, t in enumerate(schema.types) if pa.types.is_struct(t)]
-        if len(idx) == 0:
-            for row in rows:
-                yield list(row)
-        else:
-            for row in rows:
-                r = list(row)
-                for i in idx:
-                    if r[i] is not None:
-                        r[i] = r[i].asDict()
-                yield r

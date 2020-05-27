@@ -108,9 +108,9 @@ class FugueTask(TaskSpec, ABC):
             return df
         return self.execution_engine.broadcast(df)
 
-    def pre_partition(self, *args: Any, **kwargs: Any) -> "FugueTask":
-        self._pre_partition = PartitionSpec(*args, **kwargs)
-        return self
+    # def pre_partition(self, *args: Any, **kwargs: Any) -> "FugueTask":
+    #    self._pre_partition = PartitionSpec(*args, **kwargs)
+    #    return self
 
 
 class Create(FugueTask):

@@ -43,6 +43,7 @@ def test_to_processor():
     raises(FugueInterfacelessError, lambda: to_processor(t6, "a:int"))
     assert isinstance(to_processor(t7, "a:int"), Processor)
     raises(FugueInterfacelessError, lambda: to_processor(t7))
+    assert isinstance(to_processor(t8), Processor)
 
 
 def test_run_processor():
@@ -108,4 +109,9 @@ def t6(dfs: DataFrames) -> DataFrame:
 
 
 def t7(dfs: DataFrames) -> List[List[Any]]:
+    pass
+
+
+# schema: a:int
+def t8(e: ExecutionEngine, df1: DataFrame, df2: DataFrame) -> List[List[Any]]:
     pass
