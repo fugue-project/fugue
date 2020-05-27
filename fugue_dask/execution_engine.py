@@ -3,8 +3,6 @@ from typing import Any, Callable, Iterable, List, Optional
 
 import dask.dataframe as pd
 import pyarrow as pa
-from fs.base import FS as FileSystem
-from fs.osfs import OSFS
 from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
 from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
@@ -23,13 +21,15 @@ from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.threading import RunOnce
 
+from triad.collections.fs import FileSystem
+
 
 class DaskExecutionEngine(ExecutionEngine):
     def __init__(self, conf: Any = None):
         p = ParamDict(DEFAULT_CONFIG)
         p.update(ParamDict(conf))
         super().__init__(p)
-        self._fs = OSFS("/")
+        self._fs = FileSystem()
         self._log = logging.getLogger()
         self._default_sql_engine = SqliteEngine(self)
 

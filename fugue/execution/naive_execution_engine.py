@@ -3,8 +3,6 @@ from typing import Any, Callable, Iterable, List, Optional
 
 import pandas as pd
 import pyarrow as pa
-from fs.base import FS as FileSystem
-from fs.osfs import OSFS
 from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.dataframe import (
     DataFrame,
@@ -22,9 +20,11 @@ from fugue.execution.execution_engine import (
 )
 from sqlalchemy import create_engine
 from triad.collections import Schema
+from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
-from triad.collections.dict import ParamDict
+
+from triad.collections.fs import FileSystem
 
 
 class SqliteEngine(SQLEngine):
@@ -42,7 +42,7 @@ class SqliteEngine(SQLEngine):
 class NaiveExecutionEngine(ExecutionEngine):
     def __init__(self, conf: Any = None):
         super().__init__(conf)
-        self._fs = OSFS("/")
+        self._fs = FileSystem()
         self._log = logging.getLogger()
         self._default_sql_engine = SqliteEngine(self)
 

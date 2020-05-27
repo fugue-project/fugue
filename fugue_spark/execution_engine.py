@@ -4,8 +4,6 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
-from fs.base import FS as FileSystem
-from fs.osfs import OSFS
 from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe import (
@@ -36,6 +34,8 @@ from triad.collections import ParamDict, Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.iter import EmptyAwareIterable
 from triad.utils.threading import RunOnce
+
+from triad.collections.fs import FileSystem
 
 _TO_SPARK_JOIN_MAP: Dict[str, str] = {
     "inner": "inner",
@@ -72,7 +72,7 @@ class SparkExecutionEngine(ExecutionEngine):
         cf = {x[0]: x[1] for x in spark_session.sparkContext.getConf().getAll()}
         cf.update(ParamDict(conf))
         super().__init__(cf)
-        self._fs = OSFS("/")  # TODO: this is not right
+        self._fs = FileSystem()
         self._log = logging.getLogger()
         self._default_sql_engine = SparkSQLEngine(self)
         self._broadcast_func = RunOnce(

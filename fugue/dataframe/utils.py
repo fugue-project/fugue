@@ -6,7 +6,6 @@ from typing import Any, Iterable, List, Optional, Tuple
 
 import pandas as pd
 from fs import open_fs
-from fs.base import FS as FileSystem
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, LocalDataFrame
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
@@ -15,6 +14,8 @@ from triad.collections import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.assertion import assert_or_throw as aot
+
+from triad.collections.fs import FileSystem
 
 
 def _df_eq(

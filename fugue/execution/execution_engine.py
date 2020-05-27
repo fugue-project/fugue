@@ -2,7 +2,6 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
-from fs.base import FS as FileSystem
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
@@ -17,6 +16,8 @@ from triad.collections import ParamDict, Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_size
+
+from triad.collections.fs import FileSystem
 
 _DEFAULT_JOIN_KEYS: List[str] = []
 
