@@ -11,8 +11,9 @@ from fugue.dataframe import (
     LocalDataFrame,
     PandasDataFrame,
 )
+from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 from fugue_spark.utils.convert import to_cast_expression, to_schema, to_type_safe_input
-from triad.exceptions import InvalidOperationError
+from triad.collections.schema import SchemaError
 from triad.utils.assertion import assert_or_throw
 
 
@@ -21,18 +22,23 @@ class SparkDataFrame(DataFrame):
         self, df: Any = None, schema: Any = None, metadata: Any = None
     ):
         self._lock = RLock()
-        if isinstance(df, ps.DataFrame):
-            if schema is not None:
-                has_cast, expr = to_cast_expression(df, schema, True)
-                if has_cast:
-                    df = df.selectExpr(*expr)
-                schema = to_schema(schema)
-            else:
-                schema = to_schema(df)
-            self._native = df
-            super().__init__(schema, metadata)
-        else:
-            raise ValueError(f"{df} is incompatible with PandasDataFrame")
+        try:
+            if isinstance(df, ps.DataFrame):
+                if schema is not None:
+                    schema = to_schema(schema).assert_not_empty()
+                    has_cast, expr = to_cast_expression(df, schema, True)
+                    if has_cast:
+                        df = df.selectExpr(*expr)
+                else:
+                    schema = to_schema(df).assert_not_empty()
+                self._native = df
+                super().__init__(schema, metadata)
+            else:  # pragma: no cover
+                assert_or_throw(schema is not None, SchemaError("schema is None"))
+                schema = to_schema(schema).assert_not_empty()
+                raise ValueError(f"{df} is incompatible with SparkDataFrame")
+        except Exception as e:
+            raise FugueDataFrameInitError(e)
 
     @property
     def native(self) -> ps.DataFrame:
@@ -62,9 +68,8 @@ class SparkDataFrame(DataFrame):
         return self._first is None
 
     def peek_array(self) -> List[Any]:
-        if self._first is None:
-            raise InvalidOperationError("Dataframe is empty, can't peek_array")
-        return self._first
+        self.assert_not_empty()
+        return self._first  # type: ignore
 
     def count(self) -> int:
         with self._lock:
@@ -72,21 +77,22 @@ class SparkDataFrame(DataFrame):
                 self._df_count = self.native.count()
             return self._df_count
 
+    def _drop_cols(self, cols: List[str]) -> DataFrame:
+        cols = (self.schema - cols).names
+        return self._select_cols(cols)
+
+    def _select_cols(self, cols: List[Any]) -> DataFrame:
+        schema = self.schema.extract(cols)
+        return SparkDataFrame(self.native[schema.names])
+
     def as_pandas(self) -> pd.DataFrame:
         return self.native.toPandas()
 
-    def drop(self, cols: List[str]) -> "SparkDataFrame":
-        assert_or_throw(
-            cols in self.schema,
-            InvalidOperationError(f"{cols} not all in {self.schema}"),
-        )
-        assert_or_throw(
-            len(cols) < len(self.schema),
-            InvalidOperationError(f"can't drop all columns {self.schema}"),
-        )
-        return SparkDataFrame(self.native.drop(*cols))
-
     def rename(self, columns: Dict[str, str]) -> "SparkDataFrame":
+        try:
+            self.schema.rename(columns)
+        except Exception as e:
+            raise FugueDataFrameOperationError(e)
         df = self.native
         for o, n in columns.items():
             df = df.withColumnRenamed(o, n)

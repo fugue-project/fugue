@@ -1,3 +1,5 @@
+from typing import Optional
+
 import dask.dataframe as pd
 import pandas
 import pyarrow as pa
@@ -5,12 +7,28 @@ from triad.utils.pandas_like import PandasLikeUtils
 
 
 class DaskUtils(PandasLikeUtils[pd.DataFrame]):
+    def as_arrow(
+        self, df: pd.DataFrame, schema: Optional[pa.Schema] = None
+    ) -> pa.Table:
+        """Convert dask dataframe to pyarrow table
+
+        :param df: dask dataframe
+        :param schema: if specified, it will be used to construct pyarrow table,
+          defaults to None
+
+        :return: pyarrow table
+        """
+        pdf = df.compute().reset_index(drop=True)
+        return pa.Table.from_pandas(
+            pdf, schema=schema, preserve_index=False, safe=False
+        )
+
     def enforce_type(
         self, df: pd.DataFrame, schema: pa.Schema, null_safe: bool = False
     ) -> pd.DataFrame:
-        """Enforce the pandas like dataframe to comply with `schema`.
+        """Enforce the dask dataframe to comply with `schema`.
 
-        :param df: pandas like dataframe
+        :param df: dask dataframe
         :param schema: pyarrow schema
         :param null_safe: whether to enforce None value for int, string and bool values
         :return: converted dataframe
@@ -28,7 +46,7 @@ class DaskUtils(PandasLikeUtils[pd.DataFrame]):
         """Check whether the datafame is compatible with the operations inside
         this utils collection
 
-        :param df: pandas like dataframe
+        :param df: dask dataframe
         :return: if it is compatible
         """
         return isinstance(

@@ -5,10 +5,10 @@ import pandas
 from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.dataframe import _input_schema
 from triad.collections.schema import Schema
-from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from fugue_dask.utils import DASK_UTILS
 from fugue_dask.constants import DEFAULT_CONFIG
+from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 
 
 class DaskDataFrame(DataFrame):
@@ -20,38 +20,42 @@ class DaskDataFrame(DataFrame):
         num_partitions: int = 0,
         type_safe=True,
     ):
-        if num_partitions <= 0:
-            num_partitions = DEFAULT_CONFIG.get_or_throw(
-                "fugue.dask.dataframe.default.partitions", int
-            )
-        if df is None:
-            schema = _input_schema(schema).assert_not_empty()
-            df = []
-        if isinstance(df, DaskDataFrame):
-            super().__init__(df.schema, df.metadata if metadata is None else metadata)
-            self._native: pd.DataFrame = df._native
-            return
-        elif isinstance(df, (pd.DataFrame, pd.Series)):
-            if isinstance(df, pd.Series):
-                df = df.to_frame()
-            pdf = df
-            schema = None if schema is None else _input_schema(schema)
-        elif isinstance(df, (pandas.DataFrame, pandas.Series)):
-            if isinstance(df, pandas.Series):
-                df = df.to_frame()
-            pdf = pd.from_pandas(df, npartitions=num_partitions)
-            schema = None if schema is None else _input_schema(schema)
-        elif isinstance(df, Iterable):
-            assert_arg_not_none(schema, msg="schema can't be None for iterable input")
-            schema = _input_schema(schema).assert_not_empty()
-            t = PandasDataFrame(df, schema)
-            pdf = pd.from_pandas(t.native, npartitions=num_partitions)
-            type_safe = False
-        else:
-            raise ValueError(f"{df} is incompatible with DaskDataFrame")
-        pdf, schema = self._apply_schema(pdf, schema, type_safe)
-        super().__init__(schema, metadata)
-        self._native = pdf
+        try:
+            if num_partitions <= 0:
+                num_partitions = DEFAULT_CONFIG.get_or_throw(
+                    "fugue.dask.dataframe.default.partitions", int
+                )
+            if df is None:
+                schema = _input_schema(schema).assert_not_empty()
+                df = []
+            if isinstance(df, DaskDataFrame):
+                super().__init__(
+                    df.schema, df.metadata if metadata is None else metadata
+                )
+                self._native: pd.DataFrame = df._native
+                return
+            elif isinstance(df, (pd.DataFrame, pd.Series)):
+                if isinstance(df, pd.Series):
+                    df = df.to_frame()
+                pdf = df
+                schema = None if schema is None else _input_schema(schema)
+            elif isinstance(df, (pandas.DataFrame, pandas.Series)):
+                if isinstance(df, pandas.Series):
+                    df = df.to_frame()
+                pdf = pd.from_pandas(df, npartitions=num_partitions)
+                schema = None if schema is None else _input_schema(schema)
+            elif isinstance(df, Iterable):
+                schema = _input_schema(schema).assert_not_empty()
+                t = PandasDataFrame(df, schema)
+                pdf = pd.from_pandas(t.native, npartitions=num_partitions)
+                type_safe = False
+            else:
+                raise ValueError(f"{df} is incompatible with DaskDataFrame")
+            pdf, schema = self._apply_schema(pdf, schema, type_safe)
+            super().__init__(schema, metadata)
+            self._native = pdf
+        except Exception as e:
+            raise FugueDataFrameInitError(e)
 
     @property
     def native(self) -> pd.DataFrame:
@@ -76,7 +80,16 @@ class DaskDataFrame(DataFrame):
     def num_partitions(self) -> int:
         return self.native.npartitions
 
+    def _drop_cols(self, cols: List[str]) -> DataFrame:
+        cols = (self.schema - cols).names
+        return self._select_cols(cols)
+
+    def _select_cols(self, cols: List[Any]) -> DataFrame:
+        schema = self.schema.extract(cols)
+        return DaskDataFrame(self.native[schema.names], schema, type_safe=False)
+
     def peek_array(self) -> Any:
+        self.assert_not_empty()
         return self.as_pandas().iloc[0].values.tolist()
 
     def persist(self, **kwargs: Any) -> "DaskDataFrame":
@@ -89,18 +102,12 @@ class DaskDataFrame(DataFrame):
     def as_pandas(self) -> pandas.DataFrame:
         return self.native.compute().reset_index(drop=True)
 
-    def drop(self, cols: List[str]) -> DataFrame:
-        try:
-            schema = self.schema - cols
-        except Exception as e:
-            raise InvalidOperationError(str(e))
-        if len(schema) == 0:
-            raise InvalidOperationError("Can't remove all columns of a dataframe")
-        return DaskDataFrame(self.native.drop(cols, axis=1), schema, type_safe=False)
-
     def rename(self, columns: Dict[str, str]) -> "DataFrame":
+        try:
+            schema = self.schema.rename(columns)
+        except Exception as e:
+            raise FugueDataFrameOperationError(e)
         df = self.native.rename(columns=columns)
-        schema = self.schema.rename(columns)
         return DaskDataFrame(df, schema, type_safe=False)
 
     def as_array(
@@ -111,9 +118,11 @@ class DaskDataFrame(DataFrame):
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
-        sub = None if columns is None else self.schema.extract(columns).pa_schema
         return DASK_UTILS.as_array_iterable(
-            self.native.compute(), sub, type_safe=type_safe, null_safe=True
+            self.native,
+            schema=self.schema.pa_schema,
+            columns=columns,
+            type_safe=type_safe,
         )
 
     def _apply_schema(

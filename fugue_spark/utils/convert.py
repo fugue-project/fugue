@@ -3,7 +3,7 @@ from typing import Any, Iterable, List, Tuple
 import pyarrow as pa
 import pyspark.sql as ps
 import pyspark.sql.types as pt
-from pyarrow.types import is_struct
+from pyarrow.types import is_list, is_struct, is_timestamp
 from triad.collections import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
@@ -68,16 +68,26 @@ def to_select_expression(schema_from: Any, schema_to: Any) -> List[str]:
 
 
 def to_type_safe_input(rows: Iterable[ps.Row], schema: Schema) -> Iterable[List[Any]]:
-    idx = [p for p, t in enumerate(schema.types) if pa.types.is_struct(t)]
-    if len(idx) == 0:
+    struct_idx = [p for p, t in enumerate(schema.types) if pa.types.is_struct(t)]
+    complex_list_idx = [
+        p
+        for p, t in enumerate(schema.types)
+        if pa.types.is_list(t) and pa.types.is_nested(t.value_type)
+    ]
+    if len(struct_idx) == 0 and len(complex_list_idx) == 0:
         for row in rows:
             yield list(row)
-    else:
+    elif len(complex_list_idx) == 0:
         for row in rows:
             r = list(row)
-            for i in idx:
+            for i in struct_idx:
                 if r[i] is not None:
-                    r[i] = r[i].asDict()
+                    r[i] = r[i].asDict(recursive=True)
+            yield r
+    else:
+        for row in rows:
+            data = row.asDict(recursive=True)
+            r = [data[n] for n in schema.names]
             yield r
 
 
@@ -122,6 +132,12 @@ def _from_arrow_type(dt: pa.DataType) -> pt.DataType:
                 for field in dt
             ]
         )
+    elif is_list(dt):
+        if is_timestamp(dt.value_type):
+            raise TypeError(  # pragma: no cover
+                "Spark: unsupported type in conversion from Arrow: " + str(dt)
+            )
+        return pt.ArrayType(_from_arrow_type(dt.value_type))
     return pt.from_arrow_type(dt)
 
 

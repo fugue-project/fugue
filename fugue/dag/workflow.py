@@ -215,6 +215,12 @@ class WorkflowDataFrame(DataFrame):
     ) -> Iterable[Any]:  # pragma: no cover
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
+    def _drop_cols(self: TDF, cols: List[str]) -> DataFrame:  # pragma: no cover
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
+
+    def _select_cols(self, keys: List[Any]) -> DataFrame:  # pragma: no cover
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
+
 
 class FugueWorkflow(object):
     def __init__(self, execution_engine: ExecutionEngine):

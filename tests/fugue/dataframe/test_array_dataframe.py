@@ -1,19 +1,25 @@
 import json
 from datetime import datetime
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from fugue.dataframe import ArrayDataFrame, PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.exceptions import FugueDataFrameInitError
+from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 from triad.collections.schema import Schema, SchemaError
 from triad.exceptions import InvalidOperationError
 
 
-def test_init():
-    raises(SchemaError, lambda: ArrayDataFrame())
-    raises(SchemaError, lambda: ArrayDataFrame(schema=Schema()))
+class ArrayDataFrameTests(DataFrameTests.Tests):
+    def df(self, data: Any = None, schema: Any = None,
+           metadata: Any = None) -> ArrayDataFrame:
+        return ArrayDataFrame(data, schema, metadata)
 
+
+def test_init():
     df = ArrayDataFrame(schema="a:str,b:int")
     assert df.empty
     assert df.schema == "a:str,b:int"
@@ -56,17 +62,10 @@ def test_init():
     df = ArrayDataFrame([], "x:str,y:double")
     assert df.empty
 
-    raises(ValueError, lambda: ArrayDataFrame(123))
+    raises(FugueDataFrameInitError, lambda: ArrayDataFrame(123))
 
 
 def test_simple_methods():
-    df = ArrayDataFrame([], "a:str,b:int")
-    assert 0 == df.count()
-    assert df.empty
-    raises(IndexError, lambda: df.peek_array())
-    raises(IndexError, lambda: df.peek_dict())
-    assert df.is_local
-
     df = ArrayDataFrame([["a", 1], ["b", "2"]], "x:str,y:double")
     assert 2 == df.count()
     assert not df.empty
@@ -93,34 +92,6 @@ def test_nested():
     df = ArrayDataFrame(data, "a:[{a:str,b:[int]}]")
     a = df.as_array(type_safe=True)
     assert [[[dict(a=None, b=[30, 40])]]] == a
-
-
-def test_drop():
-    df = ArrayDataFrame([], "a:str,b:int").drop(["a"])
-    assert df.empty
-    assert df.schema == "b:int"
-    raises(InvalidOperationError, lambda: df.drop(["b"]))  # can't be empty
-    raises(InvalidOperationError, lambda: df.drop(["x"]))  # cols must exist
-
-    df = ArrayDataFrame([["a", 1]], "a:str,b:int").drop(["a"])
-    assert df.schema == "b:int"
-    raises(InvalidOperationError, lambda: df.drop(["b"]))  # can't be empty
-    raises(InvalidOperationError, lambda: df.drop(["x"]))  # cols must exist
-    assert [[1]] == df.as_array(type_safe=True)
-
-    df = ArrayDataFrame([["a", 1, 2]], "a:str,b:int,c:int")
-    df_eq(df[["a", "c"]], [["a", 2]], "a:str,c:int")
-    assert isinstance(df[["a", "c"]], ArrayDataFrame)
-
-    with raises(SchemaError):
-        df[["a", "x"]]
-
-
-def test_rename():
-    df = ArrayDataFrame([["a", 1]], "a:str,b:int")
-    df2 = df.rename(columns=dict(a="aa"))
-    df_eq(df2, [["a", 1]], "aa:str,b:int", throw=True)
-    df_eq(df, [["a", 1]], "a:str,b:int", throw=True)
 
 
 def test_as_array():
@@ -164,12 +135,10 @@ def test_as_array():
     assert [[datetime(2020, 1, 1), 1]] == df.as_array(type_safe=True)
 
     df = ArrayDataFrame([[pd.NaT, 1.1]], "a:datetime,b:int")
-    assert [[pd.NaT, 1]] == df.as_array(type_safe=True)
+    assert [[None, 1]] == df.as_array(type_safe=True)
 
 
 def test_as_dict_iterable():
-    df = ArrayDataFrame([[pd.NaT, 1.1]], "a:datetime,b:int")
-    assert [dict(a=pd.NaT, b=1)] == list(df.as_dict_iterable())
     df = ArrayDataFrame([["2020-01-01", 1.1]], "a:datetime,b:int")
     assert [dict(a=datetime(2020, 1, 1), b=1)] == list(df.as_dict_iterable())
 

@@ -256,12 +256,12 @@ class _Mapper(object):  # pragma: no cover
         self.map_func = map_func
         self.on_init = on_init
 
-    def run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
+    def _run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
         it = self._run(no, rows)
         for x in self._handle_special_values(it):
             yield x
 
-    def _run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
+    def run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
         df = IterableDataFrame(
             to_type_safe_input(rows, self.schema), self.schema, self.metadata
         )
