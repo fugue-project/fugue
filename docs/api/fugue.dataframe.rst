@@ -37,7 +37,7 @@ fugue.dataframe.iterable\_dataframe
 fugue.dataframe.pandas\_dataframes
 ----------------------------------
 
-.. automodule:: fugue.dataframe.pandas_dataframes
+.. automodule:: fugue.dataframe.pandas_dataframe
    :members:
    :undoc-members:
    :show-inheritance:

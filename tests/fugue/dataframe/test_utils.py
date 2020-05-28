@@ -7,7 +7,7 @@ from fs.osfs import OSFS
 from fugue.dataframe import to_local_bounded_df, to_local_df
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
-from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dataframe.utils import (deserialize_df, get_join_schemas, pickle_df,
                                    serialize_df, unpickle_df)

@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dataframe.utils import to_local_bounded_df
 from fugue.exceptions import FugueDataFrameInitError

@@ -9,7 +9,7 @@ from fs import open_fs
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, LocalDataFrame
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
-from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from triad.collections import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none

@@ -9,7 +9,7 @@ from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution.execution_engine import ExecutionEngine
 from pytest import raises
 from triad.exceptions import InvalidOperationError
-from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 
 
 class ExecutionEngineTests(object):
