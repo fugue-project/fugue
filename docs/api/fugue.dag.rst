@@ -18,3 +18,11 @@ fugue.dag.workflow
    :undoc-members:
    :show-inheritance:
 
+fugue.dag.workflow\_context
+---------------------------
+
+.. automodule:: fugue.dag.workflow_context
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
