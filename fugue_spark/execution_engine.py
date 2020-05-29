@@ -1,10 +1,14 @@
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
+import pandas as pd
+import pyarrow as pa
 import pyspark.sql as ps
-from fs.base import FS as FileSystem
-from fs.osfs import OSFS
-from fugue.collections.partition import PartitionCursor, PartitionSpec
+from fugue.collections.partition import (
+    EMPTY_PARTITION_SPEC,
+    PartitionCursor,
+    PartitionSpec,
+)
 from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe import (
     DataFrame,
@@ -20,17 +24,19 @@ from fugue.execution.execution_engine import (
     SQLEngine,
 )
 from fugue_spark.dataframe import SparkDataFrame
-from fugue_spark.utils.convert import to_schema, to_spark_schema
+from fugue_spark.utils.convert import to_schema, to_spark_schema, to_type_safe_input
 from fugue_spark.utils.partition import (
     even_repartition,
     hash_repartition,
     rand_repartition,
 )
+from fugue_spark.utils.io import SparkIO
 from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import broadcast, col
-from triad.collections.dict import ParamDict
+from triad.collections import ParamDict, Schema
+from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.iter import EmptyAwareIterable
 from triad.utils.threading import RunOnce
@@ -46,8 +52,6 @@ _TO_SPARK_JOIN_MAP: Dict[str, str] = {
     "leftsemi": "left_semi",
     "leftanti": "left_anti",
 }
-
-_NO_PARTITION_SERIALIZATION_KEY = "__no_partition_serialization_key__"
 
 
 class SparkSQLEngine(SQLEngine):
@@ -72,7 +76,7 @@ class SparkExecutionEngine(ExecutionEngine):
         cf = {x[0]: x[1] for x in spark_session.sparkContext.getConf().getAll()}
         cf.update(ParamDict(conf))
         super().__init__(cf)
-        self._fs = OSFS("/")  # TODO: this is not right
+        self._fs = FileSystem()
         self._log = logging.getLogger()
         self._default_sql_engine = SparkSQLEngine(self)
         self._broadcast_func = RunOnce(
@@ -82,6 +86,7 @@ class SparkExecutionEngine(ExecutionEngine):
         self._register_func = RunOnce(
             self._register, lambda *args, **kwargs: id(args[0])
         )
+        self._io = SparkIO(self.spark_session, self.fs)
 
     def __repr__(self) -> str:
         return "SparkExecutionEngine"
@@ -117,10 +122,15 @@ class SparkExecutionEngine(ExecutionEngine):
             )
             if isinstance(df, SparkDataFrame):
                 return df
-            sdf = self.spark_session.createDataFrame(
-                df.as_pandas(), to_spark_schema(df.schema)
-            )
-            return SparkDataFrame(sdf, df.schema, metadata)
+            if any(pa.types.is_struct(t) for t in df.schema.types):
+                sdf = self.spark_session.createDataFrame(
+                    df.as_array(type_safe=True), to_spark_schema(df.schema)
+                )
+            else:
+                sdf = self.spark_session.createDataFrame(
+                    df.as_pandas(), to_spark_schema(df.schema)
+                )
+            return SparkDataFrame(sdf, df.schema, df.metadata)
         if isinstance(df, ps.DataFrame):
             return SparkDataFrame(
                 df, None if schema is None else to_schema(schema), metadata
@@ -176,7 +186,7 @@ class SparkExecutionEngine(ExecutionEngine):
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
         df = self.to_df(self.repartition(df, partition_spec))
-        mapper = _Mapper(df, map_func, partition_spec, on_init)
+        mapper = _Mapper(df, map_func, output_schema, partition_spec, on_init)
         sdf = df.native.rdd.mapPartitionsWithIndex(mapper.run, True)
         return self.to_df(sdf, output_schema, metadata)
 
@@ -213,6 +223,38 @@ class SparkExecutionEngine(ExecutionEngine):
             res = d1.join(d2, on=key_schema.names, how=how).select(*cols)
         return self.to_df(res, output_schema, metadata)
 
+    def load_df(
+        self,
+        path: Union[str, List[str]],
+        format_hint: Any = None,
+        columns: Any = None,
+        **kwargs: Any,
+    ) -> DataFrame:
+        return self._io.load_df(
+            uri=path, format_hint=format_hint, columns=columns, **kwargs
+        )
+
+    def save_df(
+        self,
+        df: DataFrame,
+        path: str,
+        format_hint: Any = None,
+        mode: str = "overwrite",
+        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        force_single: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        df = self.to_df(df)
+        self._io.save_df(
+            df,
+            uri=path,
+            format_hint=format_hint,
+            mode=mode,
+            partition_spec=partition_spec,
+            force_single=force_single,
+            **kwargs,
+        )
+
     def _broadcast(self, df: SparkDataFrame) -> SparkDataFrame:
         sdf = broadcast(df.native)
         return SparkDataFrame(sdf, df.schema, df.metadata)
@@ -226,30 +268,40 @@ class SparkExecutionEngine(ExecutionEngine):
             df.native.persist()
             self.log.info(f"Persist dataframe with {level}, count {df.count()}")
             return df
-        raise NotImplementedError(f"{level} is not supported persist type")
+        raise ValueError(f"{level} is not supported persist type")  # pragma: no cover
 
     def _register(self, df: SparkDataFrame, name: str) -> SparkDataFrame:
         df.native.createOrReplaceTempView(name)
         return df
 
 
-class _Mapper(object):
+class _Mapper(object):  # pragma: no cover
+    # pytest can't identify the coverage, but this part is fully tested
     def __init__(
         self,
         df: DataFrame,
         map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]],
     ):
         super().__init__()
         self.schema = df.schema
+        self.output_schema = Schema(output_schema)
         self.metadata = df.metadata
         self.partition_spec = partition_spec
         self.map_func = map_func
         self.on_init = on_init
 
+    def _run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
+        it = self._run(no, rows)
+        for x in self._handle_special_values(it):
+            yield x
+
     def run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
-        df = IterableDataFrame(rows, self.schema, self.metadata)
+        df = IterableDataFrame(
+            to_type_safe_input(rows, self.schema), self.schema, self.metadata
+        )
         if df.empty:  # pragma: no cover
             return
         cursor = self.partition_spec.get_cursor(self.schema, no)
@@ -269,3 +321,21 @@ class _Mapper(object):
             res = self.map_func(cursor, sub_df)
             for r in res.as_array_iterable(type_safe=True):
                 yield r
+
+    def _handle_special_values(self, it: Iterable[Any]):
+        idx = [
+            i
+            for i, t in enumerate(self.output_schema.types)
+            if pa.types.is_date(t) or pa.types.is_timestamp(t)
+        ]
+        if len(idx) == 0:
+            for x in it:
+                yield x
+        else:
+            for x in it:
+                for i in idx:
+                    if x[i] is pd.NaT:
+                        x[i] = None
+                    elif isinstance(x[i], pd.Timestamp):
+                        x[i] = x[i].to_pydatetime()
+                yield x

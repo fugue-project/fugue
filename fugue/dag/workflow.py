@@ -17,6 +17,8 @@ from fugue.extensions.builtins import (
     SelectColumns,
     Show,
     Zip,
+    Load,
+    Save,
 )
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
@@ -53,10 +55,19 @@ class WorkflowDataFrame(DataFrame):
         params: Any = None,
         pre_partition: Any = None,
     ) -> TDF:
+        if pre_partition is None:
+            pre_partition = self._metadata.get("pre_partition", PartitionSpec())
         df = self.workflow.process(
             self, using=using, schema=schema, params=params, pre_partition=pre_partition
         )
         return self.to_self_type(df)
+
+    def output(self, using: Any, params: Any = None, pre_partition: Any = None) -> None:
+        if pre_partition is None:
+            pre_partition = self._metadata.get("pre_partition", PartitionSpec())
+        self.workflow.output(
+            self, using=using, params=params, pre_partition=pre_partition
+        )
 
     def show(
         self,
@@ -167,6 +178,24 @@ class WorkflowDataFrame(DataFrame):
         )
         return self.to_self_type(df)
 
+    def save(
+        self,
+        path: str,
+        fmt: str = "",
+        mode: str = "overwrite",
+        partition: Any = None,
+        single: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        if partition is None:
+            partition = self._metadata.get("pre_partition", PartitionSpec())
+        self.workflow.output(
+            self,
+            using=Save,
+            pre_partition=partition,
+            params=dict(path=path, fmt=fmt, mode=mode, single=single, params=kwargs),
+        )
+
     @property
     def schema(self) -> Schema:  # pragma: no cover
         raise NotImplementedError("WorkflowDataFrame does not support this method")
@@ -206,6 +235,12 @@ class WorkflowDataFrame(DataFrame):
     ) -> Iterable[Any]:  # pragma: no cover
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
+    def _drop_cols(self: TDF, cols: List[str]) -> DataFrame:  # pragma: no cover
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
+
+    def _select_cols(self, keys: List[Any]) -> DataFrame:  # pragma: no cover
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
+
 
 class FugueWorkflow(object):
     def __init__(self, execution_engine: ExecutionEngine):
@@ -221,6 +256,16 @@ class FugueWorkflow(object):
     ) -> WorkflowDataFrame:
         task = Create(
             self.execution_engine, creator=using, schema=schema, params=params
+        )
+        return self.add(task)
+
+    def load(
+        self, path: str, fmt: str = "", columns: Any = None, **kwargs: Any
+    ) -> WorkflowDataFrame:
+        task = Create(
+            self.execution_engine,
+            creator=Load,
+            params=dict(path=path, fmt=fmt, columns=columns, params=kwargs),
         )
         return self.add(task)
 
@@ -389,9 +434,9 @@ class _Dependencies(object):
             self.dependency[k] = self._parse_single_dependency(v)
 
     def _parse_single_dependency(self, dep: Any) -> str:
-        if isinstance(dep, tuple):  # (cursor_like_obj, output_name)
-            cursor = self._parse_cursor(dep[0])
-            return cursor._task.name + "." + dep[1]
+        # if isinstance(dep, tuple):  # (cursor_like_obj, output_name)
+        #     cursor = self._parse_cursor(dep[0])
+        #     return cursor._task.name + "." + dep[1]
         return self._parse_cursor(dep)._task.single_output_expression
 
     def _parse_cursor(self, dep: Any) -> WorkflowDataFrame:

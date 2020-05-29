@@ -1,7 +1,9 @@
+from fugue.collections.partition import PartitionSpec
+from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_dask.execution_engine import DaskExecutionEngine
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
-from fugue.collections.partition import PartitionSpec
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 
 
 class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -11,6 +13,18 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test__join_outer_pandas_incompatible(self):
         return
+
+    def test_map_with_dict_col(self):
+        # TODO: add back
+        return
+
+    def test_to_df(self):
+        e = self.engine
+        a = e.to_df([[1, 2], [3, 4]], "a:int,b:int", dict(a=1))
+        df_eq(a, [[1, 2], [3, 4]], "a:int,b:int", dict(a=1), throw=True)
+        a = e.to_df(PandasDataFrame([[1, 2], [3, 4]], "a:int,b:int", dict(a=1)))
+        df_eq(a, [[1, 2], [3, 4]], "a:int,b:int", dict(a=1), throw=True)
+        assert a is e.to_df(a)
 
     def test_repartition(self):
         e = self.engine

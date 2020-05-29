@@ -1,11 +1,13 @@
 import logging
-from typing import Any, Callable, Iterable, List, Optional
+from typing import Any, Callable, Iterable, List, Optional, Union
 
 import dask.dataframe as pd
 import pyarrow as pa
-from fs.base import FS as FileSystem
-from fs.osfs import OSFS
-from fugue.collections.partition import PartitionCursor, PartitionSpec
+from fugue.collections.partition import (
+    EMPTY_PARTITION_SPEC,
+    PartitionCursor,
+    PartitionSpec,
+)
 from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
 from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.utils import get_join_schemas
@@ -15,10 +17,12 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
+from fugue.utils.io import load_df, save_df
 from fugue_dask.dataframe import DEFAULT_CONFIG, DaskDataFrame
 from fugue_dask.utils import DASK_UTILS
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
+from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.threading import RunOnce
@@ -29,7 +33,7 @@ class DaskExecutionEngine(ExecutionEngine):
         p = ParamDict(DEFAULT_CONFIG)
         p.update(ParamDict(conf))
         super().__init__(p)
-        self._fs = OSFS("/")
+        self._fs = FileSystem()
         self._log = logging.getLogger()
         self._default_sql_engine = SqliteEngine(self)
 
@@ -115,6 +119,8 @@ class DaskExecutionEngine(ExecutionEngine):
         )
 
         def _map(pdf: Any) -> pd.DataFrame:
+            if pdf.shape[0] == 0:
+                return PandasDataFrame([], output_schema).as_pandas()
             if len(presort_keys) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             input_df = PandasDataFrame(
@@ -210,6 +216,36 @@ class DaskExecutionEngine(ExecutionEngine):
                 d, output_schema, df2.schema.exclude(list(df1.schema.keys())).keys()
             )
         return DaskDataFrame(d.reset_index(drop=True), output_schema, metadata)
+
+    def load_df(
+        self,
+        path: Union[str, List[str]],
+        format_hint: Any = None,
+        columns: Any = None,
+        **kwargs: Any,
+    ) -> DaskDataFrame:
+        return self.to_df(
+            load_df(
+                path, format_hint=format_hint, columns=columns, fs=self.fs, **kwargs
+            )
+        )
+
+    def save_df(
+        self,
+        df: DataFrame,
+        path: str,
+        format_hint: Any = None,
+        mode: str = "overwrite",
+        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        force_single: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        if not partition_spec.empty:
+            self.log.warning(  # pragma: no cover
+                f"partition_spec is not respected in {self}.save_df"
+            )
+        df = self.to_df(df).as_local()
+        save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
 
     def _validate_outer_joinable(self, schema: Schema, key_schema: Schema) -> None:
         # TODO: this is to prevent wrong behavior of pandas, we may not need it

@@ -43,7 +43,7 @@ def test_to_creator():
     raises(FugueInterfacelessError, lambda: to_creator(t6, "a:int"))
     assert isinstance(to_creator(t7, "a:int"), Creator)
     raises(FugueInterfacelessError, lambda: to_creator(t7))
-
+    assert isinstance(to_creator(t8), Creator)
 
 def test_run_creator():
     o1 = to_creator(t3)
@@ -94,4 +94,9 @@ def t6() -> DataFrame:
 
 
 def t7() -> List[List[Any]]:
+    pass
+
+
+# schema: a:int
+def t8(e: ExecutionEngine, a, b) -> List[List[Any]]:
     pass

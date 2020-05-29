@@ -6,33 +6,36 @@ from fugue.dataframe.dataframe import (
     _get_schema_change,
 )
 from triad.collections.schema import Schema
-from triad.exceptions import InvalidOperationError
 from triad.utils.iter import EmptyAwareIterable, make_empty_aware
 from triad.utils.pyarrow import apply_schema
+from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 
 
 class IterableDataFrame(LocalUnboundedDataFrame):
     def __init__(  # noqa: C901
         self, df: Any = None, schema: Any = None, metadata: Any = None
     ):
-        if df is None:
-            idf: Iterable[Any] = []
-            orig_schema: Optional[Schema] = None
-        elif isinstance(df, IterableDataFrame):
-            idf = df.native
-            orig_schema = df.schema
-        elif isinstance(df, DataFrame):
-            idf = df.as_array_iterable(type_safe=False)
-            orig_schema = df.schema
-        elif isinstance(df, Iterable):
-            idf = df
-            orig_schema = None
-        else:
-            raise ValueError(f"{df} is incompatible with IterableDataFrame")
-        schema, pos = _get_schema_change(orig_schema, schema)
-        super().__init__(schema, metadata)
-        self._pos = pos
-        self._native = make_empty_aware(self._preprocess(idf))
+        try:
+            if df is None:
+                idf: Iterable[Any] = []
+                orig_schema: Optional[Schema] = None
+            elif isinstance(df, IterableDataFrame):
+                idf = df.native
+                orig_schema = df.schema
+            elif isinstance(df, DataFrame):
+                idf = df.as_array_iterable(type_safe=False)
+                orig_schema = df.schema
+            elif isinstance(df, Iterable):
+                idf = df
+                orig_schema = None
+            else:
+                raise ValueError(f"{df} is incompatible with IterableDataFrame")
+            schema, pos = _get_schema_change(orig_schema, schema)
+            super().__init__(schema, metadata)
+            self._pos = pos
+            self._native = make_empty_aware(self._preprocess(idf))
+        except Exception as e:
+            raise FugueDataFrameInitError(e)
 
     @property
     def native(self) -> EmptyAwareIterable[Any]:
@@ -43,19 +46,20 @@ class IterableDataFrame(LocalUnboundedDataFrame):
         return self.native.empty
 
     def peek_array(self) -> Any:
+        self.assert_not_empty()
         return list(self.native.peek())
 
-    def drop(self, cols: List[str]) -> DataFrame:
-        try:
-            schema = self.schema - cols
-        except Exception as e:
-            raise InvalidOperationError(str(e))
-        if len(schema) == 0:
-            raise InvalidOperationError("Can't remove all columns of a dataframe")
-        return IterableDataFrame(self, schema)
+    def _drop_cols(self, cols: List[str]) -> DataFrame:
+        return IterableDataFrame(self, self.schema - cols)
+
+    def _select_cols(self, keys: List[Any]) -> DataFrame:
+        return IterableDataFrame(self, self.schema.extract(keys))
 
     def rename(self, columns: Dict[str, str]) -> "DataFrame":
-        schema = self.schema.rename(columns)
+        try:
+            schema = self.schema.rename(columns)
+        except Exception as e:
+            raise FugueDataFrameOperationError(e)
         return IterableDataFrame(self.native, schema)
 
     def as_array(

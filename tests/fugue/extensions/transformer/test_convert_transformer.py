@@ -37,6 +37,8 @@ def test_to_transformer():
     raises(FugueInterfacelessError, lambda: to_transformer("t4", None))
     e = to_transformer("t4", "*,b:int")
     assert isinstance(e, Transformer)
+    f = to_transformer("t5")
+    assert isinstance(f, Transformer)
 
 
 @transformer(["*", None, "b:int"])
@@ -63,4 +65,11 @@ def t3(df: Iterable[List[Any]]) -> Iterable[List[Any]]:
 def t4(df: Iterable[List[Any]]) -> Iterable[List[Any]]:
     for r in df:
         r += [1]
+        yield r
+
+
+# schema: *,b:int
+def t5(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+    for r in df:
+        r["b"] = 1
         yield r

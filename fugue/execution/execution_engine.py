@@ -1,8 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
-from fs.base import FS as FileSystem
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
@@ -14,6 +13,7 @@ from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
 from fugue.exceptions import FugueBug
 from triad.collections import ParamDict, Schema
+from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_size
@@ -29,9 +29,9 @@ class SQLEngine(ABC):
     def execution_engine(self) -> "ExecutionEngine":
         return self._execution_engine
 
-    @property
-    def conf(self) -> ParamDict:
-        return self.execution_engine.conf
+    # @property
+    # def conf(self) -> ParamDict:
+    #    return self.execution_engine.conf
 
     @abstractmethod
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:  # pragma: no cover
@@ -77,6 +77,7 @@ class ExecutionEngine(ABC):
     ) -> DataFrame:  # pragma: no cover
         raise NotImplementedError
 
+    @abstractmethod
     def map(
         self,
         df: DataFrame,
@@ -138,7 +139,7 @@ class ExecutionEngine(ABC):
         )
         return self.map(df, s.run, output_schema, partition_spec, metadata)
 
-    def zip_dataframes(
+    def zip(
         self,
         df1: DataFrame,
         df2: DataFrame,
@@ -151,7 +152,7 @@ class ExecutionEngine(ABC):
         how = how.lower()
         assert_or_throw(
             "semi" not in how and "anti" not in how,
-            InvalidOperationError("zip_dataframes does not support semi or anti joins"),
+            InvalidOperationError("zip does not support semi or anti joins"),
         )
         to_file_threshold = (
             -1 if to_file_threshold == -1 else to_size(to_file_threshold)
@@ -212,22 +213,28 @@ class ExecutionEngine(ABC):
             df, cs.run, output_schema, partition_spec, metadata, on_init=cs.on_init
         )
 
-    # @abstractmethod
-    # def load_df(
-    #     self, path: str, format_hint: Any = None, **kwargs: Any
-    # ) -> DataFrame:  # pragma: no cover
-    #     raise NotImplementedError
+    @abstractmethod
+    def load_df(
+        self,
+        path: Union[str, List[str]],
+        format_hint: Any = None,
+        columns: Any = None,
+        **kwargs: Any,
+    ) -> DataFrame:  # pragma: no cover
+        raise NotImplementedError
 
-    # @abstractmethod
-    # def save_df(
-    #     self,
-    #     df: DataFrame,
-    #     path: str,
-    #     overwrite: bool,
-    #     format_hint: Any = None,
-    #     **kwargs: Any,
-    # ) -> None:  # pragma: no cover
-    #     raise NotImplementedError
+    @abstractmethod
+    def save_df(
+        self,
+        df: DataFrame,
+        path: str,
+        format_hint: Any = None,
+        mode: str = "overwrite",
+        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        force_single: bool = False,
+        **kwargs: Any,
+    ) -> None:  # pragma: no cover
+        raise NotImplementedError
 
     def __copy__(self) -> "ExecutionEngine":
         return self

@@ -1,21 +1,27 @@
 import json
 import math
 from datetime import datetime
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from fugue.dataframe import PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.exceptions import FugueDataFrameInitError
+from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 from triad.collections.schema import Schema, SchemaError
 from triad.exceptions import InvalidOperationError
 
 
-def test_init():
-    raises(SchemaError, lambda: PandasDataFrame())
-    raises(SchemaError, lambda: PandasDataFrame(schema=Schema()))
+class PandasDataFrameTests(DataFrameTests.Tests):
+    def df(self, data: Any = None, schema: Any = None,
+           metadata: Any = None) -> PandasDataFrame:
+        return PandasDataFrame(data, schema, metadata)
 
+
+def test_init():
     df = PandasDataFrame(schema="a:str,b:int")
     assert df.is_bounded
     assert df.count() == 0
@@ -23,7 +29,7 @@ def test_init():
     assert Schema(df.native) == "a:str,b:int"
 
     pdf = pd.DataFrame([["a", 1], ["b", 2]])
-    raises(SchemaError, lambda: PandasDataFrame(pdf))
+    raises(FugueDataFrameInitError, lambda: PandasDataFrame(pdf))
     df = PandasDataFrame(pdf, "a:str,b:str")
     assert [["a", "1"], ["b", "2"]] == df.native.values.tolist()
     df = PandasDataFrame(pdf, "a:str,b:int")
@@ -53,7 +59,7 @@ def test_init():
     df = PandasDataFrame([], "x:str,y:double")
     assert [] == df.native.values.tolist()
 
-    raises(ValueError, lambda: PandasDataFrame(123))
+    raises(FugueDataFrameInitError, lambda: PandasDataFrame(123))
 
 
 def test_simple_methods():
@@ -61,8 +67,6 @@ def test_simple_methods():
     assert df.as_pandas() is df.native
     assert df.empty
     assert 0 == df.count()
-    raises(IndexError, lambda: df.peek_array())
-    raises(IndexError, lambda: df.peek_dict())
     assert df.is_local
 
     df = PandasDataFrame([["a", 1], ["b", "2"]], "x:str,y:double")
@@ -83,20 +87,6 @@ def test_nested():
     df = PandasDataFrame(data, "a:[{a:str,b:[int]}]")
     a = df.as_array(type_safe=True)
     assert [[[dict(a=None, b=[30, 40])]]] == a
-
-
-def test_drop():
-    df = PandasDataFrame([], "a:str,b:int").drop(["a"])
-    assert df.empty
-    assert df.schema == "b:int"
-    raises(InvalidOperationError, lambda: df.drop(["b"]))  # can't be empty
-    raises(InvalidOperationError, lambda: df.drop(["x"]))  # cols must exist
-
-    df = PandasDataFrame([["a", 1]], "a:str,b:int").drop(["a"])
-    assert df.schema == "b:int"
-    raises(InvalidOperationError, lambda: df.drop(["b"]))  # can't be empty
-    raises(InvalidOperationError, lambda: df.drop(["x"]))  # cols must exist
-    assert [[1]] == df.as_pandas().values.tolist()
 
 
 def test_rename():
@@ -139,11 +129,6 @@ def test_as_array():
     # assert not isinstance(df.as_array()[0][0], pd.Timestamp)
     assert isinstance(df.as_array()[0][1], int)
 
-    df = PandasDataFrame([[pd.NaT, 1.1]], "a:datetime,b:int")
-    df.native["a"] = pd.to_datetime(df.native["a"])
-    assert isinstance(df.as_array()[0][0], datetime)
-    assert isinstance(df.as_array()[0][1], int)
-
     df = PandasDataFrame([[1.0, 1.1]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array(type_safe=True)
     assert isinstance(df.as_array()[0][0], float)
@@ -152,7 +137,7 @@ def test_as_array():
 
 def test_as_dict_iterable():
     df = PandasDataFrame([[pd.NaT, 1.1]], "a:datetime,b:int")
-    assert [dict(a=pd.NaT, b=1)] == list(df.as_dict_iterable())
+    assert [dict(a=None, b=1)] == list(df.as_dict_iterable())
     df = PandasDataFrame([["2020-01-01", 1.1]], "a:datetime,b:int")
     assert [dict(a=datetime(2020, 1, 1), b=1)] == list(df.as_dict_iterable())
 
@@ -166,13 +151,13 @@ def test_nan_none():
 
     df = ArrayDataFrame([[None, None]], "b:int,c:bool")
     arr = PandasDataFrame(df.as_pandas(), df.schema).as_array(type_safe=True)[0]
-    assert np.isnan(arr[0])  # TODO: this will cause inconsistent behavior cross engine
-    assert np.isnan(arr[1])  # TODO: this will cause inconsistent behavior cross engine
+    assert arr[0] is None
+    assert arr[1] is None
 
     df = ArrayDataFrame([["a", 1.1], [None, None]], "b:str,c:double")
-    arr = PandasDataFrame(df.as_pandas(), df.schema).as_array()[1]
+    arr = PandasDataFrame(df.as_pandas(), df.schema).as_array(type_safe=True)[1]
     assert arr[0] is None
-    assert math.isnan(arr[1])
+    assert arr[1] is None
 
 
 def _test_as_array_perf():

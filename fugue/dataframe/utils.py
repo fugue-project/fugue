@@ -6,15 +6,16 @@ from typing import Any, Iterable, List, Optional, Tuple
 
 import pandas as pd
 from fs import open_fs
-from fs.base import FS as FileSystem
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, LocalDataFrame
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
-from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from triad.collections import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.assertion import assert_or_throw as aot
+
+from triad.collections.fs import FileSystem
 
 
 def _df_eq(
@@ -27,6 +28,7 @@ def _df_eq(
     check_schema: bool = True,
     check_content: bool = True,
     check_metadata: bool = True,
+    no_pandas: bool = False,
     throw=False,
 ) -> bool:
     """_df_eq is for internal, local test purpose only. DO NOT use
@@ -46,8 +48,14 @@ def _df_eq(
         ), f"metadata mismatch {df.metadata}, {df2.metadata}"
         if not check_content:
             return True
-        d1 = df1.as_pandas()
-        d2 = df2.as_pandas()
+        if no_pandas:
+            dd1 = [[x.__repr__()] for x in df1.as_array_iterable(type_safe=True)]
+            dd2 = [[x.__repr__()] for x in df2.as_array_iterable(type_safe=True)]
+            d1 = pd.DataFrame(dd1, columns=["data"])
+            d2 = pd.DataFrame(dd2, columns=["data"])
+        else:
+            d1 = df1.as_pandas()
+            d2 = df2.as_pandas()
         if not check_order:
             d1 = d1.sort_values(df1.schema.names)
             d2 = d2.sort_values(df1.schema.names)

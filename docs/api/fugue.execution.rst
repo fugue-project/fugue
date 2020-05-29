@@ -10,10 +10,10 @@ fugue.execution.execution\_engine
    :undoc-members:
    :show-inheritance:
 
-fugue.execution.naive\_execution\_engine
-----------------------------------------
+fugue.execution.native\_execution\_engine
+-----------------------------------------
 
-.. automodule:: fugue.execution.naive_execution_engine
+.. automodule:: fugue.execution.native_execution_engine
    :members:
    :undoc-members:
    :show-inheritance:

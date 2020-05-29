@@ -4,7 +4,7 @@ from typing import Any, Callable, List, Optional, Union, no_type_check
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.transformer.transformer import CoTransformer, Transformer
-from fugue.utils.interfaceless import FunctionWrapper
+from fugue.utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.convert import to_function, to_instance
@@ -27,7 +27,7 @@ def cotransformer(schema: Any) -> Callable[[Any], "_FuncAsCoTransformer"]:
 
 
 def to_transformer(  # noqa: C901
-    obj: Any, schema: Any
+    obj: Any, schema: Any = None
 ) -> Union[Transformer, CoTransformer]:
     exp: Optional[Exception] = None
     try:
@@ -87,6 +87,8 @@ class _FuncAsTransformer(Transformer):
 
     @staticmethod
     def from_func(func: Callable, schema: Any) -> "_FuncAsTransformer":
+        if schema is None:
+            schema = parse_output_schema_from_comment(func)
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsTransformer()
         tr._wrapper = FunctionWrapper(func, "^[lsp]x*$", "^[lsp]$")  # type: ignore
@@ -122,6 +124,8 @@ class _FuncAsCoTransformer(CoTransformer):
 
     @staticmethod
     def from_func(func: Callable, schema: Any) -> "_FuncAsCoTransformer":
+        if schema is None:
+            schema = parse_output_schema_from_comment(func)
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsCoTransformer()
         tr._wrapper = FunctionWrapper(func, "^(c|[lsp]+)x*$", "^[lsp]$")  # type: ignore

@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict, List, Optional, no_type_check
 from fugue.extensions.creator.creator import Creator
 from fugue.dataframe import DataFrame
 from fugue.exceptions import FugueInterfacelessError
-from fugue.utils.interfaceless import FunctionWrapper
+from fugue.utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_function, to_instance
@@ -56,6 +56,8 @@ class _FuncAsCreator(Creator):
     @no_type_check
     @staticmethod
     def from_func(func: Callable, schema: Any) -> "_FuncAsCreator":
+        if schema is None:
+            schema = parse_output_schema_from_comment(func)
         tr = _FuncAsCreator()
         tr._wrapper = FunctionWrapper(func, "^e?x*$", "^[dlsp]$")  # type: ignore
         tr._need_engine = tr._wrapper.input_code.startswith("e")

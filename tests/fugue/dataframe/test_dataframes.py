@@ -1,6 +1,6 @@
 from fugue.dataframe import DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from pytest import raises
 from triad.exceptions import InvalidOperationError
 

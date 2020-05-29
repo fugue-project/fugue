@@ -1,4 +1,4 @@
-from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue_spark.utils.convert import to_schema, to_spark_schema
 from fugue_spark.utils.partition import (even_repartition, hash_repartition,
                                          rand_repartition)

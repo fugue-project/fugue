@@ -1,11 +1,13 @@
 import logging
-from typing import Any, Callable, Iterable, List, Optional
+from typing import Any, Callable, Iterable, List, Optional, Union
 
 import pandas as pd
 import pyarrow as pa
-from fs.base import FS as FileSystem
-from fs.osfs import OSFS
-from fugue.collections.partition import PartitionCursor, PartitionSpec
+from fugue.collections.partition import (
+    EMPTY_PARTITION_SPEC,
+    PartitionCursor,
+    PartitionSpec,
+)
 from fugue.dataframe import (
     DataFrame,
     DataFrames,
@@ -20,11 +22,13 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
+from fugue.utils.io import load_df, save_df
 from sqlalchemy import create_engine
 from triad.collections import Schema
+from triad.collections.dict import ParamDict
+from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
-from triad.collections.dict import ParamDict
 
 
 class SqliteEngine(SQLEngine):
@@ -39,15 +43,15 @@ class SqliteEngine(SQLEngine):
         return PandasDataFrame(df)
 
 
-class NaiveExecutionEngine(ExecutionEngine):
+class NativeExecutionEngine(ExecutionEngine):
     def __init__(self, conf: Any = None):
         super().__init__(conf)
-        self._fs = OSFS("/")
+        self._fs = FileSystem()
         self._log = logging.getLogger()
         self._default_sql_engine = SqliteEngine(self)
 
     def __repr__(self) -> str:
-        return "NaiveExecutionEngine"
+        return "NativeExecutionEngine"
 
     @property
     def log(self) -> logging.Logger:
@@ -189,6 +193,36 @@ class NaiveExecutionEngine(ExecutionEngine):
                 d, output_schema, df2.schema.exclude(list(df1.schema.keys())).keys()
             )
         return PandasDataFrame(d.reset_index(drop=True), output_schema, metadata)
+
+    def load_df(
+        self,
+        path: Union[str, List[str]],
+        format_hint: Any = None,
+        columns: Any = None,
+        **kwargs: Any,
+    ) -> LocalBoundedDataFrame:
+        return self.to_df(
+            load_df(
+                path, format_hint=format_hint, columns=columns, fs=self.fs, **kwargs
+            )
+        )
+
+    def save_df(
+        self,
+        df: DataFrame,
+        path: str,
+        format_hint: Any = None,
+        mode: str = "overwrite",
+        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        force_single: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        if not partition_spec.empty:
+            self.log.warning(  # pragma: no cover
+                f"partition_spec is not respected in {self}.save_df"
+            )
+        df = self.to_df(df)
+        save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
 
     def _validate_outer_joinable(self, schema: Schema, key_schema: Schema) -> None:
         # TODO: this is to prevent wrong behavior of pandas, we may not need it

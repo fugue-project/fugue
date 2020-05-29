@@ -1,10 +1,11 @@
 from typing import Any, Dict, Iterable, List, Optional
+
 from fugue.dataframe.dataframe import (
     DataFrame,
     LocalBoundedDataFrame,
     _get_schema_change,
 )
-from triad.exceptions import InvalidOperationError
+from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pyarrow import apply_schema
 
@@ -13,22 +14,25 @@ class ArrayDataFrame(LocalBoundedDataFrame):
     def __init__(  # noqa: C901
         self, df: Any = None, schema: Any = None, metadata: Any = None
     ):
-        if df is None:
-            super().__init__(schema, metadata)
-            self._native = []
-        elif isinstance(df, DataFrame):
-            if schema is None:
-                super().__init__(df.schema, metadata)
-                self._native = df.as_array(type_safe=False)
-            else:
-                schema, _ = _get_schema_change(df.schema, schema)
+        try:
+            if df is None:
                 super().__init__(schema, metadata)
-                self._native = df.as_array(schema.names, type_safe=False)
-        elif isinstance(df, Iterable):
-            super().__init__(schema, metadata)
-            self._native = df if isinstance(df, List) else list(df)
-        else:
-            raise ValueError(f"{df} is incompatible with ArrayDataFrame")
+                self._native = []
+            elif isinstance(df, DataFrame):
+                if schema is None:
+                    super().__init__(df.schema, metadata)
+                    self._native = df.as_array(type_safe=False)
+                else:
+                    schema, _ = _get_schema_change(df.schema, schema)
+                    super().__init__(schema, metadata)
+                    self._native = df.as_array(schema.names, type_safe=False)
+            elif isinstance(df, Iterable):
+                super().__init__(schema, metadata)
+                self._native = df if isinstance(df, List) else list(df)
+            else:
+                raise ValueError(f"{df} is incompatible with ArrayDataFrame")
+        except Exception as e:
+            raise FugueDataFrameInitError(e)
 
     @property
     def native(self) -> List[Any]:
@@ -39,22 +43,23 @@ class ArrayDataFrame(LocalBoundedDataFrame):
         return self.count() == 0
 
     def peek_array(self) -> Any:
+        self.assert_not_empty()
         return list(self.native[0])
 
     def count(self) -> int:
         return len(self.native)
 
-    def drop(self, cols: List[str]) -> DataFrame:
-        try:
-            schema = self.schema - cols
-        except Exception as e:
-            raise InvalidOperationError(str(e))
-        if len(schema) == 0:
-            raise InvalidOperationError("Can't remove all columns of a dataframe")
-        return ArrayDataFrame(self, schema)
+    def _drop_cols(self, cols: List[str]) -> DataFrame:
+        return ArrayDataFrame(self, self.schema - cols)
+
+    def _select_cols(self, keys: List[Any]) -> DataFrame:
+        return ArrayDataFrame(self, self.schema.extract(keys))
 
     def rename(self, columns: Dict[str, str]) -> "DataFrame":
-        schema = self.schema.rename(columns)
+        try:
+            schema = self.schema.rename(columns)
+        except Exception as e:
+            raise FugueDataFrameOperationError(e)
         return ArrayDataFrame(self.native, schema)
 
     def as_array(

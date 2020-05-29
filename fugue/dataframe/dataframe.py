@@ -5,10 +5,11 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import pandas as pd
 import pyarrow as pa
+from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
-from triad.utils.assertion import assert_arg_not_none
+from triad.utils.assertion import assert_or_throw
 
 
 class DataFrame(ABC):
@@ -62,14 +63,6 @@ class DataFrame(ABC):
     def is_bounded(self) -> bool:  # pragma: no cover
         raise NotImplementedError
 
-    # @abstractmethod
-    # def as_local(self) -> "DataFrame":  # pragma: no cover
-    #    raise NotImplementedError
-
-    # @abstractmethod
-    # def apply_schema(self, schema: Any) -> None:  # pragma: no cover
-    #    raise NotImplementedError
-
     @property
     @abstractmethod
     def num_partitions(self) -> int:  # pragma: no cover
@@ -79,6 +72,9 @@ class DataFrame(ABC):
     @abstractmethod
     def empty(self) -> bool:  # pragma: no cover
         raise NotImplementedError
+
+    def assert_not_empty(self) -> None:
+        assert_or_throw(not self.empty, FugueDataFrameEmptyError("dataframe is empty"))
 
     @abstractmethod
     def peek_array(self) -> Any:  # pragma: no cover
@@ -96,9 +92,13 @@ class DataFrame(ABC):
         pdf = pd.DataFrame(self.as_array(), columns=self.schema.names)
         return _enforce_type(pdf, self.schema)
 
-    # @abstractmethod
-    # def as_pyarrow(self) -> pa.Table:  # pragma: no cover
-    #    raise NotImplementedError
+    def as_arrow(self, type_safe: bool = False) -> pa.Table:
+        return pa.Table.from_pandas(
+            self.as_pandas().reset_index(drop=True),
+            preserve_index=False,
+            schema=self.schema.pa_schema,
+            safe=type_safe,
+        )
 
     @abstractmethod
     def as_array(
@@ -113,17 +113,36 @@ class DataFrame(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def drop(self, cols: List[str]) -> "DataFrame":  # pragma: no cover
+    def _drop_cols(self, cols: List[str]) -> "DataFrame":  # pragma: no cover
         raise NotImplementedError
 
     @abstractmethod
     def rename(self, columns: Dict[str, str]) -> "DataFrame":  # pragma: no cover
         raise NotImplementedError
 
-    def __getitem__(self, keys: List[Any]) -> "DataFrame":
-        assert_arg_not_none(keys, "keys")
-        cols = list((self.schema - keys).keys())
-        return self.drop(cols)
+    @abstractmethod
+    def _select_cols(self, cols: List[Any]) -> "DataFrame":  # pragma: no cover
+        raise NotImplementedError
+
+    def drop(self, cols: List[str]) -> "DataFrame":
+        try:
+            schema = self.schema - cols
+        except Exception as e:
+            raise FugueDataFrameOperationError(e)
+        if len(schema) == 0:
+            raise FugueDataFrameOperationError(
+                "can't remove all columns of a dataframe"
+            )
+        return self._drop_cols(cols)
+
+    def __getitem__(self, cols: List[Any]) -> "DataFrame":
+        try:
+            schema = self.schema.extract(cols)
+        except Exception as e:
+            raise FugueDataFrameOperationError(e)
+        if len(schema) == 0:
+            raise FugueDataFrameOperationError("must select at least one column")
+        return self._select_cols(cols)
 
     def show(
         self,
@@ -350,7 +369,7 @@ def _enforce_type(df: pd.DataFrame, schema: Schema) -> pd.DataFrame:
             ns = s.isnull()
             s = s.fillna(0).astype(v.type.to_pandas_dtype())
             s[ns] = None
-        else:
+        elif not pa.types.is_struct(v.type) and not pa.types.is_list(v.type):
             s = s.astype(v.type.to_pandas_dtype())
         df[k] = s
     return df

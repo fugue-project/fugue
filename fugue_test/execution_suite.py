@@ -1,8 +1,13 @@
 import copy
+import os
+from datetime import datetime
 from unittest import TestCase
 
+import pandas as pd
+import pytest
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import ArrayDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution.execution_engine import ExecutionEngine
 from pytest import raises
@@ -36,9 +41,6 @@ class ExecutionEngineTests(object):
         def test_map(self):
             def noop(cursor, data):
                 return data
-
-            def select_top(cursor, data):
-                return ArrayDataFrame([cursor.row], cursor.row_schema)
 
             def on_init(partition_no, data):
                 # TODO: this test is not sufficient
@@ -87,6 +89,45 @@ class ExecutionEngineTests(object):
                 on_init=on_init,
             )
             df_eq(c, [[None, 4], [1, 2], [3, 4]], "a:double,b:int", throw=True)
+
+        def test_map_with_special_values(self):
+            def with_nat(cursor, data):
+                df = data.as_pandas()
+                df["nat"] = pd.NaT
+                schema = data.schema + "nat:datetime"
+                return PandasDataFrame(df, schema)
+
+            e = self.engine
+            # test datetime with nat
+            dt = datetime.now()
+            o = ArrayDataFrame(
+                [[dt, 2], [None, 2], [None, 1], [dt, 5], [None, 4]],
+                "a:datetime,b:int",
+                dict(a=1),
+            )
+            c = e.map(
+                o, select_top, o.schema, PartitionSpec(by=["a"], presort="b DESC")
+            )
+            df_eq(c, [[None, 4], [dt, 5]], "a:datetime,b:int", throw=True)
+            d = e.map(c, with_nat, "a:datetime,b:int,nat:datetime", PartitionSpec())
+            df_eq(
+                d,
+                [[None, 4, None], [dt, 5, None]],
+                "a:datetime,b:int,nat:datetime",
+                throw=True,
+            )
+            # test list
+            o = ArrayDataFrame([[dt, [1, 2]]], "a:datetime,b:[int]")
+            c = e.map(o, select_top, o.schema, PartitionSpec(by=["a"]))
+            df_eq(c, o, check_order=True, throw=True)
+
+        def test_map_with_dict_col(self):
+            e = self.engine
+            dt = datetime.now()
+            # test dict
+            o = ArrayDataFrame([[dt, dict(a=1)]], "a:datetime,b:{a:int}")
+            c = e.map(o, select_top, o.schema, PartitionSpec(by=["a"]))
+            df_eq(c, o, no_pandas=True, check_order=True, throw=True)
 
         def test__join_cross(self):
             e = self.engine
@@ -243,71 +284,65 @@ class ExecutionEngineTests(object):
             )
             assert s.count() == 2
             s = e.persist(e.serialize_by_partition(a, PartitionSpec(), df_name="_0"))
-            print(s.count())
             assert s.count() == 1
             s = e.persist(
                 e.serialize_by_partition(a, PartitionSpec(by=["x"]), df_name="_0")
             )
             assert s.count() == 1
 
-        def test_zip_dataframes(self):
+        def test_zip(self):
             ps = PartitionSpec(by=["a"], presort="b DESC,c DESC")
             e = self.engine
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
             sa = e.serialize_by_partition(a, ps, df_name="_0")
             sb = e.serialize_by_partition(b, ps, df_name="_1")
-            # test zip_dataframes with serialized dfs
-            z1 = e.persist(e.zip_dataframes(sa, sb, how="inner", partition_spec=ps))
+            # test zip with serialized dfs
+            z1 = e.persist(e.zip(sa, sb, how="inner", partition_spec=ps))
             assert 1 == z1.count()
-            z2 = e.persist(
-                e.zip_dataframes(sa, sb, how="left_outer", partition_spec=ps)
-            )
+            z2 = e.persist(e.zip(sa, sb, how="left_outer", partition_spec=ps))
             assert 2 == z2.count()
 
             # can't have duplicated keys
-            raises(
-                ValueError,
-                lambda: e.zip_dataframes(sa, sa, how="inner", partition_spec=ps),
-            )
+            raises(ValueError, lambda: e.zip(sa, sa, how="inner", partition_spec=ps))
             # not support semi or anti
             raises(
                 InvalidOperationError,
-                lambda: e.zip_dataframes(sa, sa, how="anti", partition_spec=ps),
+                lambda: e.zip(sa, sa, how="anti", partition_spec=ps),
             )
             raises(
                 InvalidOperationError,
-                lambda: e.zip_dataframes(sa, sa, how="leftsemi", partition_spec=ps),
+                lambda: e.zip(sa, sa, how="leftsemi", partition_spec=ps),
             )
             raises(
                 InvalidOperationError,
-                lambda: e.zip_dataframes(sa, sa, how="LEFT SEMI", partition_spec=ps),
+                lambda: e.zip(sa, sa, how="LEFT SEMI", partition_spec=ps),
             )
             # can't specify keys for cross join
             raises(
                 InvalidOperationError,
-                lambda: e.zip_dataframes(sa, sa, how="cross", partition_spec=ps),
+                lambda: e.zip(sa, sa, how="cross", partition_spec=ps),
             )
 
-            # test zip_dataframes with unserialized dfs
-            z3 = e.persist(e.zip_dataframes(a, b, partition_spec=ps))
+            # test zip with unserialized dfs
+            z3 = e.persist(e.zip(a, b, partition_spec=ps))
             df_eq(z1, z3, throw=True, check_metadata=False)
-            z3 = e.persist(e.zip_dataframes(a, sb, partition_spec=ps))
+            z3 = e.persist(e.zip(a, sb, partition_spec=ps))
             df_eq(z1, z3, throw=True, check_metadata=False)
-            z3 = e.persist(e.zip_dataframes(sa, b, partition_spec=ps))
+            z3 = e.persist(e.zip(sa, b, partition_spec=ps))
             df_eq(z1, z3, throw=True, check_metadata=False)
 
-            z4 = e.persist(e.zip_dataframes(a, b, how="left_outer", partition_spec=ps))
+            z4 = e.persist(e.zip(a, b, how="left_outer", partition_spec=ps))
             df_eq(z2, z4, throw=True, check_metadata=False)
-            z4 = e.persist(e.zip_dataframes(a, sb, how="left_outer", partition_spec=ps))
+            z4 = e.persist(e.zip(a, sb, how="left_outer", partition_spec=ps))
             df_eq(z2, z4, throw=True, check_metadata=False)
-            z4 = e.persist(e.zip_dataframes(sa, b, how="left_outer", partition_spec=ps))
+            z4 = e.persist(e.zip(sa, b, how="left_outer", partition_spec=ps))
             df_eq(z2, z4, throw=True, check_metadata=False)
 
-            z5 = e.persist(e.zip_dataframes(a, b, how="cross"))
+            z5 = e.persist(e.zip(a, b, how="cross"))
             assert z5.count() == 1
             assert len(z5.schema) == 2
-            z6 = e.persist(e.zip_dataframes(sa, b, how="cross"))
+            z6 = e.persist(e.zip(sa, b, how="cross"))
             assert z6.count() == 2
             assert len(z6.schema) == 3
 
@@ -316,10 +351,10 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            z1 = e.persist(e.zip_dataframes(a, b))
-            z2 = e.persist(e.zip_dataframes(a, b, partition_spec=ps, how="left_outer"))
+            z1 = e.persist(e.zip(a, b))
+            z2 = e.persist(e.zip(a, b, partition_spec=ps, how="left_outer"))
             z3 = e.persist(e.serialize_by_partition(a, partition_spec=ps, df_name="_x"))
-            z4 = e.persist(e.zip_dataframes(a, b, partition_spec=ps, how="cross"))
+            z4 = e.persist(e.zip(a, b, partition_spec=ps, how="cross"))
 
             def comap(cursor, dfs):
                 assert not dfs.has_key
@@ -358,3 +393,25 @@ class ExecutionEngineTests(object):
 
             res = e.comap(z4, comap, "v:str", PartitionSpec(), metadata=dict(a=1))
             df_eq(res, [["_03,_12"]], "v:str", metadata=dict(a=1), throw=True)
+
+        @pytest.fixture(autouse=True)
+        def init_tmpdir(self, tmpdir):
+            self.tmpdir = tmpdir
+
+        def test_io(self):
+            e = self.engine
+            b = ArrayDataFrame([[6, 1], [2, 7]], "c:int,a:long")
+            path = os.path.join(self.tmpdir, "a")
+            e.save_df(b, path, format_hint="parquet", force_single=True)
+            assert e.fs.isfile(path)
+            c = e.load_df(path, format_hint="parquet", columns=["a", "c"])
+            df_eq(c, [[1, 6], [7, 2]], "a:long,c:int", throw=True)
+
+            path = os.path.join(self.tmpdir, "b.csv")
+            e.save_df(b, path, header=True)
+            c = e.load_df(path, header=True, columns="c:int,a:long")
+            df_eq(c, b, throw=True)
+
+
+def select_top(cursor, data):
+    return ArrayDataFrame([cursor.row], cursor.row_schema)

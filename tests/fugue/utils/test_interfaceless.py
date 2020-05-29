@@ -3,12 +3,37 @@ from typing import Any, Dict, Iterable, List
 import pandas as pd
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution import ExecutionEngine
-from fugue.utils.interfaceless import FunctionWrapper, _parse_function
+from fugue.utils.interfaceless import FunctionWrapper, _parse_function, parse_output_schema_from_comment
 from pytest import raises
 from triad.utils.iter import EmptyAwareIterable
+
+
+def test_parse_output_schema_from_comment():
+    def a():
+        pass
+
+    # asdfasdf
+    def b():
+        pass
+
+    # asdfasdf
+    # schema : s:int
+    # # # schema : a :  int,b:str
+    # asdfasdf
+    def c():
+        pass
+
+    # schema:
+    def d():
+        pass
+
+    assert parse_output_schema_from_comment(a) is None
+    assert parse_output_schema_from_comment(b) is None
+    assert "a:int,b:str" == parse_output_schema_from_comment(c)
+    assert parse_output_schema_from_comment(d) is None
 
 
 def test_parse_function():

@@ -10,6 +10,14 @@ fugue.dataframe.array\_dataframe
    :undoc-members:
    :show-inheritance:
 
+fugue.dataframe.arrow\_dataframe
+--------------------------------
+
+.. automodule:: fugue.dataframe.arrow_dataframe
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.dataframe.dataframe
 -------------------------
 
@@ -34,10 +42,10 @@ fugue.dataframe.iterable\_dataframe
    :undoc-members:
    :show-inheritance:
 
-fugue.dataframe.pandas\_dataframes
-----------------------------------
+fugue.dataframe.pandas\_dataframe
+---------------------------------
 
-.. automodule:: fugue.dataframe.pandas_dataframes
+.. automodule:: fugue.dataframe.pandas_dataframe
    :members:
    :undoc-members:
    :show-inheritance:

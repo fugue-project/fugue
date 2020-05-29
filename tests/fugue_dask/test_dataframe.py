@@ -1,30 +1,36 @@
 import json
 import math
 from datetime import datetime
+from typing import Any
 
 import dask.dataframe as pd
 import numpy as np
 import pandas
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.pandas_dataframes import PandasDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.exceptions import FugueDataFrameInitError
 from fugue_dask.dataframe import DaskDataFrame
+from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 from triad.collections.schema import Schema, SchemaError
 from triad.exceptions import InvalidOperationError
 
 
-def test_init():
-    raises(SchemaError, lambda: DaskDataFrame())
-    raises(SchemaError, lambda: DaskDataFrame(schema=Schema()))
+class DaskDataFrameTests(DataFrameTests.Tests):
+    def df(self, data: Any = None, schema: Any = None,
+           metadata: Any = None) -> DaskDataFrame:
+        return DaskDataFrame(data, schema, metadata)
 
+
+def test_init():
     df = DaskDataFrame(schema="a:str,b:int")
     assert df.is_bounded
     assert df.count() == 0
     assert df.schema == "a:str,b:int"
 
     pdf = pandas.DataFrame([["a", 1], ["b", 2]])
-    raises(SchemaError, lambda: DaskDataFrame(pdf))
+    raises(FugueDataFrameInitError, lambda: DaskDataFrame(pdf))
     df = DaskDataFrame(pdf, "a:str,b:str")
     assert [["a", "1"], ["b", "2"]] == df.as_pandas().values.tolist()
     df = DaskDataFrame(pdf, "a:str,b:int")
@@ -54,15 +60,13 @@ def test_init():
     df = DaskDataFrame([], "x:str,y:double")
     assert [] == df.as_pandas().values.tolist()
 
-    raises(ValueError, lambda: DaskDataFrame(123))
+    raises(FugueDataFrameInitError, lambda: DaskDataFrame(123))
 
 
 def test_simple_methods():
     df = DaskDataFrame([], "a:str,b:int")
     assert df.empty
     assert 0 == df.count()
-    raises(IndexError, lambda: df.peek_array())
-    raises(IndexError, lambda: df.peek_dict())
     assert not df.is_local
 
     df = DaskDataFrame([["a", 1], ["b", "2"]], "x:str,y:double")
@@ -86,28 +90,6 @@ def _test_nested():
     df = DaskDataFrame(data, "a:[{a:str,b:[int]}]")
     a = df.as_array(type_safe=True)
     assert [[[dict(a=None, b=[30, 40])]]] == a
-
-
-def test_drop():
-    df = DaskDataFrame([], "a:str,b:int").drop(["a"])
-    assert df.empty
-    assert df.schema == "b:int"
-    raises(InvalidOperationError, lambda: df.drop(["b"]))  # can't be empty
-    raises(InvalidOperationError, lambda: df.drop(["x"]))  # cols must exist
-
-    df = DaskDataFrame([["a", 1]], "a:str,b:int").drop(["a"])
-    assert df.schema == "b:int"
-    raises(InvalidOperationError, lambda: df.drop(["b"]))  # can't be empty
-    raises(InvalidOperationError, lambda: df.drop(["x"]))  # cols must exist
-    assert [[1]] == df.as_pandas().values.tolist()
-
-
-def test_rename():
-    df = DaskDataFrame([["a", 1]], "a:str,b:int")
-    df2 = df.rename(columns=dict(a="aa"))
-    assert isinstance(df, DaskDataFrame)
-    df_eq(df2, [["a", 1]], "aa:str,b:int", throw=True)
-    df_eq(df, [["a", 1]], "a:str,b:int", throw=True)
 
 
 def test_as_array():
@@ -153,8 +135,6 @@ def test_as_array():
 
 
 def test_as_dict_iterable():
-    df = DaskDataFrame([[pandas.NaT, 1.1]], "a:datetime,b:int")
-    assert [dict(a=pandas.NaT, b=1)] == list(df.as_dict_iterable())
     df = DaskDataFrame([["2020-01-01", 1.1]], "a:datetime,b:int")
     assert [dict(a=datetime(2020, 1, 1), b=1)] == list(df.as_dict_iterable())
 

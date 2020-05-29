@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict, List, Optional, no_type_check
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.processor.processor import Processor
-from fugue.utils.interfaceless import FunctionWrapper
+from fugue.utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_function, to_instance
@@ -63,6 +63,8 @@ class _FuncAsProcessor(Processor):
     @no_type_check
     @staticmethod
     def from_func(func: Callable, schema: Any) -> "_FuncAsProcessor":
+        if schema is None:
+            schema = parse_output_schema_from_comment(func)
         tr = _FuncAsProcessor()
         tr._wrapper = FunctionWrapper(
             func, "^e?(c|[dlsp]+)x*$", "^[dlsp]$"
