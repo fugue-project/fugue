@@ -4,7 +4,7 @@ from adagio.instances import WorkflowContext
 from fugue.collections.partition import PartitionSpec
 from fugue.dag.workflow import FugueWorkflow
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.execution import NaiveExecutionEngine
+from fugue.execution import NativeExecutionEngine
 from fugue.extensions.transformer.convert import transformer
 from triad.exceptions import InvalidOperationError
 from pytest import raises
@@ -12,7 +12,7 @@ import copy
 
 
 def test_builder():
-    e = NaiveExecutionEngine()
+    e = NativeExecutionEngine()
     builder = FugueWorkflow(e)
     ctx = WorkflowContext()
 

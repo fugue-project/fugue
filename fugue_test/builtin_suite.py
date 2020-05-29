@@ -1,13 +1,15 @@
+import os
 from typing import Any, Dict, Iterable, List
 from unittest import TestCase
 
 import pandas as pd
+import pytest
 from adagio.instances import WorkflowContext
 from fugue.dag.workflow import FugueWorkflow
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.execution import ExecutionEngine
-from fugue.execution.naive_execution_engine import SqliteEngine
+from fugue.execution.native_execution_engine import SqliteEngine
 from fugue.extensions.outputter import Outputter
 from fugue.extensions.processor import Processor
 from fugue.extensions.transformer import (
@@ -16,6 +18,7 @@ from fugue.extensions.transformer import (
     cotransformer,
     transformer,
 )
+from triad.collections.fs import FileSystem
 
 
 class BuiltInTests(object):
@@ -244,6 +247,24 @@ class BuiltInTests(object):
 
                 a[["x"]].rename(x="xx").assert_eq(ArrayDataFrame([[1], [2]], "xx:long"))
 
+        @pytest.fixture(autouse=True)
+        def init_tmpdir(self, tmpdir):
+            self.tmpdir = tmpdir
+
+        def test_io(self):
+            path = os.path.join(self.tmpdir, "a")
+            path2 = os.path.join(self.tmpdir, "b.csv")
+            with self.dag() as dag:
+                b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
+                b.partition(num=3).save(path, fmt="parquet", single=True)
+                b.save(path2, header=True)
+            assert FileSystem().isfile(path)
+            with self.dag() as dag:
+                a = dag.load(path, fmt="parquet", columns=["a", "c"])
+                a.assert_eq(dag.df([[1, 6], [7, 2]], "a:long,c:int"))
+                a = dag.load(path2, header=True, columns="c:int,a:long")
+                a.assert_eq(dag.df([[6, 1], [2, 7]], "c:int,a:long"))
+
 
 class DagTester(FugueWorkflow):
     def __init__(self, engine: ExecutionEngine):
@@ -329,7 +350,7 @@ def mock_tf0(df: pd.DataFrame, p=1) -> pd.DataFrame:
     return df
 
 
-@transformer("*,ct:int,p:int")
+# schema: *,ct:int,p:int
 def mock_tf1(df: pd.DataFrame, p=1) -> pd.DataFrame:
     df["ct"] = df.shape[0]
     df["p"] = p

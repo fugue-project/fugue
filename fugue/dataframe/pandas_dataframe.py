@@ -106,10 +106,7 @@ class PandasDataFrame(LocalBoundedDataFrame):
     def _apply_schema(
         self, pdf: pd.DataFrame, schema: Optional[Schema]
     ) -> Tuple[pd.DataFrame, Schema]:
-        assert_or_throw(
-            pdf.empty or type(pdf.index) == pd.RangeIndex,
-            ValueError("Pandas datafame must have default index"),
-        )
+        PD_UTILS.ensure_compatible(pdf)
         if pdf.columns.dtype == "object":  # pdf has named schema
             pschema = _input_schema(pdf)
             if schema is None or pschema == schema:

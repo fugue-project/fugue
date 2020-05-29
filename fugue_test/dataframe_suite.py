@@ -172,14 +172,28 @@ class DataFrameTests(object):
             assert [[[dict(a=None, b=[30, 40])]]] == a
 
         def test_as_arrow(self):
+            # pd.Nat
             df = self.df([[pd.NaT, 1]], "a:datetime,b:int")
             assert [dict(a=None, b=1)] == list(
                 ArrowDataFrame(df.as_arrow()).as_dict_iterable()
             )
+            # pandas timestamps
             df = self.df([[pd.Timestamp("2020-01-01"), 1]], "a:datetime,b:int")
             assert [dict(a=datetime(2020, 1, 1), b=1)] == list(
                 ArrowDataFrame(df.as_arrow()).as_dict_iterable()
             )
+            # float nan, list
+            data = [[[float("nan"), 2.0]]]
+            df = self.df(data, "a:[float]")
+            assert [[[None, 2.0]]] == ArrowDataFrame(df.as_arrow()).as_array()
+            # dict
+            data = [[dict(b="x")]]
+            df = self.df(data, "a:{b:str}")
+            assert data == ArrowDataFrame(df.as_arrow()).as_array()
+            # list[dict]
+            data = [[[dict(b=[30, 40])]]]
+            df = self.df(data, "a:[{b:[int]}]")
+            assert data == ArrowDataFrame(df.as_arrow()).as_array()
 
         def test_head(self):
             df = self.df([], "a:str,b:int")

@@ -94,7 +94,7 @@ class DataFrame(ABC):
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
         return pa.Table.from_pandas(
-            self.as_pandas(),
+            self.as_pandas().reset_index(drop=True),
             preserve_index=False,
             schema=self.schema.pa_schema,
             safe=type_safe,
@@ -369,7 +369,7 @@ def _enforce_type(df: pd.DataFrame, schema: Schema) -> pd.DataFrame:
             ns = s.isnull()
             s = s.fillna(0).astype(v.type.to_pandas_dtype())
             s[ns] = None
-        elif not pa.types.is_struct(v.type):
+        elif not pa.types.is_struct(v.type) and not pa.types.is_list(v.type):
             s = s.astype(v.type.to_pandas_dtype())
         df[k] = s
     return df

@@ -1,15 +1,17 @@
 import copy
+import os
 from datetime import datetime
 from unittest import TestCase
 
 import pandas as pd
+import pytest
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import ArrayDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution.execution_engine import ExecutionEngine
 from pytest import raises
 from triad.exceptions import InvalidOperationError
-from fugue.dataframe.pandas_dataframe import PandasDataFrame
 
 
 class ExecutionEngineTests(object):
@@ -391,6 +393,24 @@ class ExecutionEngineTests(object):
 
             res = e.comap(z4, comap, "v:str", PartitionSpec(), metadata=dict(a=1))
             df_eq(res, [["_03,_12"]], "v:str", metadata=dict(a=1), throw=True)
+
+        @pytest.fixture(autouse=True)
+        def init_tmpdir(self, tmpdir):
+            self.tmpdir = tmpdir
+
+        def test_io(self):
+            e = self.engine
+            b = ArrayDataFrame([[6, 1], [2, 7]], "c:int,a:long")
+            path = os.path.join(self.tmpdir, "a")
+            e.save_df(b, path, format_hint="parquet", force_single=True)
+            assert e.fs.isfile(path)
+            c = e.load_df(path, format_hint="parquet", columns=["a", "c"])
+            df_eq(c, [[1, 6], [7, 2]], "a:long,c:int", throw=True)
+
+            path = os.path.join(self.tmpdir, "b.csv")
+            e.save_df(b, path, header=True)
+            c = e.load_df(path, header=True, columns="c:int,a:long")
+            df_eq(c, b, throw=True)
 
 
 def select_top(cursor, data):

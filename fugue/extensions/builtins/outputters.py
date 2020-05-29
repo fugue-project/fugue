@@ -20,3 +20,24 @@ class AssertEqual(Outputter):
         expected = dfs[0]
         for i in range(1, len(dfs)):
             df_eq(expected, dfs[i], throw=True, **self.params)
+
+
+class Save(Outputter):
+    def process(self, dfs: DataFrames) -> None:
+        assert len(dfs) == 1
+        kwargs = self.params.get("params", dict())
+        path = self.params.get_or_throw("path", str)
+        format_hint = self.params.get("fmt", "")
+        mode = self.params.get("mode", "overwrite")
+        partition_spec = self.partition_spec
+        force_single = self.params.get("single", False)
+
+        self.execution_engine.save_df(
+            df=dfs[0],
+            path=path,
+            format_hint=format_hint,
+            mode=mode,
+            partition_spec=partition_spec,
+            force_single=force_single,
+            **kwargs
+        )

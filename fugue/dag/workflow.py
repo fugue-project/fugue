@@ -17,6 +17,8 @@ from fugue.extensions.builtins import (
     SelectColumns,
     Show,
     Zip,
+    Load,
+    Save,
 )
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
@@ -176,6 +178,24 @@ class WorkflowDataFrame(DataFrame):
         )
         return self.to_self_type(df)
 
+    def save(
+        self,
+        path: str,
+        fmt: str = "",
+        mode: str = "overwrite",
+        partition: Any = None,
+        single: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        if partition is None:
+            partition = self._metadata.get("pre_partition", PartitionSpec())
+        self.workflow.output(
+            self,
+            using=Save,
+            pre_partition=partition,
+            params=dict(path=path, fmt=fmt, mode=mode, single=single, params=kwargs),
+        )
+
     @property
     def schema(self) -> Schema:  # pragma: no cover
         raise NotImplementedError("WorkflowDataFrame does not support this method")
@@ -236,6 +256,16 @@ class FugueWorkflow(object):
     ) -> WorkflowDataFrame:
         task = Create(
             self.execution_engine, creator=using, schema=schema, params=params
+        )
+        return self.add(task)
+
+    def load(
+        self, path: str, fmt: str = "", columns: Any = None, **kwargs: Any
+    ) -> WorkflowDataFrame:
+        task = Create(
+            self.execution_engine,
+            creator=Load,
+            params=dict(path=path, fmt=fmt, columns=columns, params=kwargs),
         )
         return self.add(task)
 

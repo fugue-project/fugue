@@ -1,10 +1,14 @@
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
-from fugue.collections.partition import PartitionCursor, PartitionSpec
+from fugue.collections.partition import (
+    EMPTY_PARTITION_SPEC,
+    PartitionCursor,
+    PartitionSpec,
+)
 from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe import (
     DataFrame,
@@ -26,16 +30,16 @@ from fugue_spark.utils.partition import (
     hash_repartition,
     rand_repartition,
 )
+from fugue_spark.utils.io import SparkIO
 from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import broadcast, col
 from triad.collections import ParamDict, Schema
+from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.iter import EmptyAwareIterable
 from triad.utils.threading import RunOnce
-
-from triad.collections.fs import FileSystem
 
 _TO_SPARK_JOIN_MAP: Dict[str, str] = {
     "inner": "inner",
@@ -82,6 +86,7 @@ class SparkExecutionEngine(ExecutionEngine):
         self._register_func = RunOnce(
             self._register, lambda *args, **kwargs: id(args[0])
         )
+        self._io = SparkIO(self.spark_session, self.fs)
 
     def __repr__(self) -> str:
         return "SparkExecutionEngine"
@@ -217,6 +222,38 @@ class SparkExecutionEngine(ExecutionEngine):
         else:
             res = d1.join(d2, on=key_schema.names, how=how).select(*cols)
         return self.to_df(res, output_schema, metadata)
+
+    def load_df(
+        self,
+        path: Union[str, List[str]],
+        format_hint: Any = None,
+        columns: Any = None,
+        **kwargs: Any,
+    ) -> DataFrame:
+        return self._io.load_df(
+            uri=path, format_hint=format_hint, columns=columns, **kwargs
+        )
+
+    def save_df(
+        self,
+        df: DataFrame,
+        path: str,
+        format_hint: Any = None,
+        mode: str = "overwrite",
+        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        force_single: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        df = self.to_df(df)
+        self._io.save_df(
+            df,
+            uri=path,
+            format_hint=format_hint,
+            mode=mode,
+            partition_spec=partition_spec,
+            force_single=force_single,
+            **kwargs,
+        )
 
     def _broadcast(self, df: SparkDataFrame) -> SparkDataFrame:
         sdf = broadcast(df.native)

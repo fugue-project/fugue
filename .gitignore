@@ -136,3 +136,6 @@ tmp
 
 # dask
 dask-worker-space
+
+# spark
+spark-warehourse
