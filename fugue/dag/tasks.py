@@ -4,6 +4,7 @@ from typing import Any, List, Optional, no_type_check
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
 from fugue.collections.partition import PartitionSpec
+from fugue.dag.workflow_context import FugueWorkflowContext
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution import ExecutionEngine
@@ -18,7 +19,6 @@ from triad.utils.assertion import assert_or_throw
 class FugueTask(TaskSpec, ABC):
     def __init__(
         self,
-        execution_engine: ExecutionEngine,
         input_n: int = 0,
         output_n: int = 0,
         configs: Any = None,
@@ -45,7 +45,6 @@ class FugueTask(TaskSpec, ABC):
             OutputSpec("_" + str(i), DataFrame, nullable=False) for i in range(output_n)
         ]
         self._input_has_key = input_names is not None
-        self._execution_engine = execution_engine
         super().__init__(
             configs=configs,
             inputs=inputs,
@@ -62,10 +61,6 @@ class FugueTask(TaskSpec, ABC):
     @abstractmethod
     def execute(self, ctx: TaskContext) -> None:  # pragma: no cover
         raise NotImplementedError
-
-    @property
-    def execution_engine(self) -> ExecutionEngine:
-        return self._execution_engine
 
     @property
     def params(self) -> ParamDict:
@@ -92,32 +87,34 @@ class FugueTask(TaskSpec, ABC):
         self._persist = "" if level is None else level
         return self
 
-    def handle_persist(self, df: DataFrame) -> DataFrame:
+    def handle_persist(self, df: DataFrame, engine: ExecutionEngine) -> DataFrame:
         if self._persist is None:
             return df
-        return self.execution_engine.persist(
-            df, None if self._persist == "" else self._persist
-        )
+        return engine.persist(df, None if self._persist == "" else self._persist)
 
     def broadcast(self) -> "FugueTask":
         self._broadcast = True
         return self
 
-    def handle_broadcast(self, df: DataFrame) -> DataFrame:
+    def handle_broadcast(self, df: DataFrame, engine: ExecutionEngine) -> DataFrame:
         if not self._broadcast:
             return df
-        return self.execution_engine.broadcast(df)
+        return engine.broadcast(df)
 
     # def pre_partition(self, *args: Any, **kwargs: Any) -> "FugueTask":
     #    self._pre_partition = PartitionSpec(*args, **kwargs)
     #    return self
+
+    def _get_execution_engine(self, ctx: TaskContext) -> ExecutionEngine:
+        wfctx = ctx.workflow_context
+        assert isinstance(wfctx, FugueWorkflowContext)
+        return wfctx.execution_engine
 
 
 class Create(FugueTask):
     @no_type_check
     def __init__(
         self,
-        execution_engine: ExecutionEngine,
         creator: Any,
         schema: Any = None,
         params: Any = None,
@@ -126,21 +123,17 @@ class Create(FugueTask):
     ):
         self._creator = to_creator(creator, schema)
         self._creator._params = ParamDict(params)
-        self._creator._execution_engine = execution_engine
         super().__init__(
-            execution_engine,
-            params=params,
-            input_n=0,
-            output_n=1,
-            deterministic=deterministic,
-            lazy=lazy,
+            params=params, input_n=0, output_n=1, deterministic=deterministic, lazy=lazy
         )
 
     @no_type_check
     def execute(self, ctx: TaskContext) -> None:
+        e = self._get_execution_engine(ctx)
+        self._creator._execution_engine = e
         df = self._creator.create()
-        df = self.handle_persist(df)
-        df = self.handle_broadcast(df)
+        df = self.handle_persist(df, e)
+        df = self.handle_broadcast(df, e)
         ctx.outputs["_0"] = df
 
 
@@ -149,7 +142,6 @@ class Process(FugueTask):
     def __init__(
         self,
         input_n: int,
-        execution_engine: ExecutionEngine,
         processor: Any,
         schema: Any,
         params: Any,
@@ -161,9 +153,7 @@ class Process(FugueTask):
         self._processor = to_processor(processor, schema)
         self._processor._params = ParamDict(params)
         self._processor._partition_spec = PartitionSpec(pre_partition)
-        self._processor._execution_engine = execution_engine
         super().__init__(
-            execution_engine,
             params=params,
             input_n=input_n,
             output_n=1,
@@ -174,12 +164,14 @@ class Process(FugueTask):
 
     @no_type_check
     def execute(self, ctx: TaskContext) -> None:
+        e = self._get_execution_engine(ctx)
+        self._processor._execution_engine = e
         if self._input_has_key:
             df = self._processor.process(DataFrames(ctx.inputs))
         else:
             df = self._processor.process(DataFrames(ctx.inputs.values()))
-        df = self.handle_persist(df)
-        df = self.handle_broadcast(df)
+        df = self.handle_persist(df, e)
+        df = self.handle_broadcast(df, e)
         ctx.outputs["_0"] = df
 
 
@@ -188,7 +180,6 @@ class Output(FugueTask):
     def __init__(
         self,
         input_n: int,
-        execution_engine: ExecutionEngine,
         outputter: Any,
         params: Any,
         pre_partition: Any = None,
@@ -200,9 +191,7 @@ class Output(FugueTask):
         self._outputter = to_outputter(outputter)
         self._outputter._params = ParamDict(params)
         self._outputter._partition_spec = PartitionSpec(pre_partition)
-        self._outputter._execution_engine = execution_engine
         super().__init__(
-            execution_engine,
             params=params,
             input_n=input_n,
             deterministic=deterministic,
@@ -212,6 +201,7 @@ class Output(FugueTask):
 
     @no_type_check
     def execute(self, ctx: TaskContext) -> None:
+        self._outputter._execution_engine = self._get_execution_engine(ctx)
         if self._input_has_key:
             self._outputter.process(DataFrames(ctx.inputs))
         else:

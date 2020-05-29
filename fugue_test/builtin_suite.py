@@ -4,8 +4,8 @@ from unittest import TestCase
 
 import pandas as pd
 import pytest
-from adagio.instances import WorkflowContext
 from fugue.dag.workflow import FugueWorkflow
+from fugue.dag.workflow_context import FugueWorkflowContext
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.execution import ExecutionEngine
@@ -268,9 +268,9 @@ class BuiltInTests(object):
 
 class DagTester(FugueWorkflow):
     def __init__(self, engine: ExecutionEngine):
-        super().__init__(engine)
+        super().__init__()
         self.engine = engine
-        self.ctx = WorkflowContext()
+        self.ctx = FugueWorkflowContext(engine)
 
     def __enter__(self):
         return self

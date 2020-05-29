@@ -5,7 +5,6 @@ from fugue.collections.partition import PartitionSpec
 from fugue.dag.tasks import Create, FugueTask, Output, Process
 from fugue.dataframe import DataFrame
 from fugue.dataframe.dataframes import DataFrames
-from fugue.execution.execution_engine import ExecutionEngine
 from fugue.extensions.builtins import (
     AssertEqual,
     CreateData,
@@ -41,10 +40,6 @@ class WorkflowDataFrame(DataFrame):
         return self._task.name
 
     @property
-    def execution_engine(self) -> ExecutionEngine:
-        return self.workflow.execution_engine
-
-    @property
     def workflow(self) -> "FugueWorkflow":
         return self._workflow
 
@@ -76,16 +71,8 @@ class WorkflowDataFrame(DataFrame):
         title: Optional[str] = None,
         best_width: int = 100,
     ) -> None:
-        task = Output(
-            1,
-            self.execution_engine,
-            outputter=Show,
-            pre_partition=None,
-            params=dict(
-                rows=rows, count=show_count, title=title, best_width=best_width
-            ),
-        )
-        self.workflow.add(task, self)
+        # TODO: best_width is not used
+        self.workflow.show(self, rows=rows, count=show_count, title=title)
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
         self.workflow.assert_eq(self, *dfs, **params)
@@ -243,30 +230,13 @@ class WorkflowDataFrame(DataFrame):
 
 
 class FugueWorkflow(object):
-    def __init__(self, execution_engine: ExecutionEngine):
+    def __init__(self):
         self._spec = WorkflowSpec()
-        self._execution_engine = execution_engine
-
-    @property
-    def execution_engine(self) -> ExecutionEngine:
-        return self._execution_engine
 
     def create(
         self, using: Any, schema: Any = None, params: Any = None
     ) -> WorkflowDataFrame:
-        task = Create(
-            self.execution_engine, creator=using, schema=schema, params=params
-        )
-        return self.add(task)
-
-    def load(
-        self, path: str, fmt: str = "", columns: Any = None, **kwargs: Any
-    ) -> WorkflowDataFrame:
-        task = Create(
-            self.execution_engine,
-            creator=Load,
-            params=dict(path=path, fmt=fmt, columns=columns, params=kwargs),
-        )
+        task = Create(creator=using, schema=schema, params=params)
         return self.add(task)
 
     def process(
@@ -280,7 +250,6 @@ class FugueWorkflow(object):
         dfs = self._to_dfs(*dfs)
         task = Process(
             len(dfs),
-            self.execution_engine,
             processor=using,
             schema=schema,
             params=params,
@@ -298,7 +267,6 @@ class FugueWorkflow(object):
         dfs = self._to_dfs(*dfs)
         task = Output(
             len(dfs),
-            self.execution_engine,
             outputter=using,
             params=params,
             pre_partition=pre_partition,
@@ -325,6 +293,13 @@ class FugueWorkflow(object):
         self, data: Any, schema: Any = None, metadata: Any = None, partition: Any = None
     ) -> WorkflowDataFrame:
         return self.create_data(data, schema, metadata, partition)
+
+    def load(
+        self, path: str, fmt: str = "", columns: Any = None, **kwargs: Any
+    ) -> WorkflowDataFrame:
+        return self.create(
+            using=Load, params=dict(path=path, fmt=fmt, columns=columns, params=kwargs)
+        )
 
     def show(
         self,

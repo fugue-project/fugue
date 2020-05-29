@@ -9,13 +9,12 @@ from fugue.extensions.transformer.convert import transformer
 from triad.exceptions import InvalidOperationError
 from pytest import raises
 import copy
+from fugue.dag.workflow_context import FugueWorkflowContext
 
 
 def test_builder():
-    e = NativeExecutionEngine()
-    builder = FugueWorkflow(e)
-    ctx = WorkflowContext()
-
+    builder = FugueWorkflow()
+    
     a = builder.create_data([[0], [0], [1]], "a:int")
     raises(InvalidOperationError, lambda: a._task.copy())
     raises(InvalidOperationError, lambda: copy.copy(a._task))
@@ -29,6 +28,7 @@ def test_builder():
     builder.show(a, b, c)
     b = a.partition(by=["a"]).transform(mock_tf2).persist().broadcast()
     b.show()
+    ctx = FugueWorkflowContext(NativeExecutionEngine())
     ctx.run(builder._spec, {})
 
 
