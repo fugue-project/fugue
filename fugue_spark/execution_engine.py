@@ -1,7 +1,6 @@
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
-import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
 from fugue.collections.partition import (
@@ -10,13 +9,8 @@ from fugue.collections.partition import (
     PartitionSpec,
 )
 from fugue.constants import KEYWORD_ROWCOUNT
-from fugue.dataframe import (
-    DataFrame,
-    DataFrames,
-    IterableDataFrame,
-    LocalDataFrame,
-    PandasDataFrame,
-)
+from fugue.dataframe import DataFrame, DataFrames, IterableDataFrame, LocalDataFrame
+from fugue.dataframe.arrow_dataframe import ArrowDataFrame
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
@@ -25,12 +19,12 @@ from fugue.execution.execution_engine import (
 )
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.utils.convert import to_schema, to_spark_schema, to_type_safe_input
+from fugue_spark.utils.io import SparkIO
 from fugue_spark.utils.partition import (
     even_repartition,
     hash_repartition,
     rand_repartition,
 )
-from fugue_spark.utils.io import SparkIO
 from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
@@ -71,7 +65,9 @@ class SparkSQLEngine(SQLEngine):
 
 
 class SparkExecutionEngine(ExecutionEngine):
-    def __init__(self, spark_session: SparkSession, conf: Any = None):
+    def __init__(self, spark_session: Optional[SparkSession] = None, conf: Any = None):
+        if spark_session is None:
+            spark_session = SparkSession.builder.getOrCreate()
         self._spark_session = spark_session
         cf = {x[0]: x[1] for x in spark_session.sparkContext.getConf().getAll()}
         cf.update(ParamDict(conf))
@@ -139,11 +135,13 @@ class SparkExecutionEngine(ExecutionEngine):
             assert_arg_not_none(schema, "schema")
             sdf = self.spark_session.createDataFrame(df, to_spark_schema(schema))
             return SparkDataFrame(sdf, to_schema(schema), metadata)
-        pdf = PandasDataFrame(df, to_schema(schema))
+
+        # use arrow dataframe here to handle nulls in int cols
+        adf = ArrowDataFrame(df, to_schema(schema))
         sdf = self.spark_session.createDataFrame(
-            pdf.as_pandas(), to_spark_schema(pdf.schema)
+            adf.as_array(), to_spark_schema(adf.schema)
         )
-        return SparkDataFrame(sdf, pdf.schema, metadata)
+        return SparkDataFrame(sdf, adf.schema, metadata)
 
     def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
         def _persist_and_count(df: DataFrame) -> int:
@@ -293,11 +291,6 @@ class _Mapper(object):  # pragma: no cover
         self.map_func = map_func
         self.on_init = on_init
 
-    def _run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
-        it = self._run(no, rows)
-        for x in self._handle_special_values(it):
-            yield x
-
     def run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
         df = IterableDataFrame(
             to_type_safe_input(rows, self.schema), self.schema, self.metadata
@@ -321,21 +314,3 @@ class _Mapper(object):  # pragma: no cover
             res = self.map_func(cursor, sub_df)
             for r in res.as_array_iterable(type_safe=True):
                 yield r
-
-    def _handle_special_values(self, it: Iterable[Any]):
-        idx = [
-            i
-            for i, t in enumerate(self.output_schema.types)
-            if pa.types.is_date(t) or pa.types.is_timestamp(t)
-        ]
-        if len(idx) == 0:
-            for x in it:
-                yield x
-        else:
-            for x in it:
-                for i in idx:
-                    if x[i] is pd.NaT:
-                        x[i] = None
-                    elif isinstance(x[i], pd.Timestamp):
-                        x[i] = x[i].to_pydatetime()
-                yield x

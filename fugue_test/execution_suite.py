@@ -190,7 +190,7 @@ class ExecutionEngineTests(object):
             df_eq(c, [["6", 1, "2"], ["2", 7, None]], "c:str,a:int,b:str", throw=True)
 
             a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
-            b = e.to_df([["6", 1], ["2", 7]], "c:double,a:int")
+            b = e.to_df([[6, 1], [2, 7]], "c:double,a:int")
             c = e.join(a, b, how="left_OUTER", on=["a"])
             df_eq(
                 c, [[1, "2", 6.0], [3, "4", None]], "a:int,b:str,c:double", throw=True

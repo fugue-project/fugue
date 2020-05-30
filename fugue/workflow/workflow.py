@@ -1,27 +1,29 @@
+from threading import RLock
 from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
-from fugue.dag.tasks import Create, FugueTask, Output, Process
+from fugue.workflow.tasks import Create, FugueTask, Output, Process
+from fugue.workflow.workflow_context import FugueWorkflowContext
 from fugue.dataframe import DataFrame
 from fugue.dataframe.dataframes import DataFrames
-from fugue.execution.execution_engine import ExecutionEngine
 from fugue.extensions.builtins import (
     AssertEqual,
     CreateData,
     DropColumns,
+    Load,
     Rename,
     RunJoin,
     RunSQLSelect,
     RunTransformer,
+    Save,
     SelectColumns,
     Show,
     Zip,
-    Load,
-    Save,
 )
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
+from fugue.exceptions import FugueWorkflowError
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -41,12 +43,17 @@ class WorkflowDataFrame(DataFrame):
         return self._task.name
 
     @property
-    def execution_engine(self) -> ExecutionEngine:
-        return self.workflow.execution_engine
-
-    @property
     def workflow(self) -> "FugueWorkflow":
         return self._workflow
+
+    @property
+    def result(self) -> DataFrame:
+        return self.workflow.get_result(self)
+
+    def compute(self, *args, **kwargs) -> DataFrame:
+        # TODO: it computes entire graph
+        self.workflow.run(*args, **kwargs)
+        return self.result
 
     def process(
         self: TDF,
@@ -76,16 +83,8 @@ class WorkflowDataFrame(DataFrame):
         title: Optional[str] = None,
         best_width: int = 100,
     ) -> None:
-        task = Output(
-            1,
-            self.execution_engine,
-            outputter=Show,
-            pre_partition=None,
-            params=dict(
-                rows=rows, count=show_count, title=title, best_width=best_width
-            ),
-        )
-        self.workflow.add(task, self)
+        # TODO: best_width is not used
+        self.workflow.show(self, rows=rows, count=show_count, title=title)
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
         self.workflow.assert_eq(self, *dfs, **params)
@@ -115,6 +114,49 @@ class WorkflowDataFrame(DataFrame):
     ) -> TDF:  # pragma: no cover
         df = self.workflow.join(self, *dfs, how=how, on=on)
         return self.to_self_type(df)
+
+    def inner_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="inner", on=on)
+
+    def semi_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="semi", on=on)
+
+    def left_semi_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="left_semi", on=on)
+
+    def anti_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="anti", on=on)
+
+    def left_anti_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="left_anti", on=on)
+
+    def left_outer_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="left_outer", on=on)
+
+    def right_outer_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="right_outer", on=on)
+
+    def full_outer_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="full_outer", on=on)
+
+    def cross_join(self: TDF, *dfs: Any) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="cross")
 
     def persist(self: TDF, level: Any = None) -> TDF:
         self._task.persist("" if level is None else level)
@@ -243,30 +285,34 @@ class WorkflowDataFrame(DataFrame):
 
 
 class FugueWorkflow(object):
-    def __init__(self, execution_engine: ExecutionEngine):
+    def __init__(self, *args: Any, **kwargs: Any):
+        self._lock = RLock()
         self._spec = WorkflowSpec()
-        self._execution_engine = execution_engine
+        self._workflow_ctx = self._to_ctx(*args, **kwargs)
+        self._computed = False
 
-    @property
-    def execution_engine(self) -> ExecutionEngine:
-        return self._execution_engine
+    def run(self, *args: Any, **kwargs: Any) -> None:
+        with self._lock:
+            self._computed = False
+            if len(args) > 0 or len(kwargs) > 0:
+                self._workflow_ctx = self._to_ctx(*args, **kwargs)
+            self._workflow_ctx.run(self._spec, {})
+            self._computed = True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.run()
+
+    def get_result(self, df: WorkflowDataFrame) -> DataFrame:
+        assert_or_throw(self._computed, FugueWorkflowError("not computed"))
+        return self._workflow_ctx.get_result(id(df._task))
 
     def create(
         self, using: Any, schema: Any = None, params: Any = None
     ) -> WorkflowDataFrame:
-        task = Create(
-            self.execution_engine, creator=using, schema=schema, params=params
-        )
-        return self.add(task)
-
-    def load(
-        self, path: str, fmt: str = "", columns: Any = None, **kwargs: Any
-    ) -> WorkflowDataFrame:
-        task = Create(
-            self.execution_engine,
-            creator=Load,
-            params=dict(path=path, fmt=fmt, columns=columns, params=kwargs),
-        )
+        task = Create(creator=using, schema=schema, params=params)
         return self.add(task)
 
     def process(
@@ -280,7 +326,6 @@ class FugueWorkflow(object):
         dfs = self._to_dfs(*dfs)
         task = Process(
             len(dfs),
-            self.execution_engine,
             processor=using,
             schema=schema,
             params=params,
@@ -298,7 +343,6 @@ class FugueWorkflow(object):
         dfs = self._to_dfs(*dfs)
         task = Output(
             len(dfs),
-            self.execution_engine,
             outputter=using,
             params=params,
             pre_partition=pre_partition,
@@ -325,6 +369,13 @@ class FugueWorkflow(object):
         self, data: Any, schema: Any = None, metadata: Any = None, partition: Any = None
     ) -> WorkflowDataFrame:
         return self.create_data(data, schema, metadata, partition)
+
+    def load(
+        self, path: str, fmt: str = "", columns: Any = None, **kwargs: Any
+    ) -> WorkflowDataFrame:
+        return self.create(
+            using=Load, params=dict(path=path, fmt=fmt, columns=columns, params=kwargs)
+        )
 
     def show(
         self,
@@ -413,6 +464,11 @@ class FugueWorkflow(object):
 
     def _to_dfs(self, *args: Any, **kwargs: Any) -> DataFrames:
         return DataFrames(*args, **kwargs).convert(self.create_data)
+
+    def _to_ctx(self, *args: Any, **kwargs) -> FugueWorkflowContext:
+        if len(args) == 1 and isinstance(args[0], FugueWorkflowContext):
+            return args[0]
+        return FugueWorkflowContext(*args, **kwargs)
 
 
 class _Dependencies(object):

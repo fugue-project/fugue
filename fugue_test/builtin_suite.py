@@ -4,10 +4,10 @@ from unittest import TestCase
 
 import pandas as pd
 import pytest
-from adagio.instances import WorkflowContext
-from fugue.dag.workflow import FugueWorkflow
+from fugue.workflow.workflow import FugueWorkflow
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution import ExecutionEngine
 from fugue.execution.native_execution_engine import SqliteEngine
 from fugue.extensions.outputter import Outputter
@@ -38,13 +38,16 @@ class BuiltInTests(object):
         def make_engine(self) -> ExecutionEngine:  # pragma: no cover
             raise NotImplementedError
 
-        def dag(self) -> "DagTester":
-            return DagTester(self.engine)
+        def dag(self) -> FugueWorkflow:
+            return FugueWorkflow(self.engine)
 
         def test_create_show(self):
             with self.dag() as dag:
                 dag.df([[0]], "a:int").persist().partition(num=2).show()
                 dag.df(dag.df([[0]], "a:int")).persist().broadcast().show()
+
+            a = FugueWorkflow().df([[0]], "a:int")
+            df_eq(a.compute(self.engine), [[0]], "a:int")
 
         def test_create_process_output(self):
             with self.dag() as dag:
@@ -179,8 +182,52 @@ class BuiltInTests(object):
 
                 b = dag.df([[2, 200], [3, 300]], "a:int,c:int")
                 c = dag.df([[2, 2000]], "a:int,d:int")
-                d = a.join(b, c, how="inner", on=["a"])
+                d = a.join(b, c, how="inner")  # infer join on
                 dag.df([[2, 20, 200, 2000]], "a:int,b:int,c:int,d:int").assert_eq(d)
+                d = a.inner_join(b, c)
+                dag.df([[2, 20, 200, 2000]], "a:int,b:int,c:int,d:int").assert_eq(d)
+                d = a.semi_join(b, c)
+                dag.df([[2, 20]], "a:int,b:int").assert_eq(d)
+                d = a.left_semi_join(b, c)
+                dag.df([[2, 20]], "a:int,b:int").assert_eq(d)
+                d = a.anti_join(b, c)
+                dag.df([[1, 10]], "a:int,b:int").assert_eq(d)
+                d = a.left_anti_join(b, c)
+                dag.df([[1, 10]], "a:int,b:int").assert_eq(d)
+
+                # TODO: change these to str type to only test outer features?
+                a = dag.df([[1, 10], [2, 20], [3, 30]], "a:int,b:int")
+                b = dag.df([[2, 200], [3, 300]], "a:int,c:int")
+                c = dag.df([[2, 2000], [4, 4000]], "a:int,d:int")
+                d = a.left_outer_join(b, c)
+                dag.df(
+                    [[1, 10, None, None], [2, 20, 200, 2000], [3, 30, 300, None]],
+                    "a:int,b:int,c:int,d:int",
+                ).assert_eq(d)
+                d = a.right_outer_join(b, c)
+                dag.df(
+                    [[2, 20, 200, 2000], [4, None, None, 4000]],
+                    "a:int,b:int,c:int,d:int",
+                ).assert_eq(d)
+                d = a.full_outer_join(b, c)
+                dag.df(
+                    [
+                        [1, 10, None, None],
+                        [2, 20, 200, 2000],
+                        [3, 30, 300, None],
+                        [4, None, None, 4000],
+                    ],
+                    "a:int,b:int,c:int,d:int",
+                ).assert_eq(d)
+
+                a = dag.df([[1, 10], [2, 20]], "a:int,b:int")
+                b = dag.df([[2], [3]], "c:int")
+                c = dag.df([[4]], "d:int")
+                d = a.cross_join(b, c)
+                dag.df(
+                    [[1, 10, 2, 4], [1, 10, 3, 4], [2, 20, 2, 4], [2, 20, 3, 4]],
+                    "a:int,b:int,c:int,d:int",
+                ).assert_eq(d)
 
         def test_select(self):
             with self.dag() as dag:
@@ -264,19 +311,6 @@ class BuiltInTests(object):
                 a.assert_eq(dag.df([[1, 6], [7, 2]], "a:long,c:int"))
                 a = dag.load(path2, header=True, columns="c:int,a:long")
                 a.assert_eq(dag.df([[6, 1], [2, 7]], "c:int,a:long"))
-
-
-class DagTester(FugueWorkflow):
-    def __init__(self, engine: ExecutionEngine):
-        super().__init__(engine)
-        self.engine = engine
-        self.ctx = WorkflowContext()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.ctx.run(self._spec, {})
 
 
 def mock_creator(p: int) -> DataFrame:

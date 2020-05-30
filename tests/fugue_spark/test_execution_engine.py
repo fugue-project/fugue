@@ -5,6 +5,7 @@ from fugue.collections.partition import PartitionSpec
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.extensions.builtins.outputters import df_eq
 from fugue.extensions.transformer import Transformer, transformer
+from fugue.workflow.workflow import FugueWorkflow
 from fugue_spark.execution_engine import SparkExecutionEngine
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
@@ -14,17 +15,29 @@ from pytest import raises
 
 
 class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
-    def make_engine(self):
-        spark_session = SparkSession.builder.getOrCreate()
-        e = SparkExecutionEngine(spark_session, dict(test=True))
-        return e
-
     @pytest.fixture(autouse=True)
     def init_session(self, spark_session):
         self.spark_session = spark_session
 
+    def make_engine(self):
+        session = SparkSession.builder.getOrCreate()
+        e = SparkExecutionEngine(session, dict(test=True))
+        return e
+
     def test__join_outer_pandas_incompatible(self):
         return
+
+    def test_to_df(self):
+        e = self.engine
+        o = ArrayDataFrame([[1, 2]],
+                           "a:int,b:int",
+                           dict(a=1),
+                           )
+        a = e.to_df(o)
+        assert a is not o
+        df_eq(a, o, throw=True)
+        a = e.to_df([[1, None]], "a:int,b:int", dict(a=1))
+        df_eq(a, [[1, None]], "a:int,b:int", dict(a=1), throw=True)
 
     def test_persist(self):
         e = self.engine
@@ -49,9 +62,13 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
         self.spark_session = spark_session
 
     def make_engine(self):
-        spark_session = SparkSession.builder.getOrCreate()
-        e = SparkExecutionEngine(spark_session, dict(test=True))
+        session = SparkSession.builder.getOrCreate()
+        e = SparkExecutionEngine(session, dict(test=True))
         return e
+
+    def test_default_session(self):
+        a = FugueWorkflow().df([[0]], "a:int")
+        df_eq(a.compute(SparkExecutionEngine), [[0]], "a:int")
 
     def test_repartition(self):
         with self.dag() as dag:

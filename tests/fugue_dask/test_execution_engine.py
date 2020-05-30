@@ -4,6 +4,7 @@ from fugue_dask.execution_engine import DaskExecutionEngine
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
+from fugue.workflow.workflow import FugueWorkflow
 
 
 class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -47,3 +48,7 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
     def make_engine(self):
         e = DaskExecutionEngine(dict(test=True))
         return e
+
+    def test_default_init(self):
+        a = FugueWorkflow().df([[0]], "a:int")
+        df_eq(a.compute(DaskExecutionEngine), [[0]], "a:int")

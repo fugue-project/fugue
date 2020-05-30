@@ -12,6 +12,7 @@ from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dataframe.utils import (deserialize_df, get_join_schemas, pickle_df,
                                    serialize_df, unpickle_df)
 from pytest import raises
+from triad.collections.schema import SchemaError
 from triad.exceptions import InvalidOperationError, NoneArgumentError
 from triad.utils.assertion import assert_or_throw
 
@@ -89,26 +90,28 @@ def test_get_join_schemas():
     raises(NoneArgumentError, lambda: get_join_schemas(a, b, how=None, on=[]))
     raises(ValueError, lambda: get_join_schemas(a, b, how="x", on=[]))
     raises(
-        KeyError, lambda: get_join_schemas(a, b, how="CROSS", on=["a"])
+        SchemaError, lambda: get_join_schemas(a, b, how="CROSS", on=["a"])
     )
     raises(
-        KeyError, lambda: get_join_schemas(a, c, how="CROSS", on=["a"])
+        SchemaError, lambda: get_join_schemas(a, c, how="CROSS", on=["a"])
     )
-    raises(KeyError, lambda: get_join_schemas(a, c, how="CROSS", on=[]))
+    raises(SchemaError, lambda: get_join_schemas(a, c, how="CROSS", on=[]))
     raises(
-        KeyError, lambda: get_join_schemas(a, b, how="inner", on=["a"])
+        SchemaError, lambda: get_join_schemas(a, b, how="inner", on=["a"])
     )
-    raises(KeyError, lambda: get_join_schemas(a, c, how="inner", on=[]))
     raises(
         ValueError, lambda: get_join_schemas(a, c, how="outer", on=["a"])
     )
     i, u = get_join_schemas(a, c, how="inner", on=["a"])
     assert i == "a:int"
     assert u == "a:int,b:int,d:str"
+    i, u = get_join_schemas(a, c, how="inner", on=[])  # infer
+    assert i == "a:int"
+    assert u == "a:int,b:int,d:str"
     a = ArrayDataFrame([], "a:int,b:int,c:int")
     b = ArrayDataFrame([], "c:int,b:int,x:int")
     raises(
-        KeyError, lambda: get_join_schemas(a, b, how="inner", on=["a"])
+        SchemaError, lambda: get_join_schemas(a, b, how="inner", on=["a"])
     )
     i, u = get_join_schemas(a, b, how="inner", on=["c", "b"])
     assert i == "b:int,c:int"
