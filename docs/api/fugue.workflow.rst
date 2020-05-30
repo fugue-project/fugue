@@ -1,9 +1,9 @@
-fugue.dag 
-==========
+fugue.workflow 
+===============
 
 
 fugue.workflow.tasks
----------------
+--------------------
 
 .. automodule:: fugue.workflow.tasks
    :members:
@@ -11,7 +11,7 @@ fugue.workflow.tasks
    :show-inheritance:
 
 fugue.workflow.workflow
-------------------
+-----------------------
 
 .. automodule:: fugue.workflow.workflow
    :members:
@@ -19,7 +19,7 @@ fugue.workflow.workflow
    :show-inheritance:
 
 fugue.workflow.workflow\_context
----------------------------
+--------------------------------
 
 .. automodule:: fugue.workflow.workflow_context
    :members:

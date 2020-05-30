@@ -5,11 +5,11 @@ fugue
    :maxdepth: 4
 
    fugue.collections
-   fugue.dag
    fugue.dataframe
    fugue.execution
    fugue.extensions
    fugue.utils
+   fugue.workflow
 
 
 fugue.constants
