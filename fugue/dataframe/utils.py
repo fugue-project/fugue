@@ -11,11 +11,11 @@ from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, LocalDat
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from triad.collections import Schema
+from triad.collections.fs import FileSystem
+from triad.collections.schema import SchemaError
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.assertion import assert_or_throw as aot
-
-from triad.collections.fs import FileSystem
 
 
 def _df_eq(
@@ -185,6 +185,12 @@ def get_join_schemas(
     )
     on = list(on)
     aot(len(on) == len(set(on)), f"{on} has duplication")
+    if how != "cross" and len(on) == 0:
+        on = list(df1.schema.intersect(df2.schema.names).names)
+        aot(
+            len(on) > 0,
+            SchemaError(f"no common columns between {df1.schema} and {df2.schema}"),
+        )
     schema2 = df2.schema
     aot(
         how != "outer",
@@ -196,14 +202,14 @@ def get_join_schemas(
         schema2 = schema2.extract(on)
     aot(
         on in df1.schema and on in schema2,
-        KeyError(f"{on} is not the intersection of {df1.schema} & {df2.schema}"),
+        SchemaError(f"{on} is not the intersection of {df1.schema} & {df2.schema}"),
     )
     cm = df1.schema.intersect(on)
     if how == "cross":
         aot(
             len(df1.schema.intersect(schema2)) == 0,
-            KeyError("can't specify on for cross join"),
+            SchemaError("can't specify on for cross join"),
         )
     else:
-        aot(len(on) > 0, KeyError("on must be specified"))
+        aot(len(on) > 0, SchemaError("on must be specified"))
     return cm, (df1.schema.union(schema2))

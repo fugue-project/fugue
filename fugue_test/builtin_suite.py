@@ -182,8 +182,52 @@ class BuiltInTests(object):
 
                 b = dag.df([[2, 200], [3, 300]], "a:int,c:int")
                 c = dag.df([[2, 2000]], "a:int,d:int")
-                d = a.join(b, c, how="inner", on=["a"])
+                d = a.join(b, c, how="inner")  # infer join on
                 dag.df([[2, 20, 200, 2000]], "a:int,b:int,c:int,d:int").assert_eq(d)
+                d = a.inner_join(b, c)
+                dag.df([[2, 20, 200, 2000]], "a:int,b:int,c:int,d:int").assert_eq(d)
+                d = a.semi_join(b, c)
+                dag.df([[2, 20]], "a:int,b:int").assert_eq(d)
+                d = a.left_semi_join(b, c)
+                dag.df([[2, 20]], "a:int,b:int").assert_eq(d)
+                d = a.anti_join(b, c)
+                dag.df([[1, 10]], "a:int,b:int").assert_eq(d)
+                d = a.left_anti_join(b, c)
+                dag.df([[1, 10]], "a:int,b:int").assert_eq(d)
+
+                # TODO: change these to str type to only test outer features?
+                a = dag.df([[1, 10], [2, 20], [3, 30]], "a:int,b:int")
+                b = dag.df([[2, 200], [3, 300]], "a:int,c:int")
+                c = dag.df([[2, 2000], [4, 4000]], "a:int,d:int")
+                d = a.left_outer_join(b, c)
+                dag.df(
+                    [[1, 10, None, None], [2, 20, 200, 2000], [3, 30, 300, None]],
+                    "a:int,b:int,c:int,d:int",
+                ).assert_eq(d)
+                d = a.right_outer_join(b, c)
+                dag.df(
+                    [[2, 20, 200, 2000], [4, None, None, 4000]],
+                    "a:int,b:int,c:int,d:int",
+                ).assert_eq(d)
+                d = a.full_outer_join(b, c)
+                dag.df(
+                    [
+                        [1, 10, None, None],
+                        [2, 20, 200, 2000],
+                        [3, 30, 300, None],
+                        [4, None, None, 4000],
+                    ],
+                    "a:int,b:int,c:int,d:int",
+                ).assert_eq(d)
+
+                a = dag.df([[1, 10], [2, 20]], "a:int,b:int")
+                b = dag.df([[2], [3]], "c:int")
+                c = dag.df([[4]], "d:int")
+                d = a.cross_join(b, c)
+                dag.df(
+                    [[1, 10, 2, 4], [1, 10, 3, 4], [2, 20, 2, 4], [2, 20, 3, 4]],
+                    "a:int,b:int,c:int,d:int",
+                ).assert_eq(d)
 
         def test_select(self):
             with self.dag() as dag:

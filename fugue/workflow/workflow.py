@@ -115,6 +115,49 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.join(self, *dfs, how=how, on=on)
         return self.to_self_type(df)
 
+    def inner_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="inner", on=on)
+
+    def semi_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="semi", on=on)
+
+    def left_semi_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="left_semi", on=on)
+
+    def anti_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="anti", on=on)
+
+    def left_anti_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="left_anti", on=on)
+
+    def left_outer_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="left_outer", on=on)
+
+    def right_outer_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="right_outer", on=on)
+
+    def full_outer_join(
+        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
+    ) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="full_outer", on=on)
+
+    def cross_join(self: TDF, *dfs: Any) -> TDF:  # pragma: no cover
+        return self.join(*dfs, how="cross")
+
     def persist(self: TDF, level: Any = None) -> TDF:
         self._task.persist("" if level is None else level)
         return self

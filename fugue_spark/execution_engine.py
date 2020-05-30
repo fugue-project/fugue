@@ -9,13 +9,8 @@ from fugue.collections.partition import (
     PartitionSpec,
 )
 from fugue.constants import KEYWORD_ROWCOUNT
-from fugue.dataframe import (
-    DataFrame,
-    DataFrames,
-    IterableDataFrame,
-    LocalDataFrame,
-    PandasDataFrame,
-)
+from fugue.dataframe import DataFrame, DataFrames, IterableDataFrame, LocalDataFrame
+from fugue.dataframe.arrow_dataframe import ArrowDataFrame
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
@@ -24,12 +19,12 @@ from fugue.execution.execution_engine import (
 )
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.utils.convert import to_schema, to_spark_schema, to_type_safe_input
+from fugue_spark.utils.io import SparkIO
 from fugue_spark.utils.partition import (
     even_repartition,
     hash_repartition,
     rand_repartition,
 )
-from fugue_spark.utils.io import SparkIO
 from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
@@ -140,11 +135,13 @@ class SparkExecutionEngine(ExecutionEngine):
             assert_arg_not_none(schema, "schema")
             sdf = self.spark_session.createDataFrame(df, to_spark_schema(schema))
             return SparkDataFrame(sdf, to_schema(schema), metadata)
-        pdf = PandasDataFrame(df, to_schema(schema))
+
+        # use arrow dataframe here to handle nulls in int cols
+        adf = ArrowDataFrame(df, to_schema(schema))
         sdf = self.spark_session.createDataFrame(
-            pdf.as_pandas(), to_spark_schema(pdf.schema)
+            adf.as_array(), to_spark_schema(adf.schema)
         )
-        return SparkDataFrame(sdf, pdf.schema, metadata)
+        return SparkDataFrame(sdf, adf.schema, metadata)
 
     def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
         def _persist_and_count(df: DataFrame) -> int:

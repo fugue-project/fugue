@@ -27,6 +27,18 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
     def test__join_outer_pandas_incompatible(self):
         return
 
+    def test_to_df(self):
+        e = self.engine
+        o = ArrayDataFrame([[1, 2]],
+                           "a:int,b:int",
+                           dict(a=1),
+                           )
+        a = e.to_df(o)
+        assert a is not o
+        df_eq(a, o, throw=True)
+        a = e.to_df([[1, None]], "a:int,b:int", dict(a=1))
+        df_eq(a, [[1, None]], "a:int,b:int", dict(a=1), throw=True)
+
     def test_persist(self):
         e = self.engine
         o = ArrayDataFrame([[1, 2]],
