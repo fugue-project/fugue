@@ -70,7 +70,9 @@ class SparkSQLEngine(SQLEngine):
 
 
 class SparkExecutionEngine(ExecutionEngine):
-    def __init__(self, spark_session: SparkSession, conf: Any = None):
+    def __init__(self, spark_session: Optional[SparkSession] = None, conf: Any = None):
+        if spark_session is None:
+            spark_session = SparkSession.builder.getOrCreate()
         self._spark_session = spark_session
         cf = {x[0]: x[1] for x in spark_session.sparkContext.getConf().getAll()}
         cf.update(ParamDict(conf))
