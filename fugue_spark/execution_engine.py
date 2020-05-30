@@ -1,7 +1,6 @@
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
-import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
 from fugue.collections.partition import (
@@ -293,11 +292,6 @@ class _Mapper(object):  # pragma: no cover
         self.map_func = map_func
         self.on_init = on_init
 
-    def _run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
-        it = self._run(no, rows)
-        for x in self._handle_special_values(it):
-            yield x
-
     def run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
         df = IterableDataFrame(
             to_type_safe_input(rows, self.schema), self.schema, self.metadata
@@ -321,21 +315,3 @@ class _Mapper(object):  # pragma: no cover
             res = self.map_func(cursor, sub_df)
             for r in res.as_array_iterable(type_safe=True):
                 yield r
-
-    def _handle_special_values(self, it: Iterable[Any]):
-        idx = [
-            i
-            for i, t in enumerate(self.output_schema.types)
-            if pa.types.is_date(t) or pa.types.is_timestamp(t)
-        ]
-        if len(idx) == 0:
-            for x in it:
-                yield x
-        else:
-            for x in it:
-                for i in idx:
-                    if x[i] is pd.NaT:
-                        x[i] = None
-                    elif isinstance(x[i], pd.Timestamp):
-                        x[i] = x[i].to_pydatetime()
-                yield x

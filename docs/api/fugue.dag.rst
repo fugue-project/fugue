@@ -2,26 +2,26 @@ fugue.dag
 ==========
 
 
-fugue.dag.tasks
+fugue.workflow.tasks
 ---------------
 
-.. automodule:: fugue.dag.tasks
+.. automodule:: fugue.workflow.tasks
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.dag.workflow
+fugue.workflow.workflow
 ------------------
 
-.. automodule:: fugue.dag.workflow
+.. automodule:: fugue.workflow.workflow
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.dag.workflow\_context
+fugue.workflow.workflow\_context
 ---------------------------
 
-.. automodule:: fugue.dag.workflow_context
+.. automodule:: fugue.workflow.workflow_context
    :members:
    :undoc-members:
    :show-inheritance:

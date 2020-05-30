@@ -1,26 +1,29 @@
+from threading import RLock
 from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
-from fugue.dag.tasks import Create, FugueTask, Output, Process
+from fugue.workflow.tasks import Create, FugueTask, Output, Process
+from fugue.workflow.workflow_context import FugueWorkflowContext
 from fugue.dataframe import DataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.extensions.builtins import (
     AssertEqual,
     CreateData,
     DropColumns,
+    Load,
     Rename,
     RunJoin,
     RunSQLSelect,
     RunTransformer,
+    Save,
     SelectColumns,
     Show,
     Zip,
-    Load,
-    Save,
 )
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
+from fugue.exceptions import FugueWorkflowError
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -42,6 +45,15 @@ class WorkflowDataFrame(DataFrame):
     @property
     def workflow(self) -> "FugueWorkflow":
         return self._workflow
+
+    @property
+    def result(self) -> DataFrame:
+        return self.workflow.get_result(self)
+
+    def compute(self, *args, **kwargs) -> DataFrame:
+        # TODO: it computes entire graph
+        self.workflow.run(*args, **kwargs)
+        return self.result
 
     def process(
         self: TDF,
@@ -230,8 +242,29 @@ class WorkflowDataFrame(DataFrame):
 
 
 class FugueWorkflow(object):
-    def __init__(self):
+    def __init__(self, *args: Any, **kwargs: Any):
+        self._lock = RLock()
         self._spec = WorkflowSpec()
+        self._workflow_ctx = self._to_ctx(*args, **kwargs)
+        self._computed = False
+
+    def run(self, *args: Any, **kwargs: Any) -> None:
+        with self._lock:
+            self._computed = False
+            if len(args) > 0 or len(kwargs) > 0:
+                self._workflow_ctx = self._to_ctx(*args, **kwargs)
+            self._workflow_ctx.run(self._spec, {})
+            self._computed = True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.run()
+
+    def get_result(self, df: WorkflowDataFrame) -> DataFrame:
+        assert_or_throw(self._computed, FugueWorkflowError("not computed"))
+        return self._workflow_ctx.get_result(id(df._task))
 
     def create(
         self, using: Any, schema: Any = None, params: Any = None
@@ -388,6 +421,11 @@ class FugueWorkflow(object):
 
     def _to_dfs(self, *args: Any, **kwargs: Any) -> DataFrames:
         return DataFrames(*args, **kwargs).convert(self.create_data)
+
+    def _to_ctx(self, *args: Any, **kwargs) -> FugueWorkflowContext:
+        if len(args) == 1 and isinstance(args[0], FugueWorkflowContext):
+            return args[0]
+        return FugueWorkflowContext(*args, **kwargs)
 
 
 class _Dependencies(object):

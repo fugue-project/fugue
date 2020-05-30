@@ -4,7 +4,7 @@ from typing import Any, List, Optional, no_type_check
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
 from fugue.collections.partition import PartitionSpec
-from fugue.dag.workflow_context import FugueWorkflowContext
+from fugue.workflow.workflow_context import FugueWorkflowContext
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution import ExecutionEngine
@@ -105,10 +105,16 @@ class FugueTask(TaskSpec, ABC):
     #    self._pre_partition = PartitionSpec(*args, **kwargs)
     #    return self
 
-    def _get_execution_engine(self, ctx: TaskContext) -> ExecutionEngine:
+    def _get_workflow_context(self, ctx: TaskContext) -> FugueWorkflowContext:
         wfctx = ctx.workflow_context
         assert isinstance(wfctx, FugueWorkflowContext)
-        return wfctx.execution_engine
+        return wfctx
+
+    def _get_execution_engine(self, ctx: TaskContext) -> ExecutionEngine:
+        return self._get_workflow_context(ctx).execution_engine
+
+    def _set_result(self, ctx: TaskContext, df: DataFrame) -> None:
+        self._get_workflow_context(ctx).set_result(id(self), df)
 
 
 class Create(FugueTask):
@@ -134,6 +140,7 @@ class Create(FugueTask):
         df = self._creator.create()
         df = self.handle_persist(df, e)
         df = self.handle_broadcast(df, e)
+        self._set_result(ctx, df)
         ctx.outputs["_0"] = df
 
 
@@ -172,6 +179,7 @@ class Process(FugueTask):
             df = self._processor.process(DataFrames(ctx.inputs.values()))
         df = self.handle_persist(df, e)
         df = self.handle_broadcast(df, e)
+        self._set_result(ctx, df)
         ctx.outputs["_0"] = df
 
 
