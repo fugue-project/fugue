@@ -31,7 +31,7 @@ def test_show():
 
     s = " ".join(["x"] * 200)
     df = ArrayDataFrame([[s, 1], ["b", "s"]], "a:str,b:str", metadata=dict(a=1, b=2))
-    df.show(n=1, show_count=True, title="abc")
+    df.show(rows=1, show_count=True, title="abc")
 
 
 def test_lazy_schema():

@@ -1,20 +1,23 @@
 import copy
+from random import randint, seed
 from typing import Any, Dict, Iterable, List
 
-from adagio.instances import WorkflowContext
+from adagio.instances import WorkflowContext, WorkflowResultCache
 from fugue.collections.partition import PartitionSpec
-from fugue.workflow.workflow import FugueWorkflow
-from fugue.workflow.workflow_context import FugueWorkflowContext
+from fugue.dataframe import DataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution import NativeExecutionEngine
 from fugue.extensions.transformer.convert import transformer
+from fugue.workflow.workflow import FugueInteractiveWorkflow, FugueWorkflow
+from fugue.workflow.workflow_context import (FugueInteractiveWorkflowContext,
+                                             FugueWorkflowContext)
 from pytest import raises
 from triad.exceptions import InvalidOperationError
 
 
-def test_builder():
+def test_workflow():
     builder = FugueWorkflow()
 
     a = builder.create_data([[0], [0], [1]], "a:int")
@@ -42,6 +45,87 @@ def test_builder():
     df_eq(b.compute(NativeExecutionEngine), [[0, 2], [0, 2], [1, 1]], "a:int,b:int")
 
 
+def test_interactive_workflow():
+    # with statement is not valid
+    with raises(FugueWorkflowError):
+        with FugueInteractiveWorkflow():
+            pass
+
+    # test basic operations, .result can be directly used
+    dag = FugueInteractiveWorkflow()
+    a = dag.create_data([[0]], "a:int")
+    df_eq(a.result, [[0]], "a:int")
+    df_eq(a.result, [[0]], "a:int")
+    a.compute()
+    df_eq(a.result, [[0]], "a:int")
+
+    # make sure create_rand is called once
+    seed(0)
+    dag = FugueInteractiveWorkflow()
+    b = dag.create(using=create_rand)
+    b.compute()
+    res1 = list(b.result.as_array())
+    b.show()
+    b.process(my_show)
+    dag.run()
+    dag.run()
+    res2 = list(b.result.as_array())
+    assert res1 == res2
+
+    # assertion on underlying cache methods
+    cache = MockCache(dummy=False)
+    dag = FugueInteractiveWorkflow(cache=cache)
+    a = dag.create_data([[0]], "a:int")
+    assert 1 == cache.get_called
+    assert 1 == cache.set_called
+    dag.run()  # for second run, this cache is not used at all
+    assert 1 == cache.get_called
+    assert 1 == cache.set_called
+    a.show()  # new task will trigger
+    assert 2 == cache.get_called
+    assert 2 == cache.set_called
+    dag.run()
+    assert 2 == cache.get_called
+    assert 2 == cache.set_called
+
+    # cache returns dummy data
+    dag = FugueInteractiveWorkflow(FugueInteractiveWorkflowContext(cache=MockCache))
+    a = dag.create_data([[0]], "a:int")
+    b = dag.create_data([[50]], "a:int")
+    a.assert_eq(b)  # dummy value from cache makes them equal
+
+
+class MockCache(WorkflowResultCache):
+    def __init__(self, ctx=None, dummy=True):
+        self.dummy = dummy
+        self.tb = dict()
+        self.set_called = 0
+        self.skip_called = 0
+        self.get_called = 0
+        self.hit = 0
+
+    def set(self, key: str, value: Any) -> None:
+        self.tb[key] = (False, value)
+        print("set", key)
+        self.set_called += 1
+
+    def skip(self, key: str) -> None:
+        self.tb[key] = (True, None)
+        self.skip_called += 1
+
+    def get(self, key: str):
+        if self.dummy:
+            return True, False, ArrayDataFrame([[100]], "a:int")
+        self.get_called += 1
+        if key not in self.tb:
+            print("not get", key)
+            return False, False, None
+        x = self.tb[key]
+        print("get", key)
+        self.hit += 1
+        return True, x[0], x[1]
+
+
 def mock_tf1(df: List[Dict[str, Any]], v: int = 1) -> Iterable[Dict[str, Any]]:
     for r in df:
         r["b"] = v * len(df)
@@ -53,3 +137,13 @@ def mock_tf2(df: List[Dict[str, Any]], v: int = 1) -> Iterable[Dict[str, Any]]:
     for r in df:
         r["b"] = v * len(df)
         yield r
+
+
+# schema: a:int
+def create_rand() -> List[List[Any]]:
+    return [[randint(0, 10)]]
+
+
+def my_show(df: DataFrame) -> DataFrame:
+    df.show()
+    return df

@@ -1,15 +1,18 @@
 from threading import RLock
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 from adagio.instances import (
     NoOpCache,
     SequentialExecutionEngine,
     WorkflowContext,
     WorkflowHooks,
+    WorkflowResultCache,
 )
 from fugue.dataframe import DataFrame
 from fugue.execution.execution_engine import ExecutionEngine
 from fugue.execution.native_execution_engine import NativeExecutionEngine
+from triad.exceptions import InvalidOperationError
+from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_instance
 
 
@@ -25,6 +28,9 @@ class FugueWorkflowContext(WorkflowContext):
             ee: ExecutionEngine = NativeExecutionEngine()
         else:
             ee = to_instance(execution_engine, ExecutionEngine)
+        self._fugue_engine = ee
+        self._lock = RLock()
+        self._results: Dict[Any, DataFrame] = {}
         super().__init__(
             cache=cache,
             engine=workflow_engine,
@@ -32,9 +38,6 @@ class FugueWorkflowContext(WorkflowContext):
             logger=ee.log,
             config=ee.conf,
         )
-        self._fugue_engine = ee
-        self._lock = RLock()
-        self._results: Dict[Any, DataFrame] = {}
 
     @property
     def execution_engine(self) -> ExecutionEngine:
@@ -47,3 +50,66 @@ class FugueWorkflowContext(WorkflowContext):
     def get_result(self, key: Any) -> DataFrame:
         with self._lock:
             return self._results[key]
+
+
+class FugueInteractiveWorkflowContext(FugueWorkflowContext):
+    def __init__(
+        self,
+        execution_engine: Any = None,
+        cache: Any = NoOpCache,
+        workflow_engine: Any = SequentialExecutionEngine,
+        hooks: Any = WorkflowHooks,
+    ):
+        super().__init__(
+            cache=cache,
+            workflow_engine=workflow_engine,
+            hooks=hooks,
+            execution_engine=execution_engine,
+        )
+        self._cache = _FugueInteractiveCache(self, self._cache)  # type: ignore
+
+
+class _FugueInteractiveCache(WorkflowResultCache):
+    """Fugue cache for interactive operations.
+    """
+
+    def __init__(self, wf_ctx: "WorkflowContext", cache: FugueWorkflowContext):
+        super().__init__(wf_ctx)
+        self._lock = RLock()
+        self._data: Dict[str, Any] = {}
+        self._cache = cache
+
+    def set(self, key: str, value: Any) -> None:
+        """Set `key` with `value`
+
+        :param key: uuid string
+        :param value: any value
+        """
+        with self._lock:
+            self._data[key] = value
+        self._cache.set(key, value)
+
+    def skip(self, key: str) -> None:  # pragma: no cover
+        """Skip `key`
+
+        :param key: uuid string
+        """
+        raise InvalidOperationError("skip is not valid in FugueInteractiveCache")
+
+    def get(self, key: str) -> Tuple[bool, bool, Any]:
+        """Try to get value for `key`
+
+        :param key: uuid string
+        :return: <hasvalue>, <skipped>, <value>
+        """
+        with self._lock:
+            if key in self._data:
+                return True, False, self._data[key]
+            has_value, skipped, value = self._cache.get(key)
+            assert_or_throw(
+                not skipped,
+                InvalidOperationError("skip is not valid in FugueInteractiveCache"),
+            )
+            if has_value:
+                self._data[key] = value
+            return has_value, skipped, value

@@ -4,7 +4,10 @@ from typing import Any, Dict, Iterable, List, Optional, TypeVar
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
 from fugue.workflow.tasks import Create, FugueTask, Output, Process
-from fugue.workflow.workflow_context import FugueWorkflowContext
+from fugue.workflow.workflow_context import (
+    FugueInteractiveWorkflowContext,
+    FugueWorkflowContext,
+)
 from fugue.dataframe import DataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.extensions.builtins import (
@@ -84,7 +87,7 @@ class WorkflowDataFrame(DataFrame):
         best_width: int = 100,
     ) -> None:
         # TODO: best_width is not used
-        self.workflow.show(self, rows=rows, count=show_count, title=title)
+        self.workflow.show(self, rows=rows, show_count=show_count, title=title)
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
         self.workflow.assert_eq(self, *dfs, **params)
@@ -109,53 +112,41 @@ class WorkflowDataFrame(DataFrame):
         )
         return self.to_self_type(df)
 
-    def join(
-        self: TDF, *dfs: Any, how: str, on: Optional[Iterable[str]] = None
-    ) -> TDF:  # pragma: no cover
+    def join(self: TDF, *dfs: Any, how: str, on: Optional[Iterable[str]] = None) -> TDF:
         df = self.workflow.join(self, *dfs, how=how, on=on)
         return self.to_self_type(df)
 
-    def inner_join(
-        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
-    ) -> TDF:  # pragma: no cover
+    def inner_join(self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None) -> TDF:
         return self.join(*dfs, how="inner", on=on)
 
-    def semi_join(
-        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
-    ) -> TDF:  # pragma: no cover
+    def semi_join(self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None) -> TDF:
         return self.join(*dfs, how="semi", on=on)
 
-    def left_semi_join(
-        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
-    ) -> TDF:  # pragma: no cover
+    def left_semi_join(self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None) -> TDF:
         return self.join(*dfs, how="left_semi", on=on)
 
-    def anti_join(
-        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
-    ) -> TDF:  # pragma: no cover
+    def anti_join(self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None) -> TDF:
         return self.join(*dfs, how="anti", on=on)
 
-    def left_anti_join(
-        self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
-    ) -> TDF:  # pragma: no cover
+    def left_anti_join(self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None) -> TDF:
         return self.join(*dfs, how="left_anti", on=on)
 
     def left_outer_join(
         self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
-    ) -> TDF:  # pragma: no cover
+    ) -> TDF:
         return self.join(*dfs, how="left_outer", on=on)
 
     def right_outer_join(
         self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
-    ) -> TDF:  # pragma: no cover
+    ) -> TDF:
         return self.join(*dfs, how="right_outer", on=on)
 
     def full_outer_join(
         self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
-    ) -> TDF:  # pragma: no cover
+    ) -> TDF:
         return self.join(*dfs, how="full_outer", on=on)
 
-    def cross_join(self: TDF, *dfs: Any) -> TDF:  # pragma: no cover
+    def cross_join(self: TDF, *dfs: Any) -> TDF:
         return self.join(*dfs, how="cross")
 
     def persist(self: TDF, level: Any = None) -> TDF:
@@ -381,10 +372,12 @@ class FugueWorkflow(object):
         self,
         *dfs: Any,
         rows: int = 10,
-        count: bool = False,
+        show_count: bool = False,
         title: Optional[str] = None,
     ) -> None:
-        self.output(*dfs, using=Show, params=dict(rows=rows, count=count, title=title))
+        self.output(
+            *dfs, using=Show, params=dict(rows=rows, show_count=show_count, title=title)
+        )
 
     def join(
         self, *dfs: Any, how: str, on: Optional[Iterable[str]] = None
@@ -469,6 +462,47 @@ class FugueWorkflow(object):
         if len(args) == 1 and isinstance(args[0], FugueWorkflowContext):
             return args[0]
         return FugueWorkflowContext(*args, **kwargs)
+
+
+class FugueInteractiveWorkflow(FugueWorkflow):
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__()
+        self._workflow_ctx = self._to_ctx(*args, **kwargs)
+
+    def run(self, *args: Any, **kwargs: Any) -> None:
+        assert_or_throw(
+            len(args) == 0 and len(kwargs) == 0,
+            FugueWorkflowError(
+                "can't reset workflow context in FugueInteractiveWorkflow"
+            ),
+        )
+        with self._lock:
+            self._computed = False
+            self._workflow_ctx.run(self._spec, {})
+            self._computed = True
+
+    def get_result(self, df: WorkflowDataFrame) -> DataFrame:
+        return self._workflow_ctx.get_result(id(df._task))
+
+    def __enter__(self):
+        raise FugueWorkflowError(
+            "with statement is invalid for FugueInteractiveWorkflow"
+        )
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        raise FugueWorkflowError(  # pragma: no cover
+            "with statement is invalid for FugueInteractiveWorkflow"
+        )
+
+    def add(self, task: FugueTask, *args: Any, **kwargs: Any) -> WorkflowDataFrame:
+        df = super().add(task, *args, **kwargs)
+        self.run()
+        return df
+
+    def _to_ctx(self, *args: Any, **kwargs) -> FugueInteractiveWorkflowContext:
+        if len(args) == 1 and isinstance(args[0], FugueInteractiveWorkflowContext):
+            return args[0]
+        return FugueInteractiveWorkflowContext(*args, **kwargs)
 
 
 class _Dependencies(object):

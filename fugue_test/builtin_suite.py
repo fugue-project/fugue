@@ -4,7 +4,6 @@ from unittest import TestCase
 
 import pandas as pd
 import pytest
-from fugue.workflow.workflow import FugueWorkflow
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -18,6 +17,7 @@ from fugue.extensions.transformer import (
     cotransformer,
     transformer,
 )
+from fugue.workflow.workflow import FugueInteractiveWorkflow, FugueWorkflow
 from triad.collections.fs import FileSystem
 
 
@@ -41,13 +41,17 @@ class BuiltInTests(object):
         def dag(self) -> FugueWorkflow:
             return FugueWorkflow(self.engine)
 
+        def test_workflows(self):
+            a = FugueWorkflow().df([[0]], "a:int")
+            df_eq(a.compute(self.engine), [[0]], "a:int")
+
+            a = FugueInteractiveWorkflow(self.engine).df([[0]], "a:int").persist()
+            df_eq(a.result, [[0]], "a:int")
+
         def test_create_show(self):
             with self.dag() as dag:
                 dag.df([[0]], "a:int").persist().partition(num=2).show()
                 dag.df(dag.df([[0]], "a:int")).persist().broadcast().show()
-
-            a = FugueWorkflow().df([[0]], "a:int")
-            df_eq(a.compute(self.engine), [[0]], "a:int")
 
         def test_create_process_output(self):
             with self.dag() as dag:

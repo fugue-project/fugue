@@ -9,7 +9,7 @@ class Show(Outputter):
         for df in dfs.values():
             df.show(
                 self.params.get("rows", 10),
-                self.params.get("count", False),
+                self.params.get("show_count", False),
                 title=self.params.get("title", ""),
             )
 
