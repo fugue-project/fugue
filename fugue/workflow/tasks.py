@@ -4,13 +4,14 @@ from typing import Any, List, Optional, no_type_check
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
 from fugue.collections.partition import PartitionSpec
-from fugue.workflow.workflow_context import FugueWorkflowContext
 from fugue.dataframe import DataFrame, DataFrames
+from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution import ExecutionEngine
 from fugue.extensions.creator.convert import to_creator
 from fugue.extensions.outputter.convert import to_outputter
 from fugue.extensions.processor.convert import to_processor
+from fugue.workflow.workflow_context import FugueWorkflowContext
 from triad.collections.dict import ParamDict
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
@@ -202,6 +203,7 @@ class Output(FugueTask):
         super().__init__(
             params=params,
             input_n=input_n,
+            output_n=1,
             deterministic=deterministic,
             lazy=lazy,
             input_names=input_names,
@@ -214,3 +216,5 @@ class Output(FugueTask):
             self._outputter.process(DataFrames(ctx.inputs))
         else:
             self._outputter.process(DataFrames(ctx.inputs.values()))
+        # TODO: output dummy to force cache to work, should we fix adagio?
+        ctx.outputs["_0"] = ArrayDataFrame([], "_0:int")

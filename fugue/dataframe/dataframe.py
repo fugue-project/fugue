@@ -146,11 +146,12 @@ class DataFrame(ABC):
 
     def show(
         self,
-        n: int = 10,
+        rows: int = 10,
         show_count: bool = False,
         title: Optional[str] = None,
         best_width: int = 100,
     ) -> None:
+        n = rows
         arr: List[List[str]] = self.head(n)
         count = -1
         if len(arr) < n:
@@ -158,7 +159,7 @@ class DataFrame(ABC):
         elif show_count:
             count = self.count()
         with DataFrame.SHOW_LOCK:
-            if title is not None:
+            if title is not None and title != "":
                 print(title)
             print(type(self).__name__)
             tb = _PrettyTable(self.schema, arr, best_width)
