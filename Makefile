@@ -7,6 +7,9 @@ help:
 	@echo "  docs		create pydocs for all relveant modules (assumes venv is present)"
 	@echo "	 package	package for pypi"
 	@echo "	 test		run all tests with coverage (assumes venv is present)"
+	@echo "	 testcore	run all tests excluding spark tests with coverage (assumes venv is present)"
+	@echo "	 sql		fugue sql code gen"
+
 
 devenv:
 	python3 -m venv venv
