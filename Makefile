@@ -7,6 +7,9 @@ help:
 	@echo "  docs		create pydocs for all relveant modules (assumes venv is present)"
 	@echo "	 package	package for pypi"
 	@echo "	 test		run all tests with coverage (assumes venv is present)"
+	@echo "	 testcore	run all tests excluding spark tests with coverage (assumes venv is present)"
+	@echo "	 sql		fugue sql code gen"
+
 
 devenv:
 	python3 -m venv venv
@@ -37,3 +40,6 @@ test:
 
 testcore:
 	python3 -bb -m pytest tests/ --ignore=tests/fugue_spark
+
+sql:
+	java -Xmx500M -jar bin/antlr-4.8-complete.jar -Dlanguage=Python3 fugue_sql/antlr/fugue_sql.g4
