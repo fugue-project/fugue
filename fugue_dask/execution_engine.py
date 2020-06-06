@@ -114,6 +114,7 @@ class DaskExecutionEngine(ExecutionEngine):
         presort_keys = list(presort.keys())
         presort_asc = list(presort.values())
         output_schema = Schema(output_schema)
+        input_schema = df.schema
         on_init_once: Any = None if on_init is None else RunOnce(
             on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
         )
@@ -124,11 +125,11 @@ class DaskExecutionEngine(ExecutionEngine):
             if len(presort_keys) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             input_df = PandasDataFrame(
-                pdf.reset_index(drop=True), df.schema, pandas_df_wrapper=True
+                pdf.reset_index(drop=True), input_schema, pandas_df_wrapper=True
             )
             if on_init_once is not None:
                 on_init_once(0, input_df)
-            cursor = partition_spec.get_cursor(df.schema, 0)
+            cursor = partition_spec.get_cursor(input_schema, 0)
             cursor.set(input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()
