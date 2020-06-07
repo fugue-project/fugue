@@ -67,9 +67,202 @@ def allUpperCase(self):
         return self._all_upper_case
     return False
 
+@property
+def simpleAssign(self):
+    if "_simple_assign" in self.__dict__:
+        return self._simple_assign
+    return False
 
 }
 
+
+
+//==========================
+// Start of the Fugue rules
+//==========================
+
+fugueLanguage:
+    fugueSingleTask+ EOF
+    ;
+
+fugueSingleStatement:
+    fugueSingleTask EOF
+    ;
+
+fugueSingleTask:
+    (assign=fugueAssignmentExpr)? (partition=fuguePartitionExpr)? task=fugueSingleOutputTaskExpr (persist=fuguePersistExpr)? (broadcast=fugueBroadcastExpr)?
+    ;
+
+fugueSingleOutputTaskExpr
+    : fugueSelectTask
+    | fugueTransformTask
+    | fugueProcessTask
+    | fugueCreateTask
+    ;
+
+fugueAssignmentExpr:
+    varname=fugueIdentifier assign=fugueAssignment
+    ;
+
+fugueAssignment
+    : COLONEQUAL
+    | CHECKPOINT
+    | {self.simpleAssign}? EQUAL
+    ;
+
+fugueSelectTask:
+    query
+    ;
+
+fugueTransformTask:
+    TRANSFORM (dfs=fugueDataFramesExpr)? fugueSingleOutputExtensionExpr
+    ;
+
+fugueProcessTask:
+    PROCESS (dfs=fugueDataFramesExpr)? fugueSingleOutputExtensionExpr
+    ;
+
+fugueCreateTask:
+    CREATE fugueSingleOutputExtensionExpr
+    ;
+
+fugueSingleOutputExtensionExpr:
+    USING ext=fugueExtensionExpr (params=fugueParamsExpr)? (schema=fugueSchemaExpr)?
+    ;
+
+fuguePersistExpr:
+    PERSIST (value=identifier)?
+    ;
+
+fugueBroadcastExpr:
+    BROADCAST
+    ;
+
+fuguePartitionExpr
+    : (algo=fuguePartitionAlgoExpr)? PARTITION num=fuguePartitionNumExpr (BY by=fugueColsExpr)? (PRESORT presort=fugueColsSortExpr)?
+    | (algo=fuguePartitionAlgoExpr)? PARTITION BY by=fugueColsExpr (PRESORT presort=fugueColsSortExpr)?
+    ;
+
+fuguePartitionAlgoExpr
+    : HASH | RAND | EVEN
+    ;
+
+fuguePartitionNumExpr:
+    INTEGER_VALUE
+    ;
+
+fugueExtensionExpr:
+    fugueIdentifier ('.' fugueIdentifier)*
+    ;
+
+fugueDataFramesExpr:
+    fugueDataFrameExpr (',' fugueDataFrameExpr)*
+    ;
+
+fugueDataFrameExpr
+    : fugueIdentifier
+    | '(' fugueSingleOutputTaskExpr ')'
+    ;
+
+fugueSchemaExpr:
+    SCHEMA fugueSchema
+    ;
+
+fugueParamsExpr
+    : PARAMS fugueParamPairs
+    | PARAMS? '{' fugueParamPairs '}'
+    | PARAMS? '(' fugueParamPairs ')'
+    ;
+
+fugueColsExpr:
+    fugueColumnIdentifier (',' fugueColumnIdentifier)*
+    ;
+
+fugueColsSortExpr:
+    fugueColSortExpr (',' fugueColSortExpr)*
+    ;
+
+fugueColSortExpr:
+    fugueColumnIdentifier (ASC | DESC)?
+    ;
+
+fugueColumnIdentifier:
+    fugueIdentifier
+    ;
+
+fugueSchema:
+    fugueSchemaPair (',' fugueSchemaPair)*
+    ;
+
+fugueSchemaPair:
+    fugueSchemaKey ':' fugueSchemaType
+    ;
+
+fugueSchemaKey:
+    fugueIdentifier
+    ;
+
+fugueSchemaType:
+    | fugueIdentifier
+    | '[' fugueSchemaType ']'
+    | '{' fugueSchema '}'
+    ;
+
+fugueParamPairs:
+    fugueParamPair (',' fugueParamPair)*
+    ;
+
+fugueParamPair
+    : fugueJsonPair
+    | fugueJsonKey EQUAL fugueJsonValue
+    ;
+
+// From https://github.com/antlr/grammars-v4/blob/master/json/JSON.g4
+
+fugueJson
+    : fugueJsonValue
+    ;
+
+fugueJsonObj
+    : '{' fugueJsonPair (',' fugueJsonPair)* '}'
+    | '{' '}'
+    ;
+
+fugueJsonPair
+    : fugueJsonKey ':' fugueJsonValue
+    ;
+
+fugueJsonKey
+    : fugueIdentifier 
+    | STRING
+    ;
+
+fugueJsonArray
+    : '[' fugueJsonValue (',' fugueJsonValue)* ']'
+    | '[' ']'
+    ;
+
+fugueJsonValue
+    : STRING
+    | number
+    | fugueJsonObj
+    | fugueJsonArray
+    | 'true'
+    | TRUE
+    | 'false'
+    | FALSE
+    | 'null'
+    | NULL
+    ;
+
+fugueIdentifier:
+    identifier
+    ;
+
+
+//========================
+// End of the Fugue rules
+//========================
 
 
 singleStatement
@@ -339,7 +532,7 @@ partitionSpec
     ;
 
 partitionVal
-    : identifier (EQ constant)?
+    : identifier (EQUAL constant)?
     ;
 
 namespace
@@ -386,7 +579,7 @@ tablePropertyList
     ;
 
 tableProperty
-    : key=tablePropertyKey (EQ? value=tablePropertyValue)?
+    : key=tablePropertyKey (EQUAL? value=tablePropertyValue)?
     ;
 
 tablePropertyKey
@@ -549,7 +742,7 @@ assignmentList
     ;
 
 assignment
-    : key=multipartIdentifier EQ value=expression
+    : key=multipartIdentifier EQUAL value=expression
     ;
 
 whereClause
@@ -813,7 +1006,12 @@ constant
     ;
 
 comparisonOperator
-    : EQ | NEQ | NEQJ | LT | LTE | GT | GTE | NSEQ
+    : comparisonEqualOperator | NEQ | NEQJ | LT | LTE | GT | GTE | NSEQ
+    ;
+
+comparisonEqualOperator
+    : DOUBLEEQUAL
+    | EQUAL
     ;
 
 arithmeticOperator
@@ -1457,6 +1655,28 @@ nonReserved
 // in `docs/sql-keywords.md`. If the token is a non-reserved keyword,
 // please update `ansiNonReserved` and `nonReserved` as well.
 
+//==================================
+// Start of the Fugue keywords list
+//==================================
+
+HASH: 'HASH';
+RAND: 'RAND';
+EVEN: 'EVEN';
+PRESORT: 'PRESORT';
+PERSIST: 'PERSIST';
+BROADCAST: 'BROADCAST';
+PARAMS: 'PARAMS';
+PROCESS: 'PROCESS';
+OUTPUT: 'OUTPUT';
+
+COLONEQUAL: ':=';
+CHECKPOINT: '??';
+
+//================================
+// End of the Fugue keywords list
+//================================
+
+
 //============================
 // Start of the keywords list
 //============================
@@ -1716,7 +1936,9 @@ YEAR: 'YEAR';
 // End of the keywords list
 //============================
 
-EQ  : '=' | '==';
+EQUAL: '=';
+DOUBLEEQUAL: '==';
+
 NSEQ: '<=>';
 NEQ : '<>';
 NEQJ: '!=';
