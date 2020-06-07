@@ -7,11 +7,23 @@ from typing import List, Iterable
 
 
 class FugueSQL(object):
-    def __init__(self, code: str, rule: str, ignore_case: bool = False):
+    def __init__(
+        self,
+        code: str,
+        rule: str,
+        ignore_case: bool = False,
+        simple_assign: bool = True,
+    ):
         self._rule = rule
         self._raw_code = code
-        self._code = _to_cased_code(code, rule) if ignore_case else code
-        self._tree = _to_tree(self._code, self._rule, False)
+        self._code = (
+            _to_cased_code(code, rule, simple_assign=simple_assign)
+            if ignore_case
+            else code
+        )
+        self._tree = _to_tree(
+            self._code, self._rule, False, simple_assign=simple_assign
+        )
 
     @property
     def raw_code(self):  # pragma: no cover
@@ -26,19 +38,26 @@ class FugueSQL(object):
         return self._tree
 
 
-def _to_tree(code: str, rule: str, all_upper_case: bool) -> Tree:
+def _to_tree(code: str, rule: str, all_upper_case: bool, simple_assign: bool) -> Tree:
     input_stream = InputStream(code)
     lexer = FugueSQLLexer(input_stream)
+    lexer._all_upper_case = all_upper_case
+    lexer._simple_assign = simple_assign
     stream = CommonTokenStream(lexer)
     parser = FugueSQLParser(stream)
     parser._all_upper_case = all_upper_case
+    parser._simple_assign = simple_assign
     parser.addErrorListener(_ErrorListener(code.splitlines()))
     return getattr(parser, rule)()  # validate syntax
 
 
-def _to_cased_code(code: str, rule: str) -> str:
+def _to_cased_code(code: str, rule: str, simple_assign: bool) -> str:
     tokens = [
-        t for t in _to_tokens(_to_tree(code.upper(), rule, True)) if _is_keyword(t)
+        t
+        for t in _to_tokens(
+            _to_tree(code.upper(), rule, True, simple_assign=simple_assign)
+        )
+        if _is_keyword(t)
     ]
     start = 0
     cased_code: List[str] = []
@@ -73,7 +92,9 @@ class _ErrorListener(ErrorListener):
         self._lines = lines
 
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
-        raise FugueSQLSyntaxError(f"{msg}\nline {line}: {self._lines[line - 1]}")
+        raise FugueSQLSyntaxError(
+            f"{msg}\nline {line}: {self._lines[line - 1]}\n{offendingSymbol}"
+        )
 
     def reportAmbiguity(
         self, recognizer, dfa, startIndex, stopIndex, exact, ambigAlts, configs
