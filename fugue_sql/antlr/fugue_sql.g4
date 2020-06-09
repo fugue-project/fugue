@@ -97,6 +97,7 @@ fugueSingleTask
     : fugueNestableTask
     | fugueOutputTask
     | fuguePrintTask
+    | fugueSaveTask
     ;
 
 fugueNestableTask
@@ -114,6 +115,7 @@ fugueNestableTaskCollectionNoSelect
     | fugueZipTask
     | fugueCreateTask
     | fugueCreateDataTask
+    | fugueLoadTask
     ;
 
 fugueSelectTask:
@@ -121,11 +123,11 @@ fugueSelectTask:
     ;
 
 fugueTransformTask:
-    (partition=fuguePrepartition)? TRANSFORM (dfs=fugueDataFrames)? params=fugueSingleOutputExtensionCommonWild (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    TRANSFORM (dfs=fugueDataFrames)? (partition=fuguePrepartition)? params=fugueSingleOutputExtensionCommonWild (persist=fuguePersist)? (broadcast=fugueBroadcast)?
     ;
 
 fugueProcessTask:
-    (partition=fuguePrepartition)? PROCESS (dfs=fugueDataFrames)? params=fugueSingleOutputExtensionCommon (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    PROCESS (dfs=fugueDataFrames)? (partition=fuguePrepartition)? params=fugueSingleOutputExtensionCommon (persist=fuguePersist)? (broadcast=fugueBroadcast)?
     ;
 
 fugueZipTask:
@@ -140,12 +142,45 @@ fugueCreateDataTask:
     CREATE DATA? data=fugueJsonArray SCHEMA schema=fugueSchema (persist=fuguePersist)? (broadcast=fugueBroadcast)?
     ;
 
+fugueLoadTask:
+    LOAD (fmt=fugueFileFormat)? path=fuguePath (params=fugueParams)? (COLUMNS columns=fugueLoadColumns)? (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    ;
+
 fugueOutputTask:
-    (partition=fuguePrepartition)? OUTPUT (dfs=fugueDataFrames)? (USING | BY) using=fugueExtension (params=fugueParams)?
+    OUTPUT (dfs=fugueDataFrames)? (partition=fuguePrepartition)? USING using=fugueExtension (params=fugueParams)?
     ;
 
 fuguePrintTask:
     PRINT (dfs=fugueDataFrames)? (ROWS rows=INTEGER_VALUE)? (count=ROWCOUNT)? (TITLE title=STRING)?
+    ;
+
+fugueSaveTask:
+    SAVE (df=fugueDataFrame)? (partition=fuguePrepartition)? m=fugueSaveMode (single=fugueSingleFile)? (fmt=fugueFileFormat)? path=fuguePath (params=fugueParams)?
+    ;
+
+fugueSingleFile
+    : single=SINGLE
+    ;
+
+fugueLoadColumns
+    : schema=fugueSchema
+    | cols = fugueCols
+    ;
+
+fugueSaveMode
+    : TO
+    | OVERWRITE
+    | APPEND
+    ;
+
+fugueFileFormat
+    : PARQUET
+    | CSV
+    | JSON
+    ;
+
+fuguePath
+    : STRING
     ;
 
 fuguePersist:
@@ -181,11 +216,11 @@ fugueAssignmentSign
     ;
 
 fugueSingleOutputExtensionCommonWild:
-    (USING | BY) using=fugueExtension (params=fugueParams)? (SCHEMA schema=fugueWildSchema)?
+    USING using=fugueExtension (params=fugueParams)? (SCHEMA schema=fugueWildSchema)?
     ;
 
 fugueSingleOutputExtensionCommon:
-    (USING | BY) using=fugueExtension (params=fugueParams)? (SCHEMA schema=fugueSchema)?
+    USING using=fugueExtension (params=fugueParams)? (SCHEMA schema=fugueSchema)?
     ;
 
 fugueExtension:
@@ -1753,6 +1788,12 @@ PREPARTITION: 'PREPARTITION';
 ZIP: 'ZIP';
 PRINT: 'PRINT';
 TITLE: 'TITLE';
+SAVE: 'SAVE';
+APPEND: 'APPEND';
+PARQUET: 'PARQUET';
+CSV: 'CSV';
+JSON: 'JSON';
+SINGLE: 'SINGLE';
 
 COLONEQUAL: ':=';
 CHECKPOINT: '??';

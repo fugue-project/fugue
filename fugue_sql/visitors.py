@@ -176,6 +176,24 @@ class _VisitorBase(FugueSQLVisitor):
     def visitFugueZipType(self, ctx: fp.FugueZipTypeContext) -> str:
         return self.ctxToStr(ctx, delimit="_").lower()
 
+    def visitFugueLoadColumns(self, ctx: fp.FugueLoadColumnsContext) -> Any:
+        if ctx.schema is not None:
+            return str(self.visit(ctx.schema))
+        else:
+            return self.visit(ctx.cols)
+
+    def visitFugueSaveMode(self, ctx: fp.FugueSaveModeContext):
+        mode = self.ctxToStr(ctx).lower()
+        if mode == "to":
+            mode = "error"
+        return mode
+
+    def visitFugueFileFormat(self, ctx: fp.FugueFileFormatContext):
+        return self.ctxToStr(ctx).lower()
+
+    def visitFuguePath(self, ctx: fp.FuguePathContext):
+        return eval(self.ctxToStr(ctx))
+
 
 class _Extensions(_VisitorBase):
     def __init__(
@@ -279,7 +297,7 @@ class _Extensions(_VisitorBase):
         data = self.get_dict(ctx, "data", "schema", "persist", "broadcast")
         return self.workflow.df(data["data"], schema=data["schema"])
 
-    def visitFugueZipTask(self, ctx: fp.FugueZipTaskContext):
+    def visitFugueZipTask(self, ctx: fp.FugueZipTaskContext) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "dfs", "how", "persist", "broadcast")
         partition_spec = PartitionSpec(**self.get_dict(ctx, "by", "presort"))
         # TODO: currently SQL does not support cache to file on ZIP
@@ -318,6 +336,34 @@ class _Extensions(_VisitorBase):
         if ctx.title is not None:
             params["title"] = eval(self.ctxToStr(ctx.title))
         self.workflow.show(data["dfs"], **params)
+
+    def visitFugueSaveTask(self, ctx: fp.FugueSaveTaskContext):
+        data = self.get_dict(
+            ctx, "partition", "df", "m", "single", "fmt", "path", "params"
+        )
+        if "df" in data:
+            df = data["df"]
+        else:
+            df = self.last
+        df.save(
+            path=data["path"],
+            fmt=data.get("fmt", ""),
+            mode=data["m"],
+            partition=data.get("partition"),
+            single="single" in data,
+            **data.get("params", {}),
+        )
+
+    def visitFugueLoadTask(self, ctx: fp.FugueLoadTaskContext) -> WorkflowDataFrame:
+        data = self.get_dict(
+            ctx, "fmt", "path", "params", "columns", "persist", "broadcast"
+        )
+        return self.workflow.load(
+            path=data["path"],
+            fmt=data.get("fmt", ""),
+            columns=data.get("columns"),
+            **data.get("params", {}),
+        )
 
     def visitFugueSelectTask(self, ctx: fp.FugueSelectTaskContext) -> None:
         data = self.get_dict(ctx, "assign", "partition", "q", "persist", "broadcast")
