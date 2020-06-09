@@ -8,6 +8,7 @@ from fugue.extensions.creator import Creator, creator, to_creator
 from pytest import raises
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
+from triad.utils.hash import to_uuid
 
 
 def test_creator():
@@ -58,6 +59,23 @@ def test_run_creator():
     o1._params = ParamDict([("a", 2)], deep=False)
     o1._execution_engine = "dummy"
     assert 2 == o1.create().as_array()[0][0]
+
+
+def test_to_creator_determinism():
+    a = to_creator(t1, None)
+    b = to_creator(t1, None)
+    c = to_creator("t1", None)
+    d = to_creator("t2", None)
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
+    assert a is not c
+    assert to_uuid(a) == to_uuid(c)
+    assert to_uuid(a) != to_uuid(d)
+
+    a = to_creator(T0)
+    b = to_creator("T0")
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
 
 
 class T0(Creator):

@@ -27,6 +27,7 @@ from fugue.extensions.builtins import (
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from fugue.exceptions import FugueWorkflowError
+from fugue.extensions.transformer.convert import to_transformer
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -40,6 +41,9 @@ class WorkflowDataFrame(DataFrame):
         super().__init__("_0:int", metadata)
         self._workflow = workflow
         self._task = task
+
+    def spec_uuid(self) -> str:
+        return self._task.__uuid__()
 
     @property
     def name(self) -> str:
@@ -97,17 +101,17 @@ class WorkflowDataFrame(DataFrame):
         using: Any,
         schema: Any = None,
         params: Any = None,
-        partition: Any = None,
+        pre_partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
     ) -> TDF:
-        if partition is None:
-            partition = self._metadata.get("pre_partition", PartitionSpec())
+        if pre_partition is None:
+            pre_partition = self._metadata.get("pre_partition", PartitionSpec())
         df = self.workflow.transform(
             self,
             using=using,
             schema=schema,
             params=params,
-            partition=partition,
+            pre_partition=pre_partition,
             ignore_errors=ignore_errors,
         )
         return self.to_self_type(df)
@@ -282,6 +286,9 @@ class FugueWorkflow(object):
         self._workflow_ctx = self._to_ctx(*args, **kwargs)
         self._computed = False
 
+    def spec_uuid(self) -> str:
+        return self._spec.__uuid__()
+
     def run(self, *args: Any, **kwargs: Any) -> None:
         with self._lock:
             self._computed = False
@@ -352,6 +359,7 @@ class FugueWorkflow(object):
                 data.workflow is self, f"{data} does not belong to this workflow"
             )
             return data
+        schema = None if schema is None else Schema(schema)
         return self.create(
             using=CreateData, params=dict(data=data, schema=schema, metadata=metadata)
         )
@@ -408,24 +416,20 @@ class FugueWorkflow(object):
         using: Any,
         schema: Any = None,
         params: Any = None,
-        partition: Any = None,
+        pre_partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
     ) -> WorkflowDataFrame:
         assert_or_throw(
             len(dfs) == 1,
             NotImplementedError("transform supports only single dataframe"),
         )
+        tf = to_transformer(using, schema)
         return self.process(
             *dfs,
             using=RunTransformer,
             schema=None,
-            params=dict(
-                transformer=using,
-                schema=schema,
-                ignore_errors=ignore_errors,
-                params=params,
-            ),
-            pre_partition=partition,
+            params=dict(transformer=tf, ignore_errors=ignore_errors, params=params),
+            pre_partition=pre_partition,
         )
 
     def select(self, *statements: Any, sql_engine: Any = None) -> WorkflowDataFrame:

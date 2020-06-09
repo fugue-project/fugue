@@ -8,6 +8,7 @@ from fugue.extensions.processor import Processor, processor, to_processor
 from pytest import raises
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
+from triad.utils.hash import to_uuid
 
 
 def test_processor():
@@ -16,6 +17,11 @@ def test_processor():
 
 
 def test_to_processor():
+    a = to_processor(MockProcessor)
+    assert isinstance(a, MockProcessor)
+    b = to_processor("MockProcessor")
+    assert isinstance(b, MockProcessor)
+
     a = to_processor(T0)
     assert isinstance(a, Processor)
     a = to_processor(T0())
@@ -73,6 +79,23 @@ def test_run_processor():
     assert 4 == o1.process(dfs2).as_array()[0][0]
 
 
+def test_to_processor_determinism():
+    a = to_processor(t1, None)
+    b = to_processor(t1, None)
+    c = to_processor("t1", None)
+    d = to_processor("t2", None)
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
+    assert a is not c
+    assert to_uuid(a) == to_uuid(c)
+    assert to_uuid(a) != to_uuid(d)
+
+    a = to_processor(MockProcessor)
+    b = to_processor("MockProcessor")
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
+
+
 class T0(Processor):
     def process(self, dfs) -> DataFrame:
         return dfs[0]
@@ -115,3 +138,8 @@ def t7(dfs: DataFrames) -> List[List[Any]]:
 # schema: a:int
 def t8(e: ExecutionEngine, df1: DataFrame, df2: DataFrame) -> List[List[Any]]:
     pass
+
+
+class MockProcessor(Processor):
+    def process(self, dfs):
+        pass

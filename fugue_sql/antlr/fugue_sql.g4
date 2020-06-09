@@ -37,7 +37,7 @@ legacy_exponent_literal_as_decimal_enabled = False
 # by a space. 34.E2 is a valid decimal token because it is followed by symbol '+'
 # which is not a digit or letter or underscore.
 def isValidDecimal(self):
-    return False  # TODO: remove this
+    return True  # TODO: remove this
     nextChar = self._input.LA(1);
     if (nextChar >= 'A' and nextChar <= 'Z') or (nextChar >= '0' and nextChar <= '9') or nextChar == '_':
         return False
@@ -45,7 +45,11 @@ def isValidDecimal(self):
         return True
 
 # When true, the behavior of keywords follows ANSI SQL standard.
-SQL_standard_keyword_behavior = False
+@property
+def SQL_standard_keyword_behavior(self):
+    if "_ansi_sql" in self.__dict__:
+        return self._ansi_sql
+    return False
 
 # This method will be called when we see '/ *' and try to match it as a bracketed comment.
 # If the next character is '+', it should be parsed as hint later, and we cannot match
@@ -89,100 +93,149 @@ fugueSingleStatement:
     fugueSingleTask EOF
     ;
 
-fugueSingleTask:
-    (assign=fugueAssignmentExpr)? (partition=fuguePartitionExpr)? task=fugueSingleOutputTaskExpr (persist=fuguePersistExpr)? (broadcast=fugueBroadcastExpr)?
+fugueSingleTask
+    : fugueNestableTask
+    | fugueOutputTask
+    | fuguePrintTask
     ;
 
-fugueSingleOutputTaskExpr
-    : fugueSelectTask
-    | fugueTransformTask
+fugueNestableTask
+    : fugueNestableTaskNoSelect
+    | fugueSelectTask
+    ;
+
+fugueNestableTaskNoSelect:
+    (assign=fugueAssignment)? df=fugueNestableTaskCollectionNoSelect
+    ;
+
+fugueNestableTaskCollectionNoSelect
+    : fugueTransformTask
     | fugueProcessTask
+    | fugueZipTask
     | fugueCreateTask
-    ;
-
-fugueAssignmentExpr:
-    varname=fugueIdentifier assign=fugueAssignment
-    ;
-
-fugueAssignment
-    : COLONEQUAL
-    | CHECKPOINT
-    | {self.simpleAssign}? EQUAL
+    | fugueCreateDataTask
     ;
 
 fugueSelectTask:
-    query
+    (assign=fugueAssignment)? (partition=fuguePrepartition)? q=query (persist=fuguePersist)? (broadcast=fugueBroadcast)?
     ;
 
 fugueTransformTask:
-    TRANSFORM (dfs=fugueDataFramesExpr)? fugueSingleOutputExtensionExpr
+    (partition=fuguePrepartition)? TRANSFORM (dfs=fugueDataFrames)? params=fugueSingleOutputExtensionCommonWild (persist=fuguePersist)? (broadcast=fugueBroadcast)?
     ;
 
 fugueProcessTask:
-    PROCESS (dfs=fugueDataFramesExpr)? fugueSingleOutputExtensionExpr
+    (partition=fuguePrepartition)? PROCESS (dfs=fugueDataFrames)? params=fugueSingleOutputExtensionCommon (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    ;
+
+fugueZipTask:
+    ZIP dfs=fugueDataFrames (how=fugueZipType)? (BY by=fugueCols)? (PRESORT presort=fugueColsSort)? (persist=fuguePersist)? (broadcast=fugueBroadcast)?
     ;
 
 fugueCreateTask:
-    CREATE fugueSingleOutputExtensionExpr
+    CREATE params=fugueSingleOutputExtensionCommon (persist=fuguePersist)? (broadcast=fugueBroadcast)?
     ;
 
-fugueSingleOutputExtensionExpr:
-    USING ext=fugueExtensionExpr (params=fugueParamsExpr)? (schema=fugueSchemaExpr)?
+fugueCreateDataTask:
+    CREATE DATA? data=fugueJsonArray SCHEMA schema=fugueSchema (persist=fuguePersist)? (broadcast=fugueBroadcast)?
     ;
 
-fuguePersistExpr:
+fugueOutputTask:
+    (partition=fuguePrepartition)? OUTPUT (dfs=fugueDataFrames)? (USING | BY) using=fugueExtension (params=fugueParams)?
+    ;
+
+fuguePrintTask:
+    PRINT (dfs=fugueDataFrames)? (ROWS rows=INTEGER_VALUE)? (count=ROWCOUNT)? (TITLE title=STRING)?
+    ;
+
+fuguePersist:
     PERSIST (value=identifier)?
     ;
 
-fugueBroadcastExpr:
+fugueBroadcast:
     BROADCAST
     ;
 
-fuguePartitionExpr
-    : (algo=fuguePartitionAlgoExpr)? PARTITION num=fuguePartitionNumExpr (BY by=fugueColsExpr)? (PRESORT presort=fugueColsSortExpr)?
-    | (algo=fuguePartitionAlgoExpr)? PARTITION BY by=fugueColsExpr (PRESORT presort=fugueColsSortExpr)?
+fugueDataFrames
+    : fugueDataFrame (',' fugueDataFrame)*          #fugueDataFramesList
+    | fugueDataFramePair (',' fugueDataFramePair)*  #fugueDataFramesDict
     ;
 
-fuguePartitionAlgoExpr
-    : HASH | RAND | EVEN
+fugueDataFramePair
+    : key=fugueIdentifier (':' | EQUAL) value=fugueDataFrame
     ;
 
-fuguePartitionNumExpr:
-    INTEGER_VALUE
+fugueDataFrame
+    : fugueIdentifier               #fugueDataFrameSource
+    | '(' task=fugueNestableTask ')'     #fugueDataFrameNested
     ;
 
-fugueExtensionExpr:
+fugueAssignment:
+    varname=fugueIdentifier sign=fugueAssignmentSign
+    ;
+
+fugueAssignmentSign
+    : COLONEQUAL
+    // | CHECKPOINT     // TODO: add checkpoint
+    | {self.simpleAssign}? EQUAL
+    ;
+
+fugueSingleOutputExtensionCommonWild:
+    (USING | BY) using=fugueExtension (params=fugueParams)? (SCHEMA schema=fugueWildSchema)?
+    ;
+
+fugueSingleOutputExtensionCommon:
+    (USING | BY) using=fugueExtension (params=fugueParams)? (SCHEMA schema=fugueSchema)?
+    ;
+
+fugueExtension:
     fugueIdentifier ('.' fugueIdentifier)*
     ;
 
-fugueDataFramesExpr:
-    fugueDataFrameExpr (',' fugueDataFrameExpr)*
+fugueZipType
+    : CROSS
+    | INNER
+    | LEFT OUTER
+    | RIGHT OUTER
+    | FULL OUTER
     ;
 
-fugueDataFrameExpr
-    : fugueIdentifier
-    | '(' fugueSingleOutputTaskExpr ')'
+fuguePrepartition
+    : (algo=fuguePartitionAlgo)? PREPARTITION num=fuguePartitionNum (BY by=fugueCols)? (PRESORT presort=fugueColsSort)?
+    | (algo=fuguePartitionAlgo)? PREPARTITION BY by=fugueCols (PRESORT presort=fugueColsSort)?
     ;
 
-fugueSchemaExpr:
-    SCHEMA fugueSchema
+fuguePartitionAlgo
+    : HASH | RAND | EVEN
     ;
 
-fugueParamsExpr
-    : PARAMS fugueParamPairs
-    | PARAMS? '{' fugueParamPairs '}'
-    | PARAMS? '(' fugueParamPairs ')'
+fuguePartitionNum
+    : fuguePartitionNumber
+    | '(' fuguePartitionNum ')'
+    | fuguePartitionNum (PLUS|MINUS|ASTERISK|SLASH) fuguePartitionNum
     ;
 
-fugueColsExpr:
+fuguePartitionNumber
+    : MINUS? DECIMAL_VALUE
+    | MINUS? INTEGER_VALUE
+    | ROWCOUNT
+    | CONCURRENCY
+    ;
+
+fugueParams
+    : PARAMS pairs=fugueJsonPairs   #fugueParamsPairs
+    | PARAMS? obj=fugueJsonObj      #fugueParamsObj
+    ;
+
+fugueCols:
     fugueColumnIdentifier (',' fugueColumnIdentifier)*
     ;
 
-fugueColsSortExpr:
-    fugueColSortExpr (',' fugueColSortExpr)*
+fugueColsSort:
+    fugueColSort (',' fugueColSort)*
     ;
 
-fugueColSortExpr:
+fugueColSort:
     fugueColumnIdentifier (ASC | DESC)?
     ;
 
@@ -190,31 +243,31 @@ fugueColumnIdentifier:
     fugueIdentifier
     ;
 
+fugueWildSchema:
+    fugueWildSchemaPair (',' fugueWildSchemaPair)*
+    ;
+
+fugueWildSchemaPair
+    : pair=fugueSchemaPair
+    | ASTERISK
+    ;
+
 fugueSchema:
     fugueSchemaPair (',' fugueSchemaPair)*
     ;
 
 fugueSchemaPair:
-    fugueSchemaKey ':' fugueSchemaType
+    key=fugueSchemaKey ':' value=fugueSchemaType
     ;
 
 fugueSchemaKey:
     fugueIdentifier
     ;
 
-fugueSchemaType:
-    | fugueIdentifier
-    | '[' fugueSchemaType ']'
-    | '{' fugueSchema '}'
-    ;
-
-fugueParamPairs:
-    fugueParamPair (',' fugueParamPair)*
-    ;
-
-fugueParamPair
-    : fugueJsonPair
-    | fugueJsonKey EQUAL fugueJsonValue
+fugueSchemaType
+    : fugueIdentifier               #fugueSchemaSimpleType
+    | '[' fugueSchemaType ']'       #fugueSchemaListType
+    | '{' fugueSchema '}'           #fugueSchemaStructType
     ;
 
 // From https://github.com/antlr/grammars-v4/blob/master/json/JSON.g4
@@ -224,37 +277,59 @@ fugueJson
     ;
 
 fugueJsonObj
-    : '{' fugueJsonPair (',' fugueJsonPair)* '}'
+    : '{' fugueJsonPairs ','? '}'
     | '{' '}'
+    | '(' fugueJsonPairs ','? ')'
+    | '(' ')'
+    ;
+
+fugueJsonPairs
+    : fugueJsonPair (',' fugueJsonPair)*
     ;
 
 fugueJsonPair
-    : fugueJsonKey ':' fugueJsonValue
+    : key=fugueJsonKey (EQUAL | ':') value=fugueJsonValue
     ;
 
 fugueJsonKey
     : fugueIdentifier 
-    | STRING
+    | fugueJsonString
     ;
 
 fugueJsonArray
-    : '[' fugueJsonValue (',' fugueJsonValue)* ']'
+    : '[' fugueJsonValue (',' fugueJsonValue)* ','? ']'
     | '[' ']'
     ;
 
 fugueJsonValue
-    : STRING
-    | number
+    : fugueJsonString
+    | fugueJsonNumber
     | fugueJsonObj
     | fugueJsonArray
-    | 'true'
+    | fugueJsonBool
+    | fugueJsonNull
+    ;
+
+fugueJsonNumber
+    : number
+    ;
+
+fugueJsonString
+    : STRING
+    ;
+
+fugueJsonBool
+    : 'true'
     | TRUE
     | 'false'
     | FALSE
-    | 'null'
-    | NULL
     ;
 
+fugueJsonNull
+    : 'null'
+    | NULL
+    ;
+    
 fugueIdentifier:
     identifier
     ;
@@ -661,7 +736,10 @@ queryPrimary
     | fromStatement                                                         #fromStmt
     | TABLE multipartIdentifier                                             #table
     | inlineTable                                                           #inlineTableDefault1
-    | '(' query ')'                                                         #subquery
+    // TODO: subquery is causing ambiguity such as SELECT * FROM (SELECT * FROM a)
+    // it thinks the first FROM is an identity not a keyword
+    // when SQL_standard_keyword_behavior=False
+    //| '(' query ')'                                                         #subquery
     ;
 
 sortItem
@@ -864,6 +942,7 @@ identifierComment
 relationPrimary
     : multipartIdentifier sample? tableAlias  #tableName
     | '(' query ')' sample? tableAlias        #aliasedQuery
+    | '(' fugueNestableTaskNoSelect ')' sample? tableAlias        #aliasedFugueNested
     | '(' relation ')' sample? tableAlias     #aliasedRelation
     | inlineTable                             #inlineTableDefault2
     | functionTable                           #tableValuedFunction
@@ -1162,14 +1241,14 @@ errorCapturingIdentifierExtra
 
 identifier
     : strictIdentifier
-    | {not fugue_sqlParser.SQL_standard_keyword_behavior}? strictNonReserved
+    | {not self.SQL_standard_keyword_behavior}? strictNonReserved
     ;
 
 strictIdentifier
     : IDENTIFIER              #unquotedIdentifier
     | quotedIdentifier        #quotedIdentifierAlternative
-    | {fugue_sqlParser.SQL_standard_keyword_behavior}? ansiNonReserved #unquotedIdentifier
-    | {not fugue_sqlParser.SQL_standard_keyword_behavior}? nonReserved    #unquotedIdentifier
+    | {self.SQL_standard_keyword_behavior}? ansiNonReserved #unquotedIdentifier
+    | {not self.SQL_standard_keyword_behavior}? nonReserved    #unquotedIdentifier
     ;
 
 quotedIdentifier
@@ -1668,6 +1747,12 @@ BROADCAST: 'BROADCAST';
 PARAMS: 'PARAMS';
 PROCESS: 'PROCESS';
 OUTPUT: 'OUTPUT';
+ROWCOUNT: 'ROWCOUNT';
+CONCURRENCY: 'CONCURRENCY';
+PREPARTITION: 'PREPARTITION';
+ZIP: 'ZIP';
+PRINT: 'PRINT';
+TITLE: 'TITLE';
 
 COLONEQUAL: ':=';
 CHECKPOINT: '??';

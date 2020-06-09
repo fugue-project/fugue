@@ -8,6 +8,7 @@ from fugue.utils.interfaceless import FunctionWrapper, parse_output_schema_from_
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_function, to_instance
+from triad.utils.hash import to_uuid
 
 
 def processor(schema: Any = None) -> Callable[[Any], "_FuncAsProcessor"]:
@@ -59,6 +60,16 @@ class _FuncAsProcessor(Processor):
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self._wrapper(*args, **kwargs)  # type: ignore
+
+    @no_type_check
+    def __uuid__(self) -> str:
+        return to_uuid(
+            self._wrapper,
+            self._need_engine,
+            self._use_dfs,
+            self._need_output_schema,
+            str(self._output_schema),
+        )
 
     @no_type_check
     @staticmethod

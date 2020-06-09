@@ -35,30 +35,30 @@ class fugue_sqlListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#fugueSingleOutputTaskExpr.
-    def enterFugueSingleOutputTaskExpr(self, ctx:fugue_sqlParser.FugueSingleOutputTaskExprContext):
+    # Enter a parse tree produced by fugue_sqlParser#fugueNestableTask.
+    def enterFugueNestableTask(self, ctx:fugue_sqlParser.FugueNestableTaskContext):
         pass
 
-    # Exit a parse tree produced by fugue_sqlParser#fugueSingleOutputTaskExpr.
-    def exitFugueSingleOutputTaskExpr(self, ctx:fugue_sqlParser.FugueSingleOutputTaskExprContext):
-        pass
-
-
-    # Enter a parse tree produced by fugue_sqlParser#fugueAssignmentExpr.
-    def enterFugueAssignmentExpr(self, ctx:fugue_sqlParser.FugueAssignmentExprContext):
-        pass
-
-    # Exit a parse tree produced by fugue_sqlParser#fugueAssignmentExpr.
-    def exitFugueAssignmentExpr(self, ctx:fugue_sqlParser.FugueAssignmentExprContext):
+    # Exit a parse tree produced by fugue_sqlParser#fugueNestableTask.
+    def exitFugueNestableTask(self, ctx:fugue_sqlParser.FugueNestableTaskContext):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#fugueAssignment.
-    def enterFugueAssignment(self, ctx:fugue_sqlParser.FugueAssignmentContext):
+    # Enter a parse tree produced by fugue_sqlParser#fugueNestableTaskNoSelect.
+    def enterFugueNestableTaskNoSelect(self, ctx:fugue_sqlParser.FugueNestableTaskNoSelectContext):
         pass
 
-    # Exit a parse tree produced by fugue_sqlParser#fugueAssignment.
-    def exitFugueAssignment(self, ctx:fugue_sqlParser.FugueAssignmentContext):
+    # Exit a parse tree produced by fugue_sqlParser#fugueNestableTaskNoSelect.
+    def exitFugueNestableTaskNoSelect(self, ctx:fugue_sqlParser.FugueNestableTaskNoSelectContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueNestableTaskCollectionNoSelect.
+    def enterFugueNestableTaskCollectionNoSelect(self, ctx:fugue_sqlParser.FugueNestableTaskCollectionNoSelectContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueNestableTaskCollectionNoSelect.
+    def exitFugueNestableTaskCollectionNoSelect(self, ctx:fugue_sqlParser.FugueNestableTaskCollectionNoSelectContext):
         pass
 
 
@@ -89,6 +89,15 @@ class fugue_sqlListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by fugue_sqlParser#fugueZipTask.
+    def enterFugueZipTask(self, ctx:fugue_sqlParser.FugueZipTaskContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueZipTask.
+    def exitFugueZipTask(self, ctx:fugue_sqlParser.FugueZipTaskContext):
+        pass
+
+
     # Enter a parse tree produced by fugue_sqlParser#fugueCreateTask.
     def enterFugueCreateTask(self, ctx:fugue_sqlParser.FugueCreateTaskContext):
         pass
@@ -98,129 +107,228 @@ class fugue_sqlListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#fugueSingleOutputExtensionExpr.
-    def enterFugueSingleOutputExtensionExpr(self, ctx:fugue_sqlParser.FugueSingleOutputExtensionExprContext):
+    # Enter a parse tree produced by fugue_sqlParser#fugueCreateDataTask.
+    def enterFugueCreateDataTask(self, ctx:fugue_sqlParser.FugueCreateDataTaskContext):
         pass
 
-    # Exit a parse tree produced by fugue_sqlParser#fugueSingleOutputExtensionExpr.
-    def exitFugueSingleOutputExtensionExpr(self, ctx:fugue_sqlParser.FugueSingleOutputExtensionExprContext):
-        pass
-
-
-    # Enter a parse tree produced by fugue_sqlParser#fuguePersistExpr.
-    def enterFuguePersistExpr(self, ctx:fugue_sqlParser.FuguePersistExprContext):
-        pass
-
-    # Exit a parse tree produced by fugue_sqlParser#fuguePersistExpr.
-    def exitFuguePersistExpr(self, ctx:fugue_sqlParser.FuguePersistExprContext):
+    # Exit a parse tree produced by fugue_sqlParser#fugueCreateDataTask.
+    def exitFugueCreateDataTask(self, ctx:fugue_sqlParser.FugueCreateDataTaskContext):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#fugueBroadcastExpr.
-    def enterFugueBroadcastExpr(self, ctx:fugue_sqlParser.FugueBroadcastExprContext):
+    # Enter a parse tree produced by fugue_sqlParser#fugueOutputTask.
+    def enterFugueOutputTask(self, ctx:fugue_sqlParser.FugueOutputTaskContext):
         pass
 
-    # Exit a parse tree produced by fugue_sqlParser#fugueBroadcastExpr.
-    def exitFugueBroadcastExpr(self, ctx:fugue_sqlParser.FugueBroadcastExprContext):
-        pass
-
-
-    # Enter a parse tree produced by fugue_sqlParser#fuguePartitionExpr.
-    def enterFuguePartitionExpr(self, ctx:fugue_sqlParser.FuguePartitionExprContext):
-        pass
-
-    # Exit a parse tree produced by fugue_sqlParser#fuguePartitionExpr.
-    def exitFuguePartitionExpr(self, ctx:fugue_sqlParser.FuguePartitionExprContext):
+    # Exit a parse tree produced by fugue_sqlParser#fugueOutputTask.
+    def exitFugueOutputTask(self, ctx:fugue_sqlParser.FugueOutputTaskContext):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#fuguePartitionAlgoExpr.
-    def enterFuguePartitionAlgoExpr(self, ctx:fugue_sqlParser.FuguePartitionAlgoExprContext):
+    # Enter a parse tree produced by fugue_sqlParser#fuguePrintTask.
+    def enterFuguePrintTask(self, ctx:fugue_sqlParser.FuguePrintTaskContext):
         pass
 
-    # Exit a parse tree produced by fugue_sqlParser#fuguePartitionAlgoExpr.
-    def exitFuguePartitionAlgoExpr(self, ctx:fugue_sqlParser.FuguePartitionAlgoExprContext):
-        pass
-
-
-    # Enter a parse tree produced by fugue_sqlParser#fuguePartitionNumExpr.
-    def enterFuguePartitionNumExpr(self, ctx:fugue_sqlParser.FuguePartitionNumExprContext):
-        pass
-
-    # Exit a parse tree produced by fugue_sqlParser#fuguePartitionNumExpr.
-    def exitFuguePartitionNumExpr(self, ctx:fugue_sqlParser.FuguePartitionNumExprContext):
+    # Exit a parse tree produced by fugue_sqlParser#fuguePrintTask.
+    def exitFuguePrintTask(self, ctx:fugue_sqlParser.FuguePrintTaskContext):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#fugueExtensionExpr.
-    def enterFugueExtensionExpr(self, ctx:fugue_sqlParser.FugueExtensionExprContext):
+    # Enter a parse tree produced by fugue_sqlParser#fuguePersist.
+    def enterFuguePersist(self, ctx:fugue_sqlParser.FuguePersistContext):
         pass
 
-    # Exit a parse tree produced by fugue_sqlParser#fugueExtensionExpr.
-    def exitFugueExtensionExpr(self, ctx:fugue_sqlParser.FugueExtensionExprContext):
-        pass
-
-
-    # Enter a parse tree produced by fugue_sqlParser#fugueDataFramesExpr.
-    def enterFugueDataFramesExpr(self, ctx:fugue_sqlParser.FugueDataFramesExprContext):
-        pass
-
-    # Exit a parse tree produced by fugue_sqlParser#fugueDataFramesExpr.
-    def exitFugueDataFramesExpr(self, ctx:fugue_sqlParser.FugueDataFramesExprContext):
+    # Exit a parse tree produced by fugue_sqlParser#fuguePersist.
+    def exitFuguePersist(self, ctx:fugue_sqlParser.FuguePersistContext):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#fugueDataFrameExpr.
-    def enterFugueDataFrameExpr(self, ctx:fugue_sqlParser.FugueDataFrameExprContext):
+    # Enter a parse tree produced by fugue_sqlParser#fugueBroadcast.
+    def enterFugueBroadcast(self, ctx:fugue_sqlParser.FugueBroadcastContext):
         pass
 
-    # Exit a parse tree produced by fugue_sqlParser#fugueDataFrameExpr.
-    def exitFugueDataFrameExpr(self, ctx:fugue_sqlParser.FugueDataFrameExprContext):
-        pass
-
-
-    # Enter a parse tree produced by fugue_sqlParser#fugueSchemaExpr.
-    def enterFugueSchemaExpr(self, ctx:fugue_sqlParser.FugueSchemaExprContext):
-        pass
-
-    # Exit a parse tree produced by fugue_sqlParser#fugueSchemaExpr.
-    def exitFugueSchemaExpr(self, ctx:fugue_sqlParser.FugueSchemaExprContext):
+    # Exit a parse tree produced by fugue_sqlParser#fugueBroadcast.
+    def exitFugueBroadcast(self, ctx:fugue_sqlParser.FugueBroadcastContext):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#fugueParamsExpr.
-    def enterFugueParamsExpr(self, ctx:fugue_sqlParser.FugueParamsExprContext):
+    # Enter a parse tree produced by fugue_sqlParser#fugueDataFramesList.
+    def enterFugueDataFramesList(self, ctx:fugue_sqlParser.FugueDataFramesListContext):
         pass
 
-    # Exit a parse tree produced by fugue_sqlParser#fugueParamsExpr.
-    def exitFugueParamsExpr(self, ctx:fugue_sqlParser.FugueParamsExprContext):
-        pass
-
-
-    # Enter a parse tree produced by fugue_sqlParser#fugueColsExpr.
-    def enterFugueColsExpr(self, ctx:fugue_sqlParser.FugueColsExprContext):
-        pass
-
-    # Exit a parse tree produced by fugue_sqlParser#fugueColsExpr.
-    def exitFugueColsExpr(self, ctx:fugue_sqlParser.FugueColsExprContext):
+    # Exit a parse tree produced by fugue_sqlParser#fugueDataFramesList.
+    def exitFugueDataFramesList(self, ctx:fugue_sqlParser.FugueDataFramesListContext):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#fugueColsSortExpr.
-    def enterFugueColsSortExpr(self, ctx:fugue_sqlParser.FugueColsSortExprContext):
+    # Enter a parse tree produced by fugue_sqlParser#fugueDataFramesDict.
+    def enterFugueDataFramesDict(self, ctx:fugue_sqlParser.FugueDataFramesDictContext):
         pass
 
-    # Exit a parse tree produced by fugue_sqlParser#fugueColsSortExpr.
-    def exitFugueColsSortExpr(self, ctx:fugue_sqlParser.FugueColsSortExprContext):
+    # Exit a parse tree produced by fugue_sqlParser#fugueDataFramesDict.
+    def exitFugueDataFramesDict(self, ctx:fugue_sqlParser.FugueDataFramesDictContext):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#fugueColSortExpr.
-    def enterFugueColSortExpr(self, ctx:fugue_sqlParser.FugueColSortExprContext):
+    # Enter a parse tree produced by fugue_sqlParser#fugueDataFramePair.
+    def enterFugueDataFramePair(self, ctx:fugue_sqlParser.FugueDataFramePairContext):
         pass
 
-    # Exit a parse tree produced by fugue_sqlParser#fugueColSortExpr.
-    def exitFugueColSortExpr(self, ctx:fugue_sqlParser.FugueColSortExprContext):
+    # Exit a parse tree produced by fugue_sqlParser#fugueDataFramePair.
+    def exitFugueDataFramePair(self, ctx:fugue_sqlParser.FugueDataFramePairContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueDataFrameSource.
+    def enterFugueDataFrameSource(self, ctx:fugue_sqlParser.FugueDataFrameSourceContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueDataFrameSource.
+    def exitFugueDataFrameSource(self, ctx:fugue_sqlParser.FugueDataFrameSourceContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueDataFrameNested.
+    def enterFugueDataFrameNested(self, ctx:fugue_sqlParser.FugueDataFrameNestedContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueDataFrameNested.
+    def exitFugueDataFrameNested(self, ctx:fugue_sqlParser.FugueDataFrameNestedContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueAssignment.
+    def enterFugueAssignment(self, ctx:fugue_sqlParser.FugueAssignmentContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueAssignment.
+    def exitFugueAssignment(self, ctx:fugue_sqlParser.FugueAssignmentContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueAssignmentSign.
+    def enterFugueAssignmentSign(self, ctx:fugue_sqlParser.FugueAssignmentSignContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueAssignmentSign.
+    def exitFugueAssignmentSign(self, ctx:fugue_sqlParser.FugueAssignmentSignContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueSingleOutputExtensionCommonWild.
+    def enterFugueSingleOutputExtensionCommonWild(self, ctx:fugue_sqlParser.FugueSingleOutputExtensionCommonWildContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueSingleOutputExtensionCommonWild.
+    def exitFugueSingleOutputExtensionCommonWild(self, ctx:fugue_sqlParser.FugueSingleOutputExtensionCommonWildContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueSingleOutputExtensionCommon.
+    def enterFugueSingleOutputExtensionCommon(self, ctx:fugue_sqlParser.FugueSingleOutputExtensionCommonContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueSingleOutputExtensionCommon.
+    def exitFugueSingleOutputExtensionCommon(self, ctx:fugue_sqlParser.FugueSingleOutputExtensionCommonContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueExtension.
+    def enterFugueExtension(self, ctx:fugue_sqlParser.FugueExtensionContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueExtension.
+    def exitFugueExtension(self, ctx:fugue_sqlParser.FugueExtensionContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueZipType.
+    def enterFugueZipType(self, ctx:fugue_sqlParser.FugueZipTypeContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueZipType.
+    def exitFugueZipType(self, ctx:fugue_sqlParser.FugueZipTypeContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fuguePrepartition.
+    def enterFuguePrepartition(self, ctx:fugue_sqlParser.FuguePrepartitionContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fuguePrepartition.
+    def exitFuguePrepartition(self, ctx:fugue_sqlParser.FuguePrepartitionContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fuguePartitionAlgo.
+    def enterFuguePartitionAlgo(self, ctx:fugue_sqlParser.FuguePartitionAlgoContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fuguePartitionAlgo.
+    def exitFuguePartitionAlgo(self, ctx:fugue_sqlParser.FuguePartitionAlgoContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fuguePartitionNum.
+    def enterFuguePartitionNum(self, ctx:fugue_sqlParser.FuguePartitionNumContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fuguePartitionNum.
+    def exitFuguePartitionNum(self, ctx:fugue_sqlParser.FuguePartitionNumContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fuguePartitionNumber.
+    def enterFuguePartitionNumber(self, ctx:fugue_sqlParser.FuguePartitionNumberContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fuguePartitionNumber.
+    def exitFuguePartitionNumber(self, ctx:fugue_sqlParser.FuguePartitionNumberContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueParamsPairs.
+    def enterFugueParamsPairs(self, ctx:fugue_sqlParser.FugueParamsPairsContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueParamsPairs.
+    def exitFugueParamsPairs(self, ctx:fugue_sqlParser.FugueParamsPairsContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueParamsObj.
+    def enterFugueParamsObj(self, ctx:fugue_sqlParser.FugueParamsObjContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueParamsObj.
+    def exitFugueParamsObj(self, ctx:fugue_sqlParser.FugueParamsObjContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueCols.
+    def enterFugueCols(self, ctx:fugue_sqlParser.FugueColsContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueCols.
+    def exitFugueCols(self, ctx:fugue_sqlParser.FugueColsContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueColsSort.
+    def enterFugueColsSort(self, ctx:fugue_sqlParser.FugueColsSortContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueColsSort.
+    def exitFugueColsSort(self, ctx:fugue_sqlParser.FugueColsSortContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueColSort.
+    def enterFugueColSort(self, ctx:fugue_sqlParser.FugueColSortContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueColSort.
+    def exitFugueColSort(self, ctx:fugue_sqlParser.FugueColSortContext):
         pass
 
 
@@ -230,6 +338,24 @@ class fugue_sqlListener(ParseTreeListener):
 
     # Exit a parse tree produced by fugue_sqlParser#fugueColumnIdentifier.
     def exitFugueColumnIdentifier(self, ctx:fugue_sqlParser.FugueColumnIdentifierContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueWildSchema.
+    def enterFugueWildSchema(self, ctx:fugue_sqlParser.FugueWildSchemaContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueWildSchema.
+    def exitFugueWildSchema(self, ctx:fugue_sqlParser.FugueWildSchemaContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueWildSchemaPair.
+    def enterFugueWildSchemaPair(self, ctx:fugue_sqlParser.FugueWildSchemaPairContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueWildSchemaPair.
+    def exitFugueWildSchemaPair(self, ctx:fugue_sqlParser.FugueWildSchemaPairContext):
         pass
 
 
@@ -260,30 +386,30 @@ class fugue_sqlListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#fugueSchemaType.
-    def enterFugueSchemaType(self, ctx:fugue_sqlParser.FugueSchemaTypeContext):
+    # Enter a parse tree produced by fugue_sqlParser#fugueSchemaSimpleType.
+    def enterFugueSchemaSimpleType(self, ctx:fugue_sqlParser.FugueSchemaSimpleTypeContext):
         pass
 
-    # Exit a parse tree produced by fugue_sqlParser#fugueSchemaType.
-    def exitFugueSchemaType(self, ctx:fugue_sqlParser.FugueSchemaTypeContext):
-        pass
-
-
-    # Enter a parse tree produced by fugue_sqlParser#fugueParamPairs.
-    def enterFugueParamPairs(self, ctx:fugue_sqlParser.FugueParamPairsContext):
-        pass
-
-    # Exit a parse tree produced by fugue_sqlParser#fugueParamPairs.
-    def exitFugueParamPairs(self, ctx:fugue_sqlParser.FugueParamPairsContext):
+    # Exit a parse tree produced by fugue_sqlParser#fugueSchemaSimpleType.
+    def exitFugueSchemaSimpleType(self, ctx:fugue_sqlParser.FugueSchemaSimpleTypeContext):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#fugueParamPair.
-    def enterFugueParamPair(self, ctx:fugue_sqlParser.FugueParamPairContext):
+    # Enter a parse tree produced by fugue_sqlParser#fugueSchemaListType.
+    def enterFugueSchemaListType(self, ctx:fugue_sqlParser.FugueSchemaListTypeContext):
         pass
 
-    # Exit a parse tree produced by fugue_sqlParser#fugueParamPair.
-    def exitFugueParamPair(self, ctx:fugue_sqlParser.FugueParamPairContext):
+    # Exit a parse tree produced by fugue_sqlParser#fugueSchemaListType.
+    def exitFugueSchemaListType(self, ctx:fugue_sqlParser.FugueSchemaListTypeContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueSchemaStructType.
+    def enterFugueSchemaStructType(self, ctx:fugue_sqlParser.FugueSchemaStructTypeContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueSchemaStructType.
+    def exitFugueSchemaStructType(self, ctx:fugue_sqlParser.FugueSchemaStructTypeContext):
         pass
 
 
@@ -302,6 +428,15 @@ class fugue_sqlListener(ParseTreeListener):
 
     # Exit a parse tree produced by fugue_sqlParser#fugueJsonObj.
     def exitFugueJsonObj(self, ctx:fugue_sqlParser.FugueJsonObjContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueJsonPairs.
+    def enterFugueJsonPairs(self, ctx:fugue_sqlParser.FugueJsonPairsContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueJsonPairs.
+    def exitFugueJsonPairs(self, ctx:fugue_sqlParser.FugueJsonPairsContext):
         pass
 
 
@@ -338,6 +473,42 @@ class fugue_sqlListener(ParseTreeListener):
 
     # Exit a parse tree produced by fugue_sqlParser#fugueJsonValue.
     def exitFugueJsonValue(self, ctx:fugue_sqlParser.FugueJsonValueContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueJsonNumber.
+    def enterFugueJsonNumber(self, ctx:fugue_sqlParser.FugueJsonNumberContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueJsonNumber.
+    def exitFugueJsonNumber(self, ctx:fugue_sqlParser.FugueJsonNumberContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueJsonString.
+    def enterFugueJsonString(self, ctx:fugue_sqlParser.FugueJsonStringContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueJsonString.
+    def exitFugueJsonString(self, ctx:fugue_sqlParser.FugueJsonStringContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueJsonBool.
+    def enterFugueJsonBool(self, ctx:fugue_sqlParser.FugueJsonBoolContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueJsonBool.
+    def exitFugueJsonBool(self, ctx:fugue_sqlParser.FugueJsonBoolContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#fugueJsonNull.
+    def enterFugueJsonNull(self, ctx:fugue_sqlParser.FugueJsonNullContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#fugueJsonNull.
+    def exitFugueJsonNull(self, ctx:fugue_sqlParser.FugueJsonNullContext):
         pass
 
 
@@ -1394,15 +1565,6 @@ class fugue_sqlListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by fugue_sqlParser#subquery.
-    def enterSubquery(self, ctx:fugue_sqlParser.SubqueryContext):
-        pass
-
-    # Exit a parse tree produced by fugue_sqlParser#subquery.
-    def exitSubquery(self, ctx:fugue_sqlParser.SubqueryContext):
-        pass
-
-
     # Enter a parse tree produced by fugue_sqlParser#sortItem.
     def enterSortItem(self, ctx:fugue_sqlParser.SortItemContext):
         pass
@@ -1787,6 +1949,15 @@ class fugue_sqlListener(ParseTreeListener):
 
     # Exit a parse tree produced by fugue_sqlParser#aliasedQuery.
     def exitAliasedQuery(self, ctx:fugue_sqlParser.AliasedQueryContext):
+        pass
+
+
+    # Enter a parse tree produced by fugue_sqlParser#aliasedFugueNested.
+    def enterAliasedFugueNested(self, ctx:fugue_sqlParser.AliasedFugueNestedContext):
+        pass
+
+    # Exit a parse tree produced by fugue_sqlParser#aliasedFugueNested.
+    def exitAliasedFugueNested(self, ctx:fugue_sqlParser.AliasedFugueNestedContext):
         pass
 
 

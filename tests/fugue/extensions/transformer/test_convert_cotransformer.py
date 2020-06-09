@@ -7,6 +7,7 @@ from fugue.extensions.transformer import (CoTransformer, cotransformer,
                                           to_transformer)
 from pytest import raises
 from triad.collections.schema import Schema
+from triad.utils.hash import to_uuid
 
 
 def test_transformer():
@@ -22,6 +23,11 @@ def test_transformer():
 
 
 def test_to_transformer():
+    a = to_transformer(MockTransformer)
+    assert isinstance(a, MockTransformer)
+    b = to_transformer("MockTransformer")
+    assert isinstance(b, MockTransformer)
+
     a = to_transformer(t1, None)
     assert isinstance(a, CoTransformer)
     a._x = 1
@@ -41,6 +47,31 @@ def test_to_transformer():
     raises(FugueInterfacelessError, lambda: to_transformer("t4", None))
     e = to_transformer("t4", "a:int,b:int")
     assert isinstance(e, CoTransformer)
+
+
+def test_to_transformer_determinism():
+    a = to_transformer(t1, None)
+    b = to_transformer(t1, None)
+    c = to_transformer("t1", None)
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
+    assert a is not c
+    assert to_uuid(a) == to_uuid(c)
+
+    a = to_transformer(t4, "*,b:int")
+    b = to_transformer("t4", "*,b:int")
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
+
+    a = to_transformer(t4, "a:int,b:int")
+    b = to_transformer("t4", Schema("a:int,b:int"))
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
+
+    a = to_transformer(MockTransformer)
+    b = to_transformer("MockTransformer")
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
 
 
 @cotransformer(["a:int", None, "b:int"])
@@ -68,3 +99,11 @@ def t4(df1: Iterable[List[Any]], df2: pd.DataFrame) -> Iterable[List[Any]]:
     for r in df1:
         r += [1]
         yield r
+
+
+class MockTransformer(CoTransformer):
+    def get_output_schema(self, dfs):
+        pass
+
+    def transform(self, dfs):
+        pass

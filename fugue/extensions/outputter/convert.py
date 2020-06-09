@@ -6,6 +6,7 @@ from fugue.exceptions import FugueInterfacelessError
 from triad.utils.convert import to_function, to_instance
 from fugue.extensions.outputter.outputter import Outputter
 from fugue.utils.interfaceless import FunctionWrapper
+from triad.utils.hash import to_uuid
 
 
 def outputter() -> Callable[[Any], "_FuncAsOutputter"]:
@@ -53,6 +54,10 @@ class _FuncAsOutputter(Outputter):
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self._wrapper(*args, **kwargs)  # type: ignore
+
+    @no_type_check
+    def __uuid__(self) -> str:
+        return to_uuid(self._wrapper, self._need_engine, self._use_dfs)
 
     @no_type_check
     @staticmethod

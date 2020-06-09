@@ -15,6 +15,7 @@ from fugue.workflow.workflow_context import FugueWorkflowContext
 from triad.collections.dict import ParamDict
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
+from triad.utils.hash import to_uuid
 
 
 class FugueTask(TaskSpec, ABC):
@@ -57,7 +58,22 @@ class FugueTask(TaskSpec, ABC):
         )
         self._persist: Any = self.params.get_or_none("persist", object)
         self._broadcast = self.params.get("broadcast", False)
-        self._partition = self.params.get_or_none("partition", PartitionSpec)
+        # self._partition = self.params.get_or_none("partition", PartitionSpec)
+
+    def __uuid__(self) -> str:
+        return to_uuid(
+            self.configs,
+            self.inputs,
+            self.outputs,
+            # get_full_type_path(self.func),
+            self.metadata,
+            self.deterministic,
+            self.lazy,
+            self.node_spec,
+            str(self._persist),
+            self._broadcast,
+            # self._partition
+        )
 
     @abstractmethod
     def execute(self, ctx: TaskContext) -> None:  # pragma: no cover
@@ -135,6 +151,10 @@ class Create(FugueTask):
         )
 
     @no_type_check
+    def __uuid__(self) -> str:
+        return to_uuid(super().__uuid__(), self._creator, self._creator._params)
+
+    @no_type_check
     def execute(self, ctx: TaskContext) -> None:
         e = self._get_execution_engine(ctx)
         self._creator._execution_engine = e
@@ -168,6 +188,15 @@ class Process(FugueTask):
             deterministic=deterministic,
             lazy=lazy,
             input_names=input_names,
+        )
+
+    @no_type_check
+    def __uuid__(self) -> str:
+        return to_uuid(
+            super().__uuid__(),
+            self._processor,
+            self._processor._params,
+            self._processor._partition_spec,
         )
 
     @no_type_check
@@ -207,6 +236,15 @@ class Output(FugueTask):
             deterministic=deterministic,
             lazy=lazy,
             input_names=input_names,
+        )
+
+    @no_type_check
+    def __uuid__(self) -> str:
+        return to_uuid(
+            super().__uuid__(),
+            self._outputter,
+            self._outputter._params,
+            self._outputter._partition_spec,
         )
 
     @no_type_check

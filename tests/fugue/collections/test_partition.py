@@ -4,6 +4,7 @@ from fugue.collections.partition import PartitionSpec
 from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
 from pytest import raises
 from triad.collections.schema import Schema
+from triad.utils.hash import to_uuid
 
 
 def test_partition_spec():
@@ -121,3 +122,17 @@ def test_get_num_partitions():
     p = PartitionSpec(dict(partition_by=["b", "a"], num="min(ROWCOUNT,CORECOUNT)"))
     assert 90 == p.get_num_partitions(
         **{KEYWORD_ROWCOUNT: lambda: 100, KEYWORD_CORECOUNT: lambda: 90})
+
+
+def test_determinism():
+    a = PartitionSpec(num=0)
+    b = PartitionSpec()
+    assert to_uuid(a) == to_uuid(b)
+
+    a = PartitionSpec(by=["a"], num=2)
+    b = PartitionSpec(num="2", by=["a"])
+    assert to_uuid(a) == to_uuid(b)
+
+    a = PartitionSpec(by=["a", "b"])
+    b = PartitionSpec(by=["b", "a"])
+    assert to_uuid(a) != to_uuid(b)

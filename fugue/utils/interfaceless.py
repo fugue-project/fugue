@@ -11,12 +11,13 @@ from fugue.dataframe import (
     LocalDataFrame,
     PandasDataFrame,
 )
+from fugue.dataframe.dataframes import DataFrames
 from fugue.dataframe.utils import to_local_df
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import to_type
-from triad.utils.iter import make_empty_aware, EmptyAwareIterable
-from fugue.dataframe.dataframes import DataFrames
+from triad.utils.convert import get_full_type_path, to_type
+from triad.utils.iter import EmptyAwareIterable, make_empty_aware
+from triad.utils.hash import to_uuid
 
 _COMMENT_SCHEMA_ANNOTATION = "schema:"
 
@@ -39,6 +40,9 @@ class FunctionWrapper(object):
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self._func(*args, **kwargs)
+
+    def __uuid__(self) -> str:
+        return to_uuid(get_full_type_path(self._func), self._params, self._rt)
 
     @property
     def input_code(self) -> str:

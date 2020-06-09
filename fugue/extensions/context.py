@@ -1,6 +1,8 @@
 from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.execution.execution_engine import ExecutionEngine
 from triad.collections import ParamDict, Schema
+from triad.utils.convert import get_full_type_path
+from triad.utils.hash import to_uuid
 
 
 class ExtensionContext(object):
@@ -33,3 +35,6 @@ class ExtensionContext(object):
     @property
     def cursor(self) -> PartitionCursor:
         return self._cursor  # type: ignore
+
+    def __uuid__(self) -> str:
+        return to_uuid(get_full_type_path(self))
