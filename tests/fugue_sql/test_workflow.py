@@ -23,7 +23,7 @@ def test_create():
     dag.create(mock_create1, params=dict(n=1))
     dag.create(mock_create2, schema="a:int", params=dict(n=1))
     assert_eq("""
-    a=create by mock_create1 params n:1
+    a=create using mock_create1 params n:1
     b=create using mock_create2(n=1) schema a:int
     """, dag)
 
@@ -42,12 +42,12 @@ def test_process():
     assert_eq("""
     a=create using mock_create1 params n:1
     b=create using mock_create1 params n:2
-    process a,b by mock_processor1(n=3)
-    process b,a by mock_processor2(n=4) schema b:int
+    process a,b using mock_processor1(n=3)
+    process b,a using mock_processor2(n=4) schema b:int
     process  # nested
-        (create by mock_create1(n=5)),
-        (create by mock_create1(n=6))
-        by mock_processor1(n=7)
+        (create using mock_create1(n=5)),
+        (create using mock_create1(n=6))
+        using mock_processor1(n=7)
     """, dag)
 
     # anonymous, nested anonymous
@@ -57,18 +57,18 @@ def test_process():
     c = a.process(mock_processor3)
     dag.process(b, c, using=mock_processor1)
     assert_eq("""
-    create by mock_create1 params n:1
-    process by mock_processor3
+    create using mock_create1 params n:1
+    process using mock_processor3
     process  # nested
-        (prepartition by a process by mock_processor3),
-        (process by mock_processor3)
-        by mock_processor1
+        (process prepartition by a using mock_processor3),
+        (process using mock_processor3)
+        using mock_processor1
     """, dag)
 
     # no last dataframe
     with raises(FugueSQLError):
         assert_eq("""
-        process by mock_processor3
+        process using mock_processor3
         """, None)
 
     # dict like dataframes
@@ -78,9 +78,9 @@ def test_process():
     dag.process(dict(df1=a, df2=b), using=mock_processor1)
     assert_eq("""
     process
-        df1=(create by mock_create1(n=1)),
-        df2:(create by mock_create1(n=2))
-        by mock_processor1
+        df1=(create using mock_create1(n=1)),
+        df2:(create using mock_create1(n=2))
+        using mock_processor1
     """, dag)
 
 
@@ -113,9 +113,9 @@ def test_cotransform():
     t = z.partition(num=3).transform(mock_cotransformer1, params=dict(n=3))
     assert_eq("""
     zip 
-        (create by mock_create1 params n:1),
-        (create by mock_create1 params n:2)
-    prepartition 3 transform by mock_cotransformer1(n=3)
+        (create using mock_create1 params n:1),
+        (create using mock_create1 params n:2)
+    transform prepartition 3 using mock_cotransformer1(n=3)
     """, dag)
 
 
@@ -134,8 +134,10 @@ def test_transform():
          )
     assert_eq("""
     create [[0],[1]] schema a:int
-    prepartition ROWCOUNT / 2 by a presort b desc
-    transform using mock_transformer(n=2) schema *
+    
+    transform 
+        prepartition ROWCOUNT / 2 by a presort b desc
+        using mock_transformer(n=2) schema *
     """, w.workflow)
 
 
@@ -147,8 +149,8 @@ def test_output():
     dag.output(a, b, using=mock_output, params=dict(n=3))
     assert_eq("""
     a=create using mock_create1(n=1)
-    prepartition 4 output by mock_output
-    output a, (create using mock_create1(n=2)) by mock_output(n=3)
+    output prepartition 4 using mock_output
+    output a, (create using mock_create1(n=2)) using mock_output(n=3)
     """, dag)
 
 
@@ -165,12 +167,12 @@ def test_select():
     dag.select("select a.* from", a, "AS a join", b, "AS b on a.a == b.a")
 
     dag.select("select * from (select * from a.b)")
-    dag.select("select * from", dag.create(mock_create1),"TABLESAMPLE (5 PERCENT)")
+    dag.select("select * from", dag.create(mock_create1), "TABLESAMPLE (5 PERCENT)")
     dag.select("select * from", dag.create(mock_create1), "AS b")
     dag.select("select * from (select * from", dag.create(mock_create1), ")")
     assert_eq("""
-    a=create by mock_create1(n=1)
-    b=create by mock_create1(n=2)
+    a=create using mock_create1(n=1)
+    b=create using mock_create1(n=2)
     
     # assignment and table not found
     x:=select * from a.b
@@ -207,6 +209,26 @@ def test_print():
     a=create using mock_create1(n=1)
     print
     print a, (create using mock_create1(n=2)) rows 5 rowcount title "\\"b   B"
+    """, dag)
+
+
+def test_save():
+    dag = FugueWorkflow()
+    a = dag.create(mock_create1, params=dict(n=1))
+    a.save("xx", fmt="parquet", mode="overwrite")
+    a.save("xx", mode="append")
+    a.save("xx", mode="error")
+    a.save("xx.csv", fmt="csv", mode="error", single=True, header=True)
+    a.partition(by=["x"]).save("xx", mode="overwrite")
+    b = dag.create(mock_create1, params=dict(n=2)).save("xx", mode="overwrite")
+    assert_eq("""
+    a=create using mock_create1(n=1)
+    save overwrite parquet "xx"
+    save a append "xx"
+    save a to "xx"
+    save to single csv "xx.csv"(header=True)
+    save prepartition by x overwrite "xx"
+    save (create using mock_create1(n=2)) overwrite "xx"
     """, dag)
 
 

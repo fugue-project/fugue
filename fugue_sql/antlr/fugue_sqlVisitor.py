@@ -69,6 +69,11 @@ class fugue_sqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by fugue_sqlParser#fugueLoadTask.
+    def visitFugueLoadTask(self, ctx:fugue_sqlParser.FugueLoadTaskContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by fugue_sqlParser#fugueOutputTask.
     def visitFugueOutputTask(self, ctx:fugue_sqlParser.FugueOutputTaskContext):
         return self.visitChildren(ctx)
@@ -76,6 +81,36 @@ class fugue_sqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by fugue_sqlParser#fuguePrintTask.
     def visitFuguePrintTask(self, ctx:fugue_sqlParser.FuguePrintTaskContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by fugue_sqlParser#fugueSaveTask.
+    def visitFugueSaveTask(self, ctx:fugue_sqlParser.FugueSaveTaskContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by fugue_sqlParser#fugueSingleFile.
+    def visitFugueSingleFile(self, ctx:fugue_sqlParser.FugueSingleFileContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by fugue_sqlParser#fugueLoadColumns.
+    def visitFugueLoadColumns(self, ctx:fugue_sqlParser.FugueLoadColumnsContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by fugue_sqlParser#fugueSaveMode.
+    def visitFugueSaveMode(self, ctx:fugue_sqlParser.FugueSaveModeContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by fugue_sqlParser#fugueFileFormat.
+    def visitFugueFileFormat(self, ctx:fugue_sqlParser.FugueFileFormatContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by fugue_sqlParser#fuguePath.
+    def visitFuguePath(self, ctx:fugue_sqlParser.FuguePathContext):
         return self.visitChildren(ctx)
 
 

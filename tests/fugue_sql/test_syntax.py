@@ -81,13 +81,14 @@ def test_transform_syntax():
     good_single_syntax(
         "a = transform ",
         ["", "a,b", "(transform using x)"],
-        ["using x", "by x"],
+        "using x",
         ignore_case=True,
         simple_assign=True)
     # extensions
     good_single_syntax(
+        "transform",
         ["prepartition by x"],
-        "transform using ",
+        " using ",
         ["x", "x.Y.z"],
         ignore_case=True,
         simple_assign=True)
@@ -125,9 +126,9 @@ def test_process_create_syntax():
         ignore_case=True,
         simple_assign=True)
     good_single_syntax(
-        ["prepartition by x"],
         "process",
         ["", "a,b", "(create using x)"],
+        ["prepartition by x"],
         "using a.b.c(a=1,b=2,) schema a:int",
         ignore_case=True,
         simple_assign=True)
@@ -135,9 +136,9 @@ def test_process_create_syntax():
 
 def test_output_syntax():
     good_single_syntax(
-        ["prepartition by x"],
         "output",
         ["", "a,b", "(create using x)"],
+        ["prepartition by x"],
         "using a.b.c",
         ["(a=1,b=2,)"],
         ignore_case=True,
@@ -158,5 +159,35 @@ def test_zip_syntax():
         ["", "cross", "inner", "left outer", "right  outer", "full outer"],
         ["by x"],
         ["presort y desc"],
+        ignore_case=True,
+        simple_assign=True)
+
+
+def test_load_save_syntax():
+    good_single_syntax(
+        "load",
+        ["", "csv", "parquet", "json"],
+        '"x"',
+        ["(a=1)"],
+        ["", "columns a,b", "columns a:int,b:int"],
+        ignore_case=True,
+        simple_assign=True)
+    good_single_syntax(
+        "save",
+        ["a"],
+        ["to","overwrite","append"],
+        '"x"',
+        ignore_case=True,
+        simple_assign=True)
+    good_single_syntax(
+        "save to",
+        ["single"],
+        ["", "csv", "parquet", "json"],
+        '"x"',
+        ignore_case=True,
+        simple_assign=True)
+    good_single_syntax(
+        "save to 'x'",
+        ["(header=True)"],
         ignore_case=True,
         simple_assign=True)
