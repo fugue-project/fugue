@@ -35,10 +35,6 @@ class _VisitorBase(FugueSQLVisitor):
     def visitFugueIdentifier(self, ctx: fp.FugueIdentifierContext) -> str:
         return self.ctxToStr(ctx)
 
-    # def visitTerminal(self, node):
-    #    token = node.getSymbol()
-    #    return self.sql.code[token.start: token.stop + 1]
-
     def collectChildren(self, node: Tree, tp: Type) -> List[Any]:
         result: List[Any] = []
         n = node.getChildCount()
