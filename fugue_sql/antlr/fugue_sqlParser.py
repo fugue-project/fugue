@@ -2855,14 +2855,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueLanguage
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueLanguage" ):
-                listener.enterFugueLanguage(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueLanguage" ):
-                listener.exitFugueLanguage(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueLanguage" ):
                 return visitor.visitFugueLanguage(self)
@@ -2919,14 +2911,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueSingleStatement
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueSingleStatement" ):
-                listener.enterFugueSingleStatement(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueSingleStatement" ):
-                listener.exitFugueSingleStatement(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueSingleStatement" ):
                 return visitor.visitFugueSingleStatement(self)
@@ -2975,14 +2959,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueSingleTask
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueSingleTask" ):
-                listener.enterFugueSingleTask(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueSingleTask" ):
-                listener.exitFugueSingleTask(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueSingleTask" ):
@@ -3046,14 +3022,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueNestableTask
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueNestableTask" ):
-                listener.enterFugueNestableTask(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueNestableTask" ):
-                listener.exitFugueNestableTask(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueNestableTask" ):
                 return visitor.visitFugueNestableTask(self)
@@ -3111,14 +3079,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueNestableTaskNoSelect
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueNestableTaskNoSelect" ):
-                listener.enterFugueNestableTaskNoSelect(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueNestableTaskNoSelect" ):
-                listener.exitFugueNestableTaskNoSelect(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueNestableTaskNoSelect" ):
@@ -3182,14 +3142,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueNestableTaskCollectionNoSelect
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueNestableTaskCollectionNoSelect" ):
-                listener.enterFugueNestableTaskCollectionNoSelect(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueNestableTaskCollectionNoSelect" ):
-                listener.exitFugueNestableTaskCollectionNoSelect(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueNestableTaskCollectionNoSelect" ):
@@ -3281,14 +3233,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueSelectTask
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueSelectTask" ):
-                listener.enterFugueSelectTask(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueSelectTask" ):
-                listener.exitFugueSelectTask(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueSelectTask" ):
@@ -3385,14 +3329,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueTransformTask
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueTransformTask" ):
-                listener.enterFugueTransformTask(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueTransformTask" ):
-                listener.exitFugueTransformTask(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueTransformTask" ):
@@ -3491,14 +3427,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueProcessTask
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueProcessTask" ):
-                listener.enterFugueProcessTask(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueProcessTask" ):
-                listener.exitFugueProcessTask(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueProcessTask" ):
@@ -3609,14 +3537,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueZipTask
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueZipTask" ):
-                listener.enterFugueZipTask(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueZipTask" ):
-                listener.exitFugueZipTask(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueZipTask" ):
                 return visitor.visitFugueZipTask(self)
@@ -3716,14 +3636,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueCreateTask
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueCreateTask" ):
-                listener.enterFugueCreateTask(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueCreateTask" ):
-                listener.exitFugueCreateTask(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueCreateTask" ):
                 return visitor.visitFugueCreateTask(self)
@@ -3805,14 +3717,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueCreateDataTask
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueCreateDataTask" ):
-                listener.enterFugueCreateDataTask(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueCreateDataTask" ):
-                listener.exitFugueCreateDataTask(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueCreateDataTask" ):
@@ -3909,14 +3813,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueOutputTask
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueOutputTask" ):
-                listener.enterFugueOutputTask(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueOutputTask" ):
-                listener.exitFugueOutputTask(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueOutputTask" ):
                 return visitor.visitFugueOutputTask(self)
@@ -4012,14 +3908,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fuguePrintTask
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFuguePrintTask" ):
-                listener.enterFuguePrintTask(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFuguePrintTask" ):
-                listener.exitFuguePrintTask(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFuguePrintTask" ):
                 return visitor.visitFuguePrintTask(self)
@@ -4099,14 +3987,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fuguePersist
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFuguePersist" ):
-                listener.enterFuguePersist(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFuguePersist" ):
-                listener.exitFuguePersist(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFuguePersist" ):
                 return visitor.visitFuguePersist(self)
@@ -4152,14 +4032,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueBroadcast
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueBroadcast" ):
-                listener.enterFugueBroadcast(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueBroadcast" ):
-                listener.exitFugueBroadcast(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueBroadcast" ):
@@ -4216,14 +4088,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getTypedRuleContext(fugue_sqlParser.FugueDataFramePairContext,i)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueDataFramesDict" ):
-                listener.enterFugueDataFramesDict(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueDataFramesDict" ):
-                listener.exitFugueDataFramesDict(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueDataFramesDict" ):
                 return visitor.visitFugueDataFramesDict(self)
@@ -4243,14 +4107,6 @@ class fugue_sqlParser ( Parser ):
             else:
                 return self.getTypedRuleContext(fugue_sqlParser.FugueDataFrameContext,i)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueDataFramesList" ):
-                listener.enterFugueDataFramesList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueDataFramesList" ):
-                listener.exitFugueDataFramesList(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueDataFramesList" ):
@@ -4340,14 +4196,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueDataFramePair
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueDataFramePair" ):
-                listener.enterFugueDataFramePair(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueDataFramePair" ):
-                listener.exitFugueDataFramePair(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueDataFramePair" ):
                 return visitor.visitFugueDataFramePair(self)
@@ -4410,14 +4258,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.FugueIdentifierContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueDataFrameSource" ):
-                listener.enterFugueDataFrameSource(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueDataFrameSource" ):
-                listener.exitFugueDataFrameSource(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueDataFrameSource" ):
                 return visitor.visitFugueDataFrameSource(self)
@@ -4435,14 +4275,6 @@ class fugue_sqlParser ( Parser ):
         def fugueNestableTask(self):
             return self.getTypedRuleContext(fugue_sqlParser.FugueNestableTaskContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueDataFrameNested" ):
-                listener.enterFugueDataFrameNested(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueDataFrameNested" ):
-                listener.exitFugueDataFrameNested(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueDataFrameNested" ):
@@ -4507,14 +4339,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueAssignment
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueAssignment" ):
-                listener.enterFugueAssignment(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueAssignment" ):
-                listener.exitFugueAssignment(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueAssignment" ):
                 return visitor.visitFugueAssignment(self)
@@ -4557,14 +4381,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueAssignmentSign
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueAssignmentSign" ):
-                listener.enterFugueAssignmentSign(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueAssignmentSign" ):
-                listener.exitFugueAssignmentSign(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueAssignmentSign" ):
@@ -4641,14 +4457,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueSingleOutputExtensionCommonWild
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueSingleOutputExtensionCommonWild" ):
-                listener.enterFugueSingleOutputExtensionCommonWild(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueSingleOutputExtensionCommonWild" ):
-                listener.exitFugueSingleOutputExtensionCommonWild(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueSingleOutputExtensionCommonWild" ):
@@ -4735,14 +4543,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueSingleOutputExtensionCommon
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueSingleOutputExtensionCommon" ):
-                listener.enterFugueSingleOutputExtensionCommon(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueSingleOutputExtensionCommon" ):
-                listener.exitFugueSingleOutputExtensionCommon(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueSingleOutputExtensionCommon" ):
                 return visitor.visitFugueSingleOutputExtensionCommon(self)
@@ -4811,14 +4611,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueExtension
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueExtension" ):
-                listener.enterFugueExtension(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueExtension" ):
-                listener.exitFugueExtension(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueExtension" ):
                 return visitor.visitFugueExtension(self)
@@ -4884,14 +4676,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueZipType
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueZipType" ):
-                listener.enterFugueZipType(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueZipType" ):
-                listener.exitFugueZipType(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueZipType" ):
@@ -4990,14 +4774,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fuguePrepartition
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFuguePrepartition" ):
-                listener.enterFuguePrepartition(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFuguePrepartition" ):
-                listener.exitFuguePrepartition(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFuguePrepartition" ):
@@ -5109,14 +4885,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fuguePartitionAlgo
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFuguePartitionAlgo" ):
-                listener.enterFuguePartitionAlgo(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFuguePartitionAlgo" ):
-                listener.exitFuguePartitionAlgo(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFuguePartitionAlgo" ):
                 return visitor.visitFuguePartitionAlgo(self)
@@ -5180,14 +4948,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fuguePartitionNum
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFuguePartitionNum" ):
-                listener.enterFuguePartitionNum(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFuguePartitionNum" ):
-                listener.exitFuguePartitionNum(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFuguePartitionNum" ):
@@ -5286,14 +5046,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fuguePartitionNumber
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFuguePartitionNumber" ):
-                listener.enterFuguePartitionNumber(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFuguePartitionNumber" ):
-                listener.exitFuguePartitionNumber(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFuguePartitionNumber" ):
                 return visitor.visitFuguePartitionNumber(self)
@@ -5391,14 +5143,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.FugueJsonPairsContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueParamsPairs" ):
-                listener.enterFugueParamsPairs(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueParamsPairs" ):
-                listener.exitFugueParamsPairs(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueParamsPairs" ):
                 return visitor.visitFugueParamsPairs(self)
@@ -5418,14 +5162,6 @@ class fugue_sqlParser ( Parser ):
 
         def PARAMS(self):
             return self.getToken(fugue_sqlParser.PARAMS, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueParamsObj" ):
-                listener.enterFugueParamsObj(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueParamsObj" ):
-                listener.exitFugueParamsObj(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueParamsObj" ):
@@ -5494,14 +5230,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueCols
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueCols" ):
-                listener.enterFugueCols(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueCols" ):
-                listener.exitFugueCols(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueCols" ):
                 return visitor.visitFugueCols(self)
@@ -5556,14 +5284,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueColsSort
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueColsSort" ):
-                listener.enterFugueColsSort(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueColsSort" ):
-                listener.exitFugueColsSort(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueColsSort" ):
@@ -5623,14 +5343,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueColSort
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueColSort" ):
-                listener.enterFugueColSort(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueColSort" ):
-                listener.exitFugueColSort(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueColSort" ):
                 return visitor.visitFugueColSort(self)
@@ -5684,14 +5396,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueColumnIdentifier
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueColumnIdentifier" ):
-                listener.enterFugueColumnIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueColumnIdentifier" ):
-                listener.exitFugueColumnIdentifier(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueColumnIdentifier" ):
                 return visitor.visitFugueColumnIdentifier(self)
@@ -5733,14 +5437,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueWildSchema
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueWildSchema" ):
-                listener.enterFugueWildSchema(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueWildSchema" ):
-                listener.exitFugueWildSchema(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueWildSchema" ):
@@ -5798,14 +5494,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueWildSchemaPair
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueWildSchemaPair" ):
-                listener.enterFugueWildSchemaPair(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueWildSchemaPair" ):
-                listener.exitFugueWildSchemaPair(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueWildSchemaPair" ):
                 return visitor.visitFugueWildSchemaPair(self)
@@ -5860,14 +5548,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueSchema
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueSchema" ):
-                listener.enterFugueSchema(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueSchema" ):
-                listener.exitFugueSchema(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueSchema" ):
@@ -5927,14 +5607,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueSchemaPair
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueSchemaPair" ):
-                listener.enterFugueSchemaPair(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueSchemaPair" ):
-                listener.exitFugueSchemaPair(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueSchemaPair" ):
                 return visitor.visitFugueSchemaPair(self)
@@ -5977,14 +5649,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueSchemaKey
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueSchemaKey" ):
-                listener.enterFugueSchemaKey(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueSchemaKey" ):
-                listener.exitFugueSchemaKey(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueSchemaKey" ):
@@ -6038,14 +5702,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.FugueIdentifierContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueSchemaSimpleType" ):
-                listener.enterFugueSchemaSimpleType(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueSchemaSimpleType" ):
-                listener.exitFugueSchemaSimpleType(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueSchemaSimpleType" ):
                 return visitor.visitFugueSchemaSimpleType(self)
@@ -6063,14 +5719,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.FugueSchemaContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueSchemaStructType" ):
-                listener.enterFugueSchemaStructType(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueSchemaStructType" ):
-                listener.exitFugueSchemaStructType(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueSchemaStructType" ):
                 return visitor.visitFugueSchemaStructType(self)
@@ -6087,14 +5735,6 @@ class fugue_sqlParser ( Parser ):
         def fugueSchemaType(self):
             return self.getTypedRuleContext(fugue_sqlParser.FugueSchemaTypeContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueSchemaListType" ):
-                listener.enterFugueSchemaListType(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueSchemaListType" ):
-                listener.exitFugueSchemaListType(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueSchemaListType" ):
@@ -6164,14 +5804,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueJson
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueJson" ):
-                listener.enterFugueJson(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueJson" ):
-                listener.exitFugueJson(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueJson" ):
                 return visitor.visitFugueJson(self)
@@ -6210,14 +5842,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueJsonObj
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueJsonObj" ):
-                listener.enterFugueJsonObj(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueJsonObj" ):
-                listener.exitFugueJsonObj(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueJsonObj" ):
@@ -6315,14 +5939,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueJsonPairs
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueJsonPairs" ):
-                listener.enterFugueJsonPairs(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueJsonPairs" ):
-                listener.exitFugueJsonPairs(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueJsonPairs" ):
                 return visitor.visitFugueJsonPairs(self)
@@ -6384,14 +6000,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueJsonPair
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueJsonPair" ):
-                listener.enterFugueJsonPair(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueJsonPair" ):
-                listener.exitFugueJsonPair(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueJsonPair" ):
                 return visitor.visitFugueJsonPair(self)
@@ -6444,14 +6052,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueJsonKey
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueJsonKey" ):
-                listener.enterFugueJsonKey(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueJsonKey" ):
-                listener.exitFugueJsonKey(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueJsonKey" ):
@@ -6507,14 +6107,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueJsonArray
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueJsonArray" ):
-                listener.enterFugueJsonArray(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueJsonArray" ):
-                listener.exitFugueJsonArray(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueJsonArray" ):
@@ -6616,14 +6208,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueJsonValue
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueJsonValue" ):
-                listener.enterFugueJsonValue(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueJsonValue" ):
-                listener.exitFugueJsonValue(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueJsonValue" ):
                 return visitor.visitFugueJsonValue(self)
@@ -6700,14 +6284,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueJsonNumber
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueJsonNumber" ):
-                listener.enterFugueJsonNumber(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueJsonNumber" ):
-                listener.exitFugueJsonNumber(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueJsonNumber" ):
                 return visitor.visitFugueJsonNumber(self)
@@ -6745,14 +6321,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueJsonString
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueJsonString" ):
-                listener.enterFugueJsonString(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueJsonString" ):
-                listener.exitFugueJsonString(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueJsonString" ):
@@ -6794,14 +6362,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueJsonBool
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueJsonBool" ):
-                listener.enterFugueJsonBool(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueJsonBool" ):
-                listener.exitFugueJsonBool(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueJsonBool" ):
@@ -6846,14 +6406,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueJsonNull
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueJsonNull" ):
-                listener.enterFugueJsonNull(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueJsonNull" ):
-                listener.exitFugueJsonNull(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueJsonNull" ):
@@ -6900,14 +6452,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fugueIdentifier
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFugueIdentifier" ):
-                listener.enterFugueIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFugueIdentifier" ):
-                listener.exitFugueIdentifier(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFugueIdentifier" ):
                 return visitor.visitFugueIdentifier(self)
@@ -6949,14 +6493,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_singleStatement
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSingleStatement" ):
-                listener.enterSingleStatement(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSingleStatement" ):
-                listener.exitSingleStatement(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSingleStatement" ):
@@ -7013,14 +6549,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_singleExpression
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSingleExpression" ):
-                listener.enterSingleExpression(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSingleExpression" ):
-                listener.exitSingleExpression(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSingleExpression" ):
                 return visitor.visitSingleExpression(self)
@@ -7064,14 +6592,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_singleTableIdentifier
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSingleTableIdentifier" ):
-                listener.enterSingleTableIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSingleTableIdentifier" ):
-                listener.exitSingleTableIdentifier(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSingleTableIdentifier" ):
@@ -7117,14 +6637,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_singleMultipartIdentifier
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSingleMultipartIdentifier" ):
-                listener.enterSingleMultipartIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSingleMultipartIdentifier" ):
-                listener.exitSingleMultipartIdentifier(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSingleMultipartIdentifier" ):
                 return visitor.visitSingleMultipartIdentifier(self)
@@ -7168,14 +6680,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_singleFunctionIdentifier
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSingleFunctionIdentifier" ):
-                listener.enterSingleFunctionIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSingleFunctionIdentifier" ):
-                listener.exitSingleFunctionIdentifier(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSingleFunctionIdentifier" ):
@@ -7221,14 +6725,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_singleDataType
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSingleDataType" ):
-                listener.enterSingleDataType(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSingleDataType" ):
-                listener.exitSingleDataType(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSingleDataType" ):
                 return visitor.visitSingleDataType(self)
@@ -7272,14 +6768,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_singleTableSchema
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSingleTableSchema" ):
-                listener.enterSingleTableSchema(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSingleTableSchema" ):
-                listener.exitSingleTableSchema(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSingleTableSchema" ):
@@ -7347,14 +6835,6 @@ class fugue_sqlParser ( Parser ):
         def COST(self):
             return self.getToken(fugue_sqlParser.COST, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterExplain" ):
-                listener.enterExplain(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitExplain" ):
-                listener.exitExplain(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitExplain" ):
                 return visitor.visitExplain(self)
@@ -7370,14 +6850,6 @@ class fugue_sqlParser ( Parser ):
 
         def RESET(self):
             return self.getToken(fugue_sqlParser.RESET, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterResetConfiguration" ):
-                listener.enterResetConfiguration(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitResetConfiguration" ):
-                listener.exitResetConfiguration(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitResetConfiguration" ):
@@ -7405,14 +6877,6 @@ class fugue_sqlParser ( Parser ):
         def AS(self):
             return self.getToken(fugue_sqlParser.AS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAlterViewQuery" ):
-                listener.enterAlterViewQuery(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAlterViewQuery" ):
-                listener.exitAlterViewQuery(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAlterViewQuery" ):
                 return visitor.visitAlterViewQuery(self)
@@ -7433,14 +6897,6 @@ class fugue_sqlParser ( Parser ):
 
         def NAMESPACE(self):
             return self.getToken(fugue_sqlParser.NAMESPACE, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterUse" ):
-                listener.enterUse(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitUse" ):
-                listener.exitUse(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitUse" ):
@@ -7471,14 +6927,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.RESTRICT, 0)
         def CASCADE(self):
             return self.getToken(fugue_sqlParser.CASCADE, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDropNamespace" ):
-                listener.enterDropNamespace(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDropNamespace" ):
-                listener.exitDropNamespace(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDropNamespace" ):
@@ -7520,14 +6968,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.TablePropertyListContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCreateTempViewUsing" ):
-                listener.enterCreateTempViewUsing(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCreateTempViewUsing" ):
-                listener.exitCreateTempViewUsing(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCreateTempViewUsing" ):
                 return visitor.visitCreateTempViewUsing(self)
@@ -7560,14 +7000,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getTypedRuleContext(fugue_sqlParser.MultipartIdentifierContext,i)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRenameTable" ):
-                listener.enterRenameTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRenameTable" ):
-                listener.exitRenameTable(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRenameTable" ):
                 return visitor.visitRenameTable(self)
@@ -7589,14 +7021,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.UnsupportedHiveNativeCommandsContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFailNativeCommand" ):
-                listener.enterFailNativeCommand(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFailNativeCommand" ):
-                listener.exitFailNativeCommand(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFailNativeCommand" ):
                 return visitor.visitFailNativeCommand(self)
@@ -7614,14 +7038,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.CLEAR, 0)
         def CACHE(self):
             return self.getToken(fugue_sqlParser.CACHE, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterClearCache" ):
-                listener.enterClearCache(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitClearCache" ):
-                listener.exitClearCache(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitClearCache" ):
@@ -7647,14 +7063,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.IF, 0)
         def EXISTS(self):
             return self.getToken(fugue_sqlParser.EXISTS, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDropView" ):
-                listener.enterDropView(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDropView" ):
-                listener.exitDropView(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDropView" ):
@@ -7686,14 +7094,6 @@ class fugue_sqlParser ( Parser ):
         def LIKE(self):
             return self.getToken(fugue_sqlParser.LIKE, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterShowTables" ):
-                listener.enterShowTables(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitShowTables" ):
-                listener.exitShowTables(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitShowTables" ):
                 return visitor.visitShowTables(self)
@@ -7719,14 +7119,6 @@ class fugue_sqlParser ( Parser ):
         def PARTITIONS(self):
             return self.getToken(fugue_sqlParser.PARTITIONS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRecoverPartitions" ):
-                listener.enterRecoverPartitions(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRecoverPartitions" ):
-                listener.exitRecoverPartitions(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRecoverPartitions" ):
                 return visitor.visitRecoverPartitions(self)
@@ -7746,14 +7138,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.CURRENT, 0)
         def NAMESPACE(self):
             return self.getToken(fugue_sqlParser.NAMESPACE, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterShowCurrentNamespace" ):
-                listener.enterShowCurrentNamespace(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitShowCurrentNamespace" ):
-                listener.exitShowCurrentNamespace(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitShowCurrentNamespace" ):
@@ -7788,14 +7172,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getTypedRuleContext(fugue_sqlParser.PartitionSpecContext,i)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRenameTablePartition" ):
-                listener.enterRenameTablePartition(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRenameTablePartition" ):
-                listener.exitRenameTablePartition(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRenameTablePartition" ):
                 return visitor.visitRenameTablePartition(self)
@@ -7819,14 +7195,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.MultipartIdentifierContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRepairTable" ):
-                listener.enterRepairTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRepairTable" ):
-                listener.exitRepairTable(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRepairTable" ):
                 return visitor.visitRepairTable(self)
@@ -7844,14 +7212,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.REFRESH, 0)
         def STRING(self):
             return self.getToken(fugue_sqlParser.STRING, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRefreshResource" ):
-                listener.enterRefreshResource(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRefreshResource" ):
-                listener.exitRefreshResource(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRefreshResource" ):
@@ -7879,14 +7239,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.AS, 0)
         def SERDE(self):
             return self.getToken(fugue_sqlParser.SERDE, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterShowCreateTable" ):
-                listener.enterShowCreateTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitShowCreateTable" ):
-                listener.exitShowCreateTable(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitShowCreateTable" ):
@@ -7919,14 +7271,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.STRING, 0)
         def LIKE(self):
             return self.getToken(fugue_sqlParser.LIKE, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterShowNamespaces" ):
-                listener.enterShowNamespaces(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitShowNamespaces" ):
-                listener.exitShowNamespaces(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitShowNamespaces" ):
@@ -7964,14 +7308,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getTypedRuleContext(fugue_sqlParser.MultipartIdentifierContext,i)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterShowColumns" ):
-                listener.enterShowColumns(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitShowColumns" ):
-                listener.exitShowColumns(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitShowColumns" ):
                 return visitor.visitShowColumns(self)
@@ -8002,14 +7338,6 @@ class fugue_sqlParser ( Parser ):
 
         def AS(self):
             return self.getToken(fugue_sqlParser.AS, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterReplaceTable" ):
-                listener.enterReplaceTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitReplaceTable" ):
-                listener.exitReplaceTable(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitReplaceTable" ):
@@ -8048,14 +7376,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getTypedRuleContext(fugue_sqlParser.PartitionSpecLocationContext,i)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAddTablePartition" ):
-                listener.enterAddTablePartition(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAddTablePartition" ):
-                listener.exitAddTablePartition(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAddTablePartition" ):
                 return visitor.visitAddTablePartition(self)
@@ -8083,14 +7403,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.LocationSpecContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSetNamespaceLocation" ):
-                listener.enterSetNamespaceLocation(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSetNamespaceLocation" ):
-                listener.exitSetNamespaceLocation(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSetNamespaceLocation" ):
                 return visitor.visitSetNamespaceLocation(self)
@@ -8111,14 +7423,6 @@ class fugue_sqlParser ( Parser ):
         def multipartIdentifier(self):
             return self.getTypedRuleContext(fugue_sqlParser.MultipartIdentifierContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRefreshTable" ):
-                listener.enterRefreshTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRefreshTable" ):
-                listener.exitRefreshTable(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRefreshTable" ):
@@ -8151,14 +7455,6 @@ class fugue_sqlParser ( Parser ):
         def PROPERTIES(self):
             return self.getToken(fugue_sqlParser.PROPERTIES, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSetNamespaceProperties" ):
-                listener.enterSetNamespaceProperties(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSetNamespaceProperties" ):
-                listener.exitSetNamespaceProperties(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSetNamespaceProperties" ):
                 return visitor.visitSetNamespaceProperties(self)
@@ -8182,14 +7478,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.LIST, 0)
         def STRING(self):
             return self.getToken(fugue_sqlParser.STRING, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterManageResource" ):
-                listener.enterManageResource(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitManageResource" ):
-                listener.exitManageResource(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitManageResource" ):
@@ -8230,14 +7518,6 @@ class fugue_sqlParser ( Parser ):
 
         def ALL(self):
             return self.getToken(fugue_sqlParser.ALL, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAnalyze" ):
-                listener.enterAnalyze(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAnalyze" ):
-                listener.exitAnalyze(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAnalyze" ):
@@ -8334,14 +7614,6 @@ class fugue_sqlParser ( Parser ):
         def AS(self):
             return self.getToken(fugue_sqlParser.AS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCreateHiveTable" ):
-                listener.enterCreateHiveTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCreateHiveTable" ):
-                listener.exitCreateHiveTable(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCreateHiveTable" ):
                 return visitor.visitCreateHiveTable(self)
@@ -8388,14 +7660,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getTypedRuleContext(fugue_sqlParser.ResourceContext,i)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCreateFunction" ):
-                listener.enterCreateFunction(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCreateFunction" ):
-                listener.exitCreateFunction(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCreateFunction" ):
                 return visitor.visitCreateFunction(self)
@@ -8432,14 +7696,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.MultipartIdentifierContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterShowTable" ):
-                listener.enterShowTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitShowTable" ):
-                listener.exitShowTable(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitShowTable" ):
                 return visitor.visitShowTable(self)
@@ -8473,14 +7729,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.PartitionSpecContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterHiveReplaceColumns" ):
-                listener.enterHiveReplaceColumns(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitHiveReplaceColumns" ):
-                listener.exitHiveReplaceColumns(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitHiveReplaceColumns" ):
                 return visitor.visitHiveReplaceColumns(self)
@@ -8511,14 +7759,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.STRING, 0)
         def NULL(self):
             return self.getToken(fugue_sqlParser.NULL, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCommentNamespace" ):
-                listener.enterCommentNamespace(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCommentNamespace" ):
-                listener.exitCommentNamespace(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCommentNamespace" ):
@@ -8551,14 +7791,6 @@ class fugue_sqlParser ( Parser ):
         def AS(self):
             return self.getToken(fugue_sqlParser.AS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCreateTable" ):
-                listener.enterCreateTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCreateTable" ):
-                listener.exitCreateTable(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCreateTable" ):
                 return visitor.visitCreateTable(self)
@@ -8578,14 +7810,6 @@ class fugue_sqlParser ( Parser ):
         def ctes(self):
             return self.getTypedRuleContext(fugue_sqlParser.CtesContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDmlStatement" ):
-                listener.enterDmlStatement(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDmlStatement" ):
-                listener.exitDmlStatement(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDmlStatement" ):
@@ -8657,14 +7881,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getTypedRuleContext(fugue_sqlParser.TablePropertyListContext,i)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCreateTableLike" ):
-                listener.enterCreateTableLike(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCreateTableLike" ):
-                listener.exitCreateTableLike(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCreateTableLike" ):
                 return visitor.visitCreateTableLike(self)
@@ -8689,14 +7905,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.IF, 0)
         def EXISTS(self):
             return self.getToken(fugue_sqlParser.EXISTS, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterUncacheTable" ):
-                listener.enterUncacheTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitUncacheTable" ):
-                listener.exitUncacheTable(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitUncacheTable" ):
@@ -8724,14 +7932,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.IF, 0)
         def EXISTS(self):
             return self.getToken(fugue_sqlParser.EXISTS, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDropFunction" ):
-                listener.enterDropFunction(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDropFunction" ):
-                listener.exitDropFunction(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDropFunction" ):
@@ -8766,14 +7966,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.EXTENDED, 0)
         def FORMATTED(self):
             return self.getToken(fugue_sqlParser.FORMATTED, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDescribeRelation" ):
-                listener.enterDescribeRelation(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDescribeRelation" ):
-                listener.exitDescribeRelation(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDescribeRelation" ):
@@ -8812,14 +8004,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.PartitionSpecContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterLoadData" ):
-                listener.enterLoadData(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitLoadData" ):
-                listener.exitLoadData(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitLoadData" ):
                 return visitor.visitLoadData(self)
@@ -8843,14 +8027,6 @@ class fugue_sqlParser ( Parser ):
         def partitionSpec(self):
             return self.getTypedRuleContext(fugue_sqlParser.PartitionSpecContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterShowPartitions" ):
-                listener.enterShowPartitions(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitShowPartitions" ):
-                listener.exitShowPartitions(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitShowPartitions" ):
@@ -8876,14 +8052,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.DESCRIBE, 0)
         def EXTENDED(self):
             return self.getToken(fugue_sqlParser.EXTENDED, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDescribeFunction" ):
-                listener.enterDescribeFunction(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDescribeFunction" ):
-                listener.exitDescribeFunction(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDescribeFunction" ):
@@ -8921,14 +8089,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.ErrorCapturingIdentifierContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRenameTableColumn" ):
-                listener.enterRenameTableColumn(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRenameTableColumn" ):
-                listener.exitRenameTableColumn(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRenameTableColumn" ):
                 return visitor.visitRenameTableColumn(self)
@@ -8945,14 +8105,6 @@ class fugue_sqlParser ( Parser ):
         def query(self):
             return self.getTypedRuleContext(fugue_sqlParser.QueryContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterStatementDefault" ):
-                listener.enterStatementDefault(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitStatementDefault" ):
-                listener.exitStatementDefault(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitStatementDefault" ):
@@ -8993,14 +8145,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.ColPositionContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterHiveChangeColumn" ):
-                listener.enterHiveChangeColumn(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitHiveChangeColumn" ):
-                listener.exitHiveChangeColumn(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitHiveChangeColumn" ):
                 return visitor.visitHiveChangeColumn(self)
@@ -9023,14 +8167,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.DESCRIBE, 0)
         def QUERY(self):
             return self.getToken(fugue_sqlParser.QUERY, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDescribeQuery" ):
-                listener.enterDescribeQuery(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDescribeQuery" ):
-                listener.exitDescribeQuery(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDescribeQuery" ):
@@ -9055,14 +8191,6 @@ class fugue_sqlParser ( Parser ):
         def partitionSpec(self):
             return self.getTypedRuleContext(fugue_sqlParser.PartitionSpecContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTruncateTable" ):
-                listener.enterTruncateTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTruncateTable" ):
-                listener.exitTruncateTable(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTruncateTable" ):
@@ -9100,14 +8228,6 @@ class fugue_sqlParser ( Parser ):
         def tablePropertyList(self):
             return self.getTypedRuleContext(fugue_sqlParser.TablePropertyListContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSetTableSerDe" ):
-                listener.enterSetTableSerDe(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSetTableSerDe" ):
-                listener.exitSetTableSerDe(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSetTableSerDe" ):
@@ -9185,14 +8305,6 @@ class fugue_sqlParser ( Parser ):
         def GLOBAL(self):
             return self.getToken(fugue_sqlParser.GLOBAL, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCreateView" ):
-                listener.enterCreateView(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCreateView" ):
-                listener.exitCreateView(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCreateView" ):
                 return visitor.visitCreateView(self)
@@ -9230,14 +8342,6 @@ class fugue_sqlParser ( Parser ):
         def PURGE(self):
             return self.getToken(fugue_sqlParser.PURGE, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDropTablePartitions" ):
-                listener.enterDropTablePartitions(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDropTablePartitions" ):
-                listener.exitDropTablePartitions(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDropTablePartitions" ):
                 return visitor.visitDropTablePartitions(self)
@@ -9253,14 +8357,6 @@ class fugue_sqlParser ( Parser ):
 
         def SET(self):
             return self.getToken(fugue_sqlParser.SET, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSetConfiguration" ):
-                listener.enterSetConfiguration(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSetConfiguration" ):
-                listener.exitSetConfiguration(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSetConfiguration" ):
@@ -9289,14 +8385,6 @@ class fugue_sqlParser ( Parser ):
         def PURGE(self):
             return self.getToken(fugue_sqlParser.PURGE, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDropTable" ):
-                listener.enterDropTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDropTable" ):
-                listener.exitDropTable(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDropTable" ):
                 return visitor.visitDropTable(self)
@@ -9322,14 +8410,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.DESCRIBE, 0)
         def EXTENDED(self):
             return self.getToken(fugue_sqlParser.EXTENDED, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDescribeNamespace" ):
-                listener.enterDescribeNamespace(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDescribeNamespace" ):
-                listener.exitDescribeNamespace(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDescribeNamespace" ):
@@ -9367,14 +8447,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.AlterColumnActionContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAlterTableAlterColumn" ):
-                listener.enterAlterTableAlterColumn(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAlterTableAlterColumn" ):
-                listener.exitAlterTableAlterColumn(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAlterTableAlterColumn" ):
                 return visitor.visitAlterTableAlterColumn(self)
@@ -9404,14 +8476,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.STRING, 0)
         def NULL(self):
             return self.getToken(fugue_sqlParser.NULL, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCommentTable" ):
-                listener.enterCommentTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCommentTable" ):
-                listener.exitCommentTable(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCommentTable" ):
@@ -9474,14 +8538,6 @@ class fugue_sqlParser ( Parser ):
             else:
                 return self.getToken(fugue_sqlParser.PROPERTIES, i)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCreateNamespace" ):
-                listener.enterCreateNamespace(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCreateNamespace" ):
-                listener.exitCreateNamespace(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCreateNamespace" ):
                 return visitor.visitCreateNamespace(self)
@@ -9507,14 +8563,6 @@ class fugue_sqlParser ( Parser ):
         def tablePropertyKey(self):
             return self.getTypedRuleContext(fugue_sqlParser.TablePropertyKeyContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterShowTblProperties" ):
-                listener.enterShowTblProperties(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitShowTblProperties" ):
-                listener.exitShowTblProperties(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitShowTblProperties" ):
@@ -9550,14 +8598,6 @@ class fugue_sqlParser ( Parser ):
         def EXISTS(self):
             return self.getToken(fugue_sqlParser.EXISTS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterUnsetTableProperties" ):
-                listener.enterUnsetTableProperties(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitUnsetTableProperties" ):
-                listener.exitUnsetTableProperties(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitUnsetTableProperties" ):
                 return visitor.visitUnsetTableProperties(self)
@@ -9586,14 +8626,6 @@ class fugue_sqlParser ( Parser ):
         def partitionSpec(self):
             return self.getTypedRuleContext(fugue_sqlParser.PartitionSpecContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSetTableLocation" ):
-                listener.enterSetTableLocation(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSetTableLocation" ):
-                listener.exitSetTableLocation(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSetTableLocation" ):
@@ -9626,14 +8658,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.MultipartIdentifierListContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDropTableColumns" ):
-                listener.enterDropTableColumns(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDropTableColumns" ):
-                listener.exitDropTableColumns(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDropTableColumns" ):
                 return visitor.visitDropTableColumns(self)
@@ -9664,14 +8688,6 @@ class fugue_sqlParser ( Parser ):
         def LIKE(self):
             return self.getToken(fugue_sqlParser.LIKE, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterShowViews" ):
-                listener.enterShowViews(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitShowViews" ):
-                listener.exitShowViews(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitShowViews" ):
                 return visitor.visitShowViews(self)
@@ -9700,14 +8716,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.LIKE, 0)
         def STRING(self):
             return self.getToken(fugue_sqlParser.STRING, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterShowFunctions" ):
-                listener.enterShowFunctions(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitShowFunctions" ):
-                listener.exitShowFunctions(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitShowFunctions" ):
@@ -9743,14 +8751,6 @@ class fugue_sqlParser ( Parser ):
         def AS(self):
             return self.getToken(fugue_sqlParser.AS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCacheTable" ):
-                listener.enterCacheTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCacheTable" ):
-                listener.exitCacheTable(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCacheTable" ):
                 return visitor.visitCacheTable(self)
@@ -9782,14 +8782,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.QualifiedColTypeWithPositionListContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAddTableColumns" ):
-                listener.enterAddTableColumns(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAddTableColumns" ):
-                listener.exitAddTableColumns(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAddTableColumns" ):
                 return visitor.visitAddTableColumns(self)
@@ -9819,14 +8811,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.TABLE, 0)
         def VIEW(self):
             return self.getToken(fugue_sqlParser.VIEW, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSetTableProperties" ):
-                listener.enterSetTableProperties(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSetTableProperties" ):
-                listener.exitSetTableProperties(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSetTableProperties" ):
@@ -12109,14 +11093,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_unsupportedHiveNativeCommands
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterUnsupportedHiveNativeCommands" ):
-                listener.enterUnsupportedHiveNativeCommands(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitUnsupportedHiveNativeCommands" ):
-                listener.exitUnsupportedHiveNativeCommands(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitUnsupportedHiveNativeCommands" ):
                 return visitor.visitUnsupportedHiveNativeCommands(self)
@@ -12675,14 +11651,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_createTableHeader
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCreateTableHeader" ):
-                listener.enterCreateTableHeader(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCreateTableHeader" ):
-                listener.exitCreateTableHeader(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCreateTableHeader" ):
                 return visitor.visitCreateTableHeader(self)
@@ -12767,14 +11735,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_replaceTableHeader
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterReplaceTableHeader" ):
-                listener.enterReplaceTableHeader(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitReplaceTableHeader" ):
-                listener.exitReplaceTableHeader(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitReplaceTableHeader" ):
                 return visitor.visitReplaceTableHeader(self)
@@ -12853,14 +11813,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_bucketSpec
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterBucketSpec" ):
-                listener.enterBucketSpec(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitBucketSpec" ):
-                listener.exitBucketSpec(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitBucketSpec" ):
@@ -12950,14 +11902,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_skewSpec
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSkewSpec" ):
-                listener.enterSkewSpec(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSkewSpec" ):
-                listener.exitSkewSpec(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSkewSpec" ):
                 return visitor.visitSkewSpec(self)
@@ -13031,14 +11975,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_locationSpec
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterLocationSpec" ):
-                listener.enterLocationSpec(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitLocationSpec" ):
-                listener.exitLocationSpec(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitLocationSpec" ):
                 return visitor.visitLocationSpec(self)
@@ -13081,14 +12017,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_commentSpec
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCommentSpec" ):
-                listener.enterCommentSpec(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCommentSpec" ):
-                listener.exitCommentSpec(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCommentSpec" ):
@@ -13138,14 +12066,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_query
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterQuery" ):
-                listener.enterQuery(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitQuery" ):
-                listener.exitQuery(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitQuery" ):
@@ -13224,14 +12144,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.CreateFileFormatContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterInsertOverwriteHiveDir" ):
-                listener.enterInsertOverwriteHiveDir(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitInsertOverwriteHiveDir" ):
-                listener.exitInsertOverwriteHiveDir(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitInsertOverwriteHiveDir" ):
                 return visitor.visitInsertOverwriteHiveDir(self)
@@ -13266,14 +12178,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.TablePropertyListContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterInsertOverwriteDir" ):
-                listener.enterInsertOverwriteDir(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitInsertOverwriteDir" ):
-                listener.exitInsertOverwriteDir(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitInsertOverwriteDir" ):
                 return visitor.visitInsertOverwriteDir(self)
@@ -13306,14 +12210,6 @@ class fugue_sqlParser ( Parser ):
         def EXISTS(self):
             return self.getToken(fugue_sqlParser.EXISTS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterInsertOverwriteTable" ):
-                listener.enterInsertOverwriteTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitInsertOverwriteTable" ):
-                listener.exitInsertOverwriteTable(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitInsertOverwriteTable" ):
                 return visitor.visitInsertOverwriteTable(self)
@@ -13345,14 +12241,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.NOT, 0)
         def EXISTS(self):
             return self.getToken(fugue_sqlParser.EXISTS, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterInsertIntoTable" ):
-                listener.enterInsertIntoTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitInsertIntoTable" ):
-                listener.exitInsertIntoTable(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitInsertIntoTable" ):
@@ -13552,14 +12440,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_partitionSpecLocation
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPartitionSpecLocation" ):
-                listener.enterPartitionSpecLocation(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPartitionSpecLocation" ):
-                listener.exitPartitionSpecLocation(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitPartitionSpecLocation" ):
                 return visitor.visitPartitionSpecLocation(self)
@@ -13613,14 +12493,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_partitionSpec
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPartitionSpec" ):
-                listener.enterPartitionSpec(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPartitionSpec" ):
-                listener.exitPartitionSpec(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitPartitionSpec" ):
@@ -13687,14 +12559,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_partitionVal
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPartitionVal" ):
-                listener.enterPartitionVal(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPartitionVal" ):
-                listener.exitPartitionVal(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitPartitionVal" ):
                 return visitor.visitPartitionVal(self)
@@ -13749,14 +12613,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_namespace
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterNamespace" ):
-                listener.enterNamespace(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitNamespace" ):
-                listener.exitNamespace(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNamespace" ):
@@ -13817,14 +12673,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_describeFuncName
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDescribeFuncName" ):
-                listener.enterDescribeFuncName(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDescribeFuncName" ):
-                listener.exitDescribeFuncName(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDescribeFuncName" ):
@@ -13901,14 +12749,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_describeColName
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDescribeColName" ):
-                listener.enterDescribeColName(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDescribeColName" ):
-                listener.exitDescribeColName(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDescribeColName" ):
                 return visitor.visitDescribeColName(self)
@@ -13968,14 +12808,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_ctes
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCtes" ):
-                listener.enterCtes(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCtes" ):
-                listener.exitCtes(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCtes" ):
@@ -14044,14 +12876,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_namedQuery
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterNamedQuery" ):
-                listener.enterNamedQuery(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitNamedQuery" ):
-                listener.exitNamedQuery(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNamedQuery" ):
                 return visitor.visitNamedQuery(self)
@@ -14116,14 +12940,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_tableProvider
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTableProvider" ):
-                listener.enterTableProvider(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTableProvider" ):
-                listener.exitTableProvider(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTableProvider" ):
@@ -14224,14 +13040,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_createTableClauses
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCreateTableClauses" ):
-                listener.enterCreateTableClauses(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCreateTableClauses" ):
-                listener.exitCreateTableClauses(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCreateTableClauses" ):
                 return visitor.visitCreateTableClauses(self)
@@ -14319,14 +13127,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_tablePropertyList
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTablePropertyList" ):
-                listener.enterTablePropertyList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTablePropertyList" ):
-                listener.exitTablePropertyList(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTablePropertyList" ):
                 return visitor.visitTablePropertyList(self)
@@ -14392,14 +13192,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_tableProperty
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTableProperty" ):
-                listener.enterTableProperty(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTableProperty" ):
-                listener.exitTableProperty(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTableProperty" ):
                 return visitor.visitTableProperty(self)
@@ -14461,14 +13253,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_tablePropertyKey
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTablePropertyKey" ):
-                listener.enterTablePropertyKey(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTablePropertyKey" ):
-                listener.exitTablePropertyKey(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTablePropertyKey" ):
@@ -14544,14 +13328,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_tablePropertyValue
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTablePropertyValue" ):
-                listener.enterTablePropertyValue(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTablePropertyValue" ):
-                listener.exitTablePropertyValue(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTablePropertyValue" ):
                 return visitor.visitTablePropertyValue(self)
@@ -14617,14 +13393,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_constantList
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterConstantList" ):
-                listener.enterConstantList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitConstantList" ):
-                listener.exitConstantList(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitConstantList" ):
                 return visitor.visitConstantList(self)
@@ -14683,14 +13451,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_nestedConstantList
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterNestedConstantList" ):
-                listener.enterNestedConstantList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitNestedConstantList" ):
-                listener.exitNestedConstantList(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNestedConstantList" ):
@@ -14760,14 +13520,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_createFileFormat
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCreateFileFormat" ):
-                listener.enterCreateFileFormat(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCreateFileFormat" ):
-                listener.exitCreateFileFormat(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCreateFileFormat" ):
@@ -14850,14 +13602,6 @@ class fugue_sqlParser ( Parser ):
             else:
                 return self.getToken(fugue_sqlParser.STRING, i)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTableFileFormat" ):
-                listener.enterTableFileFormat(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTableFileFormat" ):
-                listener.exitTableFileFormat(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTableFileFormat" ):
                 return visitor.visitTableFileFormat(self)
@@ -14874,14 +13618,6 @@ class fugue_sqlParser ( Parser ):
         def identifier(self):
             return self.getTypedRuleContext(fugue_sqlParser.IdentifierContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterGenericFileFormat" ):
-                listener.enterGenericFileFormat(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitGenericFileFormat" ):
-                listener.exitGenericFileFormat(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitGenericFileFormat" ):
@@ -14951,14 +13687,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_storageHandler
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterStorageHandler" ):
-                listener.enterStorageHandler(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitStorageHandler" ):
-                listener.exitStorageHandler(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitStorageHandler" ):
                 return visitor.visitStorageHandler(self)
@@ -15012,14 +13740,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_resource
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterResource" ):
-                listener.enterResource(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitResource" ):
-                listener.exitResource(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitResource" ):
@@ -15085,14 +13805,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.WhereClauseContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDeleteFromTable" ):
-                listener.enterDeleteFromTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDeleteFromTable" ):
-                listener.exitDeleteFromTable(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDeleteFromTable" ):
                 return visitor.visitDeleteFromTable(self)
@@ -15116,14 +13828,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.QueryOrganizationContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSingleInsertQuery" ):
-                listener.enterSingleInsertQuery(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSingleInsertQuery" ):
-                listener.exitSingleInsertQuery(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSingleInsertQuery" ):
                 return visitor.visitSingleInsertQuery(self)
@@ -15146,14 +13850,6 @@ class fugue_sqlParser ( Parser ):
             else:
                 return self.getTypedRuleContext(fugue_sqlParser.MultiInsertQueryBodyContext,i)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterMultiInsertQuery" ):
-                listener.enterMultiInsertQuery(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitMultiInsertQuery" ):
-                listener.exitMultiInsertQuery(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitMultiInsertQuery" ):
@@ -15182,14 +13878,6 @@ class fugue_sqlParser ( Parser ):
         def whereClause(self):
             return self.getTypedRuleContext(fugue_sqlParser.WhereClauseContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterUpdateTable" ):
-                listener.enterUpdateTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitUpdateTable" ):
-                listener.exitUpdateTable(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitUpdateTable" ):
@@ -15248,14 +13936,6 @@ class fugue_sqlParser ( Parser ):
             else:
                 return self.getTypedRuleContext(fugue_sqlParser.NotMatchedClauseContext,i)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterMergeIntoTable" ):
-                listener.enterMergeIntoTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitMergeIntoTable" ):
-                listener.exitMergeIntoTable(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitMergeIntoTable" ):
@@ -15471,14 +14151,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_queryOrganization
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterQueryOrganization" ):
-                listener.enterQueryOrganization(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitQueryOrganization" ):
-                listener.exitQueryOrganization(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitQueryOrganization" ):
                 return visitor.visitQueryOrganization(self)
@@ -15658,14 +14330,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_multiInsertQueryBody
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterMultiInsertQueryBody" ):
-                listener.enterMultiInsertQueryBody(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitMultiInsertQueryBody" ):
-                listener.exitMultiInsertQueryBody(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitMultiInsertQueryBody" ):
                 return visitor.visitMultiInsertQueryBody(self)
@@ -15719,14 +14383,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.QueryPrimaryContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterQueryTermDefault" ):
-                listener.enterQueryTermDefault(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitQueryTermDefault" ):
-                listener.exitQueryTermDefault(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitQueryTermDefault" ):
                 return visitor.visitQueryTermDefault(self)
@@ -15760,14 +14416,6 @@ class fugue_sqlParser ( Parser ):
         def setQuantifier(self):
             return self.getTypedRuleContext(fugue_sqlParser.SetQuantifierContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSetOperation" ):
-                listener.enterSetOperation(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSetOperation" ):
-                listener.exitSetOperation(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSetOperation" ):
@@ -15935,14 +14583,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.QuerySpecificationContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterQueryPrimaryDefault" ):
-                listener.enterQueryPrimaryDefault(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitQueryPrimaryDefault" ):
-                listener.exitQueryPrimaryDefault(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitQueryPrimaryDefault" ):
                 return visitor.visitQueryPrimaryDefault(self)
@@ -15960,14 +14600,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.InlineTableContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterInlineTableDefault1" ):
-                listener.enterInlineTableDefault1(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitInlineTableDefault1" ):
-                listener.exitInlineTableDefault1(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitInlineTableDefault1" ):
                 return visitor.visitInlineTableDefault1(self)
@@ -15984,14 +14616,6 @@ class fugue_sqlParser ( Parser ):
         def fromStatement(self):
             return self.getTypedRuleContext(fugue_sqlParser.FromStatementContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFromStmt" ):
-                listener.enterFromStmt(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFromStmt" ):
-                listener.exitFromStmt(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFromStmt" ):
@@ -16011,14 +14635,6 @@ class fugue_sqlParser ( Parser ):
         def multipartIdentifier(self):
             return self.getTypedRuleContext(fugue_sqlParser.MultipartIdentifierContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTable" ):
-                listener.enterTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTable" ):
-                listener.exitTable(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTable" ):
@@ -16104,14 +14720,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_sortItem
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSortItem" ):
-                listener.enterSortItem(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSortItem" ):
-                listener.exitSortItem(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSortItem" ):
                 return visitor.visitSortItem(self)
@@ -16188,14 +14796,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fromStatement
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFromStatement" ):
-                listener.enterFromStatement(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFromStatement" ):
-                listener.exitFromStatement(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFromStatement" ):
@@ -16280,14 +14880,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fromStatementBody
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFromStatementBody" ):
-                listener.enterFromStatementBody(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFromStatementBody" ):
-                listener.exitFromStatementBody(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFromStatementBody" ):
@@ -16430,14 +15022,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.WindowClauseContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRegularQuerySpecification" ):
-                listener.enterRegularQuerySpecification(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRegularQuerySpecification" ):
-                listener.exitRegularQuerySpecification(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRegularQuerySpecification" ):
                 return visitor.visitRegularQuerySpecification(self)
@@ -16460,14 +15044,6 @@ class fugue_sqlParser ( Parser ):
         def whereClause(self):
             return self.getTypedRuleContext(fugue_sqlParser.WhereClauseContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTransformQuerySpecification" ):
-                listener.enterTransformQuerySpecification(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTransformQuerySpecification" ):
-                listener.exitTransformQuerySpecification(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTransformQuerySpecification" ):
@@ -16640,14 +15216,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_transformClause
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTransformClause" ):
-                listener.enterTransformClause(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTransformClause" ):
-                listener.exitTransformClause(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTransformClause" ):
                 return visitor.visitTransformClause(self)
@@ -16815,14 +15383,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_selectClause
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSelectClause" ):
-                listener.enterSelectClause(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSelectClause" ):
-                listener.exitSelectClause(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSelectClause" ):
                 return visitor.visitSelectClause(self)
@@ -16887,14 +15447,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_setClause
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSetClause" ):
-                listener.enterSetClause(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSetClause" ):
-                listener.exitSetClause(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSetClause" ):
                 return visitor.visitSetClause(self)
@@ -16952,14 +15504,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_matchedClause
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterMatchedClause" ):
-                listener.enterMatchedClause(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitMatchedClause" ):
-                listener.exitMatchedClause(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitMatchedClause" ):
@@ -17037,14 +15581,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_notMatchedClause
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterNotMatchedClause" ):
-                listener.enterNotMatchedClause(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitNotMatchedClause" ):
-                listener.exitNotMatchedClause(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNotMatchedClause" ):
                 return visitor.visitNotMatchedClause(self)
@@ -17114,14 +15650,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_matchedAction
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterMatchedAction" ):
-                listener.enterMatchedAction(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitMatchedAction" ):
-                listener.exitMatchedAction(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitMatchedAction" ):
@@ -17205,14 +15733,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_notMatchedAction
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterNotMatchedAction" ):
-                listener.enterNotMatchedAction(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitNotMatchedAction" ):
-                listener.exitNotMatchedAction(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNotMatchedAction" ):
@@ -17298,14 +15818,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_assignmentList
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAssignmentList" ):
-                listener.enterAssignmentList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAssignmentList" ):
-                listener.exitAssignmentList(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAssignmentList" ):
                 return visitor.visitAssignmentList(self)
@@ -17367,14 +15879,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_assignment
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAssignment" ):
-                listener.enterAssignment(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAssignment" ):
-                listener.exitAssignment(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAssignment" ):
                 return visitor.visitAssignment(self)
@@ -17421,14 +15925,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_whereClause
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterWhereClause" ):
-                listener.enterWhereClause(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitWhereClause" ):
-                listener.exitWhereClause(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitWhereClause" ):
                 return visitor.visitWhereClause(self)
@@ -17472,14 +15968,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_havingClause
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterHavingClause" ):
-                listener.enterHavingClause(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitHavingClause" ):
-                listener.exitHavingClause(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitHavingClause" ):
@@ -17526,14 +16014,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_hint
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterHint" ):
-                listener.enterHint(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitHint" ):
-                listener.exitHint(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitHint" ):
@@ -17608,14 +16088,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_hintStatement
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterHintStatement" ):
-                listener.enterHintStatement(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitHintStatement" ):
-                listener.exitHintStatement(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitHintStatement" ):
@@ -17706,14 +16178,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_fromClause
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFromClause" ):
-                listener.enterFromClause(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFromClause" ):
-                listener.exitFromClause(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFromClause" ):
@@ -17821,14 +16285,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_aggregationClause
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAggregationClause" ):
-                listener.enterAggregationClause(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAggregationClause" ):
-                listener.exitAggregationClause(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAggregationClause" ):
@@ -17969,14 +16425,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_groupingSet
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterGroupingSet" ):
-                listener.enterGroupingSet(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitGroupingSet" ):
-                listener.exitGroupingSet(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitGroupingSet" ):
                 return visitor.visitGroupingSet(self)
@@ -18075,14 +16523,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_pivotClause
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPivotClause" ):
-                listener.enterPivotClause(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPivotClause" ):
-                listener.exitPivotClause(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitPivotClause" ):
                 return visitor.visitPivotClause(self)
@@ -18159,14 +16599,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_pivotColumn
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPivotColumn" ):
-                listener.enterPivotColumn(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPivotColumn" ):
-                listener.exitPivotColumn(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitPivotColumn" ):
@@ -18246,14 +16678,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_pivotValue
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPivotValue" ):
-                listener.enterPivotValue(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPivotValue" ):
-                listener.exitPivotValue(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitPivotValue" ):
@@ -18338,14 +16762,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_lateralView
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterLateralView" ):
-                listener.enterLateralView(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitLateralView" ):
-                listener.exitLateralView(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitLateralView" ):
@@ -18458,14 +16874,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_setQuantifier
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSetQuantifier" ):
-                listener.enterSetQuantifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSetQuantifier" ):
-                listener.exitSetQuantifier(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSetQuantifier" ):
                 return visitor.visitSetQuantifier(self)
@@ -18517,14 +16925,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_relation
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRelation" ):
-                listener.enterRelation(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRelation" ):
-                listener.exitRelation(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRelation" ):
@@ -18590,14 +16990,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_joinRelation
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterJoinRelation" ):
-                listener.enterJoinRelation(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitJoinRelation" ):
-                listener.exitJoinRelation(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitJoinRelation" ):
@@ -18688,14 +17080,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_joinType
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterJoinType" ):
-                listener.enterJoinType(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitJoinType" ):
-                listener.exitJoinType(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitJoinType" ):
@@ -18836,14 +17220,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_joinCriteria
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterJoinCriteria" ):
-                listener.enterJoinCriteria(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitJoinCriteria" ):
-                listener.exitJoinCriteria(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitJoinCriteria" ):
                 return visitor.visitJoinCriteria(self)
@@ -18902,14 +17278,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_sample
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSample" ):
-                listener.enterSample(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSample" ):
-                listener.exitSample(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSample" ):
@@ -18977,14 +17345,6 @@ class fugue_sqlParser ( Parser ):
         def ROWS(self):
             return self.getToken(fugue_sqlParser.ROWS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSampleByRows" ):
-                listener.enterSampleByRows(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSampleByRows" ):
-                listener.exitSampleByRows(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSampleByRows" ):
                 return visitor.visitSampleByRows(self)
@@ -19008,14 +17368,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.DECIMAL_VALUE, 0)
         def MINUS(self):
             return self.getToken(fugue_sqlParser.MINUS, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSampleByPercentile" ):
-                listener.enterSampleByPercentile(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSampleByPercentile" ):
-                listener.exitSampleByPercentile(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSampleByPercentile" ):
@@ -19053,14 +17405,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.QualifiedNameContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSampleByBucket" ):
-                listener.enterSampleByBucket(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSampleByBucket" ):
-                listener.exitSampleByBucket(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSampleByBucket" ):
                 return visitor.visitSampleByBucket(self)
@@ -19078,14 +17422,6 @@ class fugue_sqlParser ( Parser ):
         def expression(self):
             return self.getTypedRuleContext(fugue_sqlParser.ExpressionContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSampleByBytes" ):
-                listener.enterSampleByBytes(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSampleByBytes" ):
-                listener.exitSampleByBytes(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSampleByBytes" ):
@@ -19207,14 +17543,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_identifierList
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterIdentifierList" ):
-                listener.enterIdentifierList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitIdentifierList" ):
-                listener.exitIdentifierList(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitIdentifierList" ):
                 return visitor.visitIdentifierList(self)
@@ -19262,14 +17590,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_identifierSeq
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterIdentifierSeq" ):
-                listener.enterIdentifierSeq(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitIdentifierSeq" ):
-                listener.exitIdentifierSeq(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitIdentifierSeq" ):
@@ -19327,14 +17647,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_orderedIdentifierList
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterOrderedIdentifierList" ):
-                listener.enterOrderedIdentifierList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitOrderedIdentifierList" ):
-                listener.exitOrderedIdentifierList(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitOrderedIdentifierList" ):
@@ -19400,14 +17712,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_orderedIdentifier
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterOrderedIdentifier" ):
-                listener.enterOrderedIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitOrderedIdentifier" ):
-                listener.exitOrderedIdentifier(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitOrderedIdentifier" ):
                 return visitor.visitOrderedIdentifier(self)
@@ -19464,14 +17768,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_identifierCommentList
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterIdentifierCommentList" ):
-                listener.enterIdentifierCommentList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitIdentifierCommentList" ):
-                listener.exitIdentifierCommentList(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitIdentifierCommentList" ):
@@ -19532,14 +17828,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_identifierComment
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterIdentifierComment" ):
-                listener.enterIdentifierComment(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitIdentifierComment" ):
-                listener.exitIdentifierComment(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitIdentifierComment" ):
@@ -19602,14 +17890,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.FunctionTableContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTableValuedFunction" ):
-                listener.enterTableValuedFunction(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTableValuedFunction" ):
-                listener.exitTableValuedFunction(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTableValuedFunction" ):
                 return visitor.visitTableValuedFunction(self)
@@ -19626,14 +17906,6 @@ class fugue_sqlParser ( Parser ):
         def inlineTable(self):
             return self.getTypedRuleContext(fugue_sqlParser.InlineTableContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterInlineTableDefault2" ):
-                listener.enterInlineTableDefault2(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitInlineTableDefault2" ):
-                listener.exitInlineTableDefault2(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitInlineTableDefault2" ):
@@ -19658,14 +17930,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.SampleContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAliasedRelation" ):
-                listener.enterAliasedRelation(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAliasedRelation" ):
-                listener.exitAliasedRelation(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAliasedRelation" ):
                 return visitor.visitAliasedRelation(self)
@@ -19688,14 +17952,6 @@ class fugue_sqlParser ( Parser ):
         def sample(self):
             return self.getTypedRuleContext(fugue_sqlParser.SampleContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAliasedQuery" ):
-                listener.enterAliasedQuery(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAliasedQuery" ):
-                listener.exitAliasedQuery(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAliasedQuery" ):
@@ -19720,14 +17976,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.SampleContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTableName" ):
-                listener.enterTableName(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTableName" ):
-                listener.exitTableName(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTableName" ):
                 return visitor.visitTableName(self)
@@ -19750,14 +17998,6 @@ class fugue_sqlParser ( Parser ):
         def sample(self):
             return self.getTypedRuleContext(fugue_sqlParser.SampleContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAliasedFugueNested" ):
-                listener.enterAliasedFugueNested(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAliasedFugueNested" ):
-                listener.exitAliasedFugueNested(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAliasedFugueNested" ):
@@ -19902,14 +18142,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_inlineTable
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterInlineTable" ):
-                listener.enterInlineTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitInlineTable" ):
-                listener.exitInlineTable(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitInlineTable" ):
                 return visitor.visitInlineTable(self)
@@ -19977,14 +18209,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_functionTable
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFunctionTable" ):
-                listener.enterFunctionTable(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFunctionTable" ):
-                listener.exitFunctionTable(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFunctionTable" ):
@@ -20058,14 +18282,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_tableAlias
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTableAlias" ):
-                listener.enterTableAlias(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTableAlias" ):
-                listener.exitTableAlias(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTableAlias" ):
@@ -20155,14 +18371,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.TablePropertyListContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRowFormatSerde" ):
-                listener.enterRowFormatSerde(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRowFormatSerde" ):
-                listener.exitRowFormatSerde(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRowFormatSerde" ):
                 return visitor.visitRowFormatSerde(self)
@@ -20223,14 +18431,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getToken(fugue_sqlParser.STRING, i)
         def ESCAPED(self):
             return self.getToken(fugue_sqlParser.ESCAPED, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRowFormatDelimited" ):
-                listener.enterRowFormatDelimited(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRowFormatDelimited" ):
-                listener.exitRowFormatDelimited(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRowFormatDelimited" ):
@@ -20396,14 +18596,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_multipartIdentifierList
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterMultipartIdentifierList" ):
-                listener.enterMultipartIdentifierList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitMultipartIdentifierList" ):
-                listener.exitMultipartIdentifierList(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitMultipartIdentifierList" ):
                 return visitor.visitMultipartIdentifierList(self)
@@ -20460,14 +18652,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_multipartIdentifier
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterMultipartIdentifier" ):
-                listener.enterMultipartIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitMultipartIdentifier" ):
-                listener.exitMultipartIdentifier(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitMultipartIdentifier" ):
@@ -20528,14 +18712,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_tableIdentifier
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTableIdentifier" ):
-                listener.enterTableIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTableIdentifier" ):
-                listener.exitTableIdentifier(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTableIdentifier" ):
                 return visitor.visitTableIdentifier(self)
@@ -20589,14 +18765,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_functionIdentifier
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFunctionIdentifier" ):
-                listener.enterFunctionIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFunctionIdentifier" ):
-                listener.exitFunctionIdentifier(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFunctionIdentifier" ):
@@ -20658,14 +18826,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_namedExpression
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterNamedExpression" ):
-                listener.enterNamedExpression(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitNamedExpression" ):
-                listener.exitNamedExpression(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNamedExpression" ):
@@ -20737,14 +18897,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_namedExpressionSeq
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterNamedExpressionSeq" ):
-                listener.enterNamedExpressionSeq(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitNamedExpressionSeq" ):
-                listener.exitNamedExpressionSeq(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNamedExpressionSeq" ):
                 return visitor.visitNamedExpressionSeq(self)
@@ -20801,14 +18953,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_transformList
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTransformList" ):
-                listener.enterTransformList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTransformList" ):
-                listener.exitTransformList(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTransformList" ):
@@ -20881,14 +19025,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.QualifiedNameContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterIdentityTransform" ):
-                listener.enterIdentityTransform(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitIdentityTransform" ):
-                listener.exitIdentityTransform(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitIdentityTransform" ):
                 return visitor.visitIdentityTransform(self)
@@ -20914,14 +19050,6 @@ class fugue_sqlParser ( Parser ):
             else:
                 return self.getTypedRuleContext(fugue_sqlParser.TransformArgumentContext,i)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterApplyTransform" ):
-                listener.enterApplyTransform(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitApplyTransform" ):
-                listener.exitApplyTransform(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitApplyTransform" ):
@@ -21001,14 +19129,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_transformArgument
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTransformArgument" ):
-                listener.enterTransformArgument(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTransformArgument" ):
-                listener.exitTransformArgument(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTransformArgument" ):
                 return visitor.visitTransformArgument(self)
@@ -21060,14 +19180,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_expression
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterExpression" ):
-                listener.enterExpression(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitExpression" ):
-                listener.exitExpression(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitExpression" ):
@@ -21122,14 +19234,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.BooleanExpressionContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterLogicalNot" ):
-                listener.enterLogicalNot(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitLogicalNot" ):
-                listener.exitLogicalNot(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitLogicalNot" ):
                 return visitor.visitLogicalNot(self)
@@ -21150,14 +19254,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.PredicateContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPredicated" ):
-                listener.enterPredicated(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPredicated" ):
-                listener.exitPredicated(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitPredicated" ):
                 return visitor.visitPredicated(self)
@@ -21176,14 +19272,6 @@ class fugue_sqlParser ( Parser ):
         def query(self):
             return self.getTypedRuleContext(fugue_sqlParser.QueryContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterExists" ):
-                listener.enterExists(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitExists" ):
-                listener.exitExists(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitExists" ):
@@ -21211,14 +19299,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.AND, 0)
         def OR(self):
             return self.getToken(fugue_sqlParser.OR, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterLogicalBinary" ):
-                listener.enterLogicalBinary(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitLogicalBinary" ):
-                listener.exitLogicalBinary(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitLogicalBinary" ):
@@ -21423,14 +19503,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_predicate
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPredicate" ):
-                listener.enterPredicate(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPredicate" ):
-                listener.exitPredicate(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitPredicate" ):
@@ -21711,14 +19783,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.PrimaryExpressionContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterValueExpressionDefault" ):
-                listener.enterValueExpressionDefault(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitValueExpressionDefault" ):
-                listener.exitValueExpressionDefault(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitValueExpressionDefault" ):
                 return visitor.visitValueExpressionDefault(self)
@@ -21743,14 +19807,6 @@ class fugue_sqlParser ( Parser ):
             else:
                 return self.getTypedRuleContext(fugue_sqlParser.ValueExpressionContext,i)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterComparison" ):
-                listener.enterComparison(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitComparison" ):
-                listener.exitComparison(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitComparison" ):
@@ -21795,14 +19851,6 @@ class fugue_sqlParser ( Parser ):
         def PIPE(self):
             return self.getToken(fugue_sqlParser.PIPE, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterArithmeticBinary" ):
-                listener.enterArithmeticBinary(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitArithmeticBinary" ):
-                listener.exitArithmeticBinary(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitArithmeticBinary" ):
                 return visitor.visitArithmeticBinary(self)
@@ -21826,14 +19874,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.PLUS, 0)
         def TILDE(self):
             return self.getToken(fugue_sqlParser.TILDE, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterArithmeticUnary" ):
-                listener.enterArithmeticUnary(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitArithmeticUnary" ):
-                listener.exitArithmeticUnary(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitArithmeticUnary" ):
@@ -22036,14 +20076,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getTypedRuleContext(fugue_sqlParser.NamedExpressionContext,i)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterStruct" ):
-                listener.enterStruct(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitStruct" ):
-                listener.exitStruct(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitStruct" ):
                 return visitor.visitStruct(self)
@@ -22065,14 +20097,6 @@ class fugue_sqlParser ( Parser ):
         def identifier(self):
             return self.getTypedRuleContext(fugue_sqlParser.IdentifierContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDereference" ):
-                listener.enterDereference(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDereference" ):
-                listener.exitDereference(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDereference" ):
@@ -22108,14 +20132,6 @@ class fugue_sqlParser ( Parser ):
         def ELSE(self):
             return self.getToken(fugue_sqlParser.ELSE, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSimpleCase" ):
-                listener.enterSimpleCase(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSimpleCase" ):
-                listener.exitSimpleCase(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSimpleCase" ):
                 return visitor.visitSimpleCase(self)
@@ -22132,14 +20148,6 @@ class fugue_sqlParser ( Parser ):
         def identifier(self):
             return self.getTypedRuleContext(fugue_sqlParser.IdentifierContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterColumnReference" ):
-                listener.enterColumnReference(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitColumnReference" ):
-                listener.exitColumnReference(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitColumnReference" ):
@@ -22160,14 +20168,6 @@ class fugue_sqlParser ( Parser ):
             else:
                 return self.getTypedRuleContext(fugue_sqlParser.NamedExpressionContext,i)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRowConstructor" ):
-                listener.enterRowConstructor(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRowConstructor" ):
-                listener.exitRowConstructor(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRowConstructor" ):
@@ -22192,14 +20192,6 @@ class fugue_sqlParser ( Parser ):
         def NULLS(self):
             return self.getToken(fugue_sqlParser.NULLS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterLast" ):
-                listener.enterLast(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitLast" ):
-                listener.exitLast(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitLast" ):
                 return visitor.visitLast(self)
@@ -22218,14 +20210,6 @@ class fugue_sqlParser ( Parser ):
         def qualifiedName(self):
             return self.getTypedRuleContext(fugue_sqlParser.QualifiedNameContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterStar" ):
-                listener.enterStar(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitStar" ):
-                listener.exitStar(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitStar" ):
@@ -22259,14 +20243,6 @@ class fugue_sqlParser ( Parser ):
         def FOR(self):
             return self.getToken(fugue_sqlParser.FOR, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterOverlay" ):
-                listener.enterOverlay(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitOverlay" ):
-                listener.exitOverlay(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitOverlay" ):
                 return visitor.visitOverlay(self)
@@ -22289,14 +20265,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.ValueExpressionContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSubscript" ):
-                listener.enterSubscript(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSubscript" ):
-                listener.exitSubscript(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSubscript" ):
                 return visitor.visitSubscript(self)
@@ -22313,14 +20281,6 @@ class fugue_sqlParser ( Parser ):
         def query(self):
             return self.getTypedRuleContext(fugue_sqlParser.QueryContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSubqueryExpression" ):
-                listener.enterSubqueryExpression(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSubqueryExpression" ):
-                listener.exitSubqueryExpression(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSubqueryExpression" ):
@@ -22353,14 +20313,6 @@ class fugue_sqlParser ( Parser ):
         def FOR(self):
             return self.getToken(fugue_sqlParser.FOR, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSubstring" ):
-                listener.enterSubstring(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSubstring" ):
-                listener.exitSubstring(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSubstring" ):
                 return visitor.visitSubstring(self)
@@ -22379,14 +20331,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.CURRENT_DATE, 0)
         def CURRENT_TIMESTAMP(self):
             return self.getToken(fugue_sqlParser.CURRENT_TIMESTAMP, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCurrentDatetime" ):
-                listener.enterCurrentDatetime(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCurrentDatetime" ):
-                listener.exitCurrentDatetime(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCurrentDatetime" ):
@@ -22412,14 +20356,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.DataTypeContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterCast" ):
-                listener.enterCast(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitCast" ):
-                listener.exitCast(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitCast" ):
                 return visitor.visitCast(self)
@@ -22436,14 +20372,6 @@ class fugue_sqlParser ( Parser ):
         def constant(self):
             return self.getTypedRuleContext(fugue_sqlParser.ConstantContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterConstantDefault" ):
-                listener.enterConstantDefault(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitConstantDefault" ):
-                listener.exitConstantDefault(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitConstantDefault" ):
@@ -22468,14 +20396,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.ExpressionContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterLambda" ):
-                listener.enterLambda(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitLambda" ):
-                listener.exitLambda(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitLambda" ):
                 return visitor.visitLambda(self)
@@ -22492,14 +20412,6 @@ class fugue_sqlParser ( Parser ):
         def expression(self):
             return self.getTypedRuleContext(fugue_sqlParser.ExpressionContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterParenthesizedExpression" ):
-                listener.enterParenthesizedExpression(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitParenthesizedExpression" ):
-                listener.exitParenthesizedExpression(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitParenthesizedExpression" ):
@@ -22526,14 +20438,6 @@ class fugue_sqlParser ( Parser ):
         def valueExpression(self):
             return self.getTypedRuleContext(fugue_sqlParser.ValueExpressionContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterExtract" ):
-                listener.enterExtract(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitExtract" ):
-                listener.exitExtract(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitExtract" ):
@@ -22567,14 +20471,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.LEADING, 0)
         def TRAILING(self):
             return self.getToken(fugue_sqlParser.TRAILING, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTrim" ):
-                listener.enterTrim(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTrim" ):
-                listener.exitTrim(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTrim" ):
@@ -22617,14 +20513,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.SetQuantifierContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFunctionCall" ):
-                listener.enterFunctionCall(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFunctionCall" ):
-                listener.exitFunctionCall(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFunctionCall" ):
                 return visitor.visitFunctionCall(self)
@@ -22655,14 +20543,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.ExpressionContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSearchedCase" ):
-                listener.enterSearchedCase(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSearchedCase" ):
-                listener.exitSearchedCase(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSearchedCase" ):
                 return visitor.visitSearchedCase(self)
@@ -22689,14 +20569,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getTypedRuleContext(fugue_sqlParser.ValueExpressionContext,i)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPosition" ):
-                listener.enterPosition(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPosition" ):
-                listener.exitPosition(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitPosition" ):
                 return visitor.visitPosition(self)
@@ -22719,14 +20591,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.IGNORE, 0)
         def NULLS(self):
             return self.getToken(fugue_sqlParser.NULLS, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFirst" ):
-                listener.enterFirst(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFirst" ):
-                listener.exitFirst(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFirst" ):
@@ -23357,14 +21221,6 @@ class fugue_sqlParser ( Parser ):
         def NULL(self):
             return self.getToken(fugue_sqlParser.NULL, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterNullLiteral" ):
-                listener.enterNullLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitNullLiteral" ):
-                listener.exitNullLiteral(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNullLiteral" ):
                 return visitor.visitNullLiteral(self)
@@ -23383,14 +21239,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getTokens(fugue_sqlParser.STRING)
             else:
                 return self.getToken(fugue_sqlParser.STRING, i)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterStringLiteral" ):
-                listener.enterStringLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitStringLiteral" ):
-                listener.exitStringLiteral(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitStringLiteral" ):
@@ -23411,14 +21259,6 @@ class fugue_sqlParser ( Parser ):
         def STRING(self):
             return self.getToken(fugue_sqlParser.STRING, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTypeConstructor" ):
-                listener.enterTypeConstructor(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTypeConstructor" ):
-                listener.exitTypeConstructor(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTypeConstructor" ):
                 return visitor.visitTypeConstructor(self)
@@ -23435,14 +21275,6 @@ class fugue_sqlParser ( Parser ):
         def interval(self):
             return self.getTypedRuleContext(fugue_sqlParser.IntervalContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterIntervalLiteral" ):
-                listener.enterIntervalLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitIntervalLiteral" ):
-                listener.exitIntervalLiteral(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitIntervalLiteral" ):
@@ -23461,14 +21293,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.NumberContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterNumericLiteral" ):
-                listener.enterNumericLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitNumericLiteral" ):
-                listener.exitNumericLiteral(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNumericLiteral" ):
                 return visitor.visitNumericLiteral(self)
@@ -23485,14 +21309,6 @@ class fugue_sqlParser ( Parser ):
         def booleanValue(self):
             return self.getTypedRuleContext(fugue_sqlParser.BooleanValueContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterBooleanLiteral" ):
-                listener.enterBooleanLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitBooleanLiteral" ):
-                listener.exitBooleanLiteral(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitBooleanLiteral" ):
@@ -23610,14 +21426,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_comparisonOperator
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterComparisonOperator" ):
-                listener.enterComparisonOperator(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitComparisonOperator" ):
-                listener.exitComparisonOperator(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitComparisonOperator" ):
                 return visitor.visitComparisonOperator(self)
@@ -23702,14 +21510,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_comparisonEqualOperator
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterComparisonEqualOperator" ):
-                listener.enterComparisonEqualOperator(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitComparisonEqualOperator" ):
-                listener.exitComparisonEqualOperator(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitComparisonEqualOperator" ):
                 return visitor.visitComparisonEqualOperator(self)
@@ -23784,14 +21584,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_arithmeticOperator
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterArithmeticOperator" ):
-                listener.enterArithmeticOperator(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitArithmeticOperator" ):
-                listener.exitArithmeticOperator(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitArithmeticOperator" ):
                 return visitor.visitArithmeticOperator(self)
@@ -23845,14 +21637,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_predicateOperator
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPredicateOperator" ):
-                listener.enterPredicateOperator(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPredicateOperator" ):
-                listener.exitPredicateOperator(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitPredicateOperator" ):
                 return visitor.visitPredicateOperator(self)
@@ -23899,14 +21683,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_booleanValue
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterBooleanValue" ):
-                listener.enterBooleanValue(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitBooleanValue" ):
-                listener.exitBooleanValue(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitBooleanValue" ):
@@ -23959,14 +21735,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_interval
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterInterval" ):
-                listener.enterInterval(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitInterval" ):
-                listener.exitInterval(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitInterval" ):
@@ -24022,14 +21790,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_errorCapturingMultiUnitsInterval
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterErrorCapturingMultiUnitsInterval" ):
-                listener.enterErrorCapturingMultiUnitsInterval(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitErrorCapturingMultiUnitsInterval" ):
-                listener.exitErrorCapturingMultiUnitsInterval(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitErrorCapturingMultiUnitsInterval" ):
@@ -24087,14 +21847,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_multiUnitsInterval
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterMultiUnitsInterval" ):
-                listener.enterMultiUnitsInterval(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitMultiUnitsInterval" ):
-                listener.exitMultiUnitsInterval(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitMultiUnitsInterval" ):
@@ -24158,14 +21910,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_errorCapturingUnitToUnitInterval
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterErrorCapturingUnitToUnitInterval" ):
-                listener.enterErrorCapturingUnitToUnitInterval(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitErrorCapturingUnitToUnitInterval" ):
-                listener.exitErrorCapturingUnitToUnitInterval(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitErrorCapturingUnitToUnitInterval" ):
@@ -24231,14 +21975,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_unitToUnitInterval
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterUnitToUnitInterval" ):
-                listener.enterUnitToUnitInterval(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitUnitToUnitInterval" ):
-                listener.exitUnitToUnitInterval(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitUnitToUnitInterval" ):
                 return visitor.visitUnitToUnitInterval(self)
@@ -24294,14 +22030,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_intervalValue
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterIntervalValue" ):
-                listener.enterIntervalValue(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitIntervalValue" ):
-                listener.exitIntervalValue(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitIntervalValue" ):
@@ -24391,14 +22119,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_intervalUnit
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterIntervalUnit" ):
-                listener.enterIntervalUnit(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitIntervalUnit" ):
-                listener.exitIntervalUnit(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitIntervalUnit" ):
@@ -24490,14 +22210,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_colPosition
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterColPosition" ):
-                listener.enterColPosition(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitColPosition" ):
-                listener.exitColPosition(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitColPosition" ):
                 return visitor.visitColPosition(self)
@@ -24584,14 +22296,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.ComplexColTypeListContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterComplexDataType" ):
-                listener.enterComplexDataType(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitComplexDataType" ):
-                listener.exitComplexDataType(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitComplexDataType" ):
                 return visitor.visitComplexDataType(self)
@@ -24613,14 +22317,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getTokens(fugue_sqlParser.INTEGER_VALUE)
             else:
                 return self.getToken(fugue_sqlParser.INTEGER_VALUE, i)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterPrimitiveDataType" ):
-                listener.enterPrimitiveDataType(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitPrimitiveDataType" ):
-                listener.exitPrimitiveDataType(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitPrimitiveDataType" ):
@@ -24757,14 +22453,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_qualifiedColTypeWithPositionList
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterQualifiedColTypeWithPositionList" ):
-                listener.enterQualifiedColTypeWithPositionList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitQualifiedColTypeWithPositionList" ):
-                listener.exitQualifiedColTypeWithPositionList(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitQualifiedColTypeWithPositionList" ):
                 return visitor.visitQualifiedColTypeWithPositionList(self)
@@ -24835,14 +22523,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_qualifiedColTypeWithPosition
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterQualifiedColTypeWithPosition" ):
-                listener.enterQualifiedColTypeWithPosition(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitQualifiedColTypeWithPosition" ):
-                listener.exitQualifiedColTypeWithPosition(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitQualifiedColTypeWithPosition" ):
@@ -24915,14 +22595,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_colTypeList
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterColTypeList" ):
-                listener.enterColTypeList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitColTypeList" ):
-                listener.exitColTypeList(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitColTypeList" ):
                 return visitor.visitColTypeList(self)
@@ -24990,14 +22662,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_colType
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterColType" ):
-                listener.enterColType(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitColType" ):
-                listener.exitColType(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitColType" ):
                 return visitor.visitColType(self)
@@ -25059,14 +22723,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_complexColTypeList
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterComplexColTypeList" ):
-                listener.enterComplexColTypeList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitComplexColTypeList" ):
-                listener.exitComplexColTypeList(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitComplexColTypeList" ):
@@ -25133,14 +22789,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_complexColType
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterComplexColType" ):
-                listener.enterComplexColType(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitComplexColType" ):
-                listener.exitComplexColType(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitComplexColType" ):
@@ -25215,14 +22863,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_whenClause
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterWhenClause" ):
-                listener.enterWhenClause(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitWhenClause" ):
-                listener.exitWhenClause(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitWhenClause" ):
                 return visitor.visitWhenClause(self)
@@ -25273,14 +22913,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_windowClause
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterWindowClause" ):
-                listener.enterWindowClause(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitWindowClause" ):
-                listener.exitWindowClause(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitWindowClause" ):
@@ -25344,14 +22976,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_namedWindow
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterNamedWindow" ):
-                listener.enterNamedWindow(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitNamedWindow" ):
-                listener.exitNamedWindow(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNamedWindow" ):
                 return visitor.visitNamedWindow(self)
@@ -25409,14 +23033,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.ErrorCapturingIdentifierContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterWindowRef" ):
-                listener.enterWindowRef(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitWindowRef" ):
-                listener.exitWindowRef(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitWindowRef" ):
                 return visitor.visitWindowRef(self)
@@ -25462,14 +23078,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.ORDER, 0)
         def SORT(self):
             return self.getToken(fugue_sqlParser.SORT, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterWindowDef" ):
-                listener.enterWindowDef(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitWindowDef" ):
-                listener.exitWindowDef(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitWindowDef" ):
@@ -25654,14 +23262,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_windowFrame
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterWindowFrame" ):
-                listener.enterWindowFrame(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitWindowFrame" ):
-                listener.exitWindowFrame(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitWindowFrame" ):
                 return visitor.visitWindowFrame(self)
@@ -25762,14 +23362,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_frameBound
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFrameBound" ):
-                listener.enterFrameBound(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFrameBound" ):
-                listener.exitFrameBound(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFrameBound" ):
                 return visitor.visitFrameBound(self)
@@ -25850,14 +23442,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_qualifiedNameList
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterQualifiedNameList" ):
-                listener.enterQualifiedNameList(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitQualifiedNameList" ):
-                listener.exitQualifiedNameList(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitQualifiedNameList" ):
                 return visitor.visitQualifiedNameList(self)
@@ -25918,14 +23502,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_functionName
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterFunctionName" ):
-                listener.enterFunctionName(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitFunctionName" ):
-                listener.exitFunctionName(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitFunctionName" ):
@@ -25994,14 +23570,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_qualifiedName
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterQualifiedName" ):
-                listener.enterQualifiedName(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitQualifiedName" ):
-                listener.exitQualifiedName(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitQualifiedName" ):
                 return visitor.visitQualifiedName(self)
@@ -26057,14 +23625,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_errorCapturingIdentifier
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterErrorCapturingIdentifier" ):
-                listener.enterErrorCapturingIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitErrorCapturingIdentifier" ):
-                listener.exitErrorCapturingIdentifier(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitErrorCapturingIdentifier" ):
@@ -26128,14 +23688,6 @@ class fugue_sqlParser ( Parser ):
                 return self.getTypedRuleContext(fugue_sqlParser.IdentifierContext,i)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterErrorIdent" ):
-                listener.enterErrorIdent(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitErrorIdent" ):
-                listener.exitErrorIdent(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitErrorIdent" ):
                 return visitor.visitErrorIdent(self)
@@ -26149,14 +23701,6 @@ class fugue_sqlParser ( Parser ):
             super().__init__(parser)
             self.copyFrom(ctx)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRealIdent" ):
-                listener.enterRealIdent(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRealIdent" ):
-                listener.exitRealIdent(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitRealIdent" ):
@@ -26228,14 +23772,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_identifier
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterIdentifier" ):
-                listener.enterIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitIdentifier" ):
-                listener.exitIdentifier(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitIdentifier" ):
                 return visitor.visitIdentifier(self)
@@ -26305,14 +23841,6 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.QuotedIdentifierContext,0)
 
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterQuotedIdentifierAlternative" ):
-                listener.enterQuotedIdentifierAlternative(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitQuotedIdentifierAlternative" ):
-                listener.exitQuotedIdentifierAlternative(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitQuotedIdentifierAlternative" ):
                 return visitor.visitQuotedIdentifierAlternative(self)
@@ -26334,14 +23862,6 @@ class fugue_sqlParser ( Parser ):
         def nonReserved(self):
             return self.getTypedRuleContext(fugue_sqlParser.NonReservedContext,0)
 
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterUnquotedIdentifier" ):
-                listener.enterUnquotedIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitUnquotedIdentifier" ):
-                listener.exitUnquotedIdentifier(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitUnquotedIdentifier" ):
@@ -26417,14 +23937,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_quotedIdentifier
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterQuotedIdentifier" ):
-                listener.enterQuotedIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitQuotedIdentifier" ):
-                listener.exitQuotedIdentifier(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitQuotedIdentifier" ):
                 return visitor.visitQuotedIdentifier(self)
@@ -26478,14 +23990,6 @@ class fugue_sqlParser ( Parser ):
         def MINUS(self):
             return self.getToken(fugue_sqlParser.MINUS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDecimalLiteral" ):
-                listener.enterDecimalLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDecimalLiteral" ):
-                listener.exitDecimalLiteral(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDecimalLiteral" ):
                 return visitor.visitDecimalLiteral(self)
@@ -26504,14 +24008,6 @@ class fugue_sqlParser ( Parser ):
         def MINUS(self):
             return self.getToken(fugue_sqlParser.MINUS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterBigIntLiteral" ):
-                listener.enterBigIntLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitBigIntLiteral" ):
-                listener.exitBigIntLiteral(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitBigIntLiteral" ):
                 return visitor.visitBigIntLiteral(self)
@@ -26529,14 +24025,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.TINYINT_LITERAL, 0)
         def MINUS(self):
             return self.getToken(fugue_sqlParser.MINUS, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterTinyIntLiteral" ):
-                listener.enterTinyIntLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitTinyIntLiteral" ):
-                listener.exitTinyIntLiteral(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitTinyIntLiteral" ):
@@ -26558,14 +24046,6 @@ class fugue_sqlParser ( Parser ):
         def MINUS(self):
             return self.getToken(fugue_sqlParser.MINUS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterLegacyDecimalLiteral" ):
-                listener.enterLegacyDecimalLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitLegacyDecimalLiteral" ):
-                listener.exitLegacyDecimalLiteral(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitLegacyDecimalLiteral" ):
                 return visitor.visitLegacyDecimalLiteral(self)
@@ -26583,14 +24063,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.BIGDECIMAL_LITERAL, 0)
         def MINUS(self):
             return self.getToken(fugue_sqlParser.MINUS, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterBigDecimalLiteral" ):
-                listener.enterBigDecimalLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitBigDecimalLiteral" ):
-                listener.exitBigDecimalLiteral(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitBigDecimalLiteral" ):
@@ -26610,14 +24082,6 @@ class fugue_sqlParser ( Parser ):
         def MINUS(self):
             return self.getToken(fugue_sqlParser.MINUS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterExponentLiteral" ):
-                listener.enterExponentLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitExponentLiteral" ):
-                listener.exitExponentLiteral(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitExponentLiteral" ):
                 return visitor.visitExponentLiteral(self)
@@ -26635,14 +24099,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.DOUBLE_LITERAL, 0)
         def MINUS(self):
             return self.getToken(fugue_sqlParser.MINUS, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterDoubleLiteral" ):
-                listener.enterDoubleLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitDoubleLiteral" ):
-                listener.exitDoubleLiteral(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitDoubleLiteral" ):
@@ -26662,14 +24118,6 @@ class fugue_sqlParser ( Parser ):
         def MINUS(self):
             return self.getToken(fugue_sqlParser.MINUS, 0)
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterIntegerLiteral" ):
-                listener.enterIntegerLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitIntegerLiteral" ):
-                listener.exitIntegerLiteral(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitIntegerLiteral" ):
                 return visitor.visitIntegerLiteral(self)
@@ -26687,14 +24135,6 @@ class fugue_sqlParser ( Parser ):
             return self.getToken(fugue_sqlParser.SMALLINT_LITERAL, 0)
         def MINUS(self):
             return self.getToken(fugue_sqlParser.MINUS, 0)
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterSmallIntLiteral" ):
-                listener.enterSmallIntLiteral(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitSmallIntLiteral" ):
-                listener.exitSmallIntLiteral(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSmallIntLiteral" ):
@@ -26911,14 +24351,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_alterColumnAction
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAlterColumnAction" ):
-                listener.enterAlterColumnAction(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAlterColumnAction" ):
-                listener.exitAlterColumnAction(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAlterColumnAction" ):
@@ -27516,14 +24948,6 @@ class fugue_sqlParser ( Parser ):
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_ansiNonReserved
 
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterAnsiNonReserved" ):
-                listener.enterAnsiNonReserved(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitAnsiNonReserved" ):
-                listener.exitAnsiNonReserved(self)
-
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitAnsiNonReserved" ):
                 return visitor.visitAnsiNonReserved(self)
@@ -27609,14 +25033,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_strictNonReserved
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterStrictNonReserved" ):
-                listener.enterStrictNonReserved(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitStrictNonReserved" ):
-                listener.exitStrictNonReserved(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitStrictNonReserved" ):
@@ -28372,14 +25788,6 @@ class fugue_sqlParser ( Parser ):
 
         def getRuleIndex(self):
             return fugue_sqlParser.RULE_nonReserved
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterNonReserved" ):
-                listener.enterNonReserved(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitNonReserved" ):
-                listener.exitNonReserved(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNonReserved" ):
