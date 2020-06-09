@@ -178,7 +178,7 @@ class _VisitorBase(FugueSQLVisitor):
 
     def visitFugueLoadColumns(self, ctx: fp.FugueLoadColumnsContext) -> Any:
         if ctx.schema is not None:
-            return self.visit(ctx.schema)
+            return str(self.visit(ctx.schema))
         else:
             return self.visit(ctx.cols)
 

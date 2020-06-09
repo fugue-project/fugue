@@ -232,6 +232,20 @@ def test_save():
     """, dag)
 
 
+def test_load():
+    dag = FugueWorkflow()
+    dag.load("xx")
+    dag.load("xx", fmt="csv")
+    dag.load("xx", columns="a:int,b:str")
+    dag.load("xx", columns=["a", "b"], header=True)
+    assert_eq("""
+    load "xx"
+    load csv "xx"
+    load "xx" columns a:int, b:str
+    load "xx"(header=True) columns a, b
+    """, dag)
+
+
 def assert_eq(expr, expected: FugueWorkflow):
     sql = FugueSQL(expr, "fugueLanguage", ignore_case=True, simple_assign=True)
     wf = FugueWorkflow()
