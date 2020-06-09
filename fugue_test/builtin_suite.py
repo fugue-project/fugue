@@ -111,13 +111,15 @@ class BuiltInTests(object):
                 a = dag.df(
                     [[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int", dict(x=1)
                 )
-                c = a.transform(MockTransform1, partition={"by": ["a"]})
+                c = a.transform(MockTransform1, pre_partition={"by": ["a"]})
                 dag.df(
                     [[None, 1, 2, 1], [None, 4, 2, 1], [1, 2, 1, 1], [3, 4, 1, 1]],
                     "a:double,b:int,ct:int,p:int",
                 ).assert_eq(c)
 
-                c = a.transform(mock_tf1, partition={"by": ["a"], "presort": "b DESC"})
+                c = a.transform(
+                    mock_tf1, pre_partition={"by": ["a"], "presort": "b DESC"}
+                )
                 dag.df(
                     [[None, 4, 2, 1], [None, 1, 2, 1], [1, 2, 1, 1], [3, 4, 1, 1]],
                     "a:double,b:int,ct:int,p:int",
@@ -126,7 +128,7 @@ class BuiltInTests(object):
                 c = a.transform(
                     mock_tf2_except,
                     schema="*",
-                    partition={"by": ["a"], "presort": "b DESC"},
+                    pre_partition={"by": ["a"], "presort": "b DESC"},
                     ignore_errors=[NotImplementedError],
                 )
                 dag.df([[1, 2], [3, 4]], "a:double,b:int").assert_eq(c)

@@ -1,9 +1,10 @@
+from typing import Iterable, List, Tuple
+
 from antlr4 import CommonTokenStream, InputStream
 from antlr4.error.ErrorListener import ErrorListener
+from antlr4.tree.Tree import TerminalNode, Token, Tree
 from fugue_sql.antlr import FugueSQLLexer, FugueSQLParser
 from fugue_sql.exceptions import FugueSQLSyntaxError
-from antlr4.tree.Tree import TerminalNode, Tree, Token
-from typing import List, Iterable
 
 
 class FugueSQL(object):
@@ -13,17 +14,23 @@ class FugueSQL(object):
         rule: str,
         ignore_case: bool = False,
         simple_assign: bool = True,
+        ansi_sql: bool = False,
     ):
         self._rule = rule
         self._raw_code = code
-        self._code = (
-            _to_cased_code(code, rule, simple_assign=simple_assign)
-            if ignore_case
-            else code
-        )
-        self._tree = _to_tree(
-            self._code, self._rule, False, simple_assign=simple_assign
-        )
+        if ignore_case:
+            self._code, self._tree = _to_cased_code(
+                code, rule, simple_assign=simple_assign, ansi_sql=ansi_sql
+            )
+        else:
+            self._code = code
+            self._tree = _to_tree(
+                self._code,
+                self._rule,
+                False,
+                simple_assign=simple_assign,
+                ansi_sql=ansi_sql,
+            )
 
     @property
     def raw_code(self):  # pragma: no cover
@@ -38,27 +45,30 @@ class FugueSQL(object):
         return self._tree
 
 
-def _to_tree(code: str, rule: str, all_upper_case: bool, simple_assign: bool) -> Tree:
+def _to_tree(
+    code: str, rule: str, all_upper_case: bool, simple_assign: bool, ansi_sql: bool
+) -> Tree:
     input_stream = InputStream(code)
     lexer = FugueSQLLexer(input_stream)
     lexer._all_upper_case = all_upper_case
+    lexer._ansi_sql = ansi_sql
     lexer._simple_assign = simple_assign
     stream = CommonTokenStream(lexer)
     parser = FugueSQLParser(stream)
     parser._all_upper_case = all_upper_case
     parser._simple_assign = simple_assign
+    parser._ansi_sql = ansi_sql
     parser.addErrorListener(_ErrorListener(code.splitlines()))
     return getattr(parser, rule)()  # validate syntax
 
 
-def _to_cased_code(code: str, rule: str, simple_assign: bool) -> str:
-    tokens = [
-        t
-        for t in _to_tokens(
-            _to_tree(code.upper(), rule, True, simple_assign=simple_assign)
-        )
-        if _is_keyword(t)
-    ]
+def _to_cased_code(
+    code: str, rule: str, simple_assign: bool, ansi_sql: bool
+) -> Tuple[str, Tree]:
+    tree = _to_tree(
+        code.upper(), rule, True, simple_assign=simple_assign, ansi_sql=ansi_sql
+    )
+    tokens = [t for t in _to_tokens(tree) if _is_keyword(t)]
     start = 0
     cased_code: List[str] = []
     for t in tokens:
@@ -68,7 +78,7 @@ def _to_cased_code(code: str, rule: str, simple_assign: bool) -> str:
         start = t.stop + 1
     if start < len(code):
         cased_code.append(code[start:])
-    return "".join(cased_code)
+    return "".join(cased_code), tree
 
 
 def _to_tokens(node: Tree) -> Iterable[Token]:

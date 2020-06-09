@@ -42,4 +42,4 @@ testcore:
 	python3 -bb -m pytest tests/ --ignore=tests/fugue_spark
 
 sql:
-	java -Xmx500M -jar bin/antlr-4.8-complete.jar -Dlanguage=Python3 fugue_sql/antlr/fugue_sql.g4
+	java -Xmx500M -jar bin/antlr-4.8-complete.jar -Dlanguage=Python3 -visitor fugue_sql/antlr/fugue_sql.g4

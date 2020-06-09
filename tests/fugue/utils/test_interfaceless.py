@@ -9,6 +9,7 @@ from fugue.execution import ExecutionEngine
 from fugue.utils.interfaceless import FunctionWrapper, _parse_function, parse_output_schema_from_comment
 from pytest import raises
 from triad.utils.iter import EmptyAwareIterable
+from triad.utils.hash import to_uuid
 
 
 def test_parse_output_schema_from_comment():
@@ -87,6 +88,13 @@ def test_function_wrapper():
     assert 3 == w.run([], dict(a=1, b=2), ignore_unknown=True)
     assert 7 == w.run([], dict(a=1, b=2, c=4), ignore_unknown=True)
     assert 7 == w.run([], dict(a=1, b=2, c=4), ignore_unknown=False)
+
+
+def test_function_wrapper_determinisn():
+    w1 = FunctionWrapper(f20, "^[ldsp][ldsp]$", "[ldsp]")
+    w2 = FunctionWrapper(f20, "^[ldsp][ldsp]$", "[ldsp]")
+    assert w1 is not w2
+    assert to_uuid(w1) == to_uuid(w2)
 
 
 def f1(e: ExecutionEngine, a: DataFrame, b: LocalDataFrame, c: pd.DataFrame) -> None:

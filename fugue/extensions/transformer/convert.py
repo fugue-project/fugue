@@ -8,6 +8,7 @@ from fugue.utils.interfaceless import FunctionWrapper, parse_output_schema_from_
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.convert import to_function, to_instance
+from triad.utils.hash import to_uuid
 
 
 def transformer(schema: Any) -> Callable[[Any], "_FuncAsTransformer"]:
@@ -71,6 +72,10 @@ class _FuncAsTransformer(Transformer):
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self._wrapper(*args, **kwargs)  # type: ignore
 
+    @no_type_check
+    def __uuid__(self) -> str:
+        return to_uuid(self._wrapper.__uuid__(), self._output_schema_arg)
+
     def _parse_schema(self, obj: Any, df: DataFrame) -> Schema:
         if obj is None:
             return Schema()
@@ -89,6 +94,8 @@ class _FuncAsTransformer(Transformer):
     def from_func(func: Callable, schema: Any) -> "_FuncAsTransformer":
         if schema is None:
             schema = parse_output_schema_from_comment(func)
+        if isinstance(schema, Schema):  # to be less strict on determinism
+            schema = str(schema)
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsTransformer()
         tr._wrapper = FunctionWrapper(func, "^[lsp]x*$", "^[lsp]$")  # type: ignore
@@ -110,6 +117,12 @@ class _FuncAsCoTransformer(CoTransformer):
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self._wrapper(*args, **kwargs)  # type: ignore
 
+    @no_type_check
+    def __uuid__(self) -> str:
+        return to_uuid(
+            self._wrapper.__uuid__(), self._output_schema_arg, self._dfs_input
+        )
+
     def _parse_schema(self, obj: Any) -> Schema:
         if obj is None:
             return Schema()
@@ -126,6 +139,8 @@ class _FuncAsCoTransformer(CoTransformer):
     def from_func(func: Callable, schema: Any) -> "_FuncAsCoTransformer":
         if schema is None:
             schema = parse_output_schema_from_comment(func)
+        if isinstance(schema, Schema):  # to be less strict on determinism
+            schema = str(schema)
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsCoTransformer()
         tr._wrapper = FunctionWrapper(func, "^(c|[lsp]+)x*$", "^[lsp]$")  # type: ignore

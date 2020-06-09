@@ -6,6 +6,7 @@ from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw as aot
 from triad.utils.convert import to_size
 from triad.utils.pyarrow import SchemaedDataPartitioner
+from triad.utils.hash import to_uuid
 
 
 class PartitionSpec(object):
@@ -93,6 +94,9 @@ class PartitionSpec(object):
                 row_limit=self._row_limit,
             )
         )
+
+    def __uuid__(self) -> str:
+        return to_uuid(self.jsondict)
 
     def get_sorts(self, schema: Schema) -> IndexedOrderedDict[str, bool]:
         d: IndexedOrderedDict[str, bool] = IndexedOrderedDict()

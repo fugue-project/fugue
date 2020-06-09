@@ -7,6 +7,7 @@ from fugue.extensions.outputter import Outputter, outputter, to_outputter
 from pytest import raises
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
+from triad.utils.hash import to_uuid
 
 
 def test_outputter():
@@ -15,6 +16,11 @@ def test_outputter():
 
 
 def test_to_outputter():
+    a = to_outputter(MockOutputter)
+    assert isinstance(a, MockOutputter)
+    b = to_outputter("MockOutputter")
+    assert isinstance(b, MockOutputter)
+
     a = to_outputter(T0)
     assert isinstance(a, Outputter)
     a = to_outputter(T0())
@@ -84,6 +90,23 @@ def test_run_outputter():
     assert 4 == c.value
 
 
+def test_to_outputter_determinism():
+    a = to_outputter(t1)
+    b = to_outputter(t1)
+    c = to_outputter("t1")
+    d = to_outputter("t2")
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
+    assert a is not c
+    assert to_uuid(a) == to_uuid(c)
+    assert to_uuid(a) != to_uuid(d)
+
+    a = to_outputter(MockOutputter)
+    b = to_outputter("MockOutputter")
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
+
+
 class T0(Outputter):
     def process(self, dfs):
         pass
@@ -114,3 +137,8 @@ def t5(e: ExecutionEngine, dfs: DataFrames, a, b) -> None:
 
 def t6(dfs: DataFrames) -> None:
     pass
+
+
+class MockOutputter(Outputter):
+    def process(self, dfs):
+        pass
