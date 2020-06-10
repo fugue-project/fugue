@@ -3,13 +3,9 @@ from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
-from fugue.workflow.tasks import Create, FugueTask, Output, Process
-from fugue.workflow.workflow_context import (
-    FugueInteractiveWorkflowContext,
-    FugueWorkflowContext,
-)
 from fugue.dataframe import DataFrame
 from fugue.dataframe.dataframes import DataFrames
+from fugue.exceptions import FugueWorkflowError
 from fugue.extensions.builtins import (
     AssertEqual,
     CreateData,
@@ -24,10 +20,15 @@ from fugue.extensions.builtins import (
     Show,
     Zip,
 )
-from triad.collections import Schema
-from triad.utils.assertion import assert_or_throw
-from fugue.exceptions import FugueWorkflowError
 from fugue.extensions.transformer.convert import to_transformer
+from fugue.workflow.tasks import Create, FugueTask, Output, Process
+from fugue.workflow.workflow_context import (
+    FugueInteractiveWorkflowContext,
+    FugueWorkflowContext,
+)
+from triad.collections import Schema
+from triad.collections.dict import ParamDict
+from triad.utils.assertion import assert_or_throw
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -285,6 +286,10 @@ class FugueWorkflow(object):
         self._spec = WorkflowSpec()
         self._workflow_ctx = self._to_ctx(*args, **kwargs)
         self._computed = False
+
+    @property
+    def conf(self) -> ParamDict:
+        return self._workflow_ctx.conf
 
     def spec_uuid(self) -> str:
         return self._spec.__uuid__()
