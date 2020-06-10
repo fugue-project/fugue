@@ -24,6 +24,13 @@ from triad.utils.convert import to_bool
 from triad.utils.pyarrow import to_pa_datatype
 
 
+class FugueSQLHooks(object):
+    def on_select_source_not_found(
+        self, workflow: FugueWorkflow, name: str
+    ) -> Union[WorkflowDataFrame, str]:
+        return name
+
+
 class _VisitorBase(FugueSQLVisitor):
     def __init__(self, sql: FugueSQL):
         self._sql = sql
@@ -199,6 +206,7 @@ class _Extensions(_VisitorBase):
     def __init__(
         self,
         sql: FugueSQL,
+        hooks: FugueSQLHooks,
         workflow: FugueWorkflow,
         variables: Optional[Dict[str, WorkflowDataFrame]] = None,
         last: Optional[WorkflowDataFrame] = None,
@@ -209,10 +217,15 @@ class _Extensions(_VisitorBase):
         if variables is not None:
             self._variables.update(variables)
         self._last: Optional[WorkflowDataFrame] = last
+        self._hooks = hooks
 
     @property
     def workflow(self) -> FugueWorkflow:
         return self._workflow
+
+    @property
+    def hooks(self) -> FugueSQLHooks:
+        return self._hooks
 
     @property
     def variables(self) -> Dict[str, WorkflowDataFrame]:
@@ -233,7 +246,11 @@ class _Extensions(_VisitorBase):
         self, ctx: fp.FugueDataFrameNestedContext
     ) -> WorkflowDataFrame:
         sub = _Extensions(
-            self.sql, workflow=self.workflow, variables=self.variables, last=self._last
+            self.sql,
+            self.hooks,
+            workflow=self.workflow,
+            variables=self.variables,
+            last=self._last,
         )
         sub.visit(ctx.task)
         return sub.last
@@ -380,13 +397,19 @@ class _Extensions(_VisitorBase):
     def visitTableName(self, ctx: fp.TableNameContext) -> Iterable[Any]:
         table_name = self.ctxToStr(ctx.multipartIdentifier(), delimit="")
         if table_name not in self.variables:
-            yield table_name
+            table: Any = self.hooks.on_select_source_not_found(
+                self.workflow, table_name
+            )
+        else:
+            table = self.variables[table_name]
+        if isinstance(table, str):
+            yield table
             for x in self._get_query_elements(ctx.sample()):
                 yield x
             for x in self._get_query_elements(ctx.tableAlias()):
                 yield x
         else:
-            yield self.variables[table_name]
+            yield table
             for x in self._get_query_elements(ctx.sample()):
                 yield x
             if ctx.tableAlias().strictIdentifier() is not None:
@@ -400,7 +423,11 @@ class _Extensions(_VisitorBase):
         self, ctx: fp.AliasedFugueNestedContext
     ) -> Iterable[Any]:
         sub = _Extensions(
-            self.sql, workflow=self.workflow, variables=self.variables, last=self._last
+            self.sql,
+            self.hooks,
+            workflow=self.workflow,
+            variables=self.variables,
+            last=self._last,
         )
         sub.visit(ctx.fugueNestableTaskNoSelect())
         yield sub.last
