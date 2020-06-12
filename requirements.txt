@@ -1,7 +1,6 @@
-.
-.[sql]
-.[spark]
-.[dask]
+triad>=0.3.5
+adagio>=0.1.6
+sqlalchemy
 
 # test requirements
 pre-commit

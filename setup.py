@@ -22,6 +22,13 @@ setup(
         "sql": ["antlr4-python3-runtime", "jinjasql"],
         "spark": ["pyspark"],
         "dask": ["dask[dataframe]", "cloudpickle>=1.4.0"],
+        "all": [
+            "antlr4-python3-runtime",
+            "jinjasql",
+            "pyspark",
+            "dask[dataframe]",
+            "cloudpickle>=1.4.0",
+        ],
     },
     classifiers=[
         # "3 - Alpha", "4 - Beta" or "5 - Production/Stable"

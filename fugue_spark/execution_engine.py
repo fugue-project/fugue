@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
+import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
 from fugue.collections.partition import (
@@ -11,12 +12,14 @@ from fugue.collections.partition import (
 from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe import DataFrame, DataFrames, IterableDataFrame, LocalDataFrame
 from fugue.dataframe.arrow_dataframe import ArrowDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
     ExecutionEngine,
     SQLEngine,
 )
+from fugue_spark.constants import FUGUE_SPARK_DEFAULT_CONF
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.utils.convert import to_schema, to_spark_schema, to_type_safe_input
 from fugue_spark.utils.io import SparkIO
@@ -28,10 +31,11 @@ from fugue_spark.utils.partition import (
 from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import broadcast, col
+from pyspark.sql.functions import PandasUDFType, broadcast, col, pandas_udf
 from triad.collections import ParamDict, Schema
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
+from triad.utils.hash import to_uuid
 from triad.utils.iter import EmptyAwareIterable
 from triad.utils.threading import RunOnce
 
@@ -69,7 +73,8 @@ class SparkExecutionEngine(ExecutionEngine):
         if spark_session is None:
             spark_session = SparkSession.builder.getOrCreate()
         self._spark_session = spark_session
-        cf = {x[0]: x[1] for x in spark_session.sparkContext.getConf().getAll()}
+        cf = dict(FUGUE_SPARK_DEFAULT_CONF)
+        cf.update({x[0]: x[1] for x in spark_session.sparkContext.getConf().getAll()})
         cf.update(ParamDict(conf))
         super().__init__(cf)
         self._fs = FileSystem()
@@ -183,6 +188,19 @@ class SparkExecutionEngine(ExecutionEngine):
         metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
+        if (
+            self.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
+            and len(partition_spec.partition_by) > 0
+            and not any(pa.types.is_nested(t) for t in Schema(output_schema).types)
+        ):
+            return self._map_by_pandas_udf(
+                df,
+                map_func=map_func,
+                output_schema=output_schema,
+                partition_spec=partition_spec,
+                metadata=metadata,
+                on_init=on_init,
+            )
         df = self.to_df(self.repartition(df, partition_spec))
         mapper = _Mapper(df, map_func, output_schema, partition_spec, on_init)
         sdf = df.native.rdd.mapPartitionsWithIndex(mapper.run, True)
@@ -271,6 +289,46 @@ class SparkExecutionEngine(ExecutionEngine):
     def _register(self, df: SparkDataFrame, name: str) -> SparkDataFrame:
         df.native.createOrReplaceTempView(name)
         return df
+
+    def _map_by_pandas_udf(
+        self,
+        df: DataFrame,
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        output_schema: Any,
+        partition_spec: PartitionSpec,
+        metadata: Any = None,
+        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+    ) -> DataFrame:
+        presort = partition_spec.presort
+        presort_keys = list(presort.keys())
+        presort_asc = list(presort.values())
+        output_schema = Schema(output_schema)
+        input_schema = df.schema
+        on_init_once: Any = None if on_init is None else RunOnce(
+            on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
+        )
+
+        def _udf(pdf: Any) -> pd.DataFrame:  # pragma: no cover
+            if pdf.shape[0] == 0:
+                return PandasDataFrame([], output_schema).as_pandas()
+            if len(presort_keys) > 0:
+                pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
+            input_df = PandasDataFrame(
+                pdf.reset_index(drop=True), input_schema, pandas_df_wrapper=True
+            )
+            if on_init_once is not None:
+                on_init_once(0, input_df)
+            cursor = partition_spec.get_cursor(input_schema, 0)
+            cursor.set(input_df.peek_array(), 0, 0)
+            output_df = map_func(cursor, input_df)
+            return output_df.as_pandas()
+
+        df = self.to_df(df)
+        udf = pandas_udf(
+            _udf, to_spark_schema(output_schema), PandasUDFType.GROUPED_MAP
+        )
+        sdf = df.native.groupBy(*partition_spec.partition_by).apply(udf)
+        return SparkDataFrame(sdf, metadata=metadata)
 
 
 class _Mapper(object):  # pragma: no cover

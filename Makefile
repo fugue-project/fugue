@@ -1,5 +1,8 @@
 .PHONY: help clean dev docs package test
 
+.EXPORT_ALL_VARIABLES:
+ARROW_PRE_0_15_IPC_FORMAT = 1
+
 help:
 	@echo "The following make targets are available:"
 	@echo "	 devenv		create venv and install all deps for dev env (assumes python3 cmd exists)"
@@ -15,9 +18,11 @@ devenv:
 	python3 -m venv venv
 	. venv/bin/activate
 	pip3 install -r requirements.txt
+	pip3 install .[all]
 
 dev:
 	pip3 install -r requirements.txt
+	pip3 install .[all]
 
 docs:
 	rm -rf docs/api

@@ -167,3 +167,16 @@ def test_assignment():
     assert_eq("aA:=", "aA", ":=")
     assert_eq("aA=", "aA", "=")
     # assert_eq("aA??", "aA", "??")
+
+
+def test_persist():
+    def assert_eq(expr, is_checkpoint, value):
+        sql = FugueSQL(expr, "fuguePersist", ignore_case=True, simple_assign=True)
+        v = _VisitorBase(sql)
+        obj = v.visit(sql.tree)
+        assert (is_checkpoint, value) == obj
+
+    assert_eq("persist", False, None)
+    assert_eq("persist a.b.c", False, "a.b.c")
+    assert_eq("checkpoint", True, None)
+    # assert_eq("aA??", "aA", "??")

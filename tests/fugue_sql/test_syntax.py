@@ -46,7 +46,8 @@ def test_partition_syntax():
 
 def test_persist_broadcast_syntax():
     good_single_syntax(
-        "a = select a", ["PERSIst", "persist a12", ""], ["BROADCAst"],
+        "a = select a", ["", "checkpoint", "PERSIst",
+                         "persist a12", "persist a.b.c"], ["BROADCAst"],
         ignore_case=True,
         simple_assign=True)
 
@@ -69,6 +70,16 @@ def test_select_syntax():
         (TRANSFORM USING x) AS x INNER JOIN (TRANSFORM USING x) AS y
         ON x.a = b.a
     """, ignore_case=False)
+
+    # no from
+    good_syntax(
+        "select *",
+        ignore_case=True,
+        simple_assign=True)
+    good_syntax(
+        "select * where a=100",
+        ignore_case=True,
+        simple_assign=True)
 
 
 def test_schema_syntax():
@@ -175,7 +186,7 @@ def test_load_save_syntax():
     good_single_syntax(
         "save",
         ["a"],
-        ["to","overwrite","append"],
+        ["to", "overwrite", "append"],
         '"x"',
         ignore_case=True,
         simple_assign=True)

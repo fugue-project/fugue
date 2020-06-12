@@ -2,7 +2,7 @@ from fugue.dataframe import DataFrame
 from fugue.dataframe.utils import _df_eq
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from fugue.workflow.workflow import WorkflowDataFrame
-from fugue_sql.exceptions import FugueSQLSyntaxError
+from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
 from fugue_sql.workflow import FugueSQLWorkflow
 from pytest import raises
 
@@ -65,6 +65,40 @@ def test_multiple_sql_with_reset():
         OUTPUT a, b USING assert_eq
         OUTPUT a, (CREATE[[0], [2]] SCHEMA a: int) USING assert_eq
         """)
+
+
+def test_multiple_blocks():
+    with FugueSQLWorkflow() as dag:
+        a = dag.df([[0], [1]], "a:int")
+        c = 1
+        dag("""
+        OUTPUT a, (CREATE[[0], [1]] SCHEMA a: int) USING assert_eq
+        """)
+    # dataframe can't pass to another workflow
+    with FugueSQLWorkflow() as dag:
+        assert "a" in locals()
+        with raises(FugueSQLError):
+            dag("""
+            OUTPUT a, (CREATE[[0], [1]] SCHEMA a: int) USING assert_eq
+            """)
+    # other local variables are fine
+    with FugueSQLWorkflow() as dag:
+        a = dag.df([[0], [1]], "a:int")
+        dag("""
+        OUTPUT a, (CREATE[[0], [{{c}}]] SCHEMA a: int) USING assert_eq
+        """)
+
+
+def test_function_calls():
+    with FugueSQLWorkflow() as dag:
+        a = dag.df([[0], [1]], "a:int")
+        _eq(dag, a)
+
+
+def _eq(dag, a):
+    dag("""
+    OUTPUT a, (CREATE[[0], [1]] SCHEMA a: int) USING assert_eq
+    """)
 
 
 def assert_eq(df1: DataFrame, df2: DataFrame) -> None:

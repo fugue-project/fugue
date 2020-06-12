@@ -3,6 +3,7 @@ from typing import Any, Dict
 
 from fugue.workflow import FugueWorkflow, WorkflowDataFrame
 from fugue_sql.constants import FUGUE_SQL_DEFAULT_CONF
+from fugue_sql.exceptions import FugueSQLError
 from fugue_sql.parse import FugueSQL
 from fugue_sql.utils import fill_sql_template
 from fugue_sql.visitors import FugueSQLHooks, _Extensions
@@ -21,6 +22,7 @@ class FugueSQLWorkflow(FugueWorkflow):
         return self._sql_conf
 
     def __getitem__(self, key: str) -> WorkflowDataFrame:
+        assert_or_throw(key in self._sql_vars, FugueSQLError(f"{key} not found"))
         return self._sql_vars[key]
 
     def __call__(self, code: str, *args: Any, **kwargs: Any):
@@ -28,13 +30,19 @@ class FugueSQLWorkflow(FugueWorkflow):
         local_vars: Dict[str, Any] = {}
         if cf is not None and cf.f_back is not None:
             local_vars = cf.f_back.f_locals
+        local_vars = {
+            k: v
+            for k, v in local_vars.items()
+            if not isinstance(v, WorkflowDataFrame) or v.workflow is self
+        }
         variables = self.sql(code, self._sql_vars, local_vars, *args, **kwargs)
         if cf is not None:
             for k, v in variables.items():
-                if isinstance(v, WorkflowDataFrame):
+                if isinstance(v, WorkflowDataFrame) and v.workflow is self:
                     self._sql_vars[k] = v
 
     def sql(self, code: str, *args: Any, **kwargs: Any) -> Dict[str, WorkflowDataFrame]:
+        # TODO: move dict construction to triad
         params: Dict[str, Any] = {}
         for a in args:
             assert_or_throw(isinstance(a, Dict), f"args can only have dict: {a}")
