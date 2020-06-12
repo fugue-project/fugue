@@ -15,9 +15,11 @@ devenv:
 	python3 -m venv venv
 	. venv/bin/activate
 	pip3 install -r requirements.txt
+	pip3 install -r .[all]
 
 dev:
 	pip3 install -r requirements.txt
+	pip3 install -r .[all]
 
 docs:
 	rm -rf docs/api
