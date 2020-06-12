@@ -38,6 +38,7 @@ package:
 	python3 setup.py bdist_wheel
 
 test:
+	export ARROW_PRE_0_15_IPC_FORMAT=1
 	python3 -bb -m pytest tests/
 
 testcore:
