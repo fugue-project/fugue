@@ -1,5 +1,8 @@
 .PHONY: help clean dev docs package test
 
+.EXPORT_ALL_VARIABLES:
+ARROW_PRE_0_15_IPC_FORMAT = 1
+
 help:
 	@echo "The following make targets are available:"
 	@echo "	 devenv		create venv and install all deps for dev env (assumes python3 cmd exists)"
@@ -38,7 +41,6 @@ package:
 	python3 setup.py bdist_wheel
 
 test:
-	export ARROW_PRE_0_15_IPC_FORMAT=1
 	python3 -bb -m pytest tests/
 
 testcore:
