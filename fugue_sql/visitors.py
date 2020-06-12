@@ -20,6 +20,7 @@ from fugue_sql.antlr import FugueSQLVisitor
 from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
 from fugue_sql.parse import FugueSQL, _to_tokens
 from triad.collections.schema import Schema
+from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_bool
 from triad.utils.pyarrow import to_pa_datatype
 
@@ -189,17 +190,27 @@ class _VisitorBase(FugueSQLVisitor):
         else:
             return self.visit(ctx.cols)
 
-    def visitFugueSaveMode(self, ctx: fp.FugueSaveModeContext):
+    def visitFugueSaveMode(self, ctx: fp.FugueSaveModeContext) -> str:
         mode = self.ctxToStr(ctx).lower()
         if mode == "to":
             mode = "error"
         return mode
 
-    def visitFugueFileFormat(self, ctx: fp.FugueFileFormatContext):
+    def visitFugueFileFormat(self, ctx: fp.FugueFileFormatContext) -> str:
         return self.ctxToStr(ctx).lower()
 
-    def visitFuguePath(self, ctx: fp.FuguePathContext):
+    def visitFuguePath(self, ctx: fp.FuguePathContext) -> Any:
         return eval(self.ctxToStr(ctx))
+
+    def visitFuguePersist(self, ctx: fp.FuguePersistContext) -> Any:
+        if ctx.checkpoint:
+            return True, None
+        if ctx.value is None:
+            return False, None
+        return False, self.visit(ctx.value)
+
+    def visitFuguePersistValue(self, ctx: fp.FuguePersistValueContext) -> Any:
+        return self.ctxToStr(ctx, delimit="")
 
 
 class _Extensions(_VisitorBase):
@@ -240,7 +251,9 @@ class _Extensions(_VisitorBase):
     def visitFugueDataFrameSource(
         self, ctx: fp.FugueDataFrameSourceContext
     ) -> WorkflowDataFrame:
-        return self.variables[self.ctxToStr(ctx, delimit="")]
+        name = self.ctxToStr(ctx, delimit="")
+        assert_or_throw(name in self.variables, FugueSQLError(f"{name} is not defined"))
+        return self.variables[name]
 
     def visitFugueDataFrameNested(
         self, ctx: fp.FugueDataFrameNestedContext
@@ -273,7 +286,7 @@ class _Extensions(_VisitorBase):
     def visitFugueTransformTask(
         self, ctx: fp.FugueTransformTaskContext
     ) -> WorkflowDataFrame:
-        data = self.get_dict(ctx, "partition", "dfs", "params", "persist", "broadcast")
+        data = self.get_dict(ctx, "partition", "dfs", "params")
         if "dfs" not in data:
             data["dfs"] = DataFrames(self.last)
         p = data["params"]
@@ -289,7 +302,7 @@ class _Extensions(_VisitorBase):
     def visitFugueProcessTask(
         self, ctx: fp.FugueProcessTaskContext
     ) -> WorkflowDataFrame:
-        data = self.get_dict(ctx, "partition", "dfs", "params", "persist", "broadcast")
+        data = self.get_dict(ctx, "partition", "dfs", "params")
         if "dfs" not in data:
             data["dfs"] = DataFrames(self.last)
         p = data["params"]
@@ -302,7 +315,7 @@ class _Extensions(_VisitorBase):
         )
 
     def visitFugueCreateTask(self, ctx: fp.FugueCreateTaskContext) -> WorkflowDataFrame:
-        data = self.get_dict(ctx, "params", "persist", "broadcast")
+        data = self.get_dict(ctx, "params")
         p = data["params"]
         return self.workflow.create(
             using=p["using"], schema=p.get("schema"), params=p.get("params")
@@ -311,11 +324,11 @@ class _Extensions(_VisitorBase):
     def visitFugueCreateDataTask(
         self, ctx: fp.FugueCreateDataTaskContext
     ) -> WorkflowDataFrame:
-        data = self.get_dict(ctx, "data", "schema", "persist", "broadcast")
+        data = self.get_dict(ctx, "data", "schema")
         return self.workflow.df(data["data"], schema=data["schema"])
 
     def visitFugueZipTask(self, ctx: fp.FugueZipTaskContext) -> WorkflowDataFrame:
-        data = self.get_dict(ctx, "dfs", "how", "persist", "broadcast")
+        data = self.get_dict(ctx, "dfs", "how")
         partition_spec = PartitionSpec(**self.get_dict(ctx, "by", "presort"))
         # TODO: currently SQL does not support cache to file on ZIP
         return self.workflow.zip(
@@ -325,10 +338,8 @@ class _Extensions(_VisitorBase):
     def visitFugueNestableTaskNoSelect(
         self, ctx: fp.FugueNestableTaskNoSelectContext
     ) -> None:
-        data = self.get_dict(ctx, "assign", "df")
-        if "assign" in data:
-            self.variables[data["assign"][0]] = data["df"]
-        self._last = data["df"]
+        data = self.get_dict(ctx, "df")
+        self._process_assignable(data["df"], ctx)
 
     def visitFugueOutputTask(self, ctx: fp.FugueOutputTaskContext):
         data = self.get_dict(ctx, "dfs", "using", "params", "partition")
@@ -372,9 +383,7 @@ class _Extensions(_VisitorBase):
         )
 
     def visitFugueLoadTask(self, ctx: fp.FugueLoadTaskContext) -> WorkflowDataFrame:
-        data = self.get_dict(
-            ctx, "fmt", "path", "params", "columns", "persist", "broadcast"
-        )
+        data = self.get_dict(ctx, "fmt", "path", "params", "columns")
         return self.workflow.load(
             path=data["path"],
             fmt=data.get("fmt", ""),
@@ -383,16 +392,25 @@ class _Extensions(_VisitorBase):
         )
 
     def visitFugueSelectTask(self, ctx: fp.FugueSelectTaskContext) -> None:
-        data = self.get_dict(ctx, "assign", "partition", "q", "persist", "broadcast")
+        data = self.get_dict(ctx, "partition", "q")
         statements = list(self._beautify_sql(data["q"]))
         # print(statements, self.ctxToStr(ctx), "-")
         df = self.workflow.select(*statements)
-        if "assign" in data:
-            self.variables[data["assign"][0]] = df
-        self._last = df
+        self._process_assignable(df, ctx)
 
     def visitQuery(self, ctx: fp.QueryContext) -> Iterable[Any]:
         return self._get_query_elements(ctx)
+
+    def visitOptionalFromClause(
+        self, ctx: fp.OptionalFromClauseContext
+    ) -> Iterable[Any]:
+        c = ctx.fromClause()
+        if c is None:
+            yield "FROM"
+            yield self.last
+        else:
+            for x in self._get_query_elements(ctx):
+                yield x
 
     def visitTableName(self, ctx: fp.TableNameContext) -> Iterable[Any]:
         table_name = self.ctxToStr(ctx.multipartIdentifier(), delimit="")
@@ -477,6 +495,32 @@ class _Extensions(_VisitorBase):
             elif isinstance(n, fp.QueryContext):
                 for x in self.visitQuery(n):
                     yield x
+            elif isinstance(n, fp.OptionalFromClauseContext):
+                for x in self.visitOptionalFromClause(n):
+                    yield x
             else:
                 for x in self._get_query_elements(n):
                     yield x
+
+    def _process_assignable(self, df: WorkflowDataFrame, ctx: Tree):
+        data = self.get_dict(ctx, "assign", "persist", "broadcast")
+        if "assign" in data:
+            varname, sign = data["assign"]
+        else:
+            varname, sign = None, None
+        need_checkpoint = sign == "??"
+        if "persist" in data:
+            is_checkpoint, persist_value = data["persist"]
+            if need_checkpoint or is_checkpoint:  # pragma: no cover
+                assert_or_throw(
+                    is_checkpoint,
+                    FugueSQLSyntaxError("can't persist when checkpoint is specified"),
+                )
+                raise NotImplementedError
+            else:
+                df = df.persist(persist_value)
+        if "broadcast" in data:
+            df = df.broadcast()
+        if varname is not None:
+            self.variables[varname] = df
+        self._last = df

@@ -56,6 +56,24 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         raises(ValueError, lambda: e.persist(o, "xyz"))
 
 
+class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
+    @pytest.fixture(autouse=True)
+    def init_session(self, spark_session):
+        self.spark_session = spark_session
+
+    def make_engine(self):
+        session = SparkSession.builder.getOrCreate()
+        e = SparkExecutionEngine(
+            session,
+            {"test": True,
+             "fugue.spark.use_pandas_udf": True})
+        assert e.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
+        return e
+
+    def test__join_outer_pandas_incompatible(self):
+        return
+
+
 class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
     @pytest.fixture(autouse=True)
     def init_session(self, spark_session):

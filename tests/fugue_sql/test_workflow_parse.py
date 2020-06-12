@@ -163,19 +163,24 @@ def test_select():
     dag.select("select * from a.b AS x")
     dag.select("select * from", a, "AS a")  # fugue sql adds 'AS a'
     dag.select("select * from", a, "TABLESAMPLE (5 PERCENT) AS a")
-    dag.select("select * from", a, "TABLESAMPLE (5 PERCENT) AS x")
+    x = dag.select("select * from", a, "TABLESAMPLE (5 PERCENT) AS x")
+    y = dag.select("select * FROM", x)
+    z = dag.select("select * FROM", y, "where t = 100")
     dag.select("select a.* from", a, "AS a join", b, "AS b on a.a == b.a")
 
     dag.select("select * from (select * from a.b)")
     dag.select("select * from", dag.create(mock_create1), "TABLESAMPLE (5 PERCENT)")
     dag.select("select * from", dag.create(mock_create1), "AS b")
     dag.select("select * from (select * from", dag.create(mock_create1), ")")
+
+    dag.select("select * from", a, "AS a").persist().broadcast().show()
+    dag.select("select * from", a, "AS a").persist("a.b.c").broadcast().show()
     assert_eq("""
     a=create using mock_create1(n=1)
     b=create using mock_create1(n=2)
     
     # assignment and table not found
-    x:=select * from a.b
+    x=select * from a.b
     
     # sample and alias when table not found
     select * from a.b TABLESAMPLE (5 PERCENT) AS x
@@ -185,6 +190,10 @@ def test_select():
     select * from a
     select * from a TABLESAMPLE(5 PERCENT)
     select * from a TABLESAMPLE(5 PERCENT) AS x
+
+    # no from
+    select *
+    select * where t=100
 
     # multiple dependencies
     select a.* from a join b on a.a==b.a
@@ -196,6 +205,10 @@ def test_select():
     select * from (create using mock_create1) TABLESAMPLE(5 PERCENT)
     select * from (create using mock_create1) AS b
     select * from (select * from (create using mock_create1))
+
+    # persist & checkpoint & broadcast
+    select * from a persist broadcast print
+    select * from a persist a.b.c broadcast print
     """, dag)
 
 

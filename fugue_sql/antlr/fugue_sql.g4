@@ -105,8 +105,12 @@ fugueNestableTask
     | fugueSelectTask
     ;
 
+fugueSelectTask:
+    (assign=fugueAssignment)? (partition=fuguePrepartition)? q=query (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    ;
+
 fugueNestableTaskNoSelect:
-    (assign=fugueAssignment)? df=fugueNestableTaskCollectionNoSelect
+    (assign=fugueAssignment)? df=fugueNestableTaskCollectionNoSelect (persist=fuguePersist)? (broadcast=fugueBroadcast)?
     ;
 
 fugueNestableTaskCollectionNoSelect
@@ -118,32 +122,28 @@ fugueNestableTaskCollectionNoSelect
     | fugueLoadTask
     ;
 
-fugueSelectTask:
-    (assign=fugueAssignment)? (partition=fuguePrepartition)? q=query (persist=fuguePersist)? (broadcast=fugueBroadcast)?
-    ;
-
 fugueTransformTask:
-    TRANSFORM (dfs=fugueDataFrames)? (partition=fuguePrepartition)? params=fugueSingleOutputExtensionCommonWild (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    TRANSFORM (dfs=fugueDataFrames)? (partition=fuguePrepartition)? params=fugueSingleOutputExtensionCommonWild
     ;
 
 fugueProcessTask:
-    PROCESS (dfs=fugueDataFrames)? (partition=fuguePrepartition)? params=fugueSingleOutputExtensionCommon (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    PROCESS (dfs=fugueDataFrames)? (partition=fuguePrepartition)? params=fugueSingleOutputExtensionCommon
     ;
 
 fugueZipTask:
-    ZIP dfs=fugueDataFrames (how=fugueZipType)? (BY by=fugueCols)? (PRESORT presort=fugueColsSort)? (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    ZIP dfs=fugueDataFrames (how=fugueZipType)? (BY by=fugueCols)? (PRESORT presort=fugueColsSort)?
     ;
 
 fugueCreateTask:
-    CREATE params=fugueSingleOutputExtensionCommon (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    CREATE params=fugueSingleOutputExtensionCommon
     ;
 
 fugueCreateDataTask:
-    CREATE DATA? data=fugueJsonArray SCHEMA schema=fugueSchema (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    CREATE DATA? data=fugueJsonArray SCHEMA schema=fugueSchema
     ;
 
 fugueLoadTask:
-    LOAD (fmt=fugueFileFormat)? path=fuguePath (params=fugueParams)? (COLUMNS columns=fugueLoadColumns)? (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    LOAD (fmt=fugueFileFormat)? path=fuguePath (params=fugueParams)? (COLUMNS columns=fugueLoadColumns)?
     ;
 
 fugueOutputTask:
@@ -183,8 +183,13 @@ fuguePath
     : STRING
     ;
 
-fuguePersist:
-    PERSIST (value=identifier)?
+fuguePersist
+    : PERSIST (value=fuguePersistValue)?
+    | checkpoint=CHECKPOINT
+    ;
+
+fuguePersistValue
+    : multipartIdentifier
     ;
 
 fugueBroadcast:
@@ -211,7 +216,7 @@ fugueAssignment:
 
 fugueAssignmentSign
     : COLONEQUAL
-    // | CHECKPOINT     // TODO: add checkpoint
+    // | CHECKPOINTSIGN     // TODO: add checkpoint
     | {self.simpleAssign}? EQUAL
     ;
 
@@ -800,15 +805,19 @@ fromStatementBody
 
 querySpecification
     : transformClause
-      fromClause?
+      optionalFromClause
       whereClause?                                                          #transformQuerySpecification
     | selectClause
-      fromClause?
+      optionalFromClause
       lateralView*
       whereClause?
       aggregationClause?
       havingClause?
       windowClause?                                                         #regularQuerySpecification
+    ;
+
+optionalFromClause  // add this to easily capture no FROM cases
+    : fromClause?
     ;
 
 transformClause
@@ -1796,7 +1805,8 @@ JSON: 'JSON';
 SINGLE: 'SINGLE';
 
 COLONEQUAL: ':=';
-CHECKPOINT: '??';
+CHECKPOINT: 'CHECKPOINT';
+CHECKPOINTSIGN: '??';
 
 //================================
 // End of the Fugue keywords list
