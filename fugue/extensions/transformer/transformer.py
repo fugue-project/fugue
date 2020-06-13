@@ -1,11 +1,10 @@
-from abc import ABC, abstractmethod
 from typing import Any
 
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.extensions.context import ExtensionContext
 
 
-class Transformer(ExtensionContext, ABC):
+class Transformer(ExtensionContext):
     """The interface to process one physical partition of dataframe on one machine.
     A dataframe such as SparkDataFrame can be distributed. But this one is to tell
     the system how to process each partition locally.
@@ -29,9 +28,13 @@ class Transformer(ExtensionContext, ABC):
     interface? Do you know the interfaceless feature of Fugue? Commonly, if you don't
     need to implement `on_init`, you can choose the
     interfaceless approach which may decouple your code from Fugue.
+
+    Due to similar issue on
+    `spark pickling ABC objects <https://github.com/cloudpipe/cloudpickle/issues/305>`_.
+    This class is not ABC. If you encounter the similar issue, possible solution
+    `here <https://github.com/cloudpipe/cloudpickle/issues/305#issuecomment-529246171>`_
     """
 
-    @abstractmethod
     def get_output_schema(self, df: DataFrame) -> Any:  # pragma: no cover
         """Generate the output schema on the driver side.
 
@@ -46,7 +49,7 @@ class Transformer(ExtensionContext, ABC):
         :param df: the entire dataframe you are going to transform.
         :return: Schema like object, should not be None or empty
         """
-        return None
+        raise NotImplementedError
 
     def on_init(self, df: DataFrame) -> None:  # pragma: no cover
         """Initialize physical partition that contains one or multiple logical partitions.
@@ -67,7 +70,6 @@ class Transformer(ExtensionContext, ABC):
         """
         pass
 
-    @abstractmethod
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:  # pragma: no cover
         """Custom logic to transform from one local dataframe to another local dataframe.
 
@@ -85,7 +87,7 @@ class Transformer(ExtensionContext, ABC):
         raise NotImplementedError
 
 
-class CoTransformer(ExtensionContext, ABC):
+class CoTransformer(ExtensionContext):
     """The interface to process one physical partition of cogrouped dataframes on one
     machine. A dataframe such as SparkDataFrame can be distributed. But this one is to
     tell the system how to process each partition locally.
@@ -101,9 +103,13 @@ class CoTransformer(ExtensionContext, ABC):
     interface? Do you know the interfaceless feature of Fugue? Commonly, if you don't
     need to implement `on_init`, you can choose the
     interfaceless approach which may decouple your code from Fugue.
+
+    Due to similar issue on
+    `spark pickling ABC objects <https://github.com/cloudpipe/cloudpickle/issues/305>`_.
+    This class is not ABC. If you encounter the similar issue, possible solution
+    `here <https://github.com/cloudpipe/cloudpickle/issues/305#issuecomment-529246171>`_
     """
 
-    @abstractmethod
     def get_output_schema(self, dfs: DataFrames) -> Any:  # pragma: no cover
         """Generate the output schema on the driver side.
 
@@ -118,7 +124,7 @@ class CoTransformer(ExtensionContext, ABC):
         :param dfs: the collection of dataframes you are going to transform.
         :return: Schema like object, should not be None or empty
         """
-        return None
+        raise NotImplementedError
 
     def on_init(self, dfs: DataFrames) -> None:  # pragma: no cover
         """Initialize physical partition that contains one or multiple logical partitions.
@@ -137,7 +143,6 @@ class CoTransformer(ExtensionContext, ABC):
         """
         pass
 
-    @abstractmethod
     def transform(self, dfs: DataFrames) -> LocalDataFrame:  # pragma: no cover
         """Custom logic to transform from one local dataframe to another local dataframe.
 
