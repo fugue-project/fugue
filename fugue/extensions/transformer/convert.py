@@ -77,18 +77,11 @@ class _FuncAsTransformer(Transformer):
         return to_uuid(self._wrapper.__uuid__(), self._output_schema_arg)
 
     def _parse_schema(self, obj: Any, df: DataFrame) -> Schema:
-        if obj is None:
-            return Schema()
         if isinstance(obj, str):
-            if "*" in obj:
-                obj = obj.replace("*", str(df.schema))
-            return Schema(obj)
+            return df.schema.transform(obj)
         if isinstance(obj, List):
-            s = Schema()
-            for x in obj:
-                s += self._parse_schema(x, df)
-            return s
-        return Schema(obj)
+            return df.schema.transform(*obj)
+        return df.schema.transform(obj)
 
     @staticmethod
     def from_func(func: Callable, schema: Any) -> "_FuncAsTransformer":

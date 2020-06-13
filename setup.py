@@ -17,7 +17,7 @@ setup(
     author_email="goodwanghan@gmail.com",
     keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
-    install_requires=["triad>=0.3.5", "adagio>=0.1.6", "sqlalchemy"],
+    install_requires=["triad>=0.3.6", "adagio>=0.1.6", "sqlalchemy"],
     extras_require={
         "sql": ["antlr4-python3-runtime", "jinjasql"],
         "spark": ["pyspark"],
