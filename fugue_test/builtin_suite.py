@@ -384,7 +384,7 @@ class MockTransform1(Transformer):
         return PandasDataFrame(pdf, self.output_schema)
 
 
-@transformer("*,p:int")
+@transformer(lambda s: s + "p:int")
 def mock_tf0(df: pd.DataFrame, p=1) -> pd.DataFrame:
     df["p"] = p
     return df

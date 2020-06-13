@@ -1,6 +1,6 @@
 # flake8: noqa
 
-__version__ = "0.2.6"
+__version__ = "0.2.7"
 
 from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.dataframe.array_dataframe import ArrayDataFrame

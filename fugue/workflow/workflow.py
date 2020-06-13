@@ -175,7 +175,7 @@ class WorkflowDataFrame(DataFrame):
         return df  # type: ignore
 
     def drop(  # type: ignore
-        self: TDF, columns: Dict[str, str], if_exists: bool = False
+        self: TDF, columns: List[str], if_exists: bool = False
     ) -> TDF:
         df = self.workflow.process(
             self, using=DropColumns, params=dict(columns=columns, if_exists=if_exists)
