@@ -154,6 +154,34 @@ def test_output():
     """, dag)
 
 
+def test_persist_checkpoint_broadcast():
+    dag = FugueWorkflow()
+    dag.create(mock_create1).persist()
+    dag.create(mock_create1).persist("a.b")
+
+    dag.create(mock_create1).broadcast()
+    dag.create(mock_create1).persist("a.b").broadcast()
+
+    dag.create(mock_create1).checkpoint()
+    dag.create(mock_create1).checkpoint()
+    dag.create(mock_create1).checkpoint("xy z")
+    dag.create(mock_create1).checkpoint("xy z").broadcast()
+    assert_eq("""
+    create using mock_create1 persist
+    a=create using mock_create1 persist a.b
+
+    create using mock_create1 broadcast
+    a=create using mock_create1 persist a.b broadcast
+
+    create using mock_create1 checkpoint
+    a?? create using mock_create1
+    a=create using mock_create1 checkpoint "xy z"
+    a??create using mock_create1 checkpoint "xy z" broadcast
+    """, dag)
+
+    
+
+
 def test_select():
     dag = FugueWorkflow()
     a = dag.create(mock_create1, params=dict(n=1))

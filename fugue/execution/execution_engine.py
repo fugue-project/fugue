@@ -17,6 +17,7 @@ from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_size
+from triad.utils.string import validate_triad_var_name
 
 _DEFAULT_JOIN_KEYS: List[str] = []
 
@@ -116,8 +117,10 @@ class ExecutionEngine(ABC):
         partition_spec: PartitionSpec,
         df_name: str,
         temp_path: Optional[str] = None,
-        to_file_threshold: int = -1,
+        to_file_threshold: Any = -1,
+        has_name: bool = False,
     ) -> DataFrame:
+        to_file_threshold = _get_file_threshold(to_file_threshold)
         on = list(filter(lambda k: k in df.schema, partition_spec.partition_by))
         presort = list(
             filter(lambda p: p[0] in df.schema, partition_spec.presort.items())
@@ -135,7 +138,8 @@ class ExecutionEngine(ABC):
         metadata = dict(
             serialized=True,
             serialized_cols={df_name: col_name},
-            schemas={df_name: df.schema},
+            schemas={df_name: str(df.schema)},
+            serialized_has_name=has_name,
         )
         return self.map(df, s.run, output_schema, partition_spec, metadata)
 
@@ -147,15 +151,14 @@ class ExecutionEngine(ABC):
         partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
         temp_path: Optional[str] = None,
         to_file_threshold: Any = -1,
+        df1_name: Optional[str] = None,
+        df2_name: Optional[str] = None,
     ):
         on = list(partition_spec.partition_by)
         how = how.lower()
         assert_or_throw(
             "semi" not in how and "anti" not in how,
             InvalidOperationError("zip does not support semi or anti joins"),
-        )
-        to_file_threshold = (
-            -1 if to_file_threshold == -1 else to_size(to_file_threshold)
         )
         serialized_cols: Dict[str, Any] = {}
         schemas: Dict[str, Any] = {}
@@ -171,14 +174,17 @@ class ExecutionEngine(ABC):
             )
         partition_spec = PartitionSpec(partition_spec, by=on)
 
-        def update_df(df: DataFrame) -> DataFrame:
+        def update_df(df: DataFrame, name: Optional[str]) -> DataFrame:
+            if name is None:
+                name = f"_{len(serialized_cols)}"
             if not df.metadata.get("serialized", False):
                 df = self.serialize_by_partition(
                     df,
                     partition_spec,
-                    f"_{len(serialized_cols)}",
+                    name,
                     temp_path,
                     to_file_threshold,
+                    has_name=name is not None,
                 )
             for k in df.metadata["serialized_cols"].keys():
                 assert_or_throw(
@@ -188,12 +194,57 @@ class ExecutionEngine(ABC):
                 schemas[k] = df.metadata["schemas"][k]
             return df
 
-        df1 = update_df(df1)
-        df2 = update_df(df2)
+        df1 = update_df(df1, df1_name)
+        df2 = update_df(df2, df2_name)
         metadata = dict(
-            serialized=True, serialized_cols=serialized_cols, schemas=schemas
+            serialized=True,
+            serialized_cols=serialized_cols,
+            schemas=schemas,
+            serialized_has_name=df1_name is not None or df2_name is not None,
         )
         return self.join(df1, df2, how=how, on=on, metadata=metadata)
+
+    def zip_all(
+        self,
+        dfs: DataFrames,
+        how: str = "inner",
+        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        temp_path: Optional[str] = None,
+        to_file_threshold: Any = -1,
+    ) -> DataFrame:
+        assert_or_throw(len(dfs) > 0, "can't zip 0 dataframes")
+        pairs = list(dfs.items())
+        has_name = dfs.has_key
+        if len(dfs) == 1:
+            return self.serialize_by_partition(
+                pairs[0][1],
+                partition_spec,
+                pairs[0][0],
+                temp_path,
+                to_file_threshold,
+                has_name=has_name,
+            )
+        df = self.zip(
+            pairs[0][1],
+            pairs[1][1],
+            how=how,
+            partition_spec=partition_spec,
+            temp_path=temp_path,
+            to_file_threshold=to_file_threshold,
+            df1_name=pairs[0][0] if has_name else None,
+            df2_name=pairs[1][0] if has_name else None,
+        )
+        for i in range(2, len(dfs)):
+            df = self.zip(
+                df,
+                pairs[i][1],
+                how=how,
+                partition_spec=partition_spec,
+                temp_path=temp_path,
+                to_file_threshold=to_file_threshold,
+                df2_name=pairs[i][0] if has_name else None,
+            )
+        return df
 
     def comap(
         self,
@@ -243,9 +294,19 @@ class ExecutionEngine(ABC):
         return self
 
 
+def _get_file_threshold(size: Any) -> int:
+    if size is None:
+        return -1
+    if isinstance(size, int):
+        return size
+    return to_size(size)
+
+
 def _df_name_to_serialize_col(name: str):
     assert_or_throw(name is not None, "Dataframe name can't be None")
-    return "__blob__" + name + "__"
+    name = "__blob__" + name + "__"
+    assert_or_throw(validate_triad_var_name(name), "Invalid name " + name)
+    return name
 
 
 class _PartitionSerializer(object):
@@ -271,9 +332,10 @@ class _Comap(object):
     ):
         self.schemas = df.metadata["schemas"]
         self.df_idx = [
-            (df.schema.index_of_key(v), self.schemas[k])
+            (df.schema.index_of_key(v), k, self.schemas[k])
             for k, v in df.metadata["serialized_cols"].items()
         ]
+        self.named = df.metadata.get("serialized_has_name", False)
         self.func = func
         self._on_init = on_init
 
@@ -281,9 +343,7 @@ class _Comap(object):
         if self._on_init is None:
             return
         # TODO: currently, get_output_schema only gets empty dataframes
-        empty_dfs = DataFrames(
-            {k: ArrayDataFrame([], v) for k, v in self.schemas.items()}
-        )
+        empty_dfs = _generate_comap_empty_dfs(self.schemas, self.named)
         self._on_init(partition_no, empty_dfs)
 
     def run(self, cursor: PartitionCursor, df: LocalDataFrame) -> LocalDataFrame:
@@ -295,11 +355,21 @@ class _Comap(object):
         dfs = DataFrames(list(self._get_dfs(data[0])))
         return self.func(cursor, dfs)
 
-    def _get_dfs(self, row: Any) -> Iterable[DataFrame]:
-        for k, v in self.df_idx:
+    def _get_dfs(self, row: Any) -> Iterable[Any]:
+        for k, name, v in self.df_idx:
             if row[k] is None:
-                yield ArrayDataFrame([], v)
+                df: DataFrame = ArrayDataFrame([], v)
             else:
-                df = deserialize_df(row[k])
+                df = deserialize_df(row[k])  # type: ignore
                 assert df is not None
+            if self.named:
+                yield name, df
+            else:
                 yield df
+
+
+def _generate_comap_empty_dfs(schemas: Any, named: bool) -> DataFrames:
+    if named:
+        return DataFrames({k: ArrayDataFrame([], v) for k, v in schemas.items()})
+    else:
+        return DataFrames([ArrayDataFrame([], v) for v in schemas.values()])

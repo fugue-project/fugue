@@ -15,6 +15,8 @@ def test_transformer():
     assert t1.output_schema == "a:int,b:int"
     t2._output_schema = t2.get_output_schema(df)
     assert t2.output_schema == "b:int,a:int"
+    t3._output_schema = t3.get_output_schema(df)
+    assert t3.output_schema == "a:int,b:int"
     assert [[0, 1]] == list(t3(df.as_array_iterable()))
 
 
@@ -86,7 +88,7 @@ def t2(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
         yield r
 
 
-@transformer("*, b:int")
+@transformer(Schema("a:int, b:int"))
 def t3(df: Iterable[List[Any]]) -> Iterable[List[Any]]:
     for r in df:
         r += [1]

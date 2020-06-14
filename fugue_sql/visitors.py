@@ -204,13 +204,19 @@ class _VisitorBase(FugueSQLVisitor):
 
     def visitFuguePersist(self, ctx: fp.FuguePersistContext) -> Any:
         if ctx.checkpoint:
+            if ctx.ns:
+                return True, self.visit(ctx.ns)
             return True, None
-        if ctx.value is None:
-            return False, None
-        return False, self.visit(ctx.value)
+        else:
+            if ctx.value is None:
+                return False, None
+            return False, self.visit(ctx.value)
 
     def visitFuguePersistValue(self, ctx: fp.FuguePersistValueContext) -> Any:
         return self.ctxToStr(ctx, delimit="")
+
+    def visitFugueCheckpointNamespace(self, ctx: fp.FugueCheckpointNamespaceContext):
+        return str(eval(self.ctxToStr(ctx)))
 
 
 class _Extensions(_VisitorBase):
@@ -510,15 +516,17 @@ class _Extensions(_VisitorBase):
             varname, sign = None, None
         need_checkpoint = sign == "??"
         if "persist" in data:
-            is_checkpoint, persist_value = data["persist"]
-            if need_checkpoint or is_checkpoint:  # pragma: no cover
+            is_checkpoint, value = data["persist"]
+            if need_checkpoint or is_checkpoint:
                 assert_or_throw(
                     is_checkpoint,
                     FugueSQLSyntaxError("can't persist when checkpoint is specified"),
                 )
-                raise NotImplementedError
+                df = df.checkpoint(value)
             else:
-                df = df.persist(persist_value)
+                df = df.persist(value)
+        elif need_checkpoint:
+            df = df.checkpoint()
         if "broadcast" in data:
             df = df.broadcast()
         if varname is not None:

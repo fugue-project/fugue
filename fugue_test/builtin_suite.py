@@ -4,6 +4,7 @@ from unittest import TestCase
 
 import pandas as pd
 import pytest
+from fugue import FileSystem, Schema
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -18,7 +19,6 @@ from fugue.extensions.transformer import (
     transformer,
 )
 from fugue.workflow.workflow import FugueInteractiveWorkflow, FugueWorkflow
-from triad.collections.fs import FileSystem
 
 
 class BuiltInTests(object):
@@ -53,11 +53,18 @@ class BuiltInTests(object):
                 dag.df([[0]], "a:int").persist().partition(num=2).show()
                 dag.df(dag.df([[0]], "a:int")).persist().broadcast().show()
 
+        def test_checkpoint_no_effect(self):
+            with self.dag() as dag:
+                dag.df([[0]], "a:int").checkpoint().partition(num=2).show()
+                dag.df(dag.df([[0]], "a:int")).checkpoint("dummy").broadcast().show()
+
         def test_create_process_output(self):
             with self.dag() as dag:
                 a = dag.create(mock_creator, params=dict(p=2))
                 a.assert_eq(ArrayDataFrame([[2]], "a:int"))
                 b = dag.process(a, a, using=mock_processor)
+                b.assert_eq(ArrayDataFrame([[2]], "a:int"))
+                b = dag.process(dict(df1=a, df2=a), using=mock_processor)
                 b.assert_eq(ArrayDataFrame([[2]], "a:int"))
                 dag.output(a, b, using=mock_outputter)
                 b2 = dag.process(a, a, a, using=mock_processor2)
@@ -66,6 +73,7 @@ class BuiltInTests(object):
                 b2.assert_eq(ArrayDataFrame([[3]], "a:int"))
                 a.process(mock_processor2).assert_eq(ArrayDataFrame([[1]], "a:int"))
                 a.output(mock_outputter2)
+                dag.output(dict(df=a), using=mock_outputter2)
                 a.partition(num=3).output(MockOutputter3)
                 dag.output(dict(aa=a, bb=b), using=MockOutputter4)
 
@@ -96,6 +104,9 @@ class BuiltInTests(object):
                 a = dag.df([[1, 2], [3, 4]], "a:double,b:int", dict(x=1))
                 c = a.transform(mock_tf0)
                 dag.df([[1, 2, 1], [3, 4, 1]], "a:double,b:int,p:int").assert_eq(c)
+
+                c = a.transform(mock_tf0, params=dict(col="x"))
+                dag.df([[1, 2, 1], [3, 4, 1]], "a:double,b:int,x:int").assert_eq(c)
 
                 a = dag.df(
                     [[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int", dict(x=1)
@@ -152,7 +163,15 @@ class BuiltInTests(object):
                 c = dag.transform(a.zip(b), using=mock_co_tf1, params=dict(p=10))
                 e = dag.df([[1, 2, 1, 10]], "a:int,ct1:int,ct2:int,p:int")
                 e.assert_eq(c)
+
                 a.zip(b).transform(mock_co_tf1, params=dict(p=10)).assert_eq(e)
+
+                c = dag.transform(
+                    a.zip(b), using=mock_co_tf1, params=dict(p=10, col="x")
+                )
+                e = dag.df([[1, 2, 1, 10]], "a:int,ct1:int,ct2:int,x:int")
+                e.assert_eq(c)
+
                 # interfaceless
                 c = dag.transform(
                     a.zip(b),
@@ -179,6 +198,42 @@ class BuiltInTests(object):
                     .transform(mock_co_tf4_ex, ignore_errors=[NotImplementedError])
                 )
                 e = dag.df([[1, 2, 1]], "a:int,ct1:int,p:int")
+                e.assert_eq(c)
+
+        def test_cotransform_with_key(self):
+            with self.dag() as dag:
+                a = dag.df([[1, 2], [1, 3], [2, 1]], "a:int,b:int", dict(x=1))
+                b = dag.df([[1, 2], [3, 4]], "a:int,c:int", dict(x=1))
+                dag.zip(dict(x=a, y=b)).show()
+                c = dag.zip(dict(x=a, y=b)).transform(
+                    MockCoTransform1, params=dict(named=True)
+                )
+                e = dag.df([[1, 2, 1, 1]], "a:int,ct1:int,ct2:int,p:int")
+                e.assert_eq(c)
+
+                c = dag.zip(dict(df1=a, df2=b)).transform(
+                    mock_co_tf1, params=dict(p=10)
+                )
+                e = dag.df([[1, 2, 1, 10]], "a:int,ct1:int,ct2:int,p:int")
+                e.assert_eq(c)
+
+                c = dag.zip(dict(df2=a, df1=b)).transform(
+                    mock_co_tf1, params=dict(p=10)
+                )
+                e = dag.df([[1, 1, 2, 10]], "a:int,ct1:int,ct2:int,p:int")
+                e.assert_eq(c)
+
+                c = dag.transform(
+                    dag.zip(dict(x=a, y=b)),
+                    using=mock_co_tf2,
+                    schema="a:int,ct1:int,ct2:int,p:int",
+                    params=dict(p=10),
+                )
+                e = dag.df([[1, 2, 1, 10]], "a:int,ct1:int,ct2:int,p:int")
+                e.assert_eq(c)
+
+                c = dag.zip(dict(df1=a)).transform(mock_co_tf3)
+                e = dag.df([[1, 3, 1]], "a:int,ct1:int,p:int")
                 e.assert_eq(c)
 
         def test_join(self):
@@ -384,9 +439,9 @@ class MockTransform1(Transformer):
         return PandasDataFrame(pdf, self.output_schema)
 
 
-@transformer(lambda s: s + "p:int")
-def mock_tf0(df: pd.DataFrame, p=1) -> pd.DataFrame:
-    df["p"] = p
+@transformer(lambda df, **kwargs: df.schema + (kwargs.get("col", "p") + ":int"))
+def mock_tf0(df: pd.DataFrame, p=1, col="p") -> pd.DataFrame:
+    df[col] = p
     return df
 
 
@@ -410,11 +465,19 @@ class MockCoTransform1(CoTransformer):
     def get_output_schema(self, dfs: DataFrames) -> Any:
         assert "test" in self.workflow_conf
         assert 2 == len(dfs)
+        if self.params.get("named", False):
+            assert dfs.has_key
+        else:
+            assert not dfs.has_key
         return [self.key_schema, "ct1:int,ct2:int,p:int"]
 
     def on_init(self, dfs: DataFrames) -> None:
         assert "test" in self.workflow_conf
         assert 2 == len(dfs)
+        if self.params.get("named", False):
+            assert dfs.has_key
+        else:
+            assert not dfs.has_key
         self.pn = self.cursor.physical_partition_no
         self.ks = self.key_schema
         if "on_init_called" not in self.__dict__:
@@ -426,6 +489,10 @@ class MockCoTransform1(CoTransformer):
         assert 1 == self.on_init_called
         assert "test" in self.workflow_conf
         assert 2 == len(dfs)
+        if self.params.get("named", False):
+            assert dfs.has_key
+        else:
+            assert not dfs.has_key
         row = self.cursor.key_value_array + [
             dfs[0].count(),
             dfs[1].count(),
@@ -434,9 +501,11 @@ class MockCoTransform1(CoTransformer):
         return ArrayDataFrame([row], self.output_schema)
 
 
-@cotransformer("a:int,ct1:int,ct2:int,p:int")
+@cotransformer(
+    lambda dfs, **kwargs: "a:int,ct1:int,ct2:int," + kwargs.get("col", "p") + ":int"
+)
 def mock_co_tf1(
-    df1: List[Dict[str, Any]], df2: List[List[Any]], p=1
+    df1: List[Dict[str, Any]], df2: List[List[Any]], p=1, col="p"
 ) -> List[List[Any]]:
     return [[df1[0]["a"], len(df1), len(df2), p]]
 
@@ -445,7 +514,7 @@ def mock_co_tf2(dfs: DataFrames, p=1) -> List[List[Any]]:
     return [[dfs[0].peek_dict()["a"], dfs[0].count(), dfs[1].count(), p]]
 
 
-@cotransformer("a:int,ct1:int,p:int")
+@cotransformer(Schema("a:int,ct1:int,p:int"))
 def mock_co_tf3(df1: List[Dict[str, Any]], p=1) -> List[List[Any]]:
     return [[df1[0]["a"], len(df1), p]]
 

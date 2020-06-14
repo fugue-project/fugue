@@ -77,11 +77,13 @@ class _FuncAsTransformer(Transformer):
         return to_uuid(self._wrapper.__uuid__(), self._output_schema_arg)
 
     def _parse_schema(self, obj: Any, df: DataFrame) -> Schema:
+        if callable(obj):
+            return obj(df, **self.params)
         if isinstance(obj, str):
             return df.schema.transform(obj)
         if isinstance(obj, List):
             return df.schema.transform(*obj)
-        return df.schema.transform(obj)
+        raise NotImplementedError  # pragma: no cover
 
     @staticmethod
     def from_func(func: Callable, schema: Any) -> "_FuncAsTransformer":
@@ -98,14 +100,30 @@ class _FuncAsTransformer(Transformer):
 
 class _FuncAsCoTransformer(CoTransformer):
     def get_output_schema(self, dfs: DataFrames) -> Any:
-        return self._parse_schema(self._output_schema_arg)  # type: ignore
+        return self._parse_schema(self._output_schema_arg, dfs)  # type: ignore
 
     @no_type_check
     def transform(self, dfs: DataFrames) -> LocalDataFrame:
-        args: List[Any] = [dfs] if self._dfs_input else list(dfs.values())
-        return self._wrapper.run(  # type: ignore
-            args, self.params, ignore_unknown=False, output_schema=self.output_schema
-        )
+        if self._dfs_input:  # function has DataFrames input
+            return self._wrapper.run(  # type: ignore
+                [dfs],
+                self.params,
+                ignore_unknown=False,
+                output_schema=self.output_schema,
+            )
+        if not dfs.has_key:  # input does not have key
+            return self._wrapper.run(  # type: ignore
+                list(dfs.values()),
+                self.params,
+                ignore_unknown=False,
+                output_schema=self.output_schema,
+            )
+        else:  # input DataFrames has key
+            p = dict(dfs)
+            p.update(self.params)
+            return self._wrapper.run(  # type: ignore
+                [], p, ignore_unknown=False, output_schema=self.output_schema
+            )
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self._wrapper(*args, **kwargs)  # type: ignore
@@ -116,15 +134,15 @@ class _FuncAsCoTransformer(CoTransformer):
             self._wrapper.__uuid__(), self._output_schema_arg, self._dfs_input
         )
 
-    def _parse_schema(self, obj: Any) -> Schema:
-        if obj is None:
-            return Schema()
+    def _parse_schema(self, obj: Any, dfs: DataFrames) -> Schema:
+        if callable(obj):
+            return obj(dfs, **self.params)
         if isinstance(obj, str):
             return Schema(obj)
         if isinstance(obj, List):
             s = Schema()
             for x in obj:
-                s += self._parse_schema(x)
+                s += self._parse_schema(x, dfs)
             return s
         return Schema(obj)
 

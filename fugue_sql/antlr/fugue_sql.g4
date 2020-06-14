@@ -185,7 +185,11 @@ fuguePath
 
 fuguePersist
     : PERSIST (value=fuguePersistValue)?
-    | checkpoint=CHECKPOINT
+    | checkpoint=CHECKPOINT (ns=fugueCheckpointNamespace)?
+    ;
+
+fugueCheckpointNamespace
+    : STRING
     ;
 
 fuguePersistValue
@@ -216,7 +220,7 @@ fugueAssignment:
 
 fugueAssignmentSign
     : COLONEQUAL
-    // | CHECKPOINTSIGN     // TODO: add checkpoint
+    | CHECKPOINTSIGN
     | {self.simpleAssign}? EQUAL
     ;
 
