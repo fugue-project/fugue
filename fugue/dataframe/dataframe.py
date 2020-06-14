@@ -169,7 +169,11 @@ class DataFrame(ABC):
                 print("")
             if len(self.metadata) > 0:
                 print("Metadata:")
-                print(self.metadata.to_json(indent=True))
+                try:
+                    # try pretty print, but if not convertible to json, print original
+                    print(self.metadata.to_json(indent=True))
+                except Exception:  # pragma: no cover
+                    print(self.metadata)
                 print("")
 
     def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:

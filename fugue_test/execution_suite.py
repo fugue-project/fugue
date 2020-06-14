@@ -12,6 +12,7 @@ from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution.execution_engine import ExecutionEngine
 from pytest import raises
 from triad.exceptions import InvalidOperationError
+from fugue.dataframe.dataframes import DataFrames
 
 
 class ExecutionEngineTests(object):
@@ -300,6 +301,7 @@ class ExecutionEngineTests(object):
             # test zip with serialized dfs
             z1 = e.persist(e.zip(sa, sb, how="inner", partition_spec=ps))
             assert 1 == z1.count()
+            assert not z1.metadata.get("serialized_has_name", False)
             z2 = e.persist(e.zip(sa, sb, how="left_outer", partition_spec=ps))
             assert 2 == z2.count()
 
@@ -346,6 +348,53 @@ class ExecutionEngineTests(object):
             assert z6.count() == 2
             assert len(z6.schema) == 3
 
+            z7 = e.zip(a, b, df1_name="x", df2_name="y")
+            z7.show()
+            assert z7.metadata.get("serialized_has_name", False)
+
+        def test_zip_all(self):
+            e = self.engine
+            a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
+            z = e.persist(e.zip_all(DataFrames(a)))
+            assert 1 == z.count()
+            assert z.metadata.get("serialized", False)
+            assert not z.metadata.get("serialized_has_name", False)
+            z = e.persist(e.zip_all(DataFrames(x=a)))
+            assert 1 == z.count()
+            assert z.metadata.get("serialized", False)
+            assert z.metadata.get("serialized_has_name", False)
+            z = e.persist(
+                e.zip_all(DataFrames(x=a), partition_spec=PartitionSpec(by=["a"]))
+            )
+            assert 2 == z.count()
+            assert z.metadata.get("serialized", False)
+            assert z.metadata.get("serialized_has_name", False)
+
+            b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
+            c = e.to_df([[6, 1], [2, 7]], "d:int,a:int")
+            z = e.persist(e.zip_all(DataFrames(a, b, c)))
+            assert 1 == z.count()
+            assert not z.metadata.get("serialized_has_name", False)
+            z = e.persist(e.zip_all(DataFrames(x=a, y=b, z=c)))
+            assert 1 == z.count()
+            assert z.metadata.get("serialized_has_name", False)
+
+            z = e.persist(e.zip_all(DataFrames(b, b)))
+            assert 2 == z.count()
+            assert not z.metadata.get("serialized_has_name", False)
+            assert ["a", "c"] in z.schema
+            z = e.persist(e.zip_all(DataFrames(x=b, y=b)))
+            assert 2 == z.count()
+            assert z.metadata.get("serialized_has_name", False)
+            assert ["a", "c"] in z.schema
+
+            z = e.persist(
+                e.zip_all(DataFrames(b, b), partition_spec=PartitionSpec(by=["a"]))
+            )
+            assert 2 == z.count()
+            assert not z.metadata.get("serialized_has_name", False)
+            assert "c" not in z.schema
+
         def test_comap(self):
             ps = PartitionSpec(presort="b,c")
             e = self.engine
@@ -365,6 +414,7 @@ class ExecutionEngineTests(object):
                 return ArrayDataFrame([keys + [v]], cursor.key_schema + "v:str")
 
             def on_init(partition_no, dfs):
+                assert not dfs.has_key
                 assert partition_no >= 0
                 assert len(dfs) > 0
 
@@ -393,6 +443,60 @@ class ExecutionEngineTests(object):
 
             res = e.comap(z4, comap, "v:str", PartitionSpec(), metadata=dict(a=1))
             df_eq(res, [["_03,_12"]], "v:str", metadata=dict(a=1), throw=True)
+
+        def test_comap_with_key(self):
+            e = self.engine
+            a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
+            b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
+            c = e.to_df([[6, 1]], "c:int,a:int")
+            z1 = e.persist(e.zip(a, b, df1_name="x", df2_name="y"))
+            z2 = e.persist(e.zip_all(DataFrames(x=a, y=b, z=b)))
+            z3 = e.persist(
+                e.zip_all(DataFrames(z=c), partition_spec=PartitionSpec(by=["a"]))
+            )
+
+            def comap(cursor, dfs):
+                assert dfs.has_key
+                v = ",".join([k + str(v.count()) for k, v in dfs.items()])
+                keys = cursor.key_value_array
+                # if len(keys) == 0:
+                #    return ArrayDataFrame([[v]], "v:str")
+                return ArrayDataFrame([keys + [v]], cursor.key_schema + "v:str")
+
+            def on_init(partition_no, dfs):
+                assert dfs.has_key
+                assert partition_no >= 0
+                assert len(dfs) > 0
+
+            res = e.comap(
+                z1,
+                comap,
+                "a:int,v:str",
+                PartitionSpec(),
+                metadata=dict(a=1),
+                on_init=on_init,
+            )
+            df_eq(res, [[1, "x2,y1"]], "a:int,v:str", metadata=dict(a=1), throw=True)
+
+            res = e.comap(
+                z2,
+                comap,
+                "a:int,v:str",
+                PartitionSpec(),
+                metadata=dict(a=1),
+                on_init=on_init,
+            )
+            df_eq(res, [[1, "x2,y1,z1"]], "a:int,v:str", metadata=dict(a=1), throw=True)
+
+            res = e.comap(
+                z3,
+                comap,
+                "a:int,v:str",
+                PartitionSpec(),
+                metadata=dict(a=1),
+                on_init=on_init,
+            )
+            df_eq(res, [[1, "z1"]], "a:int,v:str", metadata=dict(a=1), throw=True)
 
         @pytest.fixture(autouse=True)
         def init_tmpdir(self, tmpdir):

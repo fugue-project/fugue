@@ -56,9 +56,10 @@ class FugueTask(TaskSpec, ABC):
             deterministic=deterministic,
             lazy=lazy,
         )
-        self._persist: Any = self.params.get_or_none("persist", object)
-        self._broadcast = self.params.get("broadcast", False)
-        # self._partition = self.params.get_or_none("partition", PartitionSpec)
+        self._persist: Any = None
+        self._broadcast = False
+        self._checkpoint = False
+        self._checkpoint_namespace: Optional[str] = None
 
     def __uuid__(self) -> str:
         return to_uuid(
@@ -72,16 +73,13 @@ class FugueTask(TaskSpec, ABC):
             self.node_spec,
             str(self._persist),
             self._broadcast,
-            # self._partition
+            self._checkpoint,
+            self._checkpoint_namespace,
         )
 
     @abstractmethod
     def execute(self, ctx: TaskContext) -> None:  # pragma: no cover
         raise NotImplementedError
-
-    @property
-    def params(self) -> ParamDict:
-        return self.metadata
 
     @property
     def single_output_expression(self) -> str:
@@ -99,6 +97,11 @@ class FugueTask(TaskSpec, ABC):
 
     def __deepcopy__(self, memo: Any) -> "FugueTask":
         raise InvalidOperationError("can't copy")
+
+    def checkpoint(self, namespace: Any = None):
+        # TODO: currently checkpoint is not taking effect
+        self._checkpoint = True
+        self._checkpoint_namespace = None if namespace is None else str(namespace)
 
     def persist(self, level: Any) -> "FugueTask":
         self._persist = "" if level is None else level

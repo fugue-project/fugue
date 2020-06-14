@@ -102,10 +102,26 @@ class _FuncAsCoTransformer(CoTransformer):
 
     @no_type_check
     def transform(self, dfs: DataFrames) -> LocalDataFrame:
-        args: List[Any] = [dfs] if self._dfs_input else list(dfs.values())
-        return self._wrapper.run(  # type: ignore
-            args, self.params, ignore_unknown=False, output_schema=self.output_schema
-        )
+        if self._dfs_input:  # function has DataFrames input
+            return self._wrapper.run(  # type: ignore
+                [dfs],
+                self.params,
+                ignore_unknown=False,
+                output_schema=self.output_schema,
+            )
+        if not dfs.has_key:  # input does not have key
+            return self._wrapper.run(  # type: ignore
+                list(dfs.values()),
+                self.params,
+                ignore_unknown=False,
+                output_schema=self.output_schema,
+            )
+        else:  # input DataFrames has key
+            p = dict(dfs)
+            p.update(self.params)
+            return self._wrapper.run(  # type: ignore
+                [], p, ignore_unknown=False, output_schema=self.output_schema
+            )
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self._wrapper(*args, **kwargs)  # type: ignore

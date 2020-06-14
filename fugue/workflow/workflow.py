@@ -154,6 +154,10 @@ class WorkflowDataFrame(DataFrame):
     def cross_join(self: TDF, *dfs: Any) -> TDF:
         return self.join(*dfs, how="cross")
 
+    def checkpoint(self: TDF, namespace: Any = None) -> TDF:
+        self._task.checkpoint(namespace)
+        return self
+
     def persist(self: TDF, level: Any = None) -> TDF:
         self._task.persist("" if level is None else level)
         return self

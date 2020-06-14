@@ -53,6 +53,11 @@ class BuiltInTests(object):
                 dag.df([[0]], "a:int").persist().partition(num=2).show()
                 dag.df(dag.df([[0]], "a:int")).persist().broadcast().show()
 
+        def test_checkpoint_no_effect(self):
+            with self.dag() as dag:
+                dag.df([[0]], "a:int").checkpoint().partition(num=2).show()
+                dag.df(dag.df([[0]], "a:int")).checkpoint("dummy").broadcast().show()
+
         def test_create_process_output(self):
             with self.dag() as dag:
                 a = dag.create(mock_creator, params=dict(p=2))
@@ -179,6 +184,42 @@ class BuiltInTests(object):
                     .transform(mock_co_tf4_ex, ignore_errors=[NotImplementedError])
                 )
                 e = dag.df([[1, 2, 1]], "a:int,ct1:int,p:int")
+                e.assert_eq(c)
+
+        def test_cotransform_with_key(self):
+            with self.dag() as dag:
+                a = dag.df([[1, 2], [1, 3], [2, 1]], "a:int,b:int", dict(x=1))
+                b = dag.df([[1, 2], [3, 4]], "a:int,c:int", dict(x=1))
+                dag.zip(dict(x=a, y=b)).show()
+                c = dag.zip(dict(x=a, y=b)).transform(
+                    MockCoTransform1, params=dict(named=True)
+                )
+                e = dag.df([[1, 2, 1, 1]], "a:int,ct1:int,ct2:int,p:int")
+                e.assert_eq(c)
+
+                c = dag.zip(dict(df1=a, df2=b)).transform(
+                    mock_co_tf1, params=dict(p=10)
+                )
+                e = dag.df([[1, 2, 1, 10]], "a:int,ct1:int,ct2:int,p:int")
+                e.assert_eq(c)
+
+                c = dag.zip(dict(df2=a, df1=b)).transform(
+                    mock_co_tf1, params=dict(p=10)
+                )
+                e = dag.df([[1, 1, 2, 10]], "a:int,ct1:int,ct2:int,p:int")
+                e.assert_eq(c)
+
+                c = dag.transform(
+                    dag.zip(dict(x=a, y=b)),
+                    using=mock_co_tf2,
+                    schema="a:int,ct1:int,ct2:int,p:int",
+                    params=dict(p=10),
+                )
+                e = dag.df([[1, 2, 1, 10]], "a:int,ct1:int,ct2:int,p:int")
+                e.assert_eq(c)
+
+                c = dag.zip(dict(df1=a)).transform(mock_co_tf3)
+                e = dag.df([[1, 3, 1]], "a:int,ct1:int,p:int")
                 e.assert_eq(c)
 
         def test_join(self):
@@ -410,11 +451,19 @@ class MockCoTransform1(CoTransformer):
     def get_output_schema(self, dfs: DataFrames) -> Any:
         assert "test" in self.workflow_conf
         assert 2 == len(dfs)
+        if self.params.get("named", False):
+            assert dfs.has_key
+        else:
+            assert not dfs.has_key
         return [self.key_schema, "ct1:int,ct2:int,p:int"]
 
     def on_init(self, dfs: DataFrames) -> None:
         assert "test" in self.workflow_conf
         assert 2 == len(dfs)
+        if self.params.get("named", False):
+            assert dfs.has_key
+        else:
+            assert not dfs.has_key
         self.pn = self.cursor.physical_partition_no
         self.ks = self.key_schema
         if "on_init_called" not in self.__dict__:
@@ -426,6 +475,10 @@ class MockCoTransform1(CoTransformer):
         assert 1 == self.on_init_called
         assert "test" in self.workflow_conf
         assert 2 == len(dfs)
+        if self.params.get("named", False):
+            assert dfs.has_key
+        else:
+            assert not dfs.has_key
         row = self.cursor.key_value_array + [
             dfs[0].count(),
             dfs[1].count(),

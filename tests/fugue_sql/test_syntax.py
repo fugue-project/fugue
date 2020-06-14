@@ -44,10 +44,15 @@ def test_partition_syntax():
         simple_assign=True)
 
 
-def test_persist_broadcast_syntax():
+def test_persist_broadcast_checkpoint_syntax():
     good_single_syntax(
-        "a = select a", ["", "checkpoint", "PERSIst",
-                         "persist a12", "persist a.b.c"], ["BROADCAst"],
+        "a = select a", ["", "PERSIst",
+                         "persist a12", "persist a.b.c",
+                         "checkpoint", "checkpoint 'x'"], ["BROADCAst"],
+        ignore_case=True,
+        simple_assign=True)
+    good_single_syntax(
+        "a ?? select a", ["", "checkpoint", "checkpoint 'x'"], ["BROADCAst"],
         ignore_case=True,
         simple_assign=True)
 

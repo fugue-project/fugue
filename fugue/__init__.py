@@ -1,6 +1,9 @@
 # flake8: noqa
 
-__version__ = "0.2.8"
+__version__ = "0.2.9"
+
+from triad.collections import Schema
+from triad.collections.fs import FileSystem
 
 from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.dataframe.array_dataframe import ArrayDataFrame
@@ -15,6 +18,11 @@ from fugue.execution.native_execution_engine import NativeExecutionEngine, Sqlit
 from fugue.extensions.creator import Creator, creator
 from fugue.extensions.outputter import Outputter, outputter
 from fugue.extensions.processor import Processor, processor
-from fugue.extensions.transformer import CoTransformer, Transformer, transformer
+from fugue.extensions.transformer import (
+    CoTransformer,
+    Transformer,
+    transformer,
+    cotransformer,
+)
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
 from fugue.workflow.workflow_context import FugueWorkflowContext

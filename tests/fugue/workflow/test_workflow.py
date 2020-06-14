@@ -98,40 +98,7 @@ def test_interactive_workflow():
     a.assert_eq(b)  # dummy value from cache makes them equal
 
 
-def test_workflow_determinism():
-    # TODO: need more thorough test, need to separate out a test file
-    builder1 = FugueWorkflow()
-    a1 = builder1.create_data([[0], [0], [1]], "a:int32")
-    b1 = a1.transform("mock_tf1", "*,b:int", pre_partition=dict(by=["a"], num=2))
-    a1.show()
 
-    builder2 = FugueWorkflow()
-    a2 = builder2.create_data([[0], [0], [1]], Schema("a:int"))
-    b2 = a2.transform("mock_tf1", "*,b:int", pre_partition=dict(num="2", by=["a"]))
-    a2.show()
-
-    assert builder1.spec_uuid() == builder1.spec_uuid()
-    assert a1.spec_uuid() == a2.spec_uuid()
-    assert b1.spec_uuid() == b2.spec_uuid()
-    assert builder1.spec_uuid() == builder2.spec_uuid()
-
-    builder3 = FugueWorkflow()
-    a3 = builder2.create_data([[0], [0], [1]], Schema("a:int"))
-    b3 = a2.transform("mock_tf1", "*,b:str", pre_partition=dict(num="2", by=["a"]))
-    a3.show()
-
-    assert a1.spec_uuid() == a3.spec_uuid()
-    assert b1.spec_uuid() != b3.spec_uuid()
-    assert builder1.spec_uuid() != builder3.spec_uuid()
-
-    builder3 = FugueWorkflow()
-    a3 = builder2.create_data([[0], [0], [1]], Schema("a:int"))
-    b3 = a2.transform("mock_tf1", "*,b:int", pre_partition=dict(num="200", by=["a"]))
-    a3.show()
-
-    assert a1.spec_uuid() == a3.spec_uuid()
-    assert b1.spec_uuid() != b3.spec_uuid()
-    assert builder1.spec_uuid() != builder3.spec_uuid()
 
 
 

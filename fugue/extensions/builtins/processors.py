@@ -10,6 +10,7 @@ from fugue.dataframe import (
 )
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution import SQLEngine
+from fugue.execution.execution_engine import _generate_comap_empty_dfs
 from fugue.extensions.processor import Processor
 from fugue.extensions.transformer import CoTransformer, Transformer, to_transformer
 from triad.collections import ParamDict
@@ -56,8 +57,8 @@ class RunTransformer(Processor):
         )
         tf._key_schema = df.schema - list(df.metadata["serialized_cols"].values())
         # TODO: currently, get_output_schema only gets empty dataframes
-        empty_dfs = DataFrames(
-            {k: ArrayDataFrame([], v) for k, v in df.metadata["schemas"].items()}
+        empty_dfs = _generate_comap_empty_dfs(
+            df.metadata["schemas"], df.metadata.get("serialized_has_name", False)
         )
         tf._output_schema = Schema(tf.get_output_schema(empty_dfs))
         tr = _CoTransformerRunner(df, tf, self._ignore_errors)
@@ -100,30 +101,13 @@ class Zip(Processor):
         # TODO: this should also search on workflow conf
         temp_path = self.params.get_or_none("temp_path", str)
         to_file_threshold = self.params.get_or_none("to_file_threshold", object)
-        if to_file_threshold is None:  # pragma: no cover
-            to_file_threshold = -1
-        if len(dfs) == 1:
-            return self.execution_engine.serialize_by_partition(
-                dfs[0], partition_spec, "_0", temp_path, to_file_threshold
-            )
-        df = self.execution_engine.zip(
-            dfs[0],
-            dfs[1],
+        return self.execution_engine.zip_all(
+            dfs,
             how=how,
             partition_spec=partition_spec,
             temp_path=temp_path,
             to_file_threshold=to_file_threshold,
         )
-        for i in range(2, len(dfs)):
-            df = self.execution_engine.zip(
-                df,
-                dfs[i],
-                how=how,
-                partition_spec=partition_spec,
-                temp_path=temp_path,
-                to_file_threshold=to_file_threshold,
-            )
-        return df
 
 
 class Rename(Processor):

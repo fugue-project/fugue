@@ -10,7 +10,7 @@ class Show(Outputter):
             df.show(
                 self.params.get("rows", 10),
                 self.params.get("show_count", False),
-                title=self.params.get("title", ""),
+                title=self.params.get_or_none("title", str),
             )
 
 
