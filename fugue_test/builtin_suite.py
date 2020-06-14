@@ -102,6 +102,9 @@ class BuiltInTests(object):
                 c = a.transform(mock_tf0)
                 dag.df([[1, 2, 1], [3, 4, 1]], "a:double,b:int,p:int").assert_eq(c)
 
+                c = a.transform(mock_tf0, params=dict(col="x"))
+                dag.df([[1, 2, 1], [3, 4, 1]], "a:double,b:int,x:int").assert_eq(c)
+
                 a = dag.df(
                     [[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int", dict(x=1)
                 )
@@ -157,7 +160,15 @@ class BuiltInTests(object):
                 c = dag.transform(a.zip(b), using=mock_co_tf1, params=dict(p=10))
                 e = dag.df([[1, 2, 1, 10]], "a:int,ct1:int,ct2:int,p:int")
                 e.assert_eq(c)
+
                 a.zip(b).transform(mock_co_tf1, params=dict(p=10)).assert_eq(e)
+
+                c = dag.transform(
+                    a.zip(b), using=mock_co_tf1, params=dict(p=10, col="x")
+                )
+                e = dag.df([[1, 2, 1, 10]], "a:int,ct1:int,ct2:int,x:int")
+                e.assert_eq(c)
+
                 # interfaceless
                 c = dag.transform(
                     a.zip(b),
@@ -425,9 +436,9 @@ class MockTransform1(Transformer):
         return PandasDataFrame(pdf, self.output_schema)
 
 
-@transformer(lambda s: s + "p:int")
-def mock_tf0(df: pd.DataFrame, p=1) -> pd.DataFrame:
-    df["p"] = p
+@transformer(lambda df, **kwargs: df.schema + (kwargs.get("col", "p") + ":int"))
+def mock_tf0(df: pd.DataFrame, p=1, col="p") -> pd.DataFrame:
+    df[col] = p
     return df
 
 
@@ -487,9 +498,11 @@ class MockCoTransform1(CoTransformer):
         return ArrayDataFrame([row], self.output_schema)
 
 
-@cotransformer("a:int,ct1:int,ct2:int,p:int")
+@cotransformer(
+    lambda dfs, **kwargs: "a:int,ct1:int,ct2:int," + kwargs.get("col", "p") + ":int"
+)
 def mock_co_tf1(
-    df1: List[Dict[str, Any]], df2: List[List[Any]], p=1
+    df1: List[Dict[str, Any]], df2: List[List[Any]], p=1, col="p"
 ) -> List[List[Any]]:
     return [[df1[0]["a"], len(df1), len(df2), p]]
 
