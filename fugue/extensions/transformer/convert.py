@@ -83,7 +83,7 @@ class _FuncAsTransformer(Transformer):
             return df.schema.transform(obj)
         if isinstance(obj, List):
             return df.schema.transform(*obj)
-        return df.schema.transform(obj)
+        raise NotImplementedError  # pragma: no cover
 
     @staticmethod
     def from_func(func: Callable, schema: Any) -> "_FuncAsTransformer":

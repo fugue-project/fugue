@@ -4,6 +4,7 @@ from unittest import TestCase
 
 import pandas as pd
 import pytest
+from fugue import FileSystem, Schema
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -18,7 +19,6 @@ from fugue.extensions.transformer import (
     transformer,
 )
 from fugue.workflow.workflow import FugueInteractiveWorkflow, FugueWorkflow
-from triad.collections.fs import FileSystem
 
 
 class BuiltInTests(object):
@@ -64,6 +64,8 @@ class BuiltInTests(object):
                 a.assert_eq(ArrayDataFrame([[2]], "a:int"))
                 b = dag.process(a, a, using=mock_processor)
                 b.assert_eq(ArrayDataFrame([[2]], "a:int"))
+                b = dag.process(dict(df1=a, df2=a), using=mock_processor)
+                b.assert_eq(ArrayDataFrame([[2]], "a:int"))
                 dag.output(a, b, using=mock_outputter)
                 b2 = dag.process(a, a, a, using=mock_processor2)
                 b2.assert_eq(ArrayDataFrame([[3]], "a:int"))
@@ -71,6 +73,7 @@ class BuiltInTests(object):
                 b2.assert_eq(ArrayDataFrame([[3]], "a:int"))
                 a.process(mock_processor2).assert_eq(ArrayDataFrame([[1]], "a:int"))
                 a.output(mock_outputter2)
+                dag.output(dict(df=a), using=mock_outputter2)
                 a.partition(num=3).output(MockOutputter3)
                 dag.output(dict(aa=a, bb=b), using=MockOutputter4)
 
@@ -511,7 +514,7 @@ def mock_co_tf2(dfs: DataFrames, p=1) -> List[List[Any]]:
     return [[dfs[0].peek_dict()["a"], dfs[0].count(), dfs[1].count(), p]]
 
 
-@cotransformer("a:int,ct1:int,p:int")
+@cotransformer(Schema("a:int,ct1:int,p:int"))
 def mock_co_tf3(df1: List[Dict[str, Any]], p=1) -> List[List[Any]]:
     return [[df1[0]["a"], len(df1), p]]
 
