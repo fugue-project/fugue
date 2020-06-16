@@ -19,6 +19,7 @@ from fugue.extensions.transformer import (
     transformer,
 )
 from fugue.workflow.workflow import FugueInteractiveWorkflow, FugueWorkflow
+import pickle
 
 
 class BuiltInTests(object):
@@ -116,6 +117,13 @@ class BuiltInTests(object):
                     [[1, 2, 10], [None, 1, 10], [3, 4, 10], [None, 4, 10]],
                     "a:double,b:int,p:int",
                 ).assert_eq(c)
+
+        def test_transform_binary(self):
+            with self.dag() as dag:
+                a = dag.df([[1, pickle.dumps([0, "a"])]], "a:int,b:bytes")
+                c = a.transform(mock_tf3)
+                b = dag.df([[1, pickle.dumps([1, "ax"])]], "a:int,b:bytes")
+                b.assert_eq(c, check_order=True)
 
         def test_transform_by(self):
             with self.dag() as dag:
@@ -459,6 +467,17 @@ def mock_tf2_except(df: Iterable[Dict[str, Any]], p=1) -> Iterable[Dict[str, Any
         n += 1
         if n > 1:
             raise NotImplementedError
+
+
+# schema: *
+def mock_tf3(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+    # binary data test
+    for row in df:
+        obj = pickle.loads(row["b"])
+        obj[0] += 1
+        obj[1] += "x"
+        row["b"] = pickle.dumps(obj)
+        yield row
 
 
 class MockCoTransform1(CoTransformer):

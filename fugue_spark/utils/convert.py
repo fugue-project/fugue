@@ -8,6 +8,9 @@ from triad.collections import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
 
+# https://issues.apache.org/jira/browse/SPARK-29041
+pt._acceptable_types[pt.BinaryType] = (bytearray, bytes)
+
 
 def to_spark_schema(obj: Any) -> pt.StructType:
     assert_arg_not_none(obj, "schema")

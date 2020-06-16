@@ -171,6 +171,12 @@ class DataFrameTests(object):
             a = df.as_array(type_safe=True)
             assert [[[dict(a=None, b=[30, 40])]]] == a
 
+        def test_binary(self):
+            data = [[b"\x01\x05"]]
+            df = self.df(data, "a:bytes")
+            a = df.as_array(type_safe=True)
+            assert data == a
+
         def test_as_arrow(self):
             # pd.Nat
             df = self.df([[pd.NaT, 1]], "a:datetime,b:int")
