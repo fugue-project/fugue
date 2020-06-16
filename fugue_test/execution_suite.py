@@ -13,6 +13,7 @@ from fugue.execution.execution_engine import ExecutionEngine
 from pytest import raises
 from triad.exceptions import InvalidOperationError
 from fugue.dataframe.dataframes import DataFrames
+import pickle
 
 
 class ExecutionEngineTests(object):
@@ -129,6 +130,22 @@ class ExecutionEngineTests(object):
             o = ArrayDataFrame([[dt, dict(a=1)]], "a:datetime,b:{a:int}")
             c = e.map(o, select_top, o.schema, PartitionSpec(by=["a"]))
             df_eq(c, o, no_pandas=True, check_order=True, throw=True)
+
+        def test_map_with_binary(self):
+            e = self.engine
+            o = ArrayDataFrame(
+                [[pickle.dumps(BinaryObject("a"))], [pickle.dumps(BinaryObject("b"))]],
+                "a:bytes",
+            )
+            c = e.map(o, binary_map, o.schema, PartitionSpec())
+            expected = ArrayDataFrame(
+                [
+                    [pickle.dumps(BinaryObject("ax"))],
+                    [pickle.dumps(BinaryObject("bx"))],
+                ],
+                "a:bytes",
+            )
+            df_eq(expected, c, no_pandas=True, check_order=True, throw=True)
 
         def test__join_cross(self):
             e = self.engine
@@ -519,3 +536,17 @@ class ExecutionEngineTests(object):
 
 def select_top(cursor, data):
     return ArrayDataFrame([cursor.row], cursor.row_schema)
+
+
+class BinaryObject(object):
+    def __init__(self, data=None):
+        self.data = data
+
+
+def binary_map(cursor, df):
+    arr = df.as_array(type_safe=True)
+    for i in range(len(arr)):
+        obj = pickle.loads(arr[i][0])
+        obj.data += "x"
+        arr[i][0] = pickle.dumps(obj)
+    return ArrayDataFrame(arr, df.schema)

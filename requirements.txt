@@ -1,4 +1,4 @@
-triad>=0.3.6
+triad>=0.3.7
 adagio>=0.1.6
 sqlalchemy
 
