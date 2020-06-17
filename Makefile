@@ -1,7 +1,7 @@
 .PHONY: help clean dev docs package test
 
-.EXPORT_ALL_VARIABLES:
-ARROW_PRE_0_15_IPC_FORMAT = 1
+# .EXPORT_ALL_VARIABLES:
+# ARROW_PRE_0_15_IPC_FORMAT = 0
 
 help:
 	@echo "The following make targets are available:"
@@ -11,6 +11,7 @@ help:
 	@echo "	 package	package for pypi"
 	@echo "	 test		run all tests with coverage (assumes venv is present)"
 	@echo "	 testcore	run all tests excluding spark tests with coverage (assumes venv is present)"
+	@echo "	 testspark	run all tests of spark (assumes venv is present)"
 	@echo "	 sql		fugue sql code gen"
 
 
@@ -45,6 +46,9 @@ test:
 
 testcore:
 	python3 -bb -m pytest tests/ --ignore=tests/fugue_spark
+
+testspark:
+	python3 -bb -m pytest tests/fugue_spark
 
 sql:
 	java -Xmx500M -jar bin/antlr-4.8-complete.jar -Dlanguage=Python3 -visitor -no-listener fugue_sql/antlr/fugue_sql.g4

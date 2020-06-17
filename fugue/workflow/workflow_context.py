@@ -3,7 +3,7 @@ from typing import Any, Dict, Tuple
 
 from adagio.instances import (
     NoOpCache,
-    SequentialExecutionEngine,
+    ParallelExecutionEngine,
     WorkflowContext,
     WorkflowHooks,
     WorkflowResultCache,
@@ -21,7 +21,7 @@ class FugueWorkflowContext(WorkflowContext):
         self,
         execution_engine: Any = None,
         cache: Any = NoOpCache,
-        workflow_engine: Any = SequentialExecutionEngine,
+        workflow_engine: Any = None,
         hooks: Any = WorkflowHooks,
     ):
         if execution_engine is None:
@@ -31,6 +31,10 @@ class FugueWorkflowContext(WorkflowContext):
         self._fugue_engine = ee
         self._lock = RLock()
         self._results: Dict[Any, DataFrame] = {}
+        if workflow_engine is None:
+            workflow_engine = ParallelExecutionEngine(
+                self.execution_engine.conf.get("fugue.workflow.concurrency", 1), self
+            )
         super().__init__(
             cache=cache,
             engine=workflow_engine,
@@ -57,7 +61,7 @@ class FugueInteractiveWorkflowContext(FugueWorkflowContext):
         self,
         execution_engine: Any = None,
         cache: Any = NoOpCache,
-        workflow_engine: Any = SequentialExecutionEngine,
+        workflow_engine: Any = None,
         hooks: Any = WorkflowHooks,
     ):
         super().__init__(
