@@ -151,30 +151,13 @@ class DataFrame(ABC):
         title: Optional[str] = None,
         best_width: int = 100,
     ) -> None:
-        n = rows
-        arr: List[List[str]] = self.head(n)
-        count = -1
-        if len(arr) < n:
-            count = len(arr)
-        elif show_count:
-            count = self.count()
-        with DataFrame.SHOW_LOCK:
-            if title is not None and title != "":
-                print(title)
-            print(type(self).__name__)
-            tb = _PrettyTable(self.schema, arr, best_width)
-            print("\n".join(tb.to_string()))
-            if count >= 0:
-                print(f"Total count: {count}")
-                print("")
-            if len(self.metadata) > 0:
-                print("Metadata:")
-                try:
-                    # try pretty print, but if not convertible to json, print original
-                    print(self.metadata.to_json(indent=True))
-                except Exception:  # pragma: no cover
-                    print(self.metadata)
-                print("")
+        self._show(
+            head_rows=self.head(rows),
+            rows=rows,
+            count=self.count() if show_count else -1,
+            title=title,
+            best_width=best_width,
+        )
 
     def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
         res: List[Any] = []
@@ -210,6 +193,36 @@ class DataFrame(ABC):
 
     def __deepcopy__(self, memo: Any) -> "DataFrame":
         return self
+
+    def _show(
+        self,
+        head_rows: List[Any],
+        rows: int = 10,
+        count: int = -1,
+        title: Optional[str] = None,
+        best_width: int = 100,
+    ) -> None:
+        # TODO: this change is temporary, DataFramePrinter should separate
+        n = rows
+        if len(head_rows) < n:
+            count = len(head_rows)
+        with DataFrame.SHOW_LOCK:
+            if title is not None and title != "":
+                print(title)
+            print(type(self).__name__)
+            tb = _PrettyTable(self.schema, head_rows, best_width)
+            print("\n".join(tb.to_string()))
+            if count >= 0:
+                print(f"Total count: {count}")
+                print("")
+            if len(self.metadata) > 0:
+                print("Metadata:")
+                try:
+                    # try pretty print, but if not convertible to json, print original
+                    print(self.metadata.to_json(indent=True))
+                except Exception:  # pragma: no cover
+                    print(self.metadata)
+                print("")
 
 
 class LocalDataFrame(DataFrame):

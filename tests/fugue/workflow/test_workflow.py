@@ -47,7 +47,7 @@ def test_workflow():
 
 
 def test_interactive_workflow():
-    # TODO: interactive workflow is not work correctly
+    # TODO: interactive workflow is not working correctly
 
     # with statement is not valid
     with raises(FugueWorkflowError):

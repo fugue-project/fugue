@@ -26,6 +26,16 @@ def test_conf_override():
         output a,b using assert_eq""")
 
 
+def test_show():
+    with FugueSQLWorkflow() as dag:
+        dag("""
+        a = CREATE[[0], [1]] SCHEMA a: int
+        b = CREATE[[0], [1]] SCHEMA a: int
+        PRINT a, b ROWS 10 ROWCOUNT TITLE "abc"
+        PRINT a, b
+        """)
+
+
 def test_use_df():
     with FugueSQLWorkflow() as dag:
         a = dag.df([[0], [1]], "a:int")

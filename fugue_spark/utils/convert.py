@@ -3,6 +3,11 @@ from typing import Any, Iterable, List, Tuple
 import pyarrow as pa
 import pyspark.sql as ps
 import pyspark.sql.types as pt
+
+try:  # pyspark < 3
+    from pyspark.sql.types import from_arrow_type, to_arrow_type
+except ImportError:  # pyspark >=3
+    from pyspark.sql.pandas.types import from_arrow_type, to_arrow_type
 from pyarrow.types import is_list, is_struct, is_timestamp
 from triad.collections import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
@@ -110,7 +115,7 @@ def _to_arrow_type(dt: pt.DataType) -> pa.DataType:
             for field in dt
         ]
         return pa.struct(fields)
-    return pt.to_arrow_type(dt)
+    return to_arrow_type(dt)
 
 
 def _to_arrow_schema(schema: pt.StructType) -> pa.Schema:
@@ -141,7 +146,7 @@ def _from_arrow_type(dt: pa.DataType) -> pt.DataType:
                 "Spark: unsupported type in conversion from Arrow: " + str(dt)
             )
         return pt.ArrayType(_from_arrow_type(dt.value_type))
-    return pt.from_arrow_type(dt)
+    return from_arrow_type(dt)
 
 
 def _from_arrow_schema(schema: pa.Schema) -> pt.StructType:

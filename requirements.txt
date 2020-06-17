@@ -1,6 +1,7 @@
 triad>=0.3.7
-adagio>=0.1.6
+adagio>=0.1.8
 sqlalchemy
+pyspark>=3.0.0
 
 # test requirements
 pre-commit
