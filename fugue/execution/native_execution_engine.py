@@ -105,7 +105,7 @@ class NativeExecutionEngine(ExecutionEngine):
             )
             output_df._metadata = ParamDict(metadata, deep=True)
             output_df._metadata.set_readonly()
-            return output_df
+            return self.to_df(output_df)
         presort = partition_spec.presort
         presort_keys = list(presort.keys())
         presort_asc = list(presort.values())

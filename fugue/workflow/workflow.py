@@ -1,5 +1,6 @@
+from collections import defaultdict
 from threading import RLock
-from typing import Any, Dict, Iterable, List, Optional, TypeVar
+from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar
 
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
@@ -290,6 +291,7 @@ class FugueWorkflow(object):
         self._spec = WorkflowSpec()
         self._workflow_ctx = self._to_ctx(*args, **kwargs)
         self._computed = False
+        self._graph = _Graph()
 
     @property
     def conf(self) -> ParamDict:
@@ -466,6 +468,16 @@ class FugueWorkflow(object):
         dep = _Dependencies(self, task, {}, *args, **kwargs)
         name = "_" + str(len(self._spec.tasks))
         wt = self._spec.add_task(name, task, dep.dependency)
+        # TODO: this is auto persist, the implementation needs imrpovement
+        for v in dep.dependency.values():
+            v = v.split(".")[0]
+            self._graph.add(name, v)
+            if len(self._graph.down[v]) > 1 and self.conf.get(
+                "fugue.workflow.auto_persist", False
+            ):
+                self._spec.tasks[v]._persist = self.conf.get(
+                    "fugue.workflow.auto_persist_value", ""
+                )
         return WorkflowDataFrame(self, wt)
 
     def _to_dfs(self, *args: Any, **kwargs: Any) -> DataFrames:
@@ -556,3 +568,15 @@ class _Dependencies(object):
         #     # TODO: should also accept dataframe?
         #     raise TypeError(f"{self._local_vars[dep]} is not a valid dependency type")
         raise TypeError(f"{dep} is not a valid dependency type")  # pragma: no cover
+
+
+# TODO: this should not exist, dependency libraries should do the job
+class _Graph(object):
+    def __init__(self):
+        self.down: Dict[str, Set[str]] = defaultdict(set)
+        self.up: Dict[str, Set[str]] = defaultdict(set)
+
+    def add(self, name: str, depend_on: str) -> None:
+        depend_on = depend_on.split(".")[0]
+        self.down[depend_on].add(name)
+        self.up[name].add(depend_on)
