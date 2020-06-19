@@ -12,6 +12,26 @@ from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationErr
 
 
 class IterableDataFrame(LocalUnboundedDataFrame):
+    """DataFrame that wraps native python iterable of arrays. Please read
+    :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
+    to understand the concept
+
+    :param df: 2-dimensional array, iterable of arrays, or
+      :class:`~fugue.dataframe.dataframe.DataFrame`
+    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param metadata: dict-like object with string keys, default ``None``
+
+    :raises FugueDataFrameInitError: if the input is not compatible
+
+    :Examples:
+    >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
+    >>> b = IterableDataFrame(a)
+
+    :Notice:
+    It's ok to peek the dataframe, it will not affect the iteration, but it's
+    invalid operation to count
+    """
+
     def __init__(  # noqa: C901
         self, df: Any = None, schema: Any = None, metadata: Any = None
     ):
@@ -39,6 +59,8 @@ class IterableDataFrame(LocalUnboundedDataFrame):
 
     @property
     def native(self) -> EmptyAwareIterable[Any]:
+        """Iterable of native python arrays
+        """
         return self._native
 
     @property

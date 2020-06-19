@@ -27,9 +27,13 @@ dev:
 
 docs:
 	rm -rf docs/api
+	rm -rf docs/api_sql
+	rm -rf docs/api_spark
 	rm -rf docs/api_dask
 	rm -rf docs/build
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api fugue/
+	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_sql fugue_sql/
+	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_spark fugue_spark/
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_dask fugue_dask/
 	sphinx-build -b html docs/ docs/build/
 

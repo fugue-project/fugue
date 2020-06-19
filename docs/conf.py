@@ -31,7 +31,7 @@ author = "Han Wang"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.todo", "sphinx.ext.viewcode",
+extensions = ["sphinx.ext.todo", "sphinx.ext.viewcode", "sphinx.ext.intersphinx",
               "sphinx.ext.autodoc", "sphinx_rtd_theme"]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -47,7 +47,7 @@ language = "python"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ["**/fugue_sql.antlr.rst"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -63,3 +63,9 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 
 master_doc = "index"
+
+intersphinx_mapping = {
+    'triad': ('https://triad.readthedocs.io/en/latest', None),
+    'tutorial': ('https://fugue-tutorials.readthedocs.io/en/latest', None),
+    'pa': ('https://arrow.apache.org/docs', None),
+    }

@@ -13,7 +13,20 @@ from triad.utils.assertion import assert_or_throw
 
 
 class DataFrame(ABC):
-    SHOW_LOCK = RLock()
+    """Base class of Fugue DataFrame. Please read
+    :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
+    to understand the concept
+
+    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param metadata: dict-like object with string keys, default ``None``
+
+    :Notice:
+    This is an abstract class, and normally you don't construct it by yourself
+    unless you are
+    implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
+    """
+
+    _SHOW_LOCK = RLock()
 
     def __init__(self, schema: Any = None, metadata: Any = None):
         if not callable(schema):
@@ -34,10 +47,14 @@ class DataFrame(ABC):
 
     @property
     def metadata(self) -> ParamDict:
+        """Metadata of the dataframe
+        """
         return self._metadata
 
     @property
     def schema(self) -> Schema:
+        """Schema of the dataframe
+        """
         if self._schema_discovered:
             # we must keep it simple because it could be called on every row by a user
             assert isinstance(self._schema, Schema)
@@ -52,47 +69,78 @@ class DataFrame(ABC):
 
     @property
     def is_local(self) -> bool:  # pragma: no cover
+        """Whether this dataframe is a :class:`.LocalDataFrame`
+        """
         return isinstance(self, LocalDataFrame)
 
     @abstractmethod
     def as_local(self) -> "LocalDataFrame":  # pragma: no cover
+        """Convert this dataframe to a :class:`.LocalDataFrame`
+        """
         raise NotImplementedError
 
     @property
     @abstractmethod
     def is_bounded(self) -> bool:  # pragma: no cover
+        """Whether this dataframe is bounded
+        """
         raise NotImplementedError
 
     @property
     @abstractmethod
     def num_partitions(self) -> int:  # pragma: no cover
+        """Number of physical partitions of this dataframe.
+        Please read `this <https://fugue-tutorials.readthedocs.io/
+        en/latest/tutorials/partition.html>`_
+        """
         raise NotImplementedError
 
     @property
     @abstractmethod
     def empty(self) -> bool:  # pragma: no cover
+        """Whether this dataframe is empty
+        """
         raise NotImplementedError
 
     def assert_not_empty(self) -> None:
+        """Assert this dataframe is not empty
+
+        :raises FugueDataFrameEmptyError: if it is empty
+        """
+
         assert_or_throw(not self.empty, FugueDataFrameEmptyError("dataframe is empty"))
 
     @abstractmethod
     def peek_array(self) -> Any:  # pragma: no cover
+        """Peek the first row of the dataframe as array
+
+        :raises FugueDataFrameEmptyError: if it is empty
+        """
         raise NotImplementedError
 
     def peek_dict(self) -> Dict[str, Any]:
+        """Peek the first row of the dataframe as dict
+
+        :raises FugueDataFrameEmptyError: if it is empty
+        """
         arr = self.peek_array()
         return {self.schema.names[i]: arr[i] for i in range(len(self.schema))}
 
     @abstractmethod
     def count(self) -> int:  # pragma: no cover
+        """Get number of rows of this dataframe
+        """
         raise NotImplementedError
 
     def as_pandas(self) -> pd.DataFrame:
+        """Convert to pandas DataFrame
+        """
         pdf = pd.DataFrame(self.as_array(), columns=self.schema.names)
         return _enforce_type(pdf, self.schema)
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
+        """Convert to pyArrow DataFrame
+        """
         return pa.Table.from_pandas(
             self.as_pandas().reset_index(drop=True),
             preserve_index=False,
@@ -104,12 +152,33 @@ class DataFrame(ABC):
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:  # pragma: no cover
+        """Convert to 2-dimensional native python array
+
+        :param columns: columns to extract, defaults to None
+        :param type_safe: whether to ensure output conforms with its schema,
+          defaults to False
+        :return: 2-dimensional native python array
+
+        :Notice:
+        If ``type_safe`` is False, then the returned values are 'raw' values.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:  # pragma: no cover
+        """Convert to iterable of native python arrays
+
+        :param columns: columns to extract, defaults to None
+        :param type_safe: whether to ensure output conforms with its schema,
+          defaults to False
+        :return: iterable of native python arrays
+
+        :Notice:
+        If ``type_safe`` is False, then the returned values are 'raw' values.
+        """
+
         raise NotImplementedError
 
     @abstractmethod
@@ -118,31 +187,50 @@ class DataFrame(ABC):
 
     @abstractmethod
     def rename(self, columns: Dict[str, str]) -> "DataFrame":  # pragma: no cover
+        """Rename the dataframe using a mapping dict
+
+        :param columns: key: the original column name, value: the new name
+        :return: a new dataframe with the new names
+        """
         raise NotImplementedError
 
     @abstractmethod
     def _select_cols(self, cols: List[Any]) -> "DataFrame":  # pragma: no cover
         raise NotImplementedError
 
-    def drop(self, cols: List[str]) -> "DataFrame":
+    def drop(self, columns: List[str]) -> "DataFrame":
+        """Drop certain columns and return a new dataframe
+
+        :param columns: columns to drop
+        :raises FugueDataFrameOperationError: if
+          ``columns`` are not strictly contained by this dataframe, or it is the
+          entire dataframe columns
+        :return: a new dataframe removing the columns
+        """
         try:
-            schema = self.schema - cols
+            schema = self.schema - columns
         except Exception as e:
             raise FugueDataFrameOperationError(e)
         if len(schema) == 0:
             raise FugueDataFrameOperationError(
                 "can't remove all columns of a dataframe"
             )
-        return self._drop_cols(cols)
+        return self._drop_cols(columns)
 
-    def __getitem__(self, cols: List[Any]) -> "DataFrame":
+    def __getitem__(self, columns: List[Any]) -> "DataFrame":
+        """Get certain columns of the dataframe as a new dataframe
+
+        :raises FugueDataFrameOperationError: if ``columns`` are not strictly contained
+          by this dataframe or it is empty
+        :return: a new dataframe with these columns
+        """
         try:
-            schema = self.schema.extract(cols)
+            schema = self.schema.extract(columns)
         except Exception as e:
             raise FugueDataFrameOperationError(e)
         if len(schema) == 0:
             raise FugueDataFrameOperationError("must select at least one column")
-        return self._select_cols(cols)
+        return self._select_cols(columns)
 
     def show(
         self,
@@ -151,6 +239,19 @@ class DataFrame(ABC):
         title: Optional[str] = None,
         best_width: int = 100,
     ) -> None:
+        """Print the dataframe to console
+
+        :param rows: number of rows to print, defaults to 10
+        :param show_count: whether to show dataframe count, defaults to False
+        :param title: title of the dataframe, defaults to None
+        :param best_width: max width of the output table, defaults to 100
+
+        :Notice:
+        When ``show_count`` is True, it can trigger expensive calculation for
+        a distributed dataframe. So if you call this function directly, you may
+        need to :func:`fugue.execution.execution_engine.ExecutionEngine.persist`
+        the dataframe.
+        """
         self._show(
             head_rows=self.head(rows),
             rows=rows,
@@ -160,6 +261,12 @@ class DataFrame(ABC):
         )
 
     def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
+        """Get first n rows of the dataframe as 2-dimensional array
+
+        :param n: number of rows
+        :param columns: selected columns, defaults to None (all columns)
+        :return: 2-dimensional array
+        """
         res: List[Any] = []
         for row in self.as_array_iterable(columns, type_safe=True):
             if n < 1:
@@ -171,6 +278,14 @@ class DataFrame(ABC):
     def as_dict_iterable(
         self, columns: Optional[List[str]] = None
     ) -> Iterable[Dict[str, Any]]:
+        """Convert to iterable of native python dicts
+
+        :param columns: columns to extract, defaults to None
+        :return: iterable of native python dicts
+
+        :Notice:
+        The default implementation enforces ``type_safe`` True
+        """
         if columns is None:
             columns = self.schema.names
         idx = range(len(columns))
@@ -178,6 +293,10 @@ class DataFrame(ABC):
             yield {columns[i]: x[i] for i in idx}
 
     def get_info_str(self) -> str:
+        """Get dataframe information (schema, type, metadata) as json string
+
+        :return: json string
+        """
         return json.dumps(
             {
                 "schema": str(self.schema),
@@ -206,7 +325,7 @@ class DataFrame(ABC):
         n = rows
         if len(head_rows) < n:
             count = len(head_rows)
-        with DataFrame.SHOW_LOCK:
+        with DataFrame._SHOW_LOCK:
             if title is not None and title != "":
                 print(title)
             print(type(self).__name__)
@@ -226,39 +345,91 @@ class DataFrame(ABC):
 
 
 class LocalDataFrame(DataFrame):
+    """Base class of all local dataframes. Please read
+    :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
+    to understand the concept
+
+    :param schema: a `schema-like <triad.collections.schema.Schema>`_ object
+    :param metadata: dict-like object with string keys, default ``None``
+
+    :Notice:
+    This is an abstract class, and normally you don't construct it by yourself
+    unless you are
+    implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
+    """
+
     def __init__(self, schema: Any = None, metadata: Any = None):
         super().__init__(schema=schema, metadata=metadata)
 
     @property
     def is_local(self) -> bool:
+        """Always True because it's a LocalDataFrame
+        """
         return True
 
     def as_local(self) -> "LocalDataFrame":
+        """Always return self, because it's a LocalDataFrame
+        """
         return self
 
     @property
     def num_partitions(self) -> int:  # pragma: no cover
+        """Always 1 because it's a LocalDataFrame
+        """
         return 1
 
 
 class LocalBoundedDataFrame(LocalDataFrame):
+    """Base class of all local bounded dataframes. Please read
+    :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
+    to understand the concept
+
+    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param metadata: dict-like object with string keys, default ``None``
+
+    :Notice:
+    This is an abstract class, and normally you don't construct it by yourself
+    unless you are
+    implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
+    """
+
     def __init__(self, schema: Any = None, metadata: Any = None):
         super().__init__(schema=schema, metadata=metadata)
 
     @property
     def is_bounded(self) -> bool:
+        """Always True because it's a bounded dataframe
+        """
         return True
 
 
 class LocalUnboundedDataFrame(LocalDataFrame):
+    """Base class of all local unbounded dataframes. Read
+    this <https://fugue-tutorials.readthedocs.io/
+    en/latest/tutorials/schema_dataframes.html#DataFrame>`_ to understand the concept
+
+    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param metadata: dict-like object with string keys, default ``None``
+
+    :Notice:
+    This is an abstract class, and normally you don't construct it by yourself
+    unless you are
+    implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
+    """
+
     def __init__(self, schema: Any = None, metadata: Any = None):
         super().__init__(schema=schema, metadata=metadata)
 
     @property
     def is_bounded(self):
+        """Always True because it's an unbounded dataframe
+        """
         return False
 
     def count(self) -> int:
+        """
+        :raises InvalidOperationError: You can't count an unbounded dataframe
+        """
         raise InvalidOperationError("Impossible to count an LocalUnboundedDataFrame")
 
 
