@@ -68,5 +68,8 @@ intersphinx_mapping = {
     'triad': ('https://triad.readthedocs.io/en/latest', None),
     'tutorial': ('https://fugue-tutorials.readthedocs.io/en/latest', None),
     'pa': ('https://arrow.apache.org/docs', None),
+<<<<<<< HEAD
     'fs': ('https://docs.pyfilesystem.org/en/latest', None)
+=======
+>>>>>>> ad8c3f93dd6c44647fd269cb66a2c38d0f530c15
     }
