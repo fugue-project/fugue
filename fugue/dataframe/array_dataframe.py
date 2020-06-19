@@ -11,6 +11,22 @@ from triad.utils.pyarrow import apply_schema
 
 
 class ArrayDataFrame(LocalBoundedDataFrame):
+    """DataFrame that wraps native python 2-dimensional arrays. Please read
+    :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
+    to understand the concept
+
+    :param df: 2-dimensional array, iterable of arrays, or
+      :class:`~fugue.dataframe.dataframe.DataFrame`
+    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param metadata: dict-like object with string keys, default ``None``
+
+    :raises FugueDataFrameInitError: if the input is not compatible
+
+    :Examples:
+    >>> a = ArrayDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
+    >>> b = ArrayDataFrame(a)
+    """
+
     def __init__(  # noqa: C901
         self, df: Any = None, schema: Any = None, metadata: Any = None
     ):
@@ -36,6 +52,8 @@ class ArrayDataFrame(LocalBoundedDataFrame):
 
     @property
     def native(self) -> List[Any]:
+        """2-dimensional native python array
+        """
         return self._native
 
     @property

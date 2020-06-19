@@ -10,6 +10,24 @@ from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationErr
 
 
 class ArrowDataFrame(LocalBoundedDataFrame):
+    """DataFrame that wraps :func:`pyarrow.Table <pa:pyarrow.table>`. Please also read
+    :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
+    to understand this Fugue concept
+
+    :param df: 2-dimensional array, iterable of arrays,
+      :func:`pyarrow.Table <pa:pyarrow.table>` or pandas DataFrame
+    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param metadata: dict-like object with string keys, default ``None``
+
+    :raises FugueDataFrameInitError: if the input is not compatible
+
+    :Examples:
+    >>> ArrowDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
+    >>> ArrowDataFrame(schema = "a:int,b:int")  # empty dataframe
+    >>> ArrowDataFrame(pd.DataFrame([[0]],columns=["a"]))
+    >>> ArrowDataFrame(ArrayDataFrame([[0]],"a:int).as_arrow())
+    """
+
     def __init__(  # noqa: C901
         self,
         df: Any = None,
@@ -76,6 +94,8 @@ class ArrowDataFrame(LocalBoundedDataFrame):
 
     @property
     def native(self) -> pa.Table:
+        """:func:`pyarrow.Table <pa:pyarrow.table>`
+        """
         return self._native
 
     @property

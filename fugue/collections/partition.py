@@ -10,6 +10,33 @@ from triad.utils.hash import to_uuid
 
 
 class PartitionSpec(object):
+    """Fugue Partition Specification.
+
+    :Examples:
+    >>> PartitionSepc(num=4)
+    >>> PartitionSepc(num="ROWCOUNT/4 + 3")  # It can be an expression
+    >>> PartitionSepc(by=["a","b"])
+    >>> PartitionSpec(by=["a"], presort="b DESC, c ASC")
+    >>> PartitionSpec(algo="even", num=4)
+    >>> p = PartitionSpec(num=4, by=["a"])
+    >>> p_override = PartitionSpec(p, by=["a","b"], algo="even")
+
+
+    It's important to understand this concept, please read
+    `this <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/partition.html>`_
+
+    Partition consists for these specs:
+
+    * **algo**: can be one of ``hash`` (default), ``rand`` and ``even``
+    * **num** or **num_partitions**: number of physical partitions, it can be an
+      expression or integer numbers, e.g ``(ROWCOUNT+4) / 3``
+    * **by** or **partition_by**: keys to partition on
+    * **presort**: keys to sort other than partition keys. E.g. ``a``
+      and ``a asc`` means presort by column a ascendingly, ``a,b desc``
+      means presort by a ascendingly and then by b descendingly.
+    * row_limit and size_limit are to be deprecated
+    """
+
     def __init__(self, *args: Any, **kwargs: Any):
         p = ParamDict()
         for a in args:
@@ -43,6 +70,8 @@ class PartitionSpec(object):
 
     @property
     def empty(self) -> bool:
+        """Whether this spec didn't specify anything
+        """
         return (
             self._num_partitions == "0"
             and self._algo == ""
@@ -54,9 +83,20 @@ class PartitionSpec(object):
 
     @property
     def num_partitions(self) -> str:
+        """Number of partitions, it can be a string expression or int
+        """
         return self._num_partitions
 
     def get_num_partitions(self, **expr_map_funcs: Any) -> int:
+        """Convert ``num_partitions`` expression to int number
+
+        :param expr_map_funcs: lambda functions (no parameter) for keywords
+        :return: integer value of the partitions
+
+        :Example:
+        >>> p = PartitionSpec(num="ROWCOUNT/2")
+        >>> p.get_num_partitions(ROWCOUNT=lambda: df.count())
+        """
         expr = self.num_partitions
         for k, v in expr_map_funcs.items():
             if k in expr:
@@ -66,24 +106,42 @@ class PartitionSpec(object):
 
     @property
     def algo(self) -> str:
+        """Get algo of the spec, one of ``hash`` (default), ``rand`` and ``even``
+        """
         return self._algo if self._algo != "" else "hash"
 
     @property
     def partition_by(self) -> List[str]:
+        """Get partition keys of the spec
+        """
         return self._partition_by
 
     @property
     def presort(self) -> IndexedOrderedDict[str, bool]:
+        """Get presort pairs of the spec
+
+        :Example:
+        >>> p = PartitionSpec(by=["a"],presort="b,c desc")
+        >>> assert p.presort == {"b":True, "c":False}
+        """
         return self._presort
 
     @property
     def presort_expr(self) -> str:
+        """Get normalized presort expression
+
+        :Example:
+        >>> p = PartitionSpec(by=["a"],presort="b , c dESc")
+        >>> assert p.presort_expr == "b ASC,c DESC"
+        """
         return ",".join(
             k + " " + ("ASC" if v else "DESC") for k, v in self.presort.items()
         )
 
     @property
     def jsondict(self) -> ParamDict:
+        """Get json serializeable dict of the spec
+        """
         return ParamDict(
             dict(
                 num_partitions=self._num_partitions,
@@ -96,9 +154,22 @@ class PartitionSpec(object):
         )
 
     def __uuid__(self) -> str:
+        """Get deterministic unique id of this object
+        """
         return to_uuid(self.jsondict)
 
     def get_sorts(self, schema: Schema) -> IndexedOrderedDict[str, bool]:
+        """Get keys for sorting in a partition, it's the combination of partition
+        keys plus the presort keys
+
+        :param schema: the dataframe schema this partition spec to operate on
+        :return: an ordered dictionary of key, order pairs
+
+        :Example:
+        >>> p = PartitionSpec(by=["a"],presort="b , c dESc")
+        >>> schema = Schema("a:int,b:int,c:int,d:int"))
+        >>> assert p.get_sorts(schema) == {"a":True, "b":True, "c": False}
+        """
         d: IndexedOrderedDict[str, bool] = IndexedOrderedDict()
         for p in self.partition_by:
             aot(p in schema, KeyError(f"{p} not in {schema}"))
@@ -109,14 +180,34 @@ class PartitionSpec(object):
         return d
 
     def get_key_schema(self, schema: Schema) -> Schema:
+        """Get partition keys schema
+
+        :param schema: the dataframe schema this partition spec to operate on
+        :return: the sub-schema only containing partition keys
+        """
         return schema.extract(self.partition_by)
 
     def get_cursor(
         self, schema: Schema, physical_partition_no: int
     ) -> "PartitionCursor":
+        """Get :class:`.PartitionCursor` based on
+        dataframe schema and physical partition number. You normally don't call
+        this method directly
+
+        :param schema: the dataframe schema this partition spec to operate on
+        :param physical_partition_no: physical partition no passed in by
+          :class:`~fugue.execution.execution_engine.ExecutionEngine`
+        :return: PartitionCursor object
+        """
         return PartitionCursor(schema, self, physical_partition_no)
 
     def get_partitioner(self, schema: Schema) -> SchemaedDataPartitioner:
+        """Get :class:`~triad.utils.pyarrow.SchemaedDataPartitioner` by input
+        dataframe schema
+
+        :param schema: the dataframe schema this partition spec to operate on
+        :return: SchemaedDataPartitioner object
+        """
         pos = [schema.index_of_key(key) for key in self.partition_by]
         return SchemaedDataPartitioner(
             schema.pa_schema,
@@ -169,6 +260,18 @@ EMPTY_PARTITION_SPEC = PartitionSpec()
 
 
 class PartitionCursor(object):
+    """The cursor pointing at the first row of each logical partition inside
+    a physical partition.
+
+    It's important to understand the concept of partition, please read
+    `this <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/partition.html>`_
+
+    :param schema: input dataframe schema
+    :param spec: partition spec
+    :param physical_partition_no: physical partition number passed in by
+      :class:`~fugue.execution.execution_engine.ExecutionEngine`
+    """
+
     def __init__(self, schema: Schema, spec: PartitionSpec, physical_partition_no: int):
         self._orig_schema = schema
         self._key_index = [schema.index_of_key(key) for key in spec.partition_by]
@@ -179,42 +282,71 @@ class PartitionCursor(object):
         self._partition_no = 0
         self._slice_no = 0
 
-    def set(self, row: Any, partition_no: int, slice_no: int):
+    def set(self, row: Any, partition_no: int, slice_no: int) -> None:
+        """reset the cursor to a row (which should be the first row of a
+        new logical partition)
+
+        :param row: list-like row data
+        :param partition_no: logical partition number
+        :param slice_no: slice number inside the logical partition (to be deprecated)
+        """
         self._row = list(row)
         self._partition_no = partition_no
         self._slice_no = slice_no
 
     @property
     def row(self) -> List[Any]:
+        """Get current row data
+        """
         return self._row
 
     @property
     def partition_no(self) -> int:
+        """Logical partition number
+        """
         return self._partition_no
 
     @property
     def physical_partition_no(self) -> int:
+        """Physical partition number
+        """
         return self._physical_partition_no
 
     @property
     def slice_no(self) -> int:
+        """Slice number (inside the current logical partition), for now
+        it should always be 0
+        """
         return self._slice_no
 
     @property
     def row_schema(self) -> Schema:
+        """Schema of the current row
+        """
         return self._orig_schema
 
     @property
     def key_schema(self) -> Schema:
+        """Partition key schema
+        """
         return self._schema
 
     @property
     def key_value_dict(self) -> Dict[str, Any]:
+        """Based on current row, get the partition key values as a dict
+        """
         return {self.row_schema.names[i]: self._row[i] for i in self._key_index}
 
     @property
     def key_value_array(self) -> List[Any]:
+        """Based on current row, get the partition key values as an array
+        """
         return [self._row[i] for i in self._key_index]
 
     def __getitem__(self, key: str) -> Any:
+        """Get value by key from the current row
+
+        :param key: column name
+        :return: value in the column
+        """
         return self._row[self.row_schema.index_of_key(key)]
