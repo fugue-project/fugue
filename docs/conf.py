@@ -32,7 +32,7 @@ author = "Han Wang"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ["sphinx.ext.todo", "sphinx.ext.viewcode", "sphinx.ext.intersphinx",
-              "sphinx.ext.autodoc", "sphinx_rtd_theme"]
+              "sphinx.ext.autodoc", "sphinx_autodoc_typehints", "sphinx_rtd_theme"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -68,4 +68,5 @@ intersphinx_mapping = {
     'triad': ('https://triad.readthedocs.io/en/latest', None),
     'tutorial': ('https://fugue-tutorials.readthedocs.io/en/latest', None),
     'pa': ('https://arrow.apache.org/docs', None),
+    'fs': ('https://docs.pyfilesystem.org/en/latest', None)
     }

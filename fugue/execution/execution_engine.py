@@ -23,59 +23,135 @@ _DEFAULT_JOIN_KEYS: List[str] = []
 
 
 class SQLEngine(ABC):
+    """The abstract base class for different SQL execution implementations. Please read
+    :ref:`this <tutorial:/tutorials/execution_engine.ipynb#sqlengine>`
+    to understand the concept
+
+    :param execution_engine: the execution engine this sql engine will run on
+    """
+
     def __init__(self, execution_engine: "ExecutionEngine") -> None:
         self._execution_engine = execution_engine
 
     @property
     def execution_engine(self) -> "ExecutionEngine":
+        """the execution engine this sql engine will run on
+        """
         return self._execution_engine
-
-    # @property
-    # def conf(self) -> ParamDict:
-    #    return self.execution_engine.conf
 
     @abstractmethod
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:  # pragma: no cover
+        """Execute select statement on the sql engine.
+
+        :param dfs: a collection of dataframes that must have keys
+        :param statement: the ``SELECT`` statement using the ``dfs`` keys as tables
+        :return: result of the ``SELECT`` statement
+
+        :Example:
+        >>> dfs = DataFrames(a=df1, b=df2)
+        >>> sql_engine.select(dfs, "SELECT * FROM a UNION SELECT * FROM b")
+
+        :Notice:
+        There can be tables that is not in ``dfs``. For example you want to select
+        from hive without input DataFrames:
+
+        >>> sql_engine.select(DataFrames(), "SELECT * FROM hive.a.table")
+        """
         raise NotImplementedError
 
 
 class ExecutionEngine(ABC):
+    """The abstract base class for execution engines.
+    It is the layer that unifies core concepts of distributed computing,
+    and separates the underlying computing frameworks from user’s higher level logic.
+
+    Please read
+    :ref:`The ExecutionEngine Tutorial <tutorial:/tutorials/execution_engine.ipynb>`
+    to understand this most important Fugue concept
+
+    :param conf: dict-like config, read
+      :ref:`this <tutorial:/tutorials/useful_config.ipynb>`
+      to learn Fugue specific options
+    """
+
     def __init__(self, conf: Any):
         self._conf = ParamDict(conf)
 
     @property
     def conf(self) -> ParamDict:
+        """All configurations of this engine instance.
+
+        :Notice: it can contain more than you providec, for example
+        in :class:`~fugue_spark.execution_engine.SparkExecutionEngine`,
+        the Spark session can bring in more config, they are all accessible
+        using this property.
+        """
         return self._conf
 
     @property
     @abstractmethod
     def log(self) -> logging.Logger:  # pragma: no cover
+        """Logger of this engine instance
+        """
         raise NotImplementedError
 
     @property
     @abstractmethod
     def fs(self) -> FileSystem:  # pragma: no cover
+        """File system of this engine instance
+        """
         raise NotImplementedError
 
     @property
     @abstractmethod
     def default_sql_engine(self) -> SQLEngine:  # pragma: no cover
+        """Default SQLEngine if user doesn't specify
+        """
         raise NotImplementedError
 
     @abstractmethod
     def stop(self) -> None:  # pragma: no cover
+        """Stop this execution engine
+        """
         raise NotImplementedError
 
     @abstractmethod
     def to_df(
         self, data: Any, schema: Any = None, metadata: Any = None
     ) -> DataFrame:  # pragma: no cover
+        """Convert a data structure to this engine compatible DataFrame
+
+        :param data: :class:`~fugue.dataframe.dataframe.DataFrame`,
+          pandas DataFramme or list or iterable of arrays or others that
+          is supported by certain engine implementation
+        :param schema: a :class:`~triad:triad.collections.schema.Schema` like object,
+          defaults to None
+        :param metadata: dict-like object with string keys, defaults to None
+        :return: engine compatible dataframe
+
+        :Notice:
+        There are certain conventions to follow for a new implementation:
+
+        * if the input is already in compatible dataframe type, it should return itself
+        * all other methods in the engine interface should take arbitrary dataframes and
+          call this method to convert before doing anything
+        """
         raise NotImplementedError
 
     @abstractmethod
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
     ) -> DataFrame:  # pragma: no cover
+        """Partition the input dataframe using ``partition_spec``.
+
+        :param df: input dataframe
+        :param partition_spec: how you want to partition the dataframe
+        :return: repartitioned dataframe
+
+        :Notice:
+        Before implementing please read
+        :ref:`The Partition Tutorial <tutorial:/tutorials/partition.ipynb>`
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -88,16 +164,48 @@ class ExecutionEngine(ABC):
         metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:  # pragma: no cover
+        """Apply a function to each partition after you partition the data in a
+        specified way.
+
+        :param df: input dataframe
+        :param map_func: the function to apply on every logical partition
+        :param output_schema: a :class:`~triad:triad.collections.schema.Schema`
+          like object that can't be None. Please also understand
+          :ref:`why we need this
+          <tutorial:/tutorials/transformer.ipynb#why-explicit-on-output-schema?>`
+        :param partition_spec: partition specification
+        :param metadata: dict-like metadata object to add to the dataframe after the
+          map operation, defaults to None
+        :param on_init: callback function when the physical partition is initializaing,
+          defaults to None
+        :return: the dataframe after the map operation
+
+        :Notice:
+        Before implementing, you must read
+        :ref:`this <tutorial:/tutorials/execution_engine.ipynb#map>` to understand
+        what map is used for and how it should work.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def broadcast(self, df: DataFrame) -> DataFrame:  # pragma: no cover
+        """Broadcast the dataframe to all workers for a distributed computing framework
+
+        :param df: the input dataframe
+        :return: the broadcasted dataframe
+        """
         raise NotImplementedError
 
     @abstractmethod
     def persist(
         self, df: DataFrame, level: Any = None
     ) -> DataFrame:  # pragma: no cover
+        """Force materializing and caching the dataframe
+
+        :param df: the input dataframe
+        :param level: parameter to pass to the underlying persist implementation
+        :return: the persisted dataframe
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -109,39 +217,22 @@ class ExecutionEngine(ABC):
         on: List[str] = _DEFAULT_JOIN_KEYS,
         metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
-        raise NotImplementedError
+        """Join two dataframes
 
-    def serialize_by_partition(
-        self,
-        df: DataFrame,
-        partition_spec: PartitionSpec,
-        df_name: str,
-        temp_path: Optional[str] = None,
-        to_file_threshold: Any = -1,
-        has_name: bool = False,
-    ) -> DataFrame:
-        to_file_threshold = _get_file_threshold(to_file_threshold)
-        on = list(filter(lambda k: k in df.schema, partition_spec.partition_by))
-        presort = list(
-            filter(lambda p: p[0] in df.schema, partition_spec.presort.items())
-        )
-        col_name = _df_name_to_serialize_col(df_name)
-        if len(on) == 0:
-            partition_spec = PartitionSpec(
-                partition_spec, num=1, by=[], presort=presort
-            )
-            output_schema = Schema(f"{col_name}:str")
-        else:
-            partition_spec = PartitionSpec(partition_spec, by=on, presort=presort)
-            output_schema = partition_spec.get_key_schema(df.schema) + f"{col_name}:str"
-        s = _PartitionSerializer(output_schema, temp_path, to_file_threshold)
-        metadata = dict(
-            serialized=True,
-            serialized_cols={df_name: col_name},
-            schemas={df_name: str(df.schema)},
-            serialized_has_name=has_name,
-        )
-        return self.map(df, s.run, output_schema, partition_spec, metadata)
+        :param df1: the first dataframe
+        :param df2: the second dataframe
+        :param how: can accept ``semi``, ``left_semi``, ``anti``, ``left_anti``,
+          ``inner``, ``left_outer``, ``right_outer``, ``full_outer``, ``cross``
+        :param on: it can always be inferred, but if you provide, it will be
+          validated agained the inferred keys.
+        :param metadata: dict-like object to add to the joined dataframe,
+          defaults to None
+        :return: the joined dataframe
+
+        :Notice:
+        Please read :func:`this <fugue.dataframe.utils.get_join_schemas>`
+        """
+        raise NotImplementedError
 
     def zip(
         self,
@@ -154,6 +245,37 @@ class ExecutionEngine(ABC):
         df1_name: Optional[str] = None,
         df2_name: Optional[str] = None,
     ):
+        """Partition the two dataframes in the same way with ``partition_spec`` and
+        zip the partitions together on the partition keys.
+
+        :param df1: the first dataframe
+        :param df2: the second dataframe
+        :param how: can accept ``inner``, ``left_outer``, ``right_outer``,
+          ``full_outer``, ``cross``, defaults to ``inner``
+        :param partition_spec: partition spec to partition each dataframe,
+          defaults to empty.
+        :type partition_spec: PartitionSpec, optional
+        :param temp_path: file path to store the data (used only if the serialized data
+          is larger than ``to_file_threshold``), defaults to None
+        :param to_file_threshold: file byte size threshold, defaults to -1
+        :param df1_name: df1's name in the zipped dataframe, defaults to None
+        :param df2_name: df2's name in the zipped dataframe, defaults to None
+
+        :return: a zipped dataframe, the metadata of the
+          dataframe will indicated it's zipped
+
+        :Notice:
+
+        * Different from join, ``df1`` and ``df2`` can have common columns that you will
+          not use as partition keys.
+        * If ``on`` is not specified it will also use the common columns of the two
+          dataframes (if it's not a cross zip)
+        * For non-cross zip, the two dataframes must have common columns, or error will
+          be thrown
+
+        For more details and examples, read
+        :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`.
+        """
         on = list(partition_spec.partition_by)
         how = how.lower()
         assert_or_throw(
@@ -178,7 +300,7 @@ class ExecutionEngine(ABC):
             if name is None:
                 name = f"_{len(serialized_cols)}"
             if not df.metadata.get("serialized", False):
-                df = self.serialize_by_partition(
+                df = self._serialize_by_partition(
                     df,
                     partition_spec,
                     name,
@@ -212,11 +334,36 @@ class ExecutionEngine(ABC):
         temp_path: Optional[str] = None,
         to_file_threshold: Any = -1,
     ) -> DataFrame:
+        """Zip multiple dataframes together with given partition
+        specifications.
+
+        :param dfs: dict-like or list-like DataFrames
+        :param how: can accept ``inner``, ``left_outer``, ``right_outer``,
+          ``full_outer``, ``cross``, defaults to ``inner``
+        :param partition_spec: partition spec to partition each dataframe,
+          defaults to empty.
+        :param temp_path: file path to store the data (used only if the serialized data
+          is larger than ``to_file_threshold``), defaults to None
+        :param to_file_threshold: file byte size threshold, defaults to -1
+
+        :return: a zipped dataframe, the metadata of the
+          dataframe will indicated it's zipped
+
+        :Notice:
+
+        * Please also read :meth:`~.zip`
+        * If ``dfs`` is dict like, the zipped dataframe will be dict like,
+          If ``dfs`` is list like, the zipped dataframe will be list like
+        * It's fine to contain only one dataframe in ``dfs``
+
+        For more details and examples, read
+        :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`.
+        """
         assert_or_throw(len(dfs) > 0, "can't zip 0 dataframes")
         pairs = list(dfs.items())
         has_name = dfs.has_key
         if len(dfs) == 1:
-            return self.serialize_by_partition(
+            return self._serialize_by_partition(
                 pairs[0][1],
                 partition_spec,
                 pairs[0][0],
@@ -255,11 +402,45 @@ class ExecutionEngine(ABC):
         metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrames], Any]] = None,
     ):
+        """Apply a function to each zipped partition on the zipped dataframe.
+
+        :param df: input dataframe, it must be a zipped dataframe (it has to be a
+          dataframe output from :meth:`~.zip` or :meth:`~.zip_all`)
+        :param map_func: the function to apply on every zipped partition
+        :param output_schema: a :class:`~triad:triad.collections.schema.Schema`
+          like object that can't be None. Please also understand
+          :ref:`why we need this
+          <tutorial:/tutorials/cotransformer.ipynb#why-explicit-on-output-schema?>`
+        :param partition_spec: partition specification for processing the zipped
+          zipped dataframe.
+        :param metadata: dict-like metadata object to add to the dataframe after the
+          map operation, defaults to None
+        :param on_init: callback function when the physical partition is initializaing,
+          defaults to None
+        :return: the dataframe after the comap operation
+
+        :Notice:
+        * The input of this method must be an output of :meth:`~.zip` or
+          :meth:`~.zip_all`
+        * The ``partition_spec`` here is NOT related with how you zipped the dataframe
+          and however you set it, will only affect the processing speed, actually the
+          partition keys will be overriden to the zipped dataframe partition keys.
+          You may use it in this way to improve the efficiency:
+          ``PartitionSpec(algo="even", num="ROWCOUNT")``,
+          this tells the execution engine to put each zipped partition into a physical
+          partition so it can achieve the best possible load balance.
+        * If input dataframe has keys, the dataframes you get in ``map_func`` and
+          ``on_init`` will have keys, otherwise you will get list-like dataframes
+        * on_init function will get a DataFrames object that has the same structure, but
+          has all empty dataframes, you can use the schemas but not the data.
+
+        For more details and examples, read
+        :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`.
+        """
         assert_or_throw(df.metadata["serialized"], ValueError("df is not serilaized"))
         cs = _Comap(df, map_func, on_init)
-        if partition_spec.empty:
-            key_schema = df.schema - list(df.metadata["serialized_cols"].values())
-            partition_spec = PartitionSpec(by=list(key_schema.keys()))
+        key_schema = df.schema - list(df.metadata["serialized_cols"].values())
+        partition_spec = PartitionSpec(partition_spec, by=list(key_schema.keys()))
         return self.map(
             df, cs.run, output_schema, partition_spec, metadata, on_init=cs.on_init
         )
@@ -272,6 +453,19 @@ class ExecutionEngine(ABC):
         columns: Any = None,
         **kwargs: Any,
     ) -> DataFrame:  # pragma: no cover
+        """Load dataframe from persistent storage
+
+        :param path: the path to the dataframe
+        :param format_hint: can accept ``parquet``, ``csv``, ``json``,
+          defaults to None, meaning to infer
+        :param columns: list of columns or a
+          :class:`~triad:triad.collections.schema.Schema` like object, defaults to None
+        :param kwargs: parameters to pass to the underlying framework
+        :return: an engine compatible dataframe
+
+        For more details and examples, read
+        :ref:`Load & Save <tutorial:/tutorials/execution_engine.ipynb#load-&-save>`.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -285,6 +479,22 @@ class ExecutionEngine(ABC):
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:  # pragma: no cover
+        """Save dataframe to a persistent storage
+
+        :param df: input dataframe
+        :param path: output path
+        :param format_hint: can accept ``parquet``, ``csv``, ``json``,
+          defaults to None, meaning to infer
+        :param mode: can accept ``overwrite``, ``append``, ``error``,
+          defaults to "overwrite"
+        :param partition_spec: how to partition the dataframe before saving,
+          defaults to empty
+        :param force_single: force the output as a single file, defaults to False
+        :param kwargs: parameters to pass to the underlying framework
+
+        For more details and examples, read
+        :ref:`Load & Save <tutorial:/tutorials/execution_engine.ipynb#load-&-save>`.
+        """
         raise NotImplementedError
 
     def __copy__(self) -> "ExecutionEngine":
@@ -292,6 +502,38 @@ class ExecutionEngine(ABC):
 
     def __deepcopy__(self, memo: Any) -> "ExecutionEngine":
         return self
+
+    def _serialize_by_partition(
+        self,
+        df: DataFrame,
+        partition_spec: PartitionSpec,
+        df_name: str,
+        temp_path: Optional[str] = None,
+        to_file_threshold: Any = -1,
+        has_name: bool = False,
+    ) -> DataFrame:
+        to_file_threshold = _get_file_threshold(to_file_threshold)
+        on = list(filter(lambda k: k in df.schema, partition_spec.partition_by))
+        presort = list(
+            filter(lambda p: p[0] in df.schema, partition_spec.presort.items())
+        )
+        col_name = _df_name_to_serialize_col(df_name)
+        if len(on) == 0:
+            partition_spec = PartitionSpec(
+                partition_spec, num=1, by=[], presort=presort
+            )
+            output_schema = Schema(f"{col_name}:str")
+        else:
+            partition_spec = PartitionSpec(partition_spec, by=on, presort=presort)
+            output_schema = partition_spec.get_key_schema(df.schema) + f"{col_name}:str"
+        s = _PartitionSerializer(output_schema, temp_path, to_file_threshold)
+        metadata = dict(
+            serialized=True,
+            serialized_cols={df_name: col_name},
+            schemas={df_name: str(df.schema)},
+            serialized_has_name=has_name,
+        )
+        return self.map(df, s.run, output_schema, partition_spec, metadata)
 
 
 def _get_file_threshold(size: Any) -> int:

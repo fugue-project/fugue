@@ -294,17 +294,17 @@ class ExecutionEngineTests(object):
             c = e.join(a, b, how="anti", on=["a"])
             df_eq(c, [], "a:int,b:int", throw=True)
 
-        def test_serialize_by_partition(self):
+        def test__serialize_by_partition(self):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
-            s = e.serialize_by_partition(
+            s = e._serialize_by_partition(
                 a, PartitionSpec(by=["a"], presort="b"), df_name="_0"
             )
             assert s.count() == 2
-            s = e.persist(e.serialize_by_partition(a, PartitionSpec(), df_name="_0"))
+            s = e.persist(e._serialize_by_partition(a, PartitionSpec(), df_name="_0"))
             assert s.count() == 1
             s = e.persist(
-                e.serialize_by_partition(a, PartitionSpec(by=["x"]), df_name="_0")
+                e._serialize_by_partition(a, PartitionSpec(by=["x"]), df_name="_0")
             )
             assert s.count() == 1
 
@@ -313,8 +313,8 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            sa = e.serialize_by_partition(a, ps, df_name="_0")
-            sb = e.serialize_by_partition(b, ps, df_name="_1")
+            sa = e._serialize_by_partition(a, ps, df_name="_0")
+            sb = e._serialize_by_partition(b, ps, df_name="_1")
             # test zip with serialized dfs
             z1 = e.persist(e.zip(sa, sb, how="inner", partition_spec=ps))
             assert 1 == z1.count()
@@ -419,7 +419,9 @@ class ExecutionEngineTests(object):
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
             z1 = e.persist(e.zip(a, b))
             z2 = e.persist(e.zip(a, b, partition_spec=ps, how="left_outer"))
-            z3 = e.persist(e.serialize_by_partition(a, partition_spec=ps, df_name="_x"))
+            z3 = e.persist(
+                e._serialize_by_partition(a, partition_spec=ps, df_name="_x")
+            )
             z4 = e.persist(e.zip(a, b, partition_spec=ps, how="cross"))
 
             def comap(cursor, dfs):

@@ -32,6 +32,11 @@ from triad.utils.pandas_like import PD_UTILS
 
 
 class SqliteEngine(SQLEngine):
+    """Sqlite execution implementation.
+
+    :param execution_engine: the execution engine this sql engine will run on
+    """
+
     def __init__(self, execution_engine: ExecutionEngine) -> None:
         return super().__init__(execution_engine)
 
@@ -44,6 +49,18 @@ class SqliteEngine(SQLEngine):
 
 
 class NativeExecutionEngine(ExecutionEngine):
+    """The execution engine based on native python and pandas. This execution engine
+    is mainly for prototyping and unit tests.
+
+    Please read
+    :ref:`The ExecutionEngine Tutorial <tutorial:/tutorials/execution_engine.ipynb>`
+    to understand this most important Fugue concept
+
+    :param conf: dict-like config, read
+      :ref:`this <tutorial:/tutorials/useful_config.ipynb>`
+      to learn Fugue specific options
+    """
+
     def __init__(self, conf: Any = None):
         super().__init__(conf)
         self._fs = FileSystem()

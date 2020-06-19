@@ -72,6 +72,25 @@ def _df_eq(
 
 
 def to_local_df(df: Any, schema: Any = None, metadata: Any = None) -> LocalDataFrame:
+    """Convert a data structure to :class:`~fugue.dataframe.dataframe.LocalDataFrame`
+
+    :param df: :class:`~fugue.dataframe.dataframe.DataFrame`, pandas DataFramme and
+      list or iterable of arrays
+    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object,
+      defaults to None, it should not be set for
+      :class:`~fugue.dataframe.dataframe.DataFrame` type
+    :param metadata: dict-like object with string keys, defaults to  None
+    :raises ValueError: if ``df`` is :class:`~fugue.dataframe.dataframe.DataFrame`
+      but you set ``schema`` or ``metadata``
+    :raises TypeError: if ``df`` is not compatible
+    :return: the dataframe itself if it's
+      :class:`~fugue.dataframe.dataframe.LocalDataFrame` else a converted one
+
+    :Examples:
+    >>> a = to_local_df([[0,'a'],[1,'b']],"a:int,b:str")
+    >>> assert to_local_df(a) is a
+    >>> to_local_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
+    """
     assert_arg_not_none(df, "df")
     if isinstance(df, DataFrame):
         aot(
@@ -91,6 +110,30 @@ def to_local_df(df: Any, schema: Any = None, metadata: Any = None) -> LocalDataF
 def to_local_bounded_df(
     df: Any, schema: Any = None, metadata: Any = None
 ) -> LocalBoundedDataFrame:
+    """Convert a data structure to :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`
+
+    :param df: :class:`~fugue.dataframe.dataframe.DataFrame`, pandas DataFramme and
+      list or iterable of arrays
+    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object,
+      defaults to None, it should not be set for
+      :class:`~fugue.dataframe.dataframe.DataFrame` type
+    :param metadata: dict-like object with string keys, defaults to  None
+    :raises ValueError: if ``df`` is :class:`~fugue.dataframe.dataframe.DataFrame`
+      but you set ``schema`` or ``metadata``
+    :raises TypeError: if ``df`` is not compatible
+    :return: the dataframe itself if it's
+      :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame` else a converted one
+
+    :Examples:
+    >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
+    >>> assert isinstance(to_local_bounded_df(a), LocalBoundedDataFrame)
+    >>> to_local_bounded_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
+
+    :Notice:
+    Compared to :func:`.to_local_df`, this function makes sure the dataframe is also
+    bounded, so :class:`~fugue.dataframe.iterable_dataframe.IterableDataFrame` will be
+    converted although it's local.
+    """
     df = to_local_df(df, schema, metadata)
     if isinstance(df, LocalBoundedDataFrame):
         return df
@@ -98,6 +141,16 @@ def to_local_bounded_df(
 
 
 def pickle_df(df: DataFrame) -> bytes:
+    """Pickles a dataframe to bytes array. It firstly converts the dataframe
+    using :func:`.to_local_bounded_df`, and then serialize the underlying data.
+
+    :param df: input DataFrame
+    :return: pickled binary data
+
+    :Notice:
+    Be careful to use on large dataframes or non-local, un-materialized dataframes,
+    it can be slow. You should always use :func:`.unpickle_df` to deserialize.
+    """
     df = to_local_bounded_df(df)
     o: List[Any] = [df.schema]
     if isinstance(df, PandasDataFrame):
@@ -115,6 +168,21 @@ def serialize_df(
     file_path: Optional[str] = None,
     fs: Optional[FileSystem] = None,
 ) -> str:
+    """Serialize input dataframe to base64 string or to file
+    if it's larger than threshold
+
+    :param df: input DataFrame
+    :param threshold: file byte size threshold, defaults to -1
+    :param file_path: file path to store the data (used only if the serialized data
+      is larger than ``threshold``), defaults to None
+    :param fs: :class:`~triad:triad.collections.fs.FileSystem`, defaults to None
+    :raises InvalidOperationError: if file is large but ``file_path`` is not provided
+    :return: a json string either containing the base64 data or the file path
+
+    :Notice:
+    If fs is not provided but it needs to write to disk, then it will use
+    :meth:`~fs:fs.opener.registry.Registry.open_fs` to try to open the file to write.
+    """
     if df is None:
         return json.dumps(dict())
     data = pickle_df(df)
@@ -136,6 +204,14 @@ def serialize_df(
 
 
 def unpickle_df(stream: bytes) -> LocalBoundedDataFrame:
+    """Unpickles a dataframe from bytes array.
+
+    :param stream: binary data
+    :return: unpickled dataframe
+
+    :Notice:
+    The data must be serialized by :func:`.pickle_df` to deserialize.
+    """
     o = pickle.loads(stream)
     schema = o[0]
     if o[1] == "p":
@@ -150,6 +226,16 @@ def unpickle_df(stream: bytes) -> LocalBoundedDataFrame:
 def deserialize_df(
     json_str: str, fs: Optional[FileSystem] = None
 ) -> Optional[LocalBoundedDataFrame]:
+    """Deserialize json string to
+    :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`
+
+    :param json_str: json string containing the base64 data or a file path
+    :param fs: :class:`~triad:triad.collections.fs.FileSystem`, defaults to None
+    :raises ValueError: if the json string is invalid, not generated from
+      :func:`~.serialize_df`
+    :return: :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame` if ``json_str``
+      contains a dataframe or None if its valid but contains no data
+    """
     d = json.loads(json_str)
     if len(d) == 0:
         return None
@@ -166,6 +252,24 @@ def deserialize_df(
 def get_join_schemas(
     df1: DataFrame, df2: DataFrame, how: str, on: Iterable[str]
 ) -> Tuple[Schema, Schema]:
+    """Get :class:`~triad:triad.collections.schema.Schema` object after
+    joining ``df1`` and ``df2``. If ``on`` is not empty, it's mainly for
+    validation purpose.
+
+    :param df1: first dataframe
+    :param df2: second dataframe
+    :param how: can accept ``semi``, ``left_semi``, ``anti``, ``left_anti``,
+      ``inner``, ``left_outer``, ``right_outer``, ``full_outer``, ``cross``
+    :param on: it can always be inferred, but if you provide, it will be
+      validated agained the inferred keys.
+    :return: the pair key schema and schema after join
+
+    :Notice:
+    In Fugue, joined schema can always be inferred because it always uses the
+    input dataframes' common keys as the join keys. So you must make sure to
+    :meth:`~fugue.dataframe.dataframe.DataFrame.rename` to input dataframes so
+    they follow this rule.
+    """
     assert_arg_not_none(how, "how")
     how = how.lower()
     aot(
