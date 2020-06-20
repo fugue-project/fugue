@@ -23,6 +23,24 @@ _COMMENT_SCHEMA_ANNOTATION = "schema:"
 
 
 def parse_output_schema_from_comment(func: Callable) -> Optional[str]:
+    """Parse schema hint from the comments above the function. It try to find
+    comment lines starts with `schema:` from bottom up, and will use the first
+    occurrance as the hint.
+
+    :param func: the function
+    :return: schema hint string
+
+    :Example:
+    .. code-block:: python
+
+        # schema: a:int,b:str
+        #schema:a:int,b:int
+        # some comment
+        def dummy():
+            pass
+
+        assert "a:int,b:int" == parse_output_schema_from_comment(dummy)
+    """
     for comment in reversed((inspect.getcomments(func) or "").splitlines()):
         comment = comment.replace(" ", "").replace("#", "")
         if not comment.startswith(_COMMENT_SCHEMA_ANNOTATION):

@@ -2,14 +2,6 @@ fugue.workflow
 ===============
 
 
-fugue.workflow.tasks
---------------------
-
-.. automodule:: fugue.workflow.tasks
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 fugue.workflow.workflow
 -----------------------
 

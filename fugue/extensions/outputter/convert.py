@@ -5,7 +5,7 @@ from fugue.dataframe import DataFrames
 from fugue.exceptions import FugueInterfacelessError
 from triad.utils.convert import to_function, to_instance
 from fugue.extensions.outputter.outputter import Outputter
-from fugue.utils.interfaceless import FunctionWrapper
+from fugue._utils.interfaceless import FunctionWrapper
 from triad.utils.hash import to_uuid
 
 

@@ -4,7 +4,7 @@ from typing import Any, Callable, List, Optional, Union, no_type_check
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.transformer.transformer import CoTransformer, Transformer
-from fugue.utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
+from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.convert import to_function, to_instance

@@ -22,9 +22,9 @@ from fugue.extensions._builtins import (
     Zip,
 )
 from fugue.extensions.transformer.convert import _to_transformer
-from fugue.workflow.tasks import Create, FugueTask, Output, Process
+from fugue.workflow._tasks import Create, FugueTask, Output, Process
 from fugue.workflow.workflow_context import (
-    FugueInteractiveWorkflowContext,
+    _FugueInteractiveWorkflowContext,
     FugueWorkflowContext,
 )
 from triad.collections import Schema
@@ -37,6 +37,22 @@ TDF = TypeVar("TDF", bound="WorkflowDataFrame")
 
 
 class WorkflowDataFrame(DataFrame):
+    """It represents the edges in the graph constructed by :class:`~.FugueWorkflow`.
+    In Fugue, we use DAG to represent workflows, and the edges are strictly
+    dataframes. DAG construction and execution are different steps, this class is
+    used in the construction step. Although it inherits from
+    :class:`~fugue.dataframe.dataframe.DataFrame`, it's not concerete data. So a
+    lot of the operations are not allowed. If you want to obtain the concrete
+    Fugue :class:`~fugue.dataframe.dataframe.DataFrame`, use :meth:`~.compute()`
+    to execute the workflow.
+
+    Normally, you don't construct it by yourself, you will just use the methods of it.
+
+    :param workflow: the parent workflow it belongs to
+    :param task: the task that generates this dataframe
+    :param metadata: dict-like metadata, defaults to None
+    """
+
     def __init__(
         self, workflow: "FugueWorkflow", task: FugueTask, metadata: Any = None
     ):
@@ -45,21 +61,56 @@ class WorkflowDataFrame(DataFrame):
         self._task = task
 
     def spec_uuid(self) -> str:
+        """UUID of its task spec
+        """
         return self._task.__uuid__()
 
     @property
     def name(self) -> str:
+        """Name of its task spec
+        """
         return self._task.name
 
     @property
     def workflow(self) -> "FugueWorkflow":
+        """The parent workflow
+        """
         return self._workflow
 
     @property
     def result(self) -> DataFrame:
+        """The concrete DataFrame obtained from :meth:`~.compute()`.
+        This property will not trigger compute again, but compute should
+        have been called earlier and the result is cached.
+        """
         return self.workflow.get_result(self)
 
     def compute(self, *args, **kwargs) -> DataFrame:
+        """Trigger the parent workflow to
+        :meth:`~fugue.workflow.workflow.FugueWorkflow.run` and to generate and cache
+        the result dataframe this instance represent.
+
+        :Examples:
+        >>> df = FugueWorkflow().df([[0]],"a:int").transform(a_transformer)
+        >>> df.compute().as_pandas()  # pandas dataframe
+        >>> df.compute(SparkExecutionEngine).native  # spark dataframe
+
+        :Notice:
+        Consider using :meth:`fugue.workflow.workflow.FugueWorkflow.run` instead.
+        Because this method actually triggers the entire workflow to run, so it may
+        be confusing to use this method because extra time may be taken to compute
+        unrelated dataframes.
+
+        .. code-block:: python
+
+            dag = FugueWorkflow()
+            df1 = dag.df([[0]],a:int).transform(a_transformer)
+            df2 = dag.df([[0]],b:int).transform(b_transformer)
+
+            dag.run(SparkExecutionEngine)
+            df1.result.show()
+            df2.result.show()
+        """
         # TODO: it computes entire graph
         self.workflow.run(*args, **kwargs)
         return self.result
@@ -71,6 +122,25 @@ class WorkflowDataFrame(DataFrame):
         params: Any = None,
         pre_partition: Any = None,
     ) -> TDF:
+        """Run a processor on this dataframe. It's a simple wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.process`
+
+        Please read the :ref:`Processor Tutorial <tutorial:/tutorials/processor.ipynb>`
+
+        :param using: processor-like object
+        :param schema: :class:`~triad:triad.collections.schema.Schema` like object,
+          defaults to None. The processor
+          will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.output_schema`
+        :param params: dict-like paramters to run the processor, defaults to None.
+          The processor will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.params`
+        :param pre_partition: partition-like object, defaults to None.
+          The processor will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
+        :return: result dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         if pre_partition is None:
             pre_partition = self._metadata.get("pre_partition", PartitionSpec())
         df = self.workflow.process(
@@ -79,6 +149,19 @@ class WorkflowDataFrame(DataFrame):
         return self.to_self_type(df)
 
     def output(self, using: Any, params: Any = None, pre_partition: Any = None) -> None:
+        """Run a outputter on this dataframe. It's a simple wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.output`
+
+        Please read the :ref:`Outputter Tutorial <tutorial:/tutorials/outputter.ipynb>`
+
+        :param using: outputter-like object
+        :param params: dict-like paramters to run the outputter, defaults to None.
+          The outputter will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.params`
+        :param pre_partition: partition-like object, defaults to None.
+          The outputter will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
+        """
         if pre_partition is None:
             pre_partition = self._metadata.get("pre_partition", PartitionSpec())
         self.workflow.output(
@@ -92,10 +175,29 @@ class WorkflowDataFrame(DataFrame):
         title: Optional[str] = None,
         best_width: int = 100,
     ) -> None:
+        """Show the dataframe.
+        See :ref:`examples <tutorial:/tutorials/dag.ipynb#initialize-a-workflow>`.
+
+        :param rows: max number of rows, defaults to 10
+        :param show_count: whether to show total count, defaults to False
+        :param title: title to display on top of the dataframe, defaults to None
+        :param best_width: max width for the output table, defaults to 100
+
+        :Notice:
+        * When you call this method, it means you want the dataframe to be
+          printed when the workflow executes. So the dataframe won't show until
+          you run the workflow.
+        * When ``show_count`` is True, it can trigger expensive calculation for
+          a distributed dataframe. So if you call this function directly, you may
+          need to :meth:`~.persist` the dataframe. Or you can turn on
+          :ref:`tutorial:/tutorials/useful_config.ipynb#auto-persist`
+        """
         # TODO: best_width is not used
         self.workflow.show(self, rows=rows, show_count=show_count, title=title)
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
+        """Assert this dataframe equals to other dataframes
+        """
         self.workflow.assert_eq(self, *dfs, **params)
 
     def transform(
@@ -489,7 +591,7 @@ class FugueWorkflow(object):
         return FugueWorkflowContext(*args, **kwargs)
 
 
-class FugueInteractiveWorkflow(FugueWorkflow):
+class _FugueInteractiveWorkflow(FugueWorkflow):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__()
         self._workflow_ctx = self._to_ctx(*args, **kwargs)
@@ -498,7 +600,7 @@ class FugueInteractiveWorkflow(FugueWorkflow):
         assert_or_throw(
             len(args) == 0 and len(kwargs) == 0,
             FugueWorkflowError(
-                "can't reset workflow context in FugueInteractiveWorkflow"
+                "can't reset workflow context in _FugueInteractiveWorkflow"
             ),
         )
         with self._lock:
@@ -511,12 +613,12 @@ class FugueInteractiveWorkflow(FugueWorkflow):
 
     def __enter__(self):
         raise FugueWorkflowError(
-            "with statement is invalid for FugueInteractiveWorkflow"
+            "with statement is invalid for _FugueInteractiveWorkflow"
         )
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         raise FugueWorkflowError(  # pragma: no cover
-            "with statement is invalid for FugueInteractiveWorkflow"
+            "with statement is invalid for _FugueInteractiveWorkflow"
         )
 
     def add(self, task: FugueTask, *args: Any, **kwargs: Any) -> WorkflowDataFrame:
@@ -524,10 +626,10 @@ class FugueInteractiveWorkflow(FugueWorkflow):
         self.run()
         return df
 
-    def _to_ctx(self, *args: Any, **kwargs) -> FugueInteractiveWorkflowContext:
-        if len(args) == 1 and isinstance(args[0], FugueInteractiveWorkflowContext):
+    def _to_ctx(self, *args: Any, **kwargs) -> _FugueInteractiveWorkflowContext:
+        if len(args) == 1 and isinstance(args[0], _FugueInteractiveWorkflowContext):
             return args[0]
-        return FugueInteractiveWorkflowContext(*args, **kwargs)
+        return _FugueInteractiveWorkflowContext(*args, **kwargs)
 
 
 class _Dependencies(object):

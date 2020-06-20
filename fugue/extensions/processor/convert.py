@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict, List, Optional, no_type_check
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.processor.processor import Processor
-from fugue.utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
+from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_function, to_instance

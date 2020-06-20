@@ -8,7 +8,6 @@ fugue
    fugue.dataframe
    fugue.execution
    fugue.extensions
-   fugue.utils
    fugue.workflow
 
 

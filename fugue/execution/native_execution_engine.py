@@ -22,7 +22,7 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
-from fugue.utils.io import load_df, save_df
+from fugue._utils.io import load_df, save_df
 from sqlalchemy import create_engine
 from triad.collections import Schema
 from triad.collections.dict import ParamDict

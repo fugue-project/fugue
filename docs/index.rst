@@ -14,4 +14,7 @@ Welcome to Fugue's documentation!
    api_sql/fugue_sql
    api_spark/fugue_spark
    api_dask/fugue_dask
+   xlike
+   triad <triad>
+   Zip & Comap <tutorial>
 

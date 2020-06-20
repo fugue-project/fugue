@@ -17,7 +17,7 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
-from fugue.utils.io import load_df, save_df
+from fugue._utils.io import load_df, save_df
 from fugue_dask.dataframe import DEFAULT_CONFIG, DaskDataFrame
 from fugue_dask.utils import DASK_UTILS
 from triad.collections import Schema
