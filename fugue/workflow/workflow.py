@@ -91,11 +91,13 @@ class WorkflowDataFrame(DataFrame):
         the result dataframe this instance represent.
 
         :Examples:
+
         >>> df = FugueWorkflow().df([[0]],"a:int").transform(a_transformer)
         >>> df.compute().as_pandas()  # pandas dataframe
         >>> df.compute(SparkExecutionEngine).native  # spark dataframe
 
         :Notice:
+
         Consider using :meth:`fugue.workflow.workflow.FugueWorkflow.run` instead.
         Because this method actually triggers the entire workflow to run, so it may
         be confusing to use this method because extra time may be taken to compute
@@ -104,8 +106,8 @@ class WorkflowDataFrame(DataFrame):
         .. code-block:: python
 
             dag = FugueWorkflow()
-            df1 = dag.df([[0]],a:int).transform(a_transformer)
-            df2 = dag.df([[0]],b:int).transform(b_transformer)
+            df1 = dag.df([[0]],"a:int").transform(a_transformer)
+            df2 = dag.df([[0]],"b:int")
 
             dag.run(SparkExecutionEngine)
             df1.result.show()
@@ -128,14 +130,13 @@ class WorkflowDataFrame(DataFrame):
         Please read the :ref:`Processor Tutorial <tutorial:/tutorials/processor.ipynb>`
 
         :param using: processor-like object
-        :param schema: :class:`~triad:triad.collections.schema.Schema` like object,
-          defaults to None. The processor
+        :param schema: |SchemaLikeObject|, defaults to None. The processor
           will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.output_schema`
-        :param params: dict-like paramters to run the processor, defaults to None.
+        :param params: |ParamsLikeObject| to run the processor, defaults to None.
           The processor will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.params`
-        :param pre_partition: partition-like object, defaults to None.
+        :param pre_partition: |PartitionLikeObject|, defaults to None.
           The processor will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
         :return: result dataframe
@@ -155,10 +156,10 @@ class WorkflowDataFrame(DataFrame):
         Please read the :ref:`Outputter Tutorial <tutorial:/tutorials/outputter.ipynb>`
 
         :param using: outputter-like object
-        :param params: dict-like paramters to run the outputter, defaults to None.
+        :param params: |ParamsLikeObject| to run the outputter, defaults to None.
           The outputter will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.params`
-        :param pre_partition: partition-like object, defaults to None.
+        :param pre_partition: |PartitionLikeObject|, defaults to None.
           The outputter will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
         """
@@ -184,6 +185,7 @@ class WorkflowDataFrame(DataFrame):
         :param best_width: max width for the output table, defaults to 100
 
         :Notice:
+
         * When you call this method, it means you want the dataframe to be
           printed when the workflow executes. So the dataframe won't show until
           you run the workflow.
@@ -196,7 +198,20 @@ class WorkflowDataFrame(DataFrame):
         self.workflow.show(self, rows=rows, show_count=show_count, title=title)
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
-        """Assert this dataframe equals to other dataframes
+        """Wrapper of :meth:`fugue.workflow.workflow.FugueWorkflow.assert_eq` to
+        compare this dataframe with other dataframes.
+
+        :param dfs: |DataFramesLikeObject|
+        :param digits: precision on float number comparison, defaults to 8
+        :param check_order: if to compare the row orders, defaults to False
+        :param check_schema: if compare schemas, defaults to True
+        :param check_content: if to compare the row values, defaults to True
+        :param check_metadata: if to compare the dataframe metadatas, defaults to True
+        :param no_pandas: if true, it will compare the string representations of the
+          dataframes, otherwise, it will convert both to pandas dataframe to compare,
+          defaults to False
+
+        :raises AssertionError: if not equal
         """
         self.workflow.assert_eq(self, *dfs, **params)
 
@@ -388,6 +403,17 @@ class WorkflowDataFrame(DataFrame):
 
 
 class FugueWorkflow(object):
+    """Fugue Workflow, also known as the Fugue Programming Interface.
+
+    In Fugue, we use DAG to represent workflows, DAG construction and execution
+    are different steps, this class is mainly used in the construction step, so all
+    things you added to the workflow is **description** and they are not executed
+    until you call :meth:`~.run`
+
+    Read :ref:`The Tutorial <tutorial:/tutorials/dag.ipynb#initialize-a-workflow>`
+    to learn how to initialize it in different ways and pros and cons.
+    """
+
     def __init__(self, *args: Any, **kwargs: Any):
         self._lock = RLock()
         self._spec = WorkflowSpec()
@@ -397,12 +423,37 @@ class FugueWorkflow(object):
 
     @property
     def conf(self) -> ParamDict:
+        """All configs of this workflow and underlying
+        :class:`~fugue.execution.execution_engine.ExecutionEngine` (if given)
+        """
         return self._workflow_ctx.conf
 
     def spec_uuid(self) -> str:
+        """UUID of the workflow spec (`description`)
+        """
         return self._spec.__uuid__()
 
     def run(self, *args: Any, **kwargs: Any) -> None:
+        """Execute the workflow and compute all dataframes.
+        If not arguments, it will use
+        :class:`~fugue.execution.native_execution_engine.NativeExecutionEngine`
+        to run the workflow.
+
+        :Examples:
+
+        .. code-block:: python
+
+            dag = FugueWorkflow()
+            df1 = dag.df([[0]],"a:int").transform(a_transformer)
+            df2 = dag.df([[0]],"b:int")
+
+            dag.run(SparkExecutionEngine)
+            df1.result.show()
+            df2.result.show()
+
+        Read :ref:`The Tutorial <tutorial:/tutorials/dag.ipynb#initialize-a-workflow>`
+        to learn how to run in different ways and pros and cons.
+        """
         with self._lock:
             self._computed = False
             if len(args) > 0 or len(kwargs) > 0:
@@ -417,12 +468,41 @@ class FugueWorkflow(object):
         self.run()
 
     def get_result(self, df: WorkflowDataFrame) -> DataFrame:
+        """After :meth:`~.run`, get the result of a dataframe defined in the dag
+
+        :return: a calculated dataframe
+
+        :Examples:
+
+        .. code-block:: python
+
+            dag = FugueWorkflow()
+            df1 = dag.df([[0]],"a:int")
+            dag.run()
+            dag.get_result(df1).show()
+        """
         assert_or_throw(self._computed, FugueWorkflowError("not computed"))
         return self._workflow_ctx.get_result(id(df._task))
 
     def create(
         self, using: Any, schema: Any = None, params: Any = None
     ) -> WorkflowDataFrame:
+        """Run a creator to create a dataframe.
+
+        Please read the :ref:`Creator Tutorial <tutorial:/tutorials/creator.ipynb>`
+
+        :param using: creator-like object
+        :param schema: |SchemaLikeObject|, defaults to None. The creator
+          will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.output_schema`
+        :param params: |ParamsLikeObject| to run the creator,
+          defaults to None. The creator will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.params`
+        :param pre_partition: |PartitionLikeObject|, defaults to None.
+          The creator will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
+        :return: result dataframe
+        """
         task = Create(creator=using, schema=schema, params=params)
         return self.add(task)
 
@@ -434,6 +514,24 @@ class FugueWorkflow(object):
         params: Any = None,
         pre_partition: Any = None,
     ) -> WorkflowDataFrame:
+        """Run a processor on the dataframes.
+
+        Please read the :ref:`Processor Tutorial <tutorial:/tutorials/processor.ipynb>`
+
+        :param dfs: |DataFramesLikeObject|
+        :param using: processor-like object
+        :param schema: |SchemaLikeObject|, defaults to None. The processor
+          will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.output_schema`
+        :param params: |ParamsLikeObject| to run the processor, defaults to None.
+          The processor will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.params`
+        :param pre_partition: |PartitionLikeObject|, defaults to None.
+          The processor will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
+
+        :return: result dataframe
+        """
         dfs = self._to_dfs(*dfs)
         task = Process(
             len(dfs),
@@ -451,6 +549,18 @@ class FugueWorkflow(object):
     def output(
         self, *dfs: Any, using: Any, params: Any = None, pre_partition: Any = None
     ) -> None:
+        """Run a outputter on dataframes.
+
+        Please read the :ref:`Outputter Tutorial <tutorial:/tutorials/outputter.ipynb>`
+
+        :param using: outputter-like object
+        :param params: |ParamsLikeObject| to run the outputter, defaults to None.
+          The outputter will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.params`
+        :param pre_partition: |PartitionLikeObject|, defaults to None.
+          The outputter will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
+        """
         dfs = self._to_dfs(*dfs)
         task = Output(
             len(dfs),
@@ -465,8 +575,15 @@ class FugueWorkflow(object):
             self.add(task, *dfs.values())
 
     def create_data(
-        self, data: Any, schema: Any = None, metadata: Any = None, partition: Any = None
+        self, data: Any, schema: Any = None, metadata: Any = None
     ) -> WorkflowDataFrame:
+        """Create dataframe.
+
+        :param data: |DataFrameLikeObject|
+        :param schema: |SchemaLikeObject|, defaults to None
+        :param metadata: |ParamsLikeObject|, defaults to None
+        :return: a dataframe of the current workflow
+        """
         if isinstance(data, WorkflowDataFrame):
             assert_or_throw(
                 data.workflow is self, f"{data} does not belong to this workflow"
@@ -478,9 +595,16 @@ class FugueWorkflow(object):
         )
 
     def df(
-        self, data: Any, schema: Any = None, metadata: Any = None, partition: Any = None
+        self, data: Any, schema: Any = None, metadata: Any = None
     ) -> WorkflowDataFrame:
-        return self.create_data(data, schema, metadata, partition)
+        """Create dataframe. Alias of :meth:`~.create_data`
+
+        :param data: |DataFrameLikeObject|
+        :param schema: |SchemaLikeObject|, defaults to None
+        :param metadata: |ParamsLikeObject|, defaults to None
+        :return: a dataframe of the current workflow
+        """
+        return self.create_data(data, schema, metadata)
 
     def load(
         self, path: str, fmt: str = "", columns: Any = None, **kwargs: Any
@@ -546,6 +670,27 @@ class FugueWorkflow(object):
         )
 
     def select(self, *statements: Any, sql_engine: Any = None) -> WorkflowDataFrame:
+        """Execute ``SELECT`` statement using
+        :class:`~fugue.execution.execution_engine.SQLEngine`
+
+        :param statements: a list of sub-statements in string
+          or :class:`~.WorkflowDataFrame`
+        :param sql_engine: :class:`~fugue.execution.execution_engine.SQLEngine`
+          type for this select statement, defaults to None to use default sql engine
+        :return: result of the ``SELECT`` statement
+
+        :Example:
+
+        .. code-block:: python
+
+            with FugueWorkflow() as dag:
+                a = dag.df([[0,"a"]],a:int,b:str)
+                b = dag.df([[0]],a:int)
+                c = dag.select("SELECT a FROM",a,"UNION SELECT * FROM",b)
+
+        Please read :ref:`this <tutorial:/tutorials/dag.ipynb#select-query>`
+        for more examples
+        """
         s_str: List[str] = []
         dfs: Dict[str, DataFrame] = {}
         for s in statements:
@@ -563,6 +708,24 @@ class FugueWorkflow(object):
         )
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
+        """Compare if these dataframes are equal. Is for internal, unit test
+        purpose only. It will convert both dataframes to
+        :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`, so it assumes
+        all dataframes are small and fast enough to convert. DO NOT use it
+        on critical or expensive tasks.
+
+        :param dfs: |DataFramesLikeObject|
+        :param digits: precision on float number comparison, defaults to 8
+        :param check_order: if to compare the row orders, defaults to False
+        :param check_schema: if compare schemas, defaults to True
+        :param check_content: if to compare the row values, defaults to True
+        :param check_metadata: if to compare the dataframe metadatas, defaults to True
+        :param no_pandas: if true, it will compare the string representations of the
+          dataframes, otherwise, it will convert both to pandas dataframe to compare,
+          defaults to False
+
+        :raises AssertionError: if not equal
+        """
         self.output(*dfs, using=AssertEqual, params=params)
 
     def add(self, task: FugueTask, *args: Any, **kwargs: Any) -> WorkflowDataFrame:

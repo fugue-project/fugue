@@ -17,10 +17,11 @@ class DataFrame(ABC):
     :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
     to understand the concept
 
-    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
 
     :Notice:
+
     This is an abstract class, and normally you don't construct it by yourself
     unless you are
     implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
@@ -90,8 +91,8 @@ class DataFrame(ABC):
     @abstractmethod
     def num_partitions(self) -> int:  # pragma: no cover
         """Number of physical partitions of this dataframe.
-        Please read `this <https://fugue-tutorials.readthedocs.io/
-        en/latest/tutorials/partition.html>`_
+        Please read
+        :ref:`The Partition Tutorial <tutorial:/tutorials/partition.ipynb>`
         """
         raise NotImplementedError
 
@@ -160,6 +161,7 @@ class DataFrame(ABC):
         :return: 2-dimensional native python array
 
         :Notice:
+
         If ``type_safe`` is False, then the returned values are 'raw' values.
         """
         raise NotImplementedError
@@ -176,6 +178,7 @@ class DataFrame(ABC):
         :return: iterable of native python arrays
 
         :Notice:
+
         If ``type_safe`` is False, then the returned values are 'raw' values.
         """
 
@@ -247,6 +250,7 @@ class DataFrame(ABC):
         :param best_width: max width of the output table, defaults to 100
 
         :Notice:
+
         When ``show_count`` is True, it can trigger expensive calculation for
         a distributed dataframe. So if you call this function directly, you may
         need to :func:`fugue.execution.execution_engine.ExecutionEngine.persist`
@@ -284,6 +288,7 @@ class DataFrame(ABC):
         :return: iterable of native python dicts
 
         :Notice:
+
         The default implementation enforces ``type_safe`` True
         """
         if columns is None:
@@ -353,6 +358,7 @@ class LocalDataFrame(DataFrame):
     :param metadata: dict-like object with string keys, default ``None``
 
     :Notice:
+
     This is an abstract class, and normally you don't construct it by yourself
     unless you are
     implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
@@ -384,10 +390,11 @@ class LocalBoundedDataFrame(LocalDataFrame):
     :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
     to understand the concept
 
-    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
 
     :Notice:
+
     This is an abstract class, and normally you don't construct it by yourself
     unless you are
     implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
@@ -408,10 +415,11 @@ class LocalUnboundedDataFrame(LocalDataFrame):
     this <https://fugue-tutorials.readthedocs.io/
     en/latest/tutorials/schema_dataframes.html#DataFrame>`_ to understand the concept
 
-    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
 
     :Notice:
+
     This is an abstract class, and normally you don't construct it by yourself
     unless you are
     implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`

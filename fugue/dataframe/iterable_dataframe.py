@@ -18,16 +18,18 @@ class IterableDataFrame(LocalUnboundedDataFrame):
 
     :param df: 2-dimensional array, iterable of arrays, or
       :class:`~fugue.dataframe.dataframe.DataFrame`
-    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
     :Examples:
+
     >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
     >>> b = IterableDataFrame(a)
 
     :Notice:
+
     It's ok to peek the dataframe, it will not affect the iteration, but it's
     invalid operation to count
     """

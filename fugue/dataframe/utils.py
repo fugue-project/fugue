@@ -31,8 +31,29 @@ def _df_eq(
     no_pandas: bool = False,
     throw=False,
 ) -> bool:
-    """_df_eq is for internal, local test purpose only. DO NOT use
-    it on critical or expensive tasks.
+    """Compare if two dataframes are equal. Is for internal, unit test
+    purpose only. It will convert both dataframes to
+    :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`, so it assumes
+    both dataframes are small and fast enough to convert. DO NOT use it
+    on critical or expensive tasks.
+
+    :param df: first data frame
+    :param data: :ref:`DataFrame like
+      <tutorial:/tutorials/x-like.ipynb#dataframe>` object
+    :param schema: :ref:`Schema like
+      <tutorial:/tutorials/x-like.ipynb#schema>` object, defaults to None
+    :param metadata: :ref:`Parameteres like
+      <tutorial:/tutorials/x-like.ipynb#parameters>` object, defaults to None
+    :param digits: precision on float number comparison, defaults to 8
+    :param check_order: if to compare the row orders, defaults to False
+    :param check_schema: if compare schemas, defaults to True
+    :param check_content: if to compare the row values, defaults to True
+    :param check_metadata: if to compare the dataframe metadatas, defaults to True
+    :param no_pandas: if true, it will compare the string representations of the
+      dataframes, otherwise, it will convert both to pandas dataframe to compare,
+      defaults to False
+    :param throw: if to throw error if not equal, defaults to False
+    :return: if they equal
     """
     df1 = to_local_bounded_df(df)
     df2 = to_local_bounded_df(data, schema, metadata)
@@ -76,8 +97,7 @@ def to_local_df(df: Any, schema: Any = None, metadata: Any = None) -> LocalDataF
 
     :param df: :class:`~fugue.dataframe.dataframe.DataFrame`, pandas DataFramme and
       list or iterable of arrays
-    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object,
-      defaults to None, it should not be set for
+    :param schema: |SchemaLikeObject|, defaults to None, it should not be set for
       :class:`~fugue.dataframe.dataframe.DataFrame` type
     :param metadata: dict-like object with string keys, defaults to  None
     :raises ValueError: if ``df`` is :class:`~fugue.dataframe.dataframe.DataFrame`
@@ -87,6 +107,7 @@ def to_local_df(df: Any, schema: Any = None, metadata: Any = None) -> LocalDataF
       :class:`~fugue.dataframe.dataframe.LocalDataFrame` else a converted one
 
     :Examples:
+
     >>> a = to_local_df([[0,'a'],[1,'b']],"a:int,b:str")
     >>> assert to_local_df(a) is a
     >>> to_local_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
@@ -114,8 +135,7 @@ def to_local_bounded_df(
 
     :param df: :class:`~fugue.dataframe.dataframe.DataFrame`, pandas DataFramme and
       list or iterable of arrays
-    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object,
-      defaults to None, it should not be set for
+    :param schema: |SchemaLikeObject|, defaults to None, it should not be set for
       :class:`~fugue.dataframe.dataframe.DataFrame` type
     :param metadata: dict-like object with string keys, defaults to  None
     :raises ValueError: if ``df`` is :class:`~fugue.dataframe.dataframe.DataFrame`
@@ -125,11 +145,13 @@ def to_local_bounded_df(
       :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame` else a converted one
 
     :Examples:
+
     >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
     >>> assert isinstance(to_local_bounded_df(a), LocalBoundedDataFrame)
     >>> to_local_bounded_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
 
     :Notice:
+
     Compared to :func:`.to_local_df`, this function makes sure the dataframe is also
     bounded, so :class:`~fugue.dataframe.iterable_dataframe.IterableDataFrame` will be
     converted although it's local.
@@ -148,6 +170,7 @@ def pickle_df(df: DataFrame) -> bytes:
     :return: pickled binary data
 
     :Notice:
+
     Be careful to use on large dataframes or non-local, un-materialized dataframes,
     it can be slow. You should always use :func:`.unpickle_df` to deserialize.
     """
@@ -180,6 +203,7 @@ def serialize_df(
     :return: a json string either containing the base64 data or the file path
 
     :Notice:
+
     If fs is not provided but it needs to write to disk, then it will use
     :meth:`~fs:fs.opener.registry.Registry.open_fs` to try to open the file to write.
     """
@@ -210,6 +234,7 @@ def unpickle_df(stream: bytes) -> LocalBoundedDataFrame:
     :return: unpickled dataframe
 
     :Notice:
+
     The data must be serialized by :func:`.pickle_df` to deserialize.
     """
     o = pickle.loads(stream)
@@ -265,6 +290,7 @@ def get_join_schemas(
     :return: the pair key schema and schema after join
 
     :Notice:
+
     In Fugue, joined schema can always be inferred because it always uses the
     input dataframes' common keys as the join keys. So you must make sure to
     :meth:`~fugue.dataframe.dataframe.DataFrame.rename` to input dataframes so

@@ -15,6 +15,7 @@ class ExtensionContext(object):
         """Parameters set for using this extension.
 
         :Examples:
+
         >>> FugueWorkflow().df(...).transform(using=dummy, params={"a": 1})
 
         You will get ``{"a": 1}`` as `params` in the ``dummy`` transformer
@@ -28,6 +29,7 @@ class ExtensionContext(object):
         :class:`~fugue.extensions.transformer.transformer.CoTransformer`
 
         :Examples:
+
         >>> dag = FugueWorkflow().df(...).transform(using=dummy)
         >>> dag.run(NativeExecutionEngine(conf={"b": 10}))
 

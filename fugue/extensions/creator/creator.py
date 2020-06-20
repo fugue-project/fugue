@@ -13,6 +13,7 @@ class Creator(ExtensionContext, ABC):
     the interface functions.
 
     :Notice:
+
     Before implementing this class, do you really need to implement this
     interface? Do you know the interfaceless feature of Fugue? Implementing Creator
     is commonly unnecessary. You can choose the interfaceless approach which may

@@ -17,12 +17,13 @@ class ArrayDataFrame(LocalBoundedDataFrame):
 
     :param df: 2-dimensional array, iterable of arrays, or
       :class:`~fugue.dataframe.dataframe.DataFrame`
-    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
     :Examples:
+
     >>> a = ArrayDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
     >>> b = ArrayDataFrame(a)
     """

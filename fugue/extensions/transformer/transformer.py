@@ -13,6 +13,7 @@ class Transformer(ExtensionContext):
     the interface functions.
 
     :Notice:
+
     Before implementing this class, do you really need to implement this
     interface? Do you know the interfaceless feature of Fugue? Commonly, if you don't
     need to implement :meth:`~.on_init`, you can choose the
@@ -33,6 +34,7 @@ class Transformer(ExtensionContext):
         """Generate the output schema on the driver side.
 
         :Notice:
+
         * This is running on driver
         * This is the only function in this interface that is facing the entire
           DataFrame that is not necessarily local, for example a SparkDataFrame
@@ -41,8 +43,7 @@ class Transformer(ExtensionContext):
         * You can access all properties except for :meth:`~.cursor`
 
         :param df: the entire dataframe you are going to transform.
-        :return: a :class:`~triad:triad.collections.schema.Schema` like object,
-          should not be None or empty
+        :return: |SchemaLikeObject|, should not be None or empty
         """
         raise NotImplementedError
 
@@ -54,6 +55,7 @@ class Transformer(ExtensionContext):
         that in :meth:`~.transform`
 
         :Notice:
+
         * This call can be on a random machine (depending on the ExecutionEngine you
           use), you should get the context from the properties of this class
         * You can get physical partition no (if available from the execution egnine)
@@ -71,6 +73,7 @@ class Transformer(ExtensionContext):
         """The transformation logic from one local dataframe to another local dataframe.
 
         :Notice:
+
         * This function operates on :ref:`logical partition level
           <tutorial:/tutorials/partition.ipynb#physical-vs-logical-partitions>`
         * This call can be on a random machine (depending on the ExecutionEngine you
@@ -96,6 +99,7 @@ class CoTransformer(ExtensionContext):
     the interface functions.
 
     :Notice:
+
     Before implementing this class, do you really need to implement this
     interface? Do you know the interfaceless feature of Fugue? Commonly, if you don't
     need to implement :meth:`~.on_init`, you can choose the
@@ -117,6 +121,7 @@ class CoTransformer(ExtensionContext):
         """Generate the output schema on the driver side.
 
         :Notice:
+
         * This is running on driver
         * Currently, ``dfs`` is a collection of empty dataframes with the same
           structure and schemas
@@ -126,8 +131,7 @@ class CoTransformer(ExtensionContext):
 
         :param dfs: the collection of dataframes you are going to transform. They
           are empty dataframes with the same structure and schemas
-        :return: a :class:`~triad:triad.collections.schema.Schema` like object,
-          should not be None or empty
+        :return: |SchemaLikeObject|, should not be None or empty
         """
         raise NotImplementedError
 
@@ -139,6 +143,7 @@ class CoTransformer(ExtensionContext):
         that in :meth:`~.transform`
 
         :Notice:
+
         * This call can be on a random machine (depending on the ExecutionEngine you
           use), you should get the context from the properties of this class
         * You can get physical partition no (if available from the execution egnine)
@@ -155,6 +160,7 @@ class CoTransformer(ExtensionContext):
         partition keys) to a local dataframe.
 
         :Notice:
+
         * This call can be on a random machine (depending on the ExecutionEngine you
           use), you should get the :class:`context
           <fugue.extensions.context.ExtensionContext>` from the properties of this class

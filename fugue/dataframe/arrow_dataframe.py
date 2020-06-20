@@ -16,12 +16,13 @@ class ArrowDataFrame(LocalBoundedDataFrame):
 
     :param df: 2-dimensional array, iterable of arrays,
       :func:`pyarrow.Table <pa:pyarrow.table>` or pandas DataFrame
-    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
     :Examples:
+
     >>> ArrowDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
     >>> ArrowDataFrame(schema = "a:int,b:int")  # empty dataframe
     >>> ArrowDataFrame(pd.DataFrame([[0]],columns=["a"]))

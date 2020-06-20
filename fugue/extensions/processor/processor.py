@@ -13,6 +13,7 @@ class Processor(ExtensionContext, ABC):
     the interface functions.
 
     :Notice:
+
     Before implementing this class, do you really need to implement this
     interface? Do you know the interfaceless feature of Fugue? Implementing Processor
     is commonly unnecessary. You can choose the interfaceless approach which may
@@ -26,6 +27,7 @@ class Processor(ExtensionContext, ABC):
         """Process the collection of dataframes on driver side
 
         :Notice:
+
         * It runs on driver side
         * The dataframes are not necessarily local, for example a SparkDataFrame
         * It is engine aware, you can put platform dependent code in it (for example

@@ -48,10 +48,12 @@ class SQLEngine(ABC):
         :return: result of the ``SELECT`` statement
 
         :Example:
+
         >>> dfs = DataFrames(a=df1, b=df2)
         >>> sql_engine.select(dfs, "SELECT * FROM a UNION SELECT * FROM b")
 
         :Notice:
+
         There can be tables that is not in ``dfs``. For example you want to select
         from hive without input DataFrames:
 
@@ -81,7 +83,9 @@ class ExecutionEngine(ABC):
     def conf(self) -> ParamDict:
         """All configurations of this engine instance.
 
-        :Notice: it can contain more than you providec, for example
+        :Notice:
+
+        it can contain more than you providec, for example
         in :class:`~fugue_spark.execution_engine.SparkExecutionEngine`,
         the Spark session can bring in more config, they are all accessible
         using this property.
@@ -124,12 +128,12 @@ class ExecutionEngine(ABC):
         :param data: :class:`~fugue.dataframe.dataframe.DataFrame`,
           pandas DataFramme or list or iterable of arrays or others that
           is supported by certain engine implementation
-        :param schema: a :class:`~triad:triad.collections.schema.Schema` like object,
-          defaults to None
+        :param schema: |SchemaLikeObject|, defaults to None
         :param metadata: dict-like object with string keys, defaults to None
         :return: engine compatible dataframe
 
         :Notice:
+
         There are certain conventions to follow for a new implementation:
 
         * if the input is already in compatible dataframe type, it should return itself
@@ -149,6 +153,7 @@ class ExecutionEngine(ABC):
         :return: repartitioned dataframe
 
         :Notice:
+
         Before implementing please read
         :ref:`The Partition Tutorial <tutorial:/tutorials/partition.ipynb>`
         """
@@ -169,9 +174,8 @@ class ExecutionEngine(ABC):
 
         :param df: input dataframe
         :param map_func: the function to apply on every logical partition
-        :param output_schema: a :class:`~triad:triad.collections.schema.Schema`
-          like object that can't be None. Please also understand
-          :ref:`why we need this
+        :param output_schema: |SchemaLikeObject| that can't be None.
+          Please also understand :ref:`why we need this
           <tutorial:/tutorials/transformer.ipynb#why-explicit-on-output-schema?>`
         :param partition_spec: partition specification
         :param metadata: dict-like metadata object to add to the dataframe after the
@@ -181,6 +185,7 @@ class ExecutionEngine(ABC):
         :return: the dataframe after the map operation
 
         :Notice:
+
         Before implementing, you must read
         :ref:`this <tutorial:/tutorials/execution_engine.ipynb#map>` to understand
         what map is used for and how it should work.
@@ -230,6 +235,7 @@ class ExecutionEngine(ABC):
         :return: the joined dataframe
 
         :Notice:
+
         Please read :func:`this <fugue.dataframe.utils.get_join_schemas>`
         """
         raise NotImplementedError
@@ -407,9 +413,8 @@ class ExecutionEngine(ABC):
         :param df: input dataframe, it must be a zipped dataframe (it has to be a
           dataframe output from :meth:`~.zip` or :meth:`~.zip_all`)
         :param map_func: the function to apply on every zipped partition
-        :param output_schema: a :class:`~triad:triad.collections.schema.Schema`
-          like object that can't be None. Please also understand
-          :ref:`why we need this
+        :param output_schema: |SchemaLikeObject| that can't be None.
+          Please also understand :ref:`why we need this
           <tutorial:/tutorials/cotransformer.ipynb#why-explicit-on-output-schema?>`
         :param partition_spec: partition specification for processing the zipped
           zipped dataframe.
@@ -420,6 +425,7 @@ class ExecutionEngine(ABC):
         :return: the dataframe after the comap operation
 
         :Notice:
+
         * The input of this method must be an output of :meth:`~.zip` or
           :meth:`~.zip_all`
         * The ``partition_spec`` here is NOT related with how you zipped the dataframe
@@ -458,8 +464,7 @@ class ExecutionEngine(ABC):
         :param path: the path to the dataframe
         :param format_hint: can accept ``parquet``, ``csv``, ``json``,
           defaults to None, meaning to infer
-        :param columns: list of columns or a
-          :class:`~triad:triad.collections.schema.Schema` like object, defaults to None
+        :param columns: list of columns or a |SchemaLikeObject|, defaults to None
         :param kwargs: parameters to pass to the underlying framework
         :return: an engine compatible dataframe
 

@@ -91,6 +91,7 @@ class DataFrames(IndexedOrderedDict[str, DataFrame]):
         :return: the new DataFrames
 
         :Example:
+
         >>> dfs2 = dfs.convert(lambda df: df.as_local()) # convert all to local
         """
         if self.has_key:

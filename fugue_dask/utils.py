@@ -34,6 +34,7 @@ class DaskUtils(PandasLikeUtils[pd.DataFrame]):
         :return: converted dataframe
 
         :Notice:
+
         When `null_safe` is true, the native column types in the dataframe may change,
         for example, if a column of `int64` has None values, the output will make sure
         each value in the column is either None or an integer, however, due to the

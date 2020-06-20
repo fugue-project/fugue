@@ -31,6 +31,7 @@ def parse_output_schema_from_comment(func: Callable) -> Optional[str]:
     :return: schema hint string
 
     :Example:
+
     .. code-block:: python
 
         # schema: a:int,b:str
