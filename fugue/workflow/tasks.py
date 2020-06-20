@@ -8,9 +8,9 @@ from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution import ExecutionEngine
-from fugue.extensions.creator.convert import to_creator
-from fugue.extensions.outputter.convert import to_outputter
-from fugue.extensions.processor.convert import to_processor
+from fugue.extensions.creator.convert import _to_creator
+from fugue.extensions.outputter.convert import _to_outputter
+from fugue.extensions.processor.convert import _to_processor
 from fugue.workflow.workflow_context import FugueWorkflowContext
 from triad.collections.dict import ParamDict
 from triad.exceptions import InvalidOperationError
@@ -147,7 +147,7 @@ class Create(FugueTask):
         deterministic: bool = True,
         lazy: bool = True,
     ):
-        self._creator = to_creator(creator, schema)
+        self._creator = _to_creator(creator, schema)
         self._creator._params = ParamDict(params)
         super().__init__(
             params=params, input_n=0, output_n=1, deterministic=deterministic, lazy=lazy
@@ -181,7 +181,7 @@ class Process(FugueTask):
         lazy: bool = False,
         input_names: Optional[List[str]] = None,
     ):
-        self._processor = to_processor(processor, schema)
+        self._processor = _to_processor(processor, schema)
         self._processor._params = ParamDict(params)
         self._processor._partition_spec = PartitionSpec(pre_partition)
         super().__init__(
@@ -229,7 +229,7 @@ class Output(FugueTask):
         input_names: Optional[List[str]] = None,
     ):
         assert_or_throw(input_n > 0, FugueWorkflowError("must have at least one input"))
-        self._outputter = to_outputter(outputter)
+        self._outputter = _to_outputter(outputter)
         self._outputter._params = ParamDict(params)
         self._outputter._partition_spec = PartitionSpec(pre_partition)
         super().__init__(

@@ -12,7 +12,7 @@ from fugue.exceptions import FugueWorkflowError
 from fugue.execution import SQLEngine
 from fugue.execution.execution_engine import _generate_comap_empty_dfs
 from fugue.extensions.processor import Processor
-from fugue.extensions.transformer import CoTransformer, Transformer, to_transformer
+from fugue.extensions.transformer import CoTransformer, Transformer, _to_transformer
 from triad.collections import ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
@@ -23,7 +23,7 @@ class RunTransformer(Processor):
     @no_type_check
     def process(self, dfs: DataFrames) -> DataFrame:
         df = dfs[0]
-        tf = to_transformer(
+        tf = _to_transformer(
             self.params.get_or_none("transformer", object),
             self.params.get_or_none("schema", object),
         )

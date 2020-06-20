@@ -12,6 +12,10 @@ from triad.utils.hash import to_uuid
 
 
 def processor(schema: Any = None) -> Callable[[Any], "_FuncAsProcessor"]:
+    """Decorator for processors
+
+    Please read :ref:`Processor Tutorial <tutorial:/tutorials/processor.ipynb>`
+    """
     # TODO: validation of schema if without * should be done at compile time
     def deco(func: Callable) -> _FuncAsProcessor:
         return _FuncAsProcessor.from_func(func, schema)
@@ -19,7 +23,7 @@ def processor(schema: Any = None) -> Callable[[Any], "_FuncAsProcessor"]:
     return deco
 
 
-def to_processor(obj: Any, schema: Any = None) -> Processor:
+def _to_processor(obj: Any, schema: Any = None) -> Processor:
     exp: Optional[Exception] = None
     try:
         return copy.copy(to_instance(obj, Processor))

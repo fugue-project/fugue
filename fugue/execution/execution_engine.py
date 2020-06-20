@@ -262,7 +262,7 @@ class ExecutionEngine(ABC):
         :param df2_name: df2's name in the zipped dataframe, defaults to None
 
         :return: a zipped dataframe, the metadata of the
-          dataframe will indicated it's zipped
+          dataframe will indicate it's zipped
 
         :Notice:
 

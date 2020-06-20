@@ -4,7 +4,6 @@ fugue.extensions
 .. toctree::
    :maxdepth: 4
 
-   fugue.extensions.builtins
    fugue.extensions.creator
    fugue.extensions.outputter
    fugue.extensions.processor

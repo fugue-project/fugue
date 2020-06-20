@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterable, List
 from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
 from fugue.execution import ExecutionEngine
-from fugue.extensions.outputter import Outputter, outputter, to_outputter
+from fugue.extensions.outputter import Outputter, outputter, _to_outputter
 from pytest import raises
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
@@ -15,36 +15,36 @@ def test_outputter():
     assert isinstance(t2, Outputter)
 
 
-def test_to_outputter():
-    a = to_outputter(MockOutputter)
+def test__to_outputter():
+    a = _to_outputter(MockOutputter)
     assert isinstance(a, MockOutputter)
-    b = to_outputter("MockOutputter")
+    b = _to_outputter("MockOutputter")
     assert isinstance(b, MockOutputter)
 
-    a = to_outputter(T0)
+    a = _to_outputter(T0)
     assert isinstance(a, Outputter)
-    a = to_outputter(T0())
+    a = _to_outputter(T0())
 
     assert isinstance(a, Outputter)
-    a = to_outputter(t1)
+    a = _to_outputter(t1)
     assert isinstance(a, Outputter)
     a._x = 1
-    b = to_outputter(t1)
+    b = _to_outputter(t1)
     assert isinstance(b, Outputter)
     assert "_x" not in b.__dict__
-    c = to_outputter(t1)
+    c = _to_outputter(t1)
     assert isinstance(c, Outputter)
     assert "_x" not in c.__dict__
     c._x = 1
-    d = to_outputter("t1")
+    d = _to_outputter("t1")
     assert isinstance(d, Outputter)
     assert "_x" not in d.__dict__
-    raises(FugueInterfacelessError, lambda: to_outputter("abc"))
+    raises(FugueInterfacelessError, lambda: _to_outputter("abc"))
 
-    assert isinstance(to_outputter(t3), Outputter)
-    assert isinstance(to_outputter(t4), Outputter)
-    assert isinstance(to_outputter(t5), Outputter)
-    assert isinstance(to_outputter(t6), Outputter)
+    assert isinstance(_to_outputter(t3), Outputter)
+    assert isinstance(_to_outputter(t4), Outputter)
+    assert isinstance(_to_outputter(t5), Outputter)
+    assert isinstance(_to_outputter(t6), Outputter)
 
 
 def test_run_outputter():
@@ -57,7 +57,7 @@ def test_run_outputter():
         pass
 
     c = Ct()
-    o1 = to_outputter(t3)
+    o1 = _to_outputter(t3)
     o1(df, df, 2, c)
     assert 4 == c.value
     c.value = 0
@@ -72,7 +72,7 @@ def test_run_outputter():
     assert 4 == c.value
 
     c = Ct()
-    o1 = to_outputter(t5)
+    o1 = _to_outputter(t5)
     o1("dummy", dfs, 2, c)
     assert 4 == c.value
     c.value = 0
@@ -90,19 +90,19 @@ def test_run_outputter():
     assert 4 == c.value
 
 
-def test_to_outputter_determinism():
-    a = to_outputter(t1)
-    b = to_outputter(t1)
-    c = to_outputter("t1")
-    d = to_outputter("t2")
+def test__to_outputter_determinism():
+    a = _to_outputter(t1)
+    b = _to_outputter(t1)
+    c = _to_outputter("t1")
+    d = _to_outputter("t2")
     assert a is not b
     assert to_uuid(a) == to_uuid(b)
     assert a is not c
     assert to_uuid(a) == to_uuid(c)
     assert to_uuid(a) != to_uuid(d)
 
-    a = to_outputter(MockOutputter)
-    b = to_outputter("MockOutputter")
+    a = _to_outputter(MockOutputter)
+    b = _to_outputter("MockOutputter")
     assert a is not b
     assert to_uuid(a) == to_uuid(b)
 

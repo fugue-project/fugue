@@ -12,7 +12,11 @@ from triad.utils.hash import to_uuid
 
 
 def transformer(schema: Any) -> Callable[[Any], "_FuncAsTransformer"]:
-    # TODO: validation of schema if without * should be done at compile time
+    """Decorator for transformers
+
+    Please read :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+    """
+
     def deco(func: Callable) -> _FuncAsTransformer:
         return _FuncAsTransformer.from_func(func, schema)
 
@@ -20,14 +24,18 @@ def transformer(schema: Any) -> Callable[[Any], "_FuncAsTransformer"]:
 
 
 def cotransformer(schema: Any) -> Callable[[Any], "_FuncAsCoTransformer"]:
-    # TODO: validation of schema if without * should be done at compile time
+    """Decorator for cotransformers
+
+    Please read :ref:`CoTransformer Tutorial <tutorial:/tutorials/cotransformer.ipynb>`
+    """
+
     def deco(func: Callable) -> _FuncAsCoTransformer:
         return _FuncAsCoTransformer.from_func(func, schema)
 
     return deco
 
 
-def to_transformer(  # noqa: C901
+def _to_transformer(  # noqa: C901
     obj: Any, schema: Any = None
 ) -> Union[Transformer, CoTransformer]:
     exp: Optional[Exception] = None

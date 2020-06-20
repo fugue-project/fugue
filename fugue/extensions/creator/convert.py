@@ -12,14 +12,18 @@ from triad.utils.hash import to_uuid
 
 
 def creator(schema: Any = None) -> Callable[[Any], "_FuncAsCreator"]:
-    # TODO: validation of schema if without * should be done at compile time
+    """Decorator for creators
+
+    Please read :ref:`Creator Tutorial <tutorial:/tutorials/creator.ipynb>`
+    """
+
     def deco(func: Callable) -> _FuncAsCreator:
         return _FuncAsCreator.from_func(func, schema)
 
     return deco
 
 
-def to_creator(obj: Any, schema: Any = None) -> Creator:
+def _to_creator(obj: Any, schema: Any = None) -> Creator:
     exp: Optional[Exception] = None
     try:
         return copy.copy(to_instance(obj, Creator))

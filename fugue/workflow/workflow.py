@@ -7,7 +7,7 @@ from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowError
-from fugue.extensions.builtins import (
+from fugue.extensions._builtins import (
     AssertEqual,
     CreateData,
     DropColumns,
@@ -21,7 +21,7 @@ from fugue.extensions.builtins import (
     Show,
     Zip,
 )
-from fugue.extensions.transformer.convert import to_transformer
+from fugue.extensions.transformer.convert import _to_transformer
 from fugue.workflow.tasks import Create, FugueTask, Output, Process
 from fugue.workflow.workflow_context import (
     FugueInteractiveWorkflowContext,
@@ -434,7 +434,7 @@ class FugueWorkflow(object):
             len(dfs) == 1,
             NotImplementedError("transform supports only single dataframe"),
         )
-        tf = to_transformer(using, schema)
+        tf = _to_transformer(using, schema)
         return self.process(
             *dfs,
             using=RunTransformer,
