@@ -154,8 +154,7 @@ class ExecutionEngine(ABC):
 
         :Notice:
 
-        Before implementing please read
-        :ref:`The Partition Tutorial <tutorial:/tutorials/partition.ipynb>`
+        Before implementing please read |PartitionTutorial|
         """
         raise NotImplementedError
 
@@ -229,7 +228,7 @@ class ExecutionEngine(ABC):
         :param how: can accept ``semi``, ``left_semi``, ``anti``, ``left_anti``,
           ``inner``, ``left_outer``, ``right_outer``, ``full_outer``, ``cross``
         :param on: it can always be inferred, but if you provide, it will be
-          validated agained the inferred keys.
+          validated against the inferred keys.
         :param metadata: dict-like object to add to the joined dataframe,
           defaults to None
         :return: the joined dataframe
@@ -343,11 +342,10 @@ class ExecutionEngine(ABC):
         """Zip multiple dataframes together with given partition
         specifications.
 
-        :param dfs: dict-like or list-like DataFrames
+        :param dfs: |DataFramesLikeObject|
         :param how: can accept ``inner``, ``left_outer``, ``right_outer``,
           ``full_outer``, ``cross``, defaults to ``inner``
-        :param partition_spec: partition spec to partition each dataframe,
-          defaults to empty.
+        :param partition_spec: |PartitionLikeObject|, defaults to empty.
         :param temp_path: file path to store the data (used only if the serialized data
           is larger than ``to_file_threshold``), defaults to None
         :param to_file_threshold: file byte size threshold, defaults to -1

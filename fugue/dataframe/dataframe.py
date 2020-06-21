@@ -91,8 +91,7 @@ class DataFrame(ABC):
     @abstractmethod
     def num_partitions(self) -> int:  # pragma: no cover
         """Number of physical partitions of this dataframe.
-        Please read
-        :ref:`The Partition Tutorial <tutorial:/tutorials/partition.ipynb>`
+        Please read |PartitionTutorial|
         """
         raise NotImplementedError
 

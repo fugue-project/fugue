@@ -23,9 +23,9 @@ from fugue.extensions._builtins import (
 )
 from fugue.extensions.transformer.convert import _to_transformer
 from fugue.workflow._tasks import Create, FugueTask, Output, Process
-from fugue.workflow.workflow_context import (
-    _FugueInteractiveWorkflowContext,
+from fugue.workflow._workflow_context import (
     FugueWorkflowContext,
+    _FugueInteractiveWorkflowContext,
 )
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
@@ -147,7 +147,7 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(
             self, using=using, schema=schema, params=params, pre_partition=pre_partition
         )
-        return self.to_self_type(df)
+        return self._to_self_type(df)
 
     def output(self, using: Any, params: Any = None, pre_partition: Any = None) -> None:
         """Run a outputter on this dataframe. It's a simple wrapper of
@@ -223,6 +223,27 @@ class WorkflowDataFrame(DataFrame):
         pre_partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
     ) -> TDF:
+        """Transform this dataframe using transformer. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.transform`
+
+        Please read the
+        :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+
+        :param using: transformer-like object
+        :param schema: |SchemaLikeObject|, defaults to None. The transformer
+          will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.output_schema`
+        :param params: |ParamsLikeObject| to run the processor, defaults to None.
+          The transformer will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.params`
+        :param pre_partition: |PartitionLikeObject|, defaults to None. It's
+          recommended to use the equivalent wayt, which is to call
+          :meth:`~.partition` and then call :meth:`~.transform` without this parameter
+        :param ignore_errors: list of exception types the transformer can ignore,
+          defaults to empty list
+        :return: the transformed dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         if pre_partition is None:
             pre_partition = self._metadata.get("pre_partition", PartitionSpec())
         df = self.workflow.transform(
@@ -233,59 +254,177 @@ class WorkflowDataFrame(DataFrame):
             pre_partition=pre_partition,
             ignore_errors=ignore_errors,
         )
-        return self.to_self_type(df)
+        return self._to_self_type(df)
 
     def join(self: TDF, *dfs: Any, how: str, on: Optional[Iterable[str]] = None) -> TDF:
+        """Join this dataframe with dataframes. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.join`. |ReadJoin|
+
+        :param dfs: |DataFramesLikeObject|
+        :param how: can accept ``semi``, ``left_semi``, ``anti``, ``left_anti``,
+          ``inner``, ``left_outer``, ``right_outer``, ``full_outer``, ``cross``
+        :param on: it can always be inferred, but if you provide, it will be
+          validated against the inferred keys. Default to None
+        :return: joined dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         df = self.workflow.join(self, *dfs, how=how, on=on)
-        return self.to_self_type(df)
+        return self._to_self_type(df)
 
     def inner_join(self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None) -> TDF:
+        """INNER Join this dataframe with dataframes. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.join`. |ReadJoin|
+
+        :param dfs: |DataFramesLikeObject|
+        :param on: it can always be inferred, but if you provide, it will be
+          validated against the inferred keys. Default to None
+        :return: joined dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         return self.join(*dfs, how="inner", on=on)
 
     def semi_join(self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None) -> TDF:
+        """LEFT SEMI Join this dataframe with dataframes. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.join`. |ReadJoin|
+
+        :param dfs: |DataFramesLikeObject|
+        :param on: it can always be inferred, but if you provide, it will be
+          validated against the inferred keys. Default to None
+        :return: joined dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         return self.join(*dfs, how="semi", on=on)
 
     def left_semi_join(self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None) -> TDF:
+        """LEFT SEMI Join this dataframe with dataframes. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.join`. |ReadJoin|
+
+        :param dfs: |DataFramesLikeObject|
+        :param on: it can always be inferred, but if you provide, it will be
+          validated against the inferred keys. Default to None
+        :return: joined dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         return self.join(*dfs, how="left_semi", on=on)
 
     def anti_join(self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None) -> TDF:
+        """LEFT ANTI Join this dataframe with dataframes. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.join`. |ReadJoin|
+
+        :param dfs: |DataFramesLikeObject|
+        :param on: it can always be inferred, but if you provide, it will be
+          validated against the inferred keys. Default to None
+        :return: joined dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         return self.join(*dfs, how="anti", on=on)
 
     def left_anti_join(self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None) -> TDF:
+        """LEFT ANTI Join this dataframe with dataframes. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.join`. |ReadJoin|
+
+        :param dfs: |DataFramesLikeObject|
+        :param on: it can always be inferred, but if you provide, it will be
+          validated against the inferred keys. Default to None
+        :return: joined dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         return self.join(*dfs, how="left_anti", on=on)
 
     def left_outer_join(
         self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
     ) -> TDF:
+        """LEFT OUTER Join this dataframe with dataframes. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.join`. |ReadJoin|
+
+        :param dfs: |DataFramesLikeObject|
+        :param on: it can always be inferred, but if you provide, it will be
+          validated against the inferred keys. Default to None
+        :return: joined dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         return self.join(*dfs, how="left_outer", on=on)
 
     def right_outer_join(
         self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
     ) -> TDF:
+        """RIGHT OUTER Join this dataframe with dataframes. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.join`. |ReadJoin|
+
+        :param dfs: |DataFramesLikeObject|
+        :param on: it can always be inferred, but if you provide, it will be
+          validated against the inferred keys. Default to None
+        :return: joined dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         return self.join(*dfs, how="right_outer", on=on)
 
     def full_outer_join(
         self: TDF, *dfs: Any, on: Optional[Iterable[str]] = None
     ) -> TDF:
+        """CROSS Join this dataframe with dataframes. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.join`. |ReadJoin|
+
+        :param dfs: |DataFramesLikeObject|
+        :param on: it can always be inferred, but if you provide, it will be
+          validated against the inferred keys. Default to None
+        :return: joined dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         return self.join(*dfs, how="full_outer", on=on)
 
     def cross_join(self: TDF, *dfs: Any) -> TDF:
+        """CROSS Join this dataframe with dataframes. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.join`. |ReadJoin|
+
+        :param dfs: |DataFramesLikeObject|
+        :return: joined dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         return self.join(*dfs, how="cross")
 
     def checkpoint(self: TDF, namespace: Any = None) -> TDF:
+        """[CURRENTLY NO EFFECT] set checkpoint for the current dataframe
+
+        :return: dataframe loaded from checkpoint
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         self._task.checkpoint(namespace)
         return self
 
     def persist(self: TDF, level: Any = None) -> TDF:
+        """Persist the current dataframe
+
+        :param level: the parameter passed to the underlying framework, defaults to None
+        :return: the persisted dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         self._task.persist("" if level is None else level)
         return self
 
     def broadcast(self: TDF) -> TDF:
+        """Broadcast the current dataframe
+
+        :return: the broadcasted dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         self._task.broadcast()
         return self
 
     def partition(self: TDF, *args, **kwargs) -> TDF:
-        return self.to_self_type(
+        """Partition the current dataframe. Please read |PartitionTutorial|
+
+        :param args: |PartitionLikeObject|
+        :param kwargs: |PartitionLikeObject|
+        :return: dataframe with the partition hint
+        :rtype: :class:`~.WorkflowDataFrame`
+
+        :Notice:
+
+        Normally this step is fast because it's to add a partition hint
+        for the next step.
+        """
+        return self._to_self_type(
             WorkflowDataFrame(
                 self.workflow,
                 self._task,
@@ -293,24 +432,48 @@ class WorkflowDataFrame(DataFrame):
             )
         )
 
-    def to_self_type(self: TDF, df: "WorkflowDataFrame") -> TDF:
+    def _to_self_type(self: TDF, df: "WorkflowDataFrame") -> TDF:
         return df  # type: ignore
 
     def drop(  # type: ignore
         self: TDF, columns: List[str], if_exists: bool = False
     ) -> TDF:
+        """Drop columns from the dataframe.
+
+        :param columns: columns to drop
+        :param if_exists: if setting to True, it will ignore non-existent columns,
+          defaults to False
+        :return: the dataframe after dropping columns
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
         df = self.workflow.process(
             self, using=DropColumns, params=dict(columns=columns, if_exists=if_exists)
         )
-        return self.to_self_type(df)
+        return self._to_self_type(df)
 
     def rename(self: TDF, *args: Any, **kwargs: Any) -> TDF:
+        """Rename the dataframe using a mapping dict
+
+        :param args: list of dicts containing rename maps
+        :param kwargs: rename map
+        :return: a new dataframe with the new names
+        :rtype: :class:`~.WorkflowDataFrame`
+
+        :Notice:
+
+        This interface is more flexible than
+        :meth:`fugue.dataframe.dataframe.DataFrame.rename`
+
+        :Examples:
+
+        >>> df.rename({"a": "b"}, c="d", e="f")
+        """
         m: Dict[str, str] = {}
         for a in args:
             m.update(a)
         m.update(kwargs)
         df = self.workflow.process(self, using=Rename, params=dict(columns=m))
-        return self.to_self_type(df)
+        return self._to_self_type(df)
 
     def zip(
         self: TDF,
@@ -320,6 +483,32 @@ class WorkflowDataFrame(DataFrame):
         temp_path: Optional[str] = None,
         to_file_threshold: Any = -1,
     ) -> TDF:
+        """Zip this data frame with multiple dataframes together
+        with given partition specifications. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.zip`.
+
+        :param dfs: |DataFramesLikeObject|
+        :param how: can accept ``inner``, ``left_outer``, ``right_outer``,
+          ``full_outer``, ``cross``, defaults to ``inner``
+        :param partition: |PartitionLikeObject|, defaults to None.
+        :param temp_path: file path to store the data (used only if the serialized data
+          is larger than ``to_file_threshold``), defaults to None
+        :param to_file_threshold: file byte size threshold, defaults to -1
+
+        :return: a zipped dataframe
+        :rtype: :class:`~.WorkflowDataFrame`
+
+        :Notice:
+
+        * ``dfs`` must be list like, the zipped dataframe will be list like
+        * ``dfs`` is fine to be empty
+        * If you want dict-like zip, use
+          :meth:`fugue.workflow.workflow.FugueWorkflow.zip`
+
+        Read :ref:`CoTransformer <tutorial:/tutorials/dag.ipynb#cotransformer>`
+        and :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`
+        for details
+        """
         if partition is None:
             partition = self._metadata.get("pre_partition", PartitionSpec())
         df = self.workflow.zip(
@@ -330,13 +519,13 @@ class WorkflowDataFrame(DataFrame):
             temp_path=temp_path,
             to_file_threshold=to_file_threshold,
         )
-        return self.to_self_type(df)
+        return self._to_self_type(df)
 
     def __getitem__(self: TDF, columns: List[Any]) -> TDF:
         df = self.workflow.process(
             self, using=SelectColumns, params=dict(columns=columns)
         )
-        return self.to_self_type(df)
+        return self._to_self_type(df)
 
     def save(
         self,
@@ -347,6 +536,21 @@ class WorkflowDataFrame(DataFrame):
         single: bool = False,
         **kwargs: Any,
     ) -> None:
+        """Save this dataframe to a persistent storage
+
+        :param path: output path
+        :param fmt: format hint can accept ``parquet``, ``csv``, ``json``,
+          defaults to None, meaning to infer
+        :param mode: can accept ``overwrite``, ``append``, ``error``,
+          defaults to "overwrite"
+        :param partition: |PartitionLikeObject|, how to partition the
+          dataframe before saving, defaults to empty
+        :param single: force the output as a single file, defaults to False
+        :param kwargs: parameters to pass to the underlying framework
+
+        For more details and examples, read
+        :ref:`Save & Load <tutorial:/tutorials/dag.ipynb#save-&-load>`.
+        """
         if partition is None:
             partition = self._metadata.get("pre_partition", PartitionSpec())
         self.workflow.output(
@@ -358,41 +562,71 @@ class WorkflowDataFrame(DataFrame):
 
     @property
     def schema(self) -> Schema:  # pragma: no cover
+        """
+        :raises NotImplementedError: don't call this method
+        """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     @property
     def is_local(self) -> bool:  # pragma: no cover
+        """
+        :raises NotImplementedError: don't call this method
+        """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def as_local(self) -> DataFrame:  # type: ignore  # pragma: no cover
+        """
+        :raises NotImplementedError: don't call this method
+        """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     @property
     def is_bounded(self) -> bool:  # pragma: no cover
+        """
+        :raises NotImplementedError: don't call this method
+        """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     @property
     def empty(self) -> bool:  # pragma: no cover
+        """
+        :raises NotImplementedError: don't call this method
+        """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     @property
     def num_partitions(self) -> int:  # pragma: no cover
+        """
+        :raises NotImplementedError: don't call this method
+        """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def peek_array(self) -> Any:  # pragma: no cover
+        """
+        :raises NotImplementedError: don't call this method
+        """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def count(self) -> int:  # pragma: no cover
+        """
+        :raises NotImplementedError: don't call this method
+        """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:  # pragma: no cover
+        """
+        :raises NotImplementedError: don't call this method
+        """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:  # pragma: no cover
+        """
+        :raises NotImplementedError: don't call this method
+        """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
     def _drop_cols(self: TDF, cols: List[str]) -> DataFrame:  # pragma: no cover
@@ -609,6 +843,16 @@ class FugueWorkflow(object):
     def load(
         self, path: str, fmt: str = "", columns: Any = None, **kwargs: Any
     ) -> WorkflowDataFrame:
+        """Load dataframe from persistent storage.
+        Read :ref:`this <tutorial:/tutorials/dag.ipynb#save-&-load>` for details
+
+        :param path: file path
+        :param fmt: format hint can accept ``parquet``, ``csv``, ``json``,
+          defaults to "", meaning to infer
+        :param columns: list of columns or a |SchemaLikeObject|, defaults to None
+        :return: dataframe from the file
+        :rtype: WorkflowDataFrame
+        """
         return self.create(
             using=Load, params=dict(path=path, fmt=fmt, columns=columns, params=kwargs)
         )
@@ -620,6 +864,25 @@ class FugueWorkflow(object):
         show_count: bool = False,
         title: Optional[str] = None,
     ) -> None:
+        """Show the dataframes.
+        See :ref:`examples <tutorial:/tutorials/dag.ipynb#initialize-a-workflow>`.
+
+        :param dfs: |DataFramesLikeObject|
+        :param rows: max number of rows, defaults to 10
+        :param show_count: whether to show total count, defaults to False
+        :param title: title to display on top of the dataframe, defaults to None
+        :param best_width: max width for the output table, defaults to 100
+
+        :Notice:
+
+        * When you call this method, it means you want the dataframe to be
+          printed when the workflow executes. So the dataframe won't show until
+          you run the workflow.
+        * When ``show_count`` is True, it can trigger expensive calculation for
+          a distributed dataframe. So if you call this function directly, you may
+          need to :meth:`~.WorkflowDataFrame.persist` the dataframe. Or you can turn on
+          :ref:`tutorial:/tutorials/useful_config.ipynb#auto-persist`
+        """
         self.output(
             *dfs, using=Show, params=dict(rows=rows, show_count=show_count, title=title)
         )
@@ -627,6 +890,16 @@ class FugueWorkflow(object):
     def join(
         self, *dfs: Any, how: str, on: Optional[Iterable[str]] = None
     ) -> WorkflowDataFrame:  # pragma: no cover
+        """Join dataframes.
+        |ReadJoin|
+
+        :param dfs: |DataFramesLikeObject|
+        :param how: can accept ``semi``, ``left_semi``, ``anti``, ``left_anti``,
+          ``inner``, ``left_outer``, ``right_outer``, ``full_outer``, ``cross``
+        :param on: it can always be inferred, but if you provide, it will be
+          validated against the inferred keys. Default to None
+        :return: joined dataframe
+        """
         _on: List[str] = list(on) if on is not None else []
         return self.process(*dfs, using=RunJoin, params=dict(how=how, on=_on))
 
@@ -638,6 +911,29 @@ class FugueWorkflow(object):
         temp_path: Optional[str] = None,
         to_file_threshold: Any = -1,
     ) -> WorkflowDataFrame:
+        """Zip multiple dataframes together with given partition
+        specifications.
+
+        :param dfs: |DataFramesLikeObject|
+        :param how: can accept ``inner``, ``left_outer``, ``right_outer``,
+          ``full_outer``, ``cross``, defaults to ``inner``
+        :param partition: |PartitionLikeObject|, defaults to None.
+        :param temp_path: file path to store the data (used only if the serialized data
+          is larger than ``to_file_threshold``), defaults to None
+        :param to_file_threshold: file byte size threshold, defaults to -1
+
+        :return: a zipped dataframe
+
+        :Notice:
+
+        * If ``dfs`` is dict like, the zipped dataframe will be dict like,
+          If ``dfs`` is list like, the zipped dataframe will be list like
+        * It's fine to contain only one dataframe in ``dfs``
+
+        Read :ref:`CoTransformer <tutorial:/tutorials/dag.ipynb#cotransformer>`
+        and :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`
+        for details
+        """
         return self.process(
             *dfs,
             using=Zip,
@@ -656,6 +952,26 @@ class FugueWorkflow(object):
         pre_partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
     ) -> WorkflowDataFrame:
+        """Transform dataframes using transformer.
+
+        Please read the
+        :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+
+        :param dfs: |DataFramesLikeObject|
+        :param using: transformer-like object
+        :param schema: |SchemaLikeObject|, defaults to None. The transformer
+          will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.output_schema`
+        :param params: |ParamsLikeObject| to run the processor, defaults to None.
+          The transformer will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.params`
+        :param pre_partition: |PartitionLikeObject|, defaults to None. It's
+          recommended to use the equivalent wayt, which is to call
+          :meth:`~.partition` and then call :meth:`~.transform` without this parameter
+        :param ignore_errors: list of exception types the transformer can ignore,
+          defaults to empty list
+        :return: the transformed dataframe
+        """
         assert_or_throw(
             len(dfs) == 1,
             NotImplementedError("transform supports only single dataframe"),
@@ -729,6 +1045,9 @@ class FugueWorkflow(object):
         self.output(*dfs, using=AssertEqual, params=params)
 
     def add(self, task: FugueTask, *args: Any, **kwargs: Any) -> WorkflowDataFrame:
+        """This method should not be called directly by users. Use
+        :meth:`~.create`, :meth:`~.process`, :meth:`~.output` instead
+        """
         assert_or_throw(task._node_spec is None, f"can't reuse {task}")
         dep = _Dependencies(self, task, {}, *args, **kwargs)
         name = "_" + str(len(self._spec.tasks))

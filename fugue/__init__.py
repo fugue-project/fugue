@@ -25,4 +25,4 @@ from fugue.extensions.transformer import (
     cotransformer,
 )
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
-from fugue.workflow.workflow_context import FugueWorkflowContext
+from fugue.workflow._workflow_context import FugueWorkflowContext

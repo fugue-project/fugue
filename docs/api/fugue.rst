@@ -16,6 +16,10 @@ fugue
 .. |DataFramesLikeObject| replace:: :ref:`DataFrames like object <tutorial:/tutorials/x-like.ipynb#dataframes>`
 .. |PartitionLikeObject| replace:: :ref:`Partition like object <tutorial:/tutorials/x-like.ipynb#partition>`
 
+.. |ReadJoin| replace:: Read Join tutorials on :ref:`workflow <tutorial:/tutorials/dag.ipynb#join>` and :ref:`engine <tutorial:/tutorials/execution_engine.ipynb#join>` for details
+.. |PartitionTutorial| replace:: :ref:`the Partition Tutorial <tutorial:/tutorials/partition.ipynb>`
+
+
 
 fugue.constants
 ---------------

@@ -11,7 +11,7 @@ from fugue.execution import ExecutionEngine
 from fugue.extensions.creator.convert import _to_creator
 from fugue.extensions.outputter.convert import _to_outputter
 from fugue.extensions.processor.convert import _to_processor
-from fugue.workflow.workflow_context import FugueWorkflowContext
+from fugue.workflow._workflow_context import FugueWorkflowContext
 from triad.collections.dict import ParamDict
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw

@@ -19,8 +19,7 @@ class Transformer(ExtensionContext):
     need to implement :meth:`~.on_init`, you can choose the
     interfaceless approach which may decouple your code from Fugue.
 
-    It's important to understand
-    :ref:`the partition concept <tutorial:/tutorials/partition.ipynb>`, and please
+    It's important to understand |PartitionTutorial|, and please
     also read :ref:`The Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
 
 

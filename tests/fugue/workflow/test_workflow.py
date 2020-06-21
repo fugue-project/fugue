@@ -11,7 +11,7 @@ from fugue.exceptions import FugueWorkflowError
 from fugue.execution import NativeExecutionEngine
 from fugue.extensions.transformer.convert import transformer
 from fugue.workflow.workflow import _FugueInteractiveWorkflow, FugueWorkflow
-from fugue.workflow.workflow_context import (_FugueInteractiveWorkflowContext,
+from fugue.workflow._workflow_context import (_FugueInteractiveWorkflowContext,
                                              FugueWorkflowContext)
 from pytest import raises
 from triad.exceptions import InvalidOperationError

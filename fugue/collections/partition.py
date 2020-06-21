@@ -22,8 +22,7 @@ class PartitionSpec(object):
     >>> p = PartitionSpec(num=4, by=["a"])
     >>> p_override = PartitionSpec(p, by=["a","b"], algo="even")
 
-    It's important to understand this concept, please read
-    :ref:`The Partition Tutorial <tutorial:/tutorials/partition.ipynb>`
+    It's important to understand this concept, please read |PartitionTutorial|
 
     Partition consists for these specs:
 
@@ -268,7 +267,7 @@ class PartitionCursor(object):
     a physical partition.
 
     It's important to understand the concept of partition, please read
-    :ref:`The Partition Tutorial <tutorial:/tutorials/partition.ipynb>`
+    |PartitionTutorial|
 
     :param schema: input dataframe schema
     :param spec: partition spec
