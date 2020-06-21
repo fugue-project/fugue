@@ -15,10 +15,10 @@ from antlr4.tree.Tree import TerminalNode, Token, Tree
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrames
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
-from fugue_sql.antlr import FugueSQLParser as fp
-from fugue_sql.antlr import FugueSQLVisitor
+from fugue_sql._antlr import FugueSQLParser as fp
+from fugue_sql._antlr import FugueSQLVisitor
 from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
-from fugue_sql.parse import FugueSQL, _to_tokens
+from fugue_sql._parse import FugueSQL, _to_tokens
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_bool

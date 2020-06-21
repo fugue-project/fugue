@@ -5,8 +5,8 @@ from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.workflow.workflow import FugueWorkflow
 from fugue_sql.exceptions import FugueSQLError
-from fugue_sql.parse import FugueSQL
-from fugue_sql.visitors import FugueSQLHooks, _Extensions, _VisitorBase
+from fugue_sql._parse import FugueSQL
+from fugue_sql._visitors import FugueSQLHooks, _Extensions, _VisitorBase
 from triad.collections.schema import Schema
 from pytest import raises
 

@@ -12,12 +12,30 @@ from fugue.dataframe import (
     PandasDataFrame,
 )
 from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
-from fugue_spark.utils.convert import to_cast_expression, to_schema, to_type_safe_input
+from fugue_spark._utils.convert import to_cast_expression, to_schema, to_type_safe_input
 from triad.collections.schema import SchemaError
 from triad.utils.assertion import assert_or_throw
 
 
 class SparkDataFrame(DataFrame):
+    """DataFrame that wraps Spark DataFrame. Please also read
+    |DataFrameTutorial| to understand this Fugue concept
+
+    :param df: :class:`spark:pyspark.sql.DataFrame`
+    :param schema: |SchemaLikeObject| or :class:`spark:pyspark.sql.types.StructType`,
+      defaults to None.
+    :param metadata: |ParamsLikeObject|, defaults to None
+
+    :raises FugueDataFrameInitError: if the input is not compatible
+
+    :Notice:
+
+    * You should use :meth:`fugue_spark.execution_engine.SparkExecutionEngine.to_df`
+      instead of construction it by yourself.
+    * If ``schema`` is set, then there will be type cast on the Spark DataFrame if the
+      schema is different.
+    """
+
     def __init__(  # noqa: C901
         self, df: Any = None, schema: Any = None, metadata: Any = None
     ):
@@ -42,6 +60,10 @@ class SparkDataFrame(DataFrame):
 
     @property
     def native(self) -> ps.DataFrame:
+        """The wrapped Spark DataFrame
+
+        :rtype: :class:`spark:pyspark.sql.DataFrame`
+        """
         return self._native
 
     @property

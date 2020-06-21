@@ -1,5 +1,5 @@
 from fugue_sql.exceptions import FugueSQLSyntaxError
-from fugue_sql.parse import FugueSQL
+from fugue_sql._parse import FugueSQL
 from pytest import raises
 from tests.fugue_sql.utils import (bad_single_syntax, bad_syntax,
                                    good_single_syntax, good_syntax)

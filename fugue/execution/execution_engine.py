@@ -129,7 +129,7 @@ class ExecutionEngine(ABC):
           pandas DataFramme or list or iterable of arrays or others that
           is supported by certain engine implementation
         :param schema: |SchemaLikeObject|, defaults to None
-        :param metadata: dict-like object with string keys, defaults to None
+        :param metadata: |ParamsLikeObject|, defaults to None
         :return: engine compatible dataframe
 
         :Notice:

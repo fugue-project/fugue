@@ -12,8 +12,7 @@ from triad.utils.pyarrow import apply_schema
 
 class ArrayDataFrame(LocalBoundedDataFrame):
     """DataFrame that wraps native python 2-dimensional arrays. Please read
-    :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
-    to understand the concept
+    |DataFrameTutorial| to understand the concept
 
     :param df: 2-dimensional array, iterable of arrays, or
       :class:`~fugue.dataframe.dataframe.DataFrame`

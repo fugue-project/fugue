@@ -11,8 +11,7 @@ from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationErr
 
 class ArrowDataFrame(LocalBoundedDataFrame):
     """DataFrame that wraps :func:`pyarrow.Table <pa:pyarrow.table>`. Please also read
-    :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
-    to understand this Fugue concept
+    |DataFrameTutorial| to understand this Fugue concept
 
     :param df: 2-dimensional array, iterable of arrays,
       :func:`pyarrow.Table <pa:pyarrow.table>` or pandas DataFrame

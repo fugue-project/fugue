@@ -15,8 +15,7 @@ from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationErr
 
 class PandasDataFrame(LocalBoundedDataFrame):
     """DataFrame that wraps pandas DataFrame. Please also read
-    :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
-    to understand this Fugue concept
+    |DataFrameTutorial| to understand this Fugue concept
 
     :param df: 2-dimensional array, iterable of arrays or pandas DataFrame
     :param schema: |SchemaLikeObject|

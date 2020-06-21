@@ -19,11 +19,11 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
-from fugue_spark.constants import FUGUE_SPARK_DEFAULT_CONF
+from fugue_spark._constants import FUGUE_SPARK_DEFAULT_CONF
 from fugue_spark.dataframe import SparkDataFrame
-from fugue_spark.utils.convert import to_schema, to_spark_schema, to_type_safe_input
-from fugue_spark.utils.io import SparkIO
-from fugue_spark.utils.partition import (
+from fugue_spark._utils.convert import to_schema, to_spark_schema, to_type_safe_input
+from fugue_spark._utils.io import SparkIO
+from fugue_spark._utils.partition import (
     even_repartition,
     hash_repartition,
     rand_repartition,
@@ -53,6 +53,12 @@ _TO_SPARK_JOIN_MAP: Dict[str, str] = {
 
 
 class SparkSQLEngine(SQLEngine):
+    """`Spark SQL <https://spark.apache.org/sql/>`_ execution implementation.
+
+    :param execution_engine: it must be :class:`~.SparkExecutionEngine`
+    :raises ValueError: if the engine is not :class:`~.SparkExecutionEngine`
+    """
+
     def __init__(self, execution_engine: ExecutionEngine) -> None:
         assert_or_throw(
             isinstance(execution_engine, SparkExecutionEngine),
@@ -69,6 +75,16 @@ class SparkSQLEngine(SQLEngine):
 
 
 class SparkExecutionEngine(ExecutionEngine):
+    """The execution engine based on :class:`~spark:pyspark.sql.SparkSession`.
+
+    Please read |ExecutionEngineTutorial| to understand this important Fugue concept
+
+    :param spark_session: Spark session, defaults to None to get the Spark session by
+      :meth:`~spark:pyspark.sql.SparkSession.Builder.getOrCreate`
+    :param conf: |ParamsLikeObject| defaults to None, read |FugueConfig| to
+      learn Fugue specific options
+    """
+
     def __init__(self, spark_session: Optional[SparkSession] = None, conf: Any = None):
         if spark_session is None:
             spark_session = SparkSession.builder.getOrCreate()
@@ -94,6 +110,10 @@ class SparkExecutionEngine(ExecutionEngine):
 
     @property
     def spark_session(self) -> SparkSession:
+        """
+        :return: The wrapped spark session
+        :rtype: :class:`spark:pyspark.sql.SparkSession`
+        """
         return self._spark_session
 
     @property
@@ -109,6 +129,8 @@ class SparkExecutionEngine(ExecutionEngine):
         return self._default_sql_engine
 
     def stop(self) -> None:
+        """For now, it does NOT stop the underlying spark session
+        """
         # TODO: we need a conf to control whether to stop session
         # self.spark_session.stop()
         pass
@@ -116,6 +138,28 @@ class SparkExecutionEngine(ExecutionEngine):
     def to_df(
         self, df: Any, schema: Any = None, metadata: Any = None
     ) -> SparkDataFrame:
+        """Convert a data structure to :class:`~fugue_spark.dataframe.SparkDataFrame`
+
+        :param data: :class:`~fugue.dataframe.dataframe.DataFrame`,
+          :class:`spark:pyspark.sql.DataFrame`, :class:`spark:pyspark.RDD`,
+          pandas DataFrame or
+          list or iterable of arrays
+        :param schema: |SchemaLikeObject| or :class:`spark:pyspark.sql.types.StructType`
+          defaults to None.
+        :param metadata: |ParamsLikeObject|, defaults to None
+        :return: engine compatible dataframe
+
+        :Notice:
+
+        * if the input is already :class:`~fugue_spark.dataframe.SparkDataFrame`,
+          it should return itself
+        * For :class:`~spark:pyspark.RDD`, list or iterable of arrays,
+          ``schema`` must be specified
+        * When ``schema`` is not None, a potential type cast may happen to ensure
+          the dataframe's schema.
+        * all other methods in the engine can take arbitrary dataframes and
+          call this method to convert before doing anything
+        """
         if isinstance(df, DataFrame):
             assert_or_throw(
                 schema is None and metadata is None,

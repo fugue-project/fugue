@@ -52,13 +52,9 @@ class NativeExecutionEngine(ExecutionEngine):
     """The execution engine based on native python and pandas. This execution engine
     is mainly for prototyping and unit tests.
 
-    Please read
-    :ref:`The ExecutionEngine Tutorial <tutorial:/tutorials/execution_engine.ipynb>`
-    to understand this most important Fugue concept
+    Please read |ExecutionEngineTutorial| to understand this important Fugue concept
 
-    :param conf: dict-like config, read
-      :ref:`this <tutorial:/tutorials/useful_config.ipynb>`
-      to learn Fugue specific options
+    :param conf: |ParamsLikeObject|, read |FugueConfig| to learn Fugue specific options
     """
 
     def __init__(self, conf: Any = None):

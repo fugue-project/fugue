@@ -19,7 +19,7 @@ from fugue.execution.execution_engine import (
 )
 from fugue._utils.io import load_df, save_df
 from fugue_dask.dataframe import DEFAULT_CONFIG, DaskDataFrame
-from fugue_dask.utils import DASK_UTILS
+from fugue_dask._utils import DASK_UTILS
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
@@ -29,6 +29,19 @@ from triad.utils.threading import RunOnce
 
 
 class DaskExecutionEngine(ExecutionEngine):
+    """The execution engine based on `Dask <https://docs.dask.org/>`_.
+
+    Please read |ExecutionEngineTutorial| to understand this important Fugue concept
+
+    :param conf: |ParamsLikeObject| defaults to None, read |FugueConfig| to
+      learn Fugue specific options
+
+    :Notice:
+
+    You should setup Dask single machine or distributed environment in the
+    :doc:`common <dask:setup>` way. Before initializing :class:`~.DaskExecutionEngine`
+    """
+
     def __init__(self, conf: Any = None):
         p = ParamDict(DEFAULT_CONFIG)
         p.update(ParamDict(conf))
@@ -53,9 +66,30 @@ class DaskExecutionEngine(ExecutionEngine):
         return self._default_sql_engine
 
     def stop(self) -> None:  # pragma: no cover
+        """It does nothing
+        """
         return
 
     def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DaskDataFrame:
+        """Convert a data structure to :class:`~fugue_dask.dataframe.DaskDataFrame`
+
+        :param data: :class:`~fugue.dataframe.dataframe.DataFrame`,
+          :class:`dask:dask.dataframe.DataFrame`,
+          pandas DataFrame or list or iterable of arrays
+        :param schema: |SchemaLikeObject|, defaults to None.
+        :param metadata: |ParamsLikeObject|, defaults to None
+        :return: engine compatible dataframe
+
+        :Notice:
+
+        * if the input is already :class:`~fugue_dask.dataframe.DaskDataFrame`,
+          it should return itself
+        * For list or iterable of arrays, ``schema`` must be specified
+        * When ``schema`` is not None, a potential type cast may happen to ensure
+          the dataframe's schema.
+        * all other methods in the engine can take arbitrary dataframes and
+          call this method to convert before doing anything
+        """
         default_partitions = self.conf.get_or_throw(
             "fugue.dask.dataframe.default.partitions", int
         )

@@ -2,7 +2,7 @@ import random
 from typing import Any, Iterable, List
 
 import pyspark.sql as ps
-from fugue_spark.utils.convert import to_schema, to_spark_schema
+from fugue_spark._utils.convert import to_schema, to_spark_schema
 from pyspark import RDD
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import lit

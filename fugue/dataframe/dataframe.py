@@ -14,8 +14,7 @@ from triad.utils.assertion import assert_or_throw
 
 class DataFrame(ABC):
     """Base class of Fugue DataFrame. Please read
-    :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
-    to understand the concept
+    |DataFrameTutorial| to understand the concept
 
     :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``

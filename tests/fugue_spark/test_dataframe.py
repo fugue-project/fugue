@@ -11,7 +11,7 @@ from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dataframe.utils import to_local_bounded_df
 from fugue.exceptions import FugueDataFrameInitError
 from fugue_spark.dataframe import SparkDataFrame
-from fugue_spark.utils.convert import to_schema, to_spark_schema
+from fugue_spark._utils.convert import to_schema, to_spark_schema
 from fugue_test.dataframe_suite import DataFrameTests
 from pyspark.sql import SparkSession
 from pytest import raises

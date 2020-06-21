@@ -13,8 +13,7 @@ from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationErr
 
 class IterableDataFrame(LocalUnboundedDataFrame):
     """DataFrame that wraps native python iterable of arrays. Please read
-    :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
-    to understand the concept
+    |DataFrameTutorial| to understand the concept
 
     :param df: 2-dimensional array, iterable of arrays, or
       :class:`~fugue.dataframe.dataframe.DataFrame`

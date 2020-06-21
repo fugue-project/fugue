@@ -6,12 +6,31 @@ from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.dataframe import _input_schema
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
-from fugue_dask.utils import DASK_UTILS
-from fugue_dask.constants import DEFAULT_CONFIG
+from fugue_dask._utils import DASK_UTILS
+from fugue_dask._constants import DEFAULT_CONFIG
 from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 
 
 class DaskDataFrame(DataFrame):
+    """DataFrame that wraps Dask DataFrame. Please also read
+    |DataFrameTutorial| to understand this Fugue concept
+
+    :param df: :class:`dask:dask.dataframe.DataFrame`,
+      pandas DataFrame or list or iterable of arrays
+    :param schema: |SchemaLikeObject| or :class:`spark:pyspark.sql.types.StructType`,
+      defaults to None.
+    :param metadata: |ParamsLikeObject|, defaults to None
+    :param num_partitions: initial number of partitions for the dask dataframe
+      defaults to 0 to get the value from `fugue.dask.dataframe.default.partitions`
+    :param type_safe: whether to cast input data to ensure type safe, defaults to True
+
+    :raises FugueDataFrameInitError: if the input is not compatible
+
+    :Notice:
+
+    * For :class:`dask:dask.dataframe.DataFrame`, schema must be None
+    """
+
     def __init__(  # noqa: C901
         self,
         df: Any = None,
@@ -59,6 +78,10 @@ class DaskDataFrame(DataFrame):
 
     @property
     def native(self) -> pd.DataFrame:
+        """The wrapped Dask DataFrame
+
+        :rtype: :class:`dask:dask.dataframe.DataFrame`
+        """
         return self._native
 
     @property

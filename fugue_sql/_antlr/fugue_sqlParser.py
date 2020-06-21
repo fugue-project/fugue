@@ -1,4 +1,4 @@
-# Generated from fugue_sql/antlr/fugue_sql.g4 by ANTLR 4.8
+# Generated from fugue_sql/_antlr/fugue_sql.g4 by ANTLR 4.8
 # encoding: utf-8
 from antlr4 import *
 from io import StringIO

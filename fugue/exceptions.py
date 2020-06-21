@@ -26,7 +26,7 @@ class FugueDataFrameError(FugueError):
 
 
 class FugueDataFrameInitError(FugueDataFrameError):
-    """Fugue dataframe is empty
+    """Fugue dataframe initialization error
     """
 
     def __init__(self, *args: Any):
@@ -42,7 +42,7 @@ class FugueDataFrameEmptyError(FugueDataFrameError):
 
 
 class FugueDataFrameOperationError(FugueDataFrameError):
-    """Fugue dataframe is empty
+    """Fugue dataframe invalid operation
     """
 
     def __init__(self, *args: Any):

@@ -47,7 +47,7 @@ language = "python"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["**/fugue_sql.antlr.rst"]
+exclude_patterns = ["**/fugue_sql._antlr.rst"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -68,5 +68,7 @@ intersphinx_mapping = {
     'triad': ('https://triad.readthedocs.io/en/latest', None),
     'tutorial': ('https://fugue-tutorials.readthedocs.io/en/latest', None),
     'pa': ('https://arrow.apache.org/docs', None),
-    'fs': ('https://docs.pyfilesystem.org/en/latest', None)
+    'fs': ('https://docs.pyfilesystem.org/en/latest', None),
+    'spark': ('https://spark.apache.org/docs/latest/api/python', None),
+    'dask': ('https://docs.dask.org/en/latest', None),
     }

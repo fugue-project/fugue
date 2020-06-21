@@ -5,8 +5,8 @@ from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import FugueDataFrameInitError
 from fugue_spark.dataframe import SparkDataFrame
-from fugue_spark.utils.convert import to_schema, to_spark_schema
-from fugue_spark.utils.io import SparkIO
+from fugue_spark._utils.convert import to_schema, to_spark_schema
+from fugue_spark._utils.io import SparkIO
 from pyspark.sql import SparkSession
 from pyspark.sql.utils import AnalysisException
 from pytest import raises

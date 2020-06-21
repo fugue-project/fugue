@@ -2,7 +2,7 @@ import itertools
 
 from antlr4.tree.Tree import TerminalNode
 from fugue_sql.exceptions import FugueSQLSyntaxError
-from fugue_sql.parse import FugueSQL
+from fugue_sql._parse import FugueSQL
 from pytest import raises
 
 

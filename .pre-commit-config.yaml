@@ -5,7 +5,7 @@ exclude: |
     (?x)(
         ^tests/|
         ^docs/|
-        ^fugue_sql/antlr/
+        ^fugue_sql/_antlr/
     )
 repos:
     - repo: https://github.com/pre-commit/pre-commit-hooks

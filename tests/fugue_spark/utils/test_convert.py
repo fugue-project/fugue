@@ -1,4 +1,4 @@
-from fugue_spark.utils.convert import (to_cast_expression, to_schema,
+from fugue_spark._utils.convert import (to_cast_expression, to_schema,
                                        to_select_expression, to_spark_schema)
 from pytest import raises
 
