@@ -18,7 +18,7 @@ from fugue.extensions.transformer import (
     cotransformer,
     transformer,
 )
-from fugue.workflow.workflow import FugueInteractiveWorkflow, FugueWorkflow
+from fugue.workflow.workflow import _FugueInteractiveWorkflow, FugueWorkflow
 import pickle
 
 
@@ -46,7 +46,7 @@ class BuiltInTests(object):
             a = FugueWorkflow().df([[0]], "a:int")
             df_eq(a.compute(self.engine), [[0]], "a:int")
 
-            a = FugueInteractiveWorkflow(self.engine).df([[0]], "a:int").persist()
+            a = _FugueInteractiveWorkflow(self.engine).df([[0]], "a:int").persist()
             df_eq(a.result, [[0]], "a:int")
 
         def test_create_show(self):

@@ -2,16 +2,19 @@ import inspect
 from typing import Any, Dict
 
 from fugue.workflow import FugueWorkflow, WorkflowDataFrame
-from fugue_sql.constants import FUGUE_SQL_DEFAULT_CONF
+from fugue_sql._utils import fill_sql_template
+from fugue_sql._constants import FUGUE_SQL_DEFAULT_CONF
 from fugue_sql.exceptions import FugueSQLError
-from fugue_sql.parse import FugueSQL
-from fugue_sql.utils import fill_sql_template
-from fugue_sql.visitors import FugueSQLHooks, _Extensions
+from fugue_sql._parse import FugueSQL
+from fugue_sql._visitors import FugueSQLHooks, _Extensions
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
 
 
 class FugueSQLWorkflow(FugueWorkflow):
+    """Fugue workflow that supports Fugue SQL. Please read |FugueSQLTutorial|.
+    """
+
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._sql_vars: Dict[str, WorkflowDataFrame] = {}
@@ -35,13 +38,15 @@ class FugueSQLWorkflow(FugueWorkflow):
             for k, v in local_vars.items()
             if not isinstance(v, WorkflowDataFrame) or v.workflow is self
         }
-        variables = self.sql(code, self._sql_vars, local_vars, *args, **kwargs)
+        variables = self._sql(code, self._sql_vars, local_vars, *args, **kwargs)
         if cf is not None:
             for k, v in variables.items():
                 if isinstance(v, WorkflowDataFrame) and v.workflow is self:
                     self._sql_vars[k] = v
 
-    def sql(self, code: str, *args: Any, **kwargs: Any) -> Dict[str, WorkflowDataFrame]:
+    def _sql(
+        self, code: str, *args: Any, **kwargs: Any
+    ) -> Dict[str, WorkflowDataFrame]:
         # TODO: move dict construction to triad
         params: Dict[str, Any] = {}
         for a in args:

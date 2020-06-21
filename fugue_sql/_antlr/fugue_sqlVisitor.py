@@ -1,4 +1,4 @@
-# Generated from fugue_sql/antlr/fugue_sql.g4 by ANTLR 4.8
+# Generated from fugue_sql/_antlr/fugue_sql.g4 by ANTLR 4.8
 from antlr4 import *
 if __name__ is not None and "." in __name__:
     from .fugue_sqlParser import fugue_sqlParser

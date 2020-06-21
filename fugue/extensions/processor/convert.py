@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict, List, Optional, no_type_check
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.processor.processor import Processor
-from fugue.utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
+from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_function, to_instance
@@ -12,6 +12,10 @@ from triad.utils.hash import to_uuid
 
 
 def processor(schema: Any = None) -> Callable[[Any], "_FuncAsProcessor"]:
+    """Decorator for processors
+
+    Please read :ref:`Processor Tutorial <tutorial:/tutorials/processor.ipynb>`
+    """
     # TODO: validation of schema if without * should be done at compile time
     def deco(func: Callable) -> _FuncAsProcessor:
         return _FuncAsProcessor.from_func(func, schema)
@@ -19,7 +23,7 @@ def processor(schema: Any = None) -> Callable[[Any], "_FuncAsProcessor"]:
     return deco
 
 
-def to_processor(obj: Any, schema: Any = None) -> Processor:
+def _to_processor(obj: Any, schema: Any = None) -> Processor:
     exp: Optional[Exception] = None
     try:
         return copy.copy(to_instance(obj, Processor))

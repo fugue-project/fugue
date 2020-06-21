@@ -56,7 +56,7 @@ class FugueWorkflowContext(WorkflowContext):
             return self._results[key]
 
 
-class FugueInteractiveWorkflowContext(FugueWorkflowContext):
+class _FugueInteractiveWorkflowContext(FugueWorkflowContext):
     def __init__(
         self,
         execution_engine: Any = None,

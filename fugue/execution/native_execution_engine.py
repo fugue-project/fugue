@@ -22,7 +22,7 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
-from fugue.utils.io import load_df, save_df
+from fugue._utils.io import load_df, save_df
 from sqlalchemy import create_engine
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
@@ -32,6 +32,11 @@ from triad.utils.pandas_like import PD_UTILS
 
 
 class SqliteEngine(SQLEngine):
+    """Sqlite execution implementation.
+
+    :param execution_engine: the execution engine this sql engine will run on
+    """
+
     def __init__(self, execution_engine: ExecutionEngine) -> None:
         return super().__init__(execution_engine)
 
@@ -44,6 +49,14 @@ class SqliteEngine(SQLEngine):
 
 
 class NativeExecutionEngine(ExecutionEngine):
+    """The execution engine based on native python and pandas. This execution engine
+    is mainly for prototyping and unit tests.
+
+    Please read |ExecutionEngineTutorial| to understand this important Fugue concept
+
+    :param conf: |ParamsLikeObject|, read |FugueConfig| to learn Fugue specific options
+    """
+
     def __init__(self, conf: Any = None):
         super().__init__(conf)
         self._fs = FileSystem()

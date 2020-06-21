@@ -6,7 +6,7 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution import ExecutionEngine
-from fugue.utils.interfaceless import FunctionWrapper, _parse_function, parse_output_schema_from_comment
+from fugue._utils.interfaceless import FunctionWrapper, _parse_function, parse_output_schema_from_comment
 from pytest import raises
 from triad.utils.iter import EmptyAwareIterable
 from triad.utils.hash import to_uuid

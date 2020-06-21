@@ -15,23 +15,24 @@ from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationErr
 
 class PandasDataFrame(LocalBoundedDataFrame):
     """DataFrame that wraps pandas DataFrame. Please also read
-    :ref:`this <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
-    to understand this Fugue concept
+    |DataFrameTutorial| to understand this Fugue concept
 
     :param df: 2-dimensional array, iterable of arrays or pandas DataFrame
-    :param schema: a :class:`~triad:triad.collections.schema.Schema` like object
+    :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
     :param pandas_df_wrapper: if this is a simple wrapper, default False
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
     :Examples:
+
     >>> PandasDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
     >>> PandasDataFrame(schema = "a:int,b:int")  # empty dataframe
     >>> PandasDataFrame(pd.DataFrame([[0]],columns=["a"]))
     >>> PandasDataFrame(ArrayDataFrame([[0]],"a:int).as_pandas())
 
     :Notice:
+
     If ``pandas_df_wrapper`` is True, then the constructor will not do any type check
     otherwise, it will enforce type according to the input schema after the construction
     """

@@ -2,7 +2,7 @@ from typing import Any, Dict, Iterable, List
 
 from fugue.dataframe import ArrayDataFrame
 from fugue.exceptions import FugueInterfacelessError
-from fugue.extensions.transformer import Transformer, to_transformer, transformer
+from fugue.extensions.transformer import Transformer, _to_transformer, transformer
 from pytest import raises
 from triad.collections.schema import Schema
 
@@ -17,25 +17,25 @@ def test_transformer():
     assert [[0, 1]] == list(t3(df.as_array_iterable()))
 
 
-def test_to_transformer():
-    a = to_transformer(t1, None)
+def test__to_transformer():
+    a = _to_transformer(t1, None)
     assert isinstance(a, Transformer)
     a._x = 1
     # every parse should produce a different transformer even the input is
     # a transformer instance
-    b = to_transformer(t1, None)
+    b = _to_transformer(t1, None)
     assert isinstance(b, Transformer)
     assert "_x" not in b.__dict__
-    c = to_transformer("t1", None)
+    c = _to_transformer("t1", None)
     assert isinstance(c, Transformer)
     assert "_x" not in c.__dict__
     c._x = 1
-    d = to_transformer("t1", None)
+    d = _to_transformer("t1", None)
     assert isinstance(d, Transformer)
     assert "_x" not in d.__dict__
-    raises(FugueInterfacelessError, lambda: to_transformer(t4, None))
-    raises(FugueInterfacelessError, lambda: to_transformer("t4", None))
-    e = to_transformer("t4", "*,b:int")
+    raises(FugueInterfacelessError, lambda: _to_transformer(t4, None))
+    raises(FugueInterfacelessError, lambda: _to_transformer("t4", None))
+    e = _to_transformer("t4", "*,b:int")
     assert isinstance(e, Transformer)
 
 

@@ -4,7 +4,7 @@ from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.exceptions import FugueInterfacelessError
 from fugue.execution import ExecutionEngine
-from fugue.extensions.processor import Processor, processor, to_processor
+from fugue.extensions.processor import Processor, processor, _to_processor
 from pytest import raises
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
@@ -16,40 +16,40 @@ def test_processor():
     assert isinstance(t2, Processor)
 
 
-def test_to_processor():
-    a = to_processor(MockProcessor)
+def test__to_processor():
+    a = _to_processor(MockProcessor)
     assert isinstance(a, MockProcessor)
-    b = to_processor("MockProcessor")
+    b = _to_processor("MockProcessor")
     assert isinstance(b, MockProcessor)
 
-    a = to_processor(T0)
+    a = _to_processor(T0)
     assert isinstance(a, Processor)
-    a = to_processor(T0())
+    a = _to_processor(T0())
 
     assert isinstance(a, Processor)
-    a = to_processor(t1)
+    a = _to_processor(t1)
     assert isinstance(a, Processor)
     a._x = 1
-    b = to_processor(t1)
+    b = _to_processor(t1)
     assert isinstance(b, Processor)
     assert "_x" not in b.__dict__
-    c = to_processor(t1)
+    c = _to_processor(t1)
     assert isinstance(c, Processor)
     assert "_x" not in c.__dict__
     c._x = 1
-    d = to_processor("t1")
+    d = _to_processor("t1")
     assert isinstance(d, Processor)
     assert "_x" not in d.__dict__
-    raises(FugueInterfacelessError, lambda: to_processor("abc"))
+    raises(FugueInterfacelessError, lambda: _to_processor("abc"))
 
-    assert isinstance(to_processor(t3), Processor)
-    assert isinstance(to_processor(t4), Processor)
-    assert isinstance(to_processor(t5), Processor)
-    assert isinstance(to_processor(t6), Processor)
-    raises(FugueInterfacelessError, lambda: to_processor(t6, "a:int"))
-    assert isinstance(to_processor(t7, "a:int"), Processor)
-    raises(FugueInterfacelessError, lambda: to_processor(t7))
-    assert isinstance(to_processor(t8), Processor)
+    assert isinstance(_to_processor(t3), Processor)
+    assert isinstance(_to_processor(t4), Processor)
+    assert isinstance(_to_processor(t5), Processor)
+    assert isinstance(_to_processor(t6), Processor)
+    raises(FugueInterfacelessError, lambda: _to_processor(t6, "a:int"))
+    assert isinstance(_to_processor(t7, "a:int"), Processor)
+    raises(FugueInterfacelessError, lambda: _to_processor(t7))
+    assert isinstance(_to_processor(t8), Processor)
 
 
 def test_run_processor():
@@ -58,7 +58,7 @@ def test_run_processor():
     dfs2 = DataFrames(df, df)
     assert not dfs2.has_key
 
-    o1 = to_processor(t3)
+    o1 = _to_processor(t3)
     assert 4 == o1(df, df, 2).as_array()[0][0]
 
     o1._params = ParamDict([("a", 2)], deep=False)
@@ -68,7 +68,7 @@ def test_run_processor():
     o1._execution_engine = None
     assert 4 == o1.process(dfs2).as_array()[0][0]
 
-    o1 = to_processor(t5)
+    o1 = _to_processor(t5)
     assert 4 == o1("dummy", dfs, 2)[0][0]
     assert 4 == o1("dummy", dfs2, 2)[0][0]
     o1._params = ParamDict([("a", 2)], deep=False)
@@ -79,19 +79,19 @@ def test_run_processor():
     assert 4 == o1.process(dfs2).as_array()[0][0]
 
 
-def test_to_processor_determinism():
-    a = to_processor(t1, None)
-    b = to_processor(t1, None)
-    c = to_processor("t1", None)
-    d = to_processor("t2", None)
+def test__to_processor_determinism():
+    a = _to_processor(t1, None)
+    b = _to_processor(t1, None)
+    c = _to_processor("t1", None)
+    d = _to_processor("t2", None)
     assert a is not b
     assert to_uuid(a) == to_uuid(b)
     assert a is not c
     assert to_uuid(a) == to_uuid(c)
     assert to_uuid(a) != to_uuid(d)
 
-    a = to_processor(MockProcessor)
-    b = to_processor("MockProcessor")
+    a = _to_processor(MockProcessor)
+    b = _to_processor("MockProcessor")
     assert a is not b
     assert to_uuid(a) == to_uuid(b)
 

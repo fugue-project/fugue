@@ -13,6 +13,7 @@ class PartitionSpec(object):
     """Fugue Partition Specification.
 
     :Examples:
+
     >>> PartitionSepc(num=4)
     >>> PartitionSepc(num="ROWCOUNT/4 + 3")  # It can be an expression
     >>> PartitionSepc(by=["a","b"])
@@ -21,9 +22,7 @@ class PartitionSpec(object):
     >>> p = PartitionSpec(num=4, by=["a"])
     >>> p_override = PartitionSpec(p, by=["a","b"], algo="even")
 
-
-    It's important to understand this concept, please read
-    `this <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/partition.html>`_
+    It's important to understand this concept, please read |PartitionTutorial|
 
     Partition consists for these specs:
 
@@ -94,6 +93,7 @@ class PartitionSpec(object):
         :return: integer value of the partitions
 
         :Example:
+
         >>> p = PartitionSpec(num="ROWCOUNT/2")
         >>> p.get_num_partitions(ROWCOUNT=lambda: df.count())
         """
@@ -121,6 +121,7 @@ class PartitionSpec(object):
         """Get presort pairs of the spec
 
         :Example:
+
         >>> p = PartitionSpec(by=["a"],presort="b,c desc")
         >>> assert p.presort == {"b":True, "c":False}
         """
@@ -131,6 +132,7 @@ class PartitionSpec(object):
         """Get normalized presort expression
 
         :Example:
+
         >>> p = PartitionSpec(by=["a"],presort="b , c dESc")
         >>> assert p.presort_expr == "b ASC,c DESC"
         """
@@ -166,6 +168,7 @@ class PartitionSpec(object):
         :return: an ordered dictionary of key, order pairs
 
         :Example:
+
         >>> p = PartitionSpec(by=["a"],presort="b , c dESc")
         >>> schema = Schema("a:int,b:int,c:int,d:int"))
         >>> assert p.get_sorts(schema) == {"a":True, "b":True, "c": False}
@@ -264,7 +267,7 @@ class PartitionCursor(object):
     a physical partition.
 
     It's important to understand the concept of partition, please read
-    `this <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/partition.html>`_
+    |PartitionTutorial|
 
     :param schema: input dataframe schema
     :param spec: partition spec

@@ -1,4 +1,4 @@
-from fugue.utils.misc import get_attribute
+from fugue._utils.misc import get_attribute
 from pytest import raises
 
 

@@ -4,7 +4,7 @@ from typing import Any, Callable, List, Optional, Union, no_type_check
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.transformer.transformer import CoTransformer, Transformer
-from fugue.utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
+from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.convert import to_function, to_instance
@@ -12,7 +12,11 @@ from triad.utils.hash import to_uuid
 
 
 def transformer(schema: Any) -> Callable[[Any], "_FuncAsTransformer"]:
-    # TODO: validation of schema if without * should be done at compile time
+    """Decorator for transformers
+
+    Please read :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+    """
+
     def deco(func: Callable) -> _FuncAsTransformer:
         return _FuncAsTransformer.from_func(func, schema)
 
@@ -20,14 +24,18 @@ def transformer(schema: Any) -> Callable[[Any], "_FuncAsTransformer"]:
 
 
 def cotransformer(schema: Any) -> Callable[[Any], "_FuncAsCoTransformer"]:
-    # TODO: validation of schema if without * should be done at compile time
+    """Decorator for cotransformers
+
+    Please read :ref:`CoTransformer Tutorial <tutorial:/tutorials/cotransformer.ipynb>`
+    """
+
     def deco(func: Callable) -> _FuncAsCoTransformer:
         return _FuncAsCoTransformer.from_func(func, schema)
 
     return deco
 
 
-def to_transformer(  # noqa: C901
+def _to_transformer(  # noqa: C901
     obj: Any, schema: Any = None
 ) -> Union[Transformer, CoTransformer]:
     exp: Optional[Exception] = None

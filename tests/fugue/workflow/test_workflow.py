@@ -10,8 +10,8 @@ from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution import NativeExecutionEngine
 from fugue.extensions.transformer.convert import transformer
-from fugue.workflow.workflow import FugueInteractiveWorkflow, FugueWorkflow
-from fugue.workflow.workflow_context import (FugueInteractiveWorkflowContext,
+from fugue.workflow.workflow import _FugueInteractiveWorkflow, FugueWorkflow
+from fugue.workflow._workflow_context import (_FugueInteractiveWorkflowContext,
                                              FugueWorkflowContext)
 from pytest import raises
 from triad.exceptions import InvalidOperationError
@@ -51,11 +51,11 @@ def test_interactive_workflow():
 
     # with statement is not valid
     with raises(FugueWorkflowError):
-        with FugueInteractiveWorkflow():
+        with _FugueInteractiveWorkflow():
             pass
 
     # test basic operations, .result can be directly used
-    dag = FugueInteractiveWorkflow()
+    dag = _FugueInteractiveWorkflow()
     a = dag.create_data([[0]], "a:int")
     df_eq(a.result, [[0]], "a:int")
     df_eq(a.result, [[0]], "a:int")
@@ -64,7 +64,7 @@ def test_interactive_workflow():
 
     # make sure create_rand is called once
     seed(0)
-    dag = FugueInteractiveWorkflow()
+    dag = _FugueInteractiveWorkflow()
     b = dag.create(using=create_rand)
     b.compute()
     res1 = list(b.result.as_array())
@@ -77,7 +77,7 @@ def test_interactive_workflow():
 
     # assertion on underlying cache methods
     cache = MockCache(dummy=False)
-    dag = FugueInteractiveWorkflow(cache=cache)
+    dag = _FugueInteractiveWorkflow(cache=cache)
     a = dag.create_data([[0]], "a:int")
     assert 1 == cache.get_called
     assert 1 == cache.set_called
@@ -92,7 +92,7 @@ def test_interactive_workflow():
     assert 2 == cache.set_called
 
     # cache returns dummy data
-    dag = FugueInteractiveWorkflow(FugueInteractiveWorkflowContext(cache=MockCache))
+    dag = _FugueInteractiveWorkflow(_FugueInteractiveWorkflowContext(cache=MockCache))
     a = dag.create_data([[0]], "a:int")
     b = dag.create_data([[50]], "a:int")
     a.assert_eq(b)  # dummy value from cache makes them equal

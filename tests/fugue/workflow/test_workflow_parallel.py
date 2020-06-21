@@ -26,8 +26,10 @@ def test_parallel_exception():
             dag.run(*args)
 
     t = timeit(lambda: run(dag, NativeExecutionEngine(
+        {"fugue.workflow.concurrency": 2})), number=1)  # warmup
+    t = timeit(lambda: run(dag, NativeExecutionEngine(
         {"fugue.workflow.concurrency": 2})), number=1)
-    assert t < 0.2
+    assert t < 0.5
 
 
 # schema: a:int

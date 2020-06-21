@@ -3,9 +3,9 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import pyspark.sql as ps
 from fugue.collections.partition import EMPTY_PARTITION_SPEC, PartitionSpec
 from fugue.dataframe import DataFrame
-from fugue.utils.io import FileParser, save_df
+from fugue._utils.io import FileParser, save_df
 from fugue_spark.dataframe import SparkDataFrame
-from fugue_spark.utils.convert import to_schema, to_spark_schema
+from fugue_spark._utils.convert import to_schema, to_spark_schema
 from pyspark.sql import SparkSession
 from triad.collections import Schema
 from triad.collections.fs import FileSystem

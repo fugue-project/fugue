@@ -9,11 +9,17 @@ class Processor(ExtensionContext, ABC):
     DataFrame. For example dropping a column of df should be a type of Processor.
     Processor is task level extension, running on driver, and execution engine aware.
 
+    To implement this class, you should not have ``__init__``, please directly implement
+    the interface functions.
+
     :Notice:
+
     Before implementing this class, do you really need to implement this
     interface? Do you know the interfaceless feature of Fugue? Implementing Processor
     is commonly unnecessary. You can choose the interfaceless approach which may
     decouple your code from Fugue.
+
+    Please read :ref:`Processor Tutorial <tutorial:/tutorials/processor.ipynb>`
     """
 
     @abstractmethod
@@ -21,13 +27,14 @@ class Processor(ExtensionContext, ABC):
         """Process the collection of dataframes on driver side
 
         :Notice:
+
         * It runs on driver side
         * The dataframes are not necessarily local, for example a SparkDataFrame
         * It is engine aware, you can put platform dependent code in it (for example
-        native pyspark code) but by doing so your code may not be portable. If you
-        only use the functions of the general ExecutionEngine, it's still portable.
+          native pyspark code) but by doing so your code may not be portable. If you
+          only use the functions of the general ExecutionEngine, it's still portable.
 
-        :param dfs: dataframe collection to operate on
-        :return: result dataframe
+        :param dfs: dataframe collection to process
+        :return: the result dataframe
         """
         raise NotImplementedError

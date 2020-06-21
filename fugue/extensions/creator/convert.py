@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict, List, Optional, no_type_check
 from fugue.extensions.creator.creator import Creator
 from fugue.dataframe import DataFrame
 from fugue.exceptions import FugueInterfacelessError
-from fugue.utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
+from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_function, to_instance
@@ -12,14 +12,18 @@ from triad.utils.hash import to_uuid
 
 
 def creator(schema: Any = None) -> Callable[[Any], "_FuncAsCreator"]:
-    # TODO: validation of schema if without * should be done at compile time
+    """Decorator for creators
+
+    Please read :ref:`Creator Tutorial <tutorial:/tutorials/creator.ipynb>`
+    """
+
     def deco(func: Callable) -> _FuncAsCreator:
         return _FuncAsCreator.from_func(func, schema)
 
     return deco
 
 
-def to_creator(obj: Any, schema: Any = None) -> Creator:
+def _to_creator(obj: Any, schema: Any = None) -> Creator:
     exp: Optional[Exception] = None
     try:
         return copy.copy(to_instance(obj, Creator))

@@ -1,6 +1,6 @@
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
-from fugue_spark.utils.convert import to_schema, to_spark_schema
-from fugue_spark.utils.partition import (even_repartition, hash_repartition,
+from fugue_spark._utils.convert import to_schema, to_spark_schema
+from fugue_spark._utils.partition import (even_repartition, hash_repartition,
                                          rand_repartition)
 from pyspark.sql import SparkSession
 

@@ -1,6 +1,6 @@
 # flake8: noqa
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 from triad.collections import Schema
 from triad.collections.fs import FileSystem
@@ -25,4 +25,4 @@ from fugue.extensions.transformer import (
     cotransformer,
 )
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
-from fugue.workflow.workflow_context import FugueWorkflowContext
+from fugue.workflow._workflow_context import FugueWorkflowContext

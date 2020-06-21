@@ -3,7 +3,7 @@ from typing import Iterable, List, Tuple
 from antlr4 import CommonTokenStream, InputStream
 from antlr4.error.ErrorListener import ErrorListener
 from antlr4.tree.Tree import TerminalNode, Token, Tree
-from fugue_sql.antlr import FugueSQLLexer, FugueSQLParser
+from fugue_sql._antlr import FugueSQLLexer, FugueSQLParser
 from fugue_sql.exceptions import FugueSQLSyntaxError
 
 
