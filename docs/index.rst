@@ -3,15 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Fugue's documentation!
-=================================
+Fugue Documentation
+====================
 
 .. toctree::
    :maxdepth: 3
-   :caption: API:
 
-   api/fugue
-   api_sql/fugue_sql
-   api_spark/fugue_spark
-   api_dask/fugue_dask
+   introduction
+   tutorials
+   community
+   api
 
