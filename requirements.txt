@@ -1,5 +1,5 @@
-triad>=0.3.7
-adagio>=0.1.8
+triad>=0.3.8
+adagio>=0.2.0
 sqlalchemy
 pyspark>=3.0.0
 
