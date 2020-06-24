@@ -1,6 +1,6 @@
 # flake8: noqa
 
-__version__ = "0.3.2"
+__version__ = "0.3.5"
 
 from triad.collections import Schema
 from triad.collections.fs import FileSystem

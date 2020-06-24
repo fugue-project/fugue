@@ -17,14 +17,14 @@ setup(
     author_email="goodwanghan@gmail.com",
     keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
-    install_requires=["triad>=0.3.7", "adagio>=0.1.8", "sqlalchemy"],
+    install_requires=["triad>=0.3.8", "adagio>=0.2.0", "sqlalchemy"],
     extras_require={
-        "sql": ["antlr4-python3-runtime", "jinjasql"],
+        "sql": ["antlr4-python3-runtime", "jinja2"],
         "spark": ["pyspark"],
         "dask": ["dask[dataframe]", "cloudpickle>=1.4.0"],
         "all": [
             "antlr4-python3-runtime",
-            "jinjasql",
+            "jinja2",
             "pyspark",
             "dask[dataframe]",
             "cloudpickle>=1.4.0",
