@@ -60,7 +60,8 @@ def test_parquet_io(tmpdir):
     df_eq(actual, [[2, "1"]], "b:int,a:str")
     actual = load_df(path, columns="b:str,a:int")
     df_eq(actual, [["2", 1]], "b:str,a:int")
-    raises(FugueDataFrameInitError, lambda: load_df(path, columns="bb:str,a:int"))
+    # can't specify wrong columns
+    raises(Exception, lambda: load_df(path, columns="bb:str,a:int"))
 
     # load directory
     fs = FileSystem()
