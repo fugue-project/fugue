@@ -9,7 +9,7 @@ exclude: |
     )
 repos:
     - repo: https://github.com/pre-commit/pre-commit-hooks
-      rev: v2.5.0
+      rev: v3.2.0
       hooks:
           - id: check-ast
           - id: check-docstring-first
@@ -22,7 +22,7 @@ repos:
           - id: trailing-whitespace
           - id: check-vcs-permalinks
     - repo: https://gitlab.com/pycqa/flake8
-      rev: '3.7.9'
+      rev: '3.8.3'
       hooks:
           - id: flake8
             types: [python]
@@ -35,11 +35,11 @@ repos:
             - flake8-tidy-imports
             - pycodestyle
     - repo: https://github.com/pre-commit/mirrors-mypy
-      rev: v0.770
+      rev: v0.782
       hooks:
         - id: mypy
     - repo: https://github.com/ambv/black
-      rev: stable
+      rev: 20.8b1
       hooks:
       - id: black
         types: [python]
