@@ -76,8 +76,7 @@ class PandasDataFrame(LocalBoundedDataFrame):
 
     @property
     def native(self) -> pd.DataFrame:
-        """Pandas DataFrame
-        """
+        """Pandas DataFrame"""
         return self._native
 
     @property

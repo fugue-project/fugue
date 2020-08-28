@@ -61,20 +61,17 @@ class WorkflowDataFrame(DataFrame):
         self._task = task
 
     def spec_uuid(self) -> str:
-        """UUID of its task spec
-        """
+        """UUID of its task spec"""
         return self._task.__uuid__()
 
     @property
     def name(self) -> str:
-        """Name of its task spec
-        """
+        """Name of its task spec"""
         return self._task.name
 
     @property
     def workflow(self) -> "FugueWorkflow":
-        """The parent workflow
-        """
+        """The parent workflow"""
         return self._workflow
 
     @property
@@ -663,8 +660,7 @@ class FugueWorkflow(object):
         return self._workflow_ctx.conf
 
     def spec_uuid(self) -> str:
-        """UUID of the workflow spec (`description`)
-        """
+        """UUID of the workflow spec (`description`)"""
         return self._spec.__uuid__()
 
     def run(self, *args: Any, **kwargs: Any) -> None:

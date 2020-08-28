@@ -52,8 +52,7 @@ class ArrayDataFrame(LocalBoundedDataFrame):
 
     @property
     def native(self) -> List[Any]:
-        """2-dimensional native python array
-        """
+        """2-dimensional native python array"""
         return self._native
 
     @property

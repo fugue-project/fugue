@@ -12,8 +12,7 @@ from triad.utils.assertion import assert_or_throw
 
 
 class FugueSQLWorkflow(FugueWorkflow):
-    """Fugue workflow that supports Fugue SQL. Please read |FugueSQLTutorial|.
-    """
+    """Fugue workflow that supports Fugue SQL. Please read |FugueSQLTutorial|."""
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)

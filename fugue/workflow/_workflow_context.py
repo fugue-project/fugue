@@ -74,8 +74,7 @@ class _FugueInteractiveWorkflowContext(FugueWorkflowContext):
 
 
 class _FugueInteractiveCache(WorkflowResultCache):
-    """Fugue cache for interactive operations.
-    """
+    """Fugue cache for interactive operations."""
 
     def __init__(self, wf_ctx: "WorkflowContext", cache: FugueWorkflowContext):
         super().__init__(wf_ctx)

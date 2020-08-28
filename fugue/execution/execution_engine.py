@@ -35,8 +35,7 @@ class SQLEngine(ABC):
 
     @property
     def execution_engine(self) -> "ExecutionEngine":
-        """the execution engine this sql engine will run on
-        """
+        """the execution engine this sql engine will run on"""
         return self._execution_engine
 
     @abstractmethod
@@ -95,28 +94,24 @@ class ExecutionEngine(ABC):
     @property
     @abstractmethod
     def log(self) -> logging.Logger:  # pragma: no cover
-        """Logger of this engine instance
-        """
+        """Logger of this engine instance"""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def fs(self) -> FileSystem:  # pragma: no cover
-        """File system of this engine instance
-        """
+        """File system of this engine instance"""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def default_sql_engine(self) -> SQLEngine:  # pragma: no cover
-        """Default SQLEngine if user doesn't specify
-        """
+        """Default SQLEngine if user doesn't specify"""
         raise NotImplementedError
 
     @abstractmethod
     def stop(self) -> None:  # pragma: no cover
-        """Stop this execution engine
-        """
+        """Stop this execution engine"""
         raise NotImplementedError
 
     @abstractmethod
