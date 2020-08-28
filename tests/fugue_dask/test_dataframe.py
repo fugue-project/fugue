@@ -13,13 +13,13 @@ from fugue.exceptions import FugueDataFrameInitError
 from fugue_dask.dataframe import DaskDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
-from triad.collections.schema import Schema, SchemaError
-from triad.exceptions import InvalidOperationError
+from triad.collections.schema import Schema
 
 
 class DaskDataFrameTests(DataFrameTests.Tests):
-    def df(self, data: Any = None, schema: Any = None,
-           metadata: Any = None) -> DaskDataFrame:
+    def df(
+        self, data: Any = None, schema: Any = None, metadata: Any = None
+    ) -> DaskDataFrame:
         return DaskDataFrame(data, schema, metadata)
 
 
@@ -75,16 +75,20 @@ def test_simple_methods():
     assert ["a", 1.0] == df.peek_array()
     assert dict(x="a", y=1.0) == df.peek_dict()
 
-    df_eq(PandasDataFrame(df.as_pandas()), [
-          ["a", 1.0], ["b", 2.0]], "x:str,y:double", throw=True)
+    df_eq(
+        PandasDataFrame(df.as_pandas()),
+        [["a", 1.0], ["b", 2.0]],
+        "x:str,y:double",
+        throw=True,
+    )
 
 
 def _test_nested():
     # TODO: nested type doesn't work in dask
-    #data = [[dict(a=1, b=[3, 4], d=1.0)], [json.dumps(dict(b=[30, "40"]))]]
-    #df = DaskDataFrame(data, "a:{a:str,b:[int]}")
-    #a = df.as_array(type_safe=True)
-    #assert [[dict(a="1", b=[3, 4])], [dict(a=None, b=[30, 40])]] == a
+    # data = [[dict(a=1, b=[3, 4], d=1.0)], [json.dumps(dict(b=[30, "40"]))]]
+    # df = DaskDataFrame(data, "a:{a:str,b:[int]}")
+    # a = df.as_array(type_safe=True)
+    # assert [[dict(a="1", b=[3, 4])], [dict(a=None, b=[30, 40])]] == a
 
     data = [[[json.dumps(dict(b=[30, "40"]))]]]
     df = DaskDataFrame(data, "a:[{a:str,b:[int]}]")

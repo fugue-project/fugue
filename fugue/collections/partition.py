@@ -69,8 +69,7 @@ class PartitionSpec(object):
 
     @property
     def empty(self) -> bool:
-        """Whether this spec didn't specify anything
-        """
+        """Whether this spec didn't specify anything"""
         return (
             self._num_partitions == "0"
             and self._algo == ""
@@ -82,8 +81,7 @@ class PartitionSpec(object):
 
     @property
     def num_partitions(self) -> str:
-        """Number of partitions, it can be a string expression or int
-        """
+        """Number of partitions, it can be a string expression or int"""
         return self._num_partitions
 
     def get_num_partitions(self, **expr_map_funcs: Any) -> int:
@@ -106,14 +104,12 @@ class PartitionSpec(object):
 
     @property
     def algo(self) -> str:
-        """Get algo of the spec, one of ``hash`` (default), ``rand`` and ``even``
-        """
+        """Get algo of the spec, one of ``hash`` (default), ``rand`` and ``even``"""
         return self._algo if self._algo != "" else "hash"
 
     @property
     def partition_by(self) -> List[str]:
-        """Get partition keys of the spec
-        """
+        """Get partition keys of the spec"""
         return self._partition_by
 
     @property
@@ -142,8 +138,7 @@ class PartitionSpec(object):
 
     @property
     def jsondict(self) -> ParamDict:
-        """Get json serializeable dict of the spec
-        """
+        """Get json serializeable dict of the spec"""
         return ParamDict(
             dict(
                 num_partitions=self._num_partitions,
@@ -156,8 +151,7 @@ class PartitionSpec(object):
         )
 
     def __uuid__(self) -> str:
-        """Get deterministic unique id of this object
-        """
+        """Get deterministic unique id of this object"""
         return to_uuid(self.jsondict)
 
     def get_sorts(self, schema: Schema) -> IndexedOrderedDict[str, bool]:
@@ -299,20 +293,17 @@ class PartitionCursor(object):
 
     @property
     def row(self) -> List[Any]:
-        """Get current row data
-        """
+        """Get current row data"""
         return self._row
 
     @property
     def partition_no(self) -> int:
-        """Logical partition number
-        """
+        """Logical partition number"""
         return self._partition_no
 
     @property
     def physical_partition_no(self) -> int:
-        """Physical partition number
-        """
+        """Physical partition number"""
         return self._physical_partition_no
 
     @property
@@ -324,26 +315,22 @@ class PartitionCursor(object):
 
     @property
     def row_schema(self) -> Schema:
-        """Schema of the current row
-        """
+        """Schema of the current row"""
         return self._orig_schema
 
     @property
     def key_schema(self) -> Schema:
-        """Partition key schema
-        """
+        """Partition key schema"""
         return self._schema
 
     @property
     def key_value_dict(self) -> Dict[str, Any]:
-        """Based on current row, get the partition key values as a dict
-        """
+        """Based on current row, get the partition key values as a dict"""
         return {self.row_schema.names[i]: self._row[i] for i in self._key_index}
 
     @property
     def key_value_array(self) -> List[Any]:
-        """Based on current row, get the partition key values as an array
-        """
+        """Based on current row, get the partition key values as an array"""
         return [self._row[i] for i in self._key_index]
 
     def __getitem__(self, key: str) -> Any:

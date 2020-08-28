@@ -60,8 +60,7 @@ class IterableDataFrame(LocalUnboundedDataFrame):
 
     @property
     def native(self) -> EmptyAwareIterable[Any]:
-        """Iterable of native python arrays
-        """
+        """Iterable of native python arrays"""
         return self._native
 
     @property

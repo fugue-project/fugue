@@ -47,14 +47,12 @@ class DataFrame(ABC):
 
     @property
     def metadata(self) -> ParamDict:
-        """Metadata of the dataframe
-        """
+        """Metadata of the dataframe"""
         return self._metadata
 
     @property
     def schema(self) -> Schema:
-        """Schema of the dataframe
-        """
+        """Schema of the dataframe"""
         if self._schema_discovered:
             # we must keep it simple because it could be called on every row by a user
             assert isinstance(self._schema, Schema)
@@ -69,21 +67,18 @@ class DataFrame(ABC):
 
     @property
     def is_local(self) -> bool:  # pragma: no cover
-        """Whether this dataframe is a :class:`.LocalDataFrame`
-        """
+        """Whether this dataframe is a :class:`.LocalDataFrame`"""
         return isinstance(self, LocalDataFrame)
 
     @abstractmethod
     def as_local(self) -> "LocalDataFrame":  # pragma: no cover
-        """Convert this dataframe to a :class:`.LocalDataFrame`
-        """
+        """Convert this dataframe to a :class:`.LocalDataFrame`"""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def is_bounded(self) -> bool:  # pragma: no cover
-        """Whether this dataframe is bounded
-        """
+        """Whether this dataframe is bounded"""
         raise NotImplementedError
 
     @property
@@ -97,8 +92,7 @@ class DataFrame(ABC):
     @property
     @abstractmethod
     def empty(self) -> bool:  # pragma: no cover
-        """Whether this dataframe is empty
-        """
+        """Whether this dataframe is empty"""
         raise NotImplementedError
 
     def assert_not_empty(self) -> None:
@@ -127,19 +121,16 @@ class DataFrame(ABC):
 
     @abstractmethod
     def count(self) -> int:  # pragma: no cover
-        """Get number of rows of this dataframe
-        """
+        """Get number of rows of this dataframe"""
         raise NotImplementedError
 
     def as_pandas(self) -> pd.DataFrame:
-        """Convert to pandas DataFrame
-        """
+        """Convert to pandas DataFrame"""
         pdf = pd.DataFrame(self.as_array(), columns=self.schema.names)
         return _enforce_type(pdf, self.schema)
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
-        """Convert to pyArrow DataFrame
-        """
+        """Convert to pyArrow DataFrame"""
         return pa.Table.from_pandas(
             self.as_pandas().reset_index(drop=True),
             preserve_index=False,
@@ -367,19 +358,16 @@ class LocalDataFrame(DataFrame):
 
     @property
     def is_local(self) -> bool:
-        """Always True because it's a LocalDataFrame
-        """
+        """Always True because it's a LocalDataFrame"""
         return True
 
     def as_local(self) -> "LocalDataFrame":
-        """Always return self, because it's a LocalDataFrame
-        """
+        """Always return self, because it's a LocalDataFrame"""
         return self
 
     @property
     def num_partitions(self) -> int:  # pragma: no cover
-        """Always 1 because it's a LocalDataFrame
-        """
+        """Always 1 because it's a LocalDataFrame"""
         return 1
 
 
@@ -403,8 +391,7 @@ class LocalBoundedDataFrame(LocalDataFrame):
 
     @property
     def is_bounded(self) -> bool:
-        """Always True because it's a bounded dataframe
-        """
+        """Always True because it's a bounded dataframe"""
         return True
 
 
@@ -428,8 +415,7 @@ class LocalUnboundedDataFrame(LocalDataFrame):
 
     @property
     def is_bounded(self):
-        """Always True because it's an unbounded dataframe
-        """
+        """Always True because it's an unbounded dataframe"""
         return False
 
     def count(self) -> int:

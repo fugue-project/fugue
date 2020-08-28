@@ -129,8 +129,7 @@ class SparkExecutionEngine(ExecutionEngine):
         return self._default_sql_engine
 
     def stop(self) -> None:
-        """For now, it does NOT stop the underlying spark session
-        """
+        """For now, it does NOT stop the underlying spark session"""
         # TODO: we need a conf to control whether to stop session
         # self.spark_session.stop()
         pass
@@ -348,8 +347,12 @@ class SparkExecutionEngine(ExecutionEngine):
         presort_asc = list(presort.values())
         output_schema = Schema(output_schema)
         input_schema = df.schema
-        on_init_once: Any = None if on_init is None else RunOnce(
-            on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
+        on_init_once: Any = (
+            None
+            if on_init is None
+            else RunOnce(
+                on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
+            )
         )
 
         def _udf(pdf: Any) -> pd.DataFrame:  # pragma: no cover

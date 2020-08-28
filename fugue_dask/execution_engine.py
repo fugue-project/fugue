@@ -9,9 +9,8 @@ from fugue.collections.partition import (
     PartitionSpec,
 )
 from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
-from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
+from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame, DataFrames
 from fugue.dataframe.utils import get_join_schemas
-from fugue.execution import SqliteEngine
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
     ExecutionEngine,
@@ -26,6 +25,25 @@ from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.threading import RunOnce
+from qpd_dask import run_sql_on_dask
+
+
+class QPDDaskEngine(SQLEngine):
+    """Sqlite execution implementation.
+
+    :param execution_engine: the execution engine this sql engine will run on
+    """
+
+    def __init__(self, execution_engine: ExecutionEngine) -> None:
+        return super().__init__(execution_engine)
+
+    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
+        dask_dfs = {
+            k: self.execution_engine.to_df(v).native  # type: ignore
+            for k, v in dfs.items()
+        }
+        df = run_sql_on_dask(statement, dask_dfs)
+        return DaskDataFrame(df)
 
 
 class DaskExecutionEngine(ExecutionEngine):
@@ -48,7 +66,7 @@ class DaskExecutionEngine(ExecutionEngine):
         super().__init__(p)
         self._fs = FileSystem()
         self._log = logging.getLogger()
-        self._default_sql_engine = SqliteEngine(self)
+        self._default_sql_engine = QPDDaskEngine(self)
 
     def __repr__(self) -> str:
         return "DaskExecutionEngine"
@@ -66,8 +84,7 @@ class DaskExecutionEngine(ExecutionEngine):
         return self._default_sql_engine
 
     def stop(self) -> None:  # pragma: no cover
-        """It does nothing
-        """
+        """It does nothing"""
         return
 
     def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DaskDataFrame:
@@ -149,8 +166,12 @@ class DaskExecutionEngine(ExecutionEngine):
         presort_asc = list(presort.values())
         output_schema = Schema(output_schema)
         input_schema = df.schema
-        on_init_once: Any = None if on_init is None else RunOnce(
-            on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
+        on_init_once: Any = (
+            None
+            if on_init is None
+            else RunOnce(
+                on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
+            )
         )
 
         def _map(pdf: Any) -> pd.DataFrame:

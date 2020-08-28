@@ -60,8 +60,7 @@ class DataFrames(IndexedOrderedDict[str, DataFrame]):
 
     @property
     def has_key(self):
-        """If this collection has key (dict-like) or not (list-like)
-        """
+        """If this collection has key (dict-like) or not (list-like)"""
         return self._has_key
 
     def __setitem__(  # type: ignore
@@ -78,9 +77,7 @@ class DataFrames(IndexedOrderedDict[str, DataFrame]):
         super().__setitem__(key, value, *args, **kwds)  # type: ignore
         self._has_key = True
 
-    def __getitem__(  # type: ignore
-        self, key: Union[str, int]
-    ) -> DataFrame:
+    def __getitem__(self, key: Union[str, int]) -> DataFrame:  # type: ignore
         if isinstance(key, int):
             key = self.get_key_by_index(key)
         return super().__getitem__(key)  # type: ignore

@@ -1,7 +1,8 @@
 triad>=0.3.8
 adagio>=0.2.0
+qpd[dask]
 sqlalchemy
-pyspark>=3.0.0
+pyspark
 
 # test requirements
 pre-commit

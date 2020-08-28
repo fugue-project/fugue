@@ -50,10 +50,13 @@ class DaskUtils(PandasLikeUtils[pd.DataFrame]):
         :param df: dask dataframe
         :return: if it is compatible
         """
-        return isinstance(
-            df.index,
-            (pandas.RangeIndex, pandas.Int64Index, pandas.UInt64Index, pd.Index),
-        ) or self.empty(df)
+        return (
+            isinstance(
+                df.index,
+                (pandas.RangeIndex, pandas.Int64Index, pandas.UInt64Index, pd.Index),
+            )
+            or self.empty(df)
+        )
 
 
 DASK_UTILS = DaskUtils()

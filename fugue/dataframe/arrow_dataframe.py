@@ -94,8 +94,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
 
     @property
     def native(self) -> pa.Table:
-        """:func:`pyarrow.Table <pa:pyarrow.table>`
-        """
+        """:func:`pyarrow.Table <pa:pyarrow.table>`"""
         return self._native
 
     @property
