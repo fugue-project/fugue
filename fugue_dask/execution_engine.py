@@ -29,7 +29,7 @@ from qpd_dask import run_sql_on_dask
 
 
 class QPDDaskEngine(SQLEngine):
-    """Sqlite execution implementation.
+    """QPD execution implementation.
 
     :param execution_engine: the execution engine this sql engine will run on
     """
