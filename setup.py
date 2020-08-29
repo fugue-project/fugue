@@ -21,7 +21,7 @@ setup(
     extras_require={
         "sql": ["antlr4-python3-runtime", "jinja2"],
         "spark": ["pyspark"],
-        "dask": ["qpd[dask]"],
+        "dask": ["qpd[dask]>=0.2.2"],
         "all": ["antlr4-python3-runtime", "jinja2", "pyspark", "qpd[dask]>=0.2.2"],
     },
     classifiers=[
