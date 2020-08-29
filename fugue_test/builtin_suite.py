@@ -339,10 +339,10 @@ class BuiltInTests(object):
                     sql_engine="SqliteEngine",
                 ).assert_eq(c)
 
-                # no input TODO: add back
-                # dag.select("9223372036854775807 AS a").assert_eq(
-                #    dag.df([[9223372036854775807]], "a:long")
-                # )
+                # no input
+                dag.select("9223372036854775807 AS a").assert_eq(
+                    dag.df([[9223372036854775807]], "a:long")
+                )
 
                 # make sure transform -> select works
                 b = a.transform(mock_tf1)

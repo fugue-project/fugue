@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from fugue import __version__
+from fugue_version import __version__
 
 
 with open("README.md") as f:
@@ -17,12 +17,12 @@ setup(
     author_email="goodwanghan@gmail.com",
     keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
-    install_requires=["triad>=0.3.8", "adagio>=0.2.0", "qpd", "sqlalchemy"],
+    install_requires=["triad>=0.3.8", "adagio>=0.2.0", "qpd>=0.2.2", "sqlalchemy"],
     extras_require={
         "sql": ["antlr4-python3-runtime", "jinja2"],
         "spark": ["pyspark"],
         "dask": ["qpd[dask]"],
-        "all": ["antlr4-python3-runtime", "jinja2", "pyspark", "qpd[dask]"],
+        "all": ["antlr4-python3-runtime", "jinja2", "pyspark", "qpd[dask]>=0.2.2"],
     },
     classifiers=[
         # "3 - Alpha", "4 - Beta" or "5 - Production/Stable"
