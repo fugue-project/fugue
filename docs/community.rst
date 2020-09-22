@@ -12,7 +12,7 @@ computing and machine learning, and we deserve the freedom of choosing different
 Ask a question
 ^^^^^^^^^^^^^^^
 
-Please join `Slack chat <https://join.slack.com/t/fugue-project/shared_invite/zt-ffo2ik1d-maSsCykv_p7kXpnmIjKAug>`_
+Please join `Slack chat <https://join.slack.com/t/fugue-project/shared_invite/zt-he6tcazr-OCkj2GEv~J9UYoZT3FPM4g>`_
 to ask questions. We will try to reply as soon as possible.
 
 
@@ -21,12 +21,12 @@ Request bug fix or new features
 
 You can request bug fix or new features at `<https://github.com/fugue-project/fugue/issues>`_, before submitting
 a new request, it will be great if you can firstly contact us through
-`slack <https://join.slack.com/t/fugue-project/shared_invite/zt-ffo2ik1d-maSsCykv_p7kXpnmIjKAug>`_.
+`slack <https://join.slack.com/t/fugue-project/shared_invite/zt-he6tcazr-OCkj2GEv~J9UYoZT3FPM4g>`_.
 
 
 Contribute
 ^^^^^^^^^^^
 
 Fugue is a very new project, we truly appreciate if you can contribute code, ideas or docs. Please reach out
-using `slack <https://join.slack.com/t/fugue-project/shared_invite/zt-ffo2ik1d-maSsCykv_p7kXpnmIjKAug>`_, we will
+using `slack <https://join.slack.com/t/fugue-project/shared_invite/zt-he6tcazr-OCkj2GEv~J9UYoZT3FPM4g>`_, we will
 be excited to chat with you.

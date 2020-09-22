@@ -6,7 +6,7 @@ with open("README.md") as f:
     LONG_DESCRIPTION = f.read()
 
 setup(
-    name="euguf",
+    name="fugue",
     version=__version__,
     packages=find_packages(),
     description="An abstraction layer for distributed computation",
@@ -17,7 +17,7 @@ setup(
     author_email="goodwanghan@gmail.com",
     keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
-    install_requires=["triad>=0.3.8", "adagio>=0.2.0", "qpd>=0.2.2", "sqlalchemy"],
+    install_requires=["triad>=0.4.0", "adagio>=0.2.1", "qpd>=0.2.2", "sqlalchemy"],
     extras_require={
         "sql": ["antlr4-python3-runtime", "jinja2"],
         "spark": ["pyspark"],
