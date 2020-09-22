@@ -11,7 +11,7 @@ pytest
 pytest-cov
 pytest-mock
 pytest-spark
-sphinx
+sphinx>=2.4.0
 sphinx-rtd-theme
 sphinx-autodoc-typehints
 
