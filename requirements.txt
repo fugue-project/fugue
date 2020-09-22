@@ -13,6 +13,7 @@ pytest-mock
 pytest-spark
 sphinx
 sphinx-rtd-theme
+sphinx-autodoc-typehints
 
 # publish to pypi
 wheel
