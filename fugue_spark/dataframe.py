@@ -78,8 +78,8 @@ class SparkDataFrame(DataFrame):
         # TODO: does it make sense to also include the metadata?
         if any(pa.types.is_nested(t) for t in self.schema.types):
             data = list(to_type_safe_input(self.native.collect(), self.schema))
-            return ArrayDataFrame(data, self.schema)
-        return PandasDataFrame(self.native.toPandas(), self.schema)
+            return ArrayDataFrame(data, self.schema, self.metadata)
+        return PandasDataFrame(self.native.toPandas(), self.schema, self.metadata)
 
     @property
     def num_partitions(self) -> int:

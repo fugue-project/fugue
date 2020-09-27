@@ -3,6 +3,7 @@ qpd[dask]
 
 # test requirements
 pre-commit
+black
 mypy
 flake8
 autopep8

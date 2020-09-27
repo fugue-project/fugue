@@ -141,8 +141,7 @@ class SparkExecutionEngine(ExecutionEngine):
 
         :param data: :class:`~fugue.dataframe.dataframe.DataFrame`,
           :class:`spark:pyspark.sql.DataFrame`, :class:`spark:pyspark.RDD`,
-          pandas DataFrame or
-          list or iterable of arrays
+          pandas DataFrame or list or iterable of arrays
         :param schema: |SchemaLikeObject| or :class:`spark:pyspark.sql.types.StructType`
           defaults to None.
         :param metadata: |ParamsLikeObject|, defaults to None
@@ -183,6 +182,9 @@ class SparkExecutionEngine(ExecutionEngine):
             assert_arg_not_none(schema, "schema")
             sdf = self.spark_session.createDataFrame(df, to_spark_schema(schema))
             return SparkDataFrame(sdf, to_schema(schema), metadata)
+        if isinstance(df, pd.DataFrame):
+            sdf = self.spark_session.createDataFrame(df)
+            return SparkDataFrame(sdf, schema, metadata)
 
         # use arrow dataframe here to handle nulls in int cols
         adf = ArrowDataFrame(df, to_schema(schema))

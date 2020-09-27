@@ -47,10 +47,13 @@ test:
 	python3 -bb -m pytest tests/
 
 testcore:
-	python3 -bb -m pytest tests/ --ignore=tests/fugue_spark
+	python3 -bb -m pytest tests/fugue
 
 testspark:
 	python3 -bb -m pytest tests/fugue_spark
+
+testdask:
+	python3 -bb -m pytest tests/fugue_dask
 
 testsql:
 	python3 -bb -m pytest tests/fugue_sql

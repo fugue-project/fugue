@@ -27,6 +27,6 @@ jobs:
     - name: Uninstall pytest-spark
       run: pip uninstall -y pytest-spark
     - name: Test
-      run: make testcore
+      run: make testcore testsql
     - name: Lint
       run: make lint

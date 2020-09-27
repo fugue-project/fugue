@@ -81,6 +81,9 @@ class ArrowDataFrame(LocalBoundedDataFrame):
                 # cols = [pa.array(arr[i], type=schema.types[i]) for i in range(n)]
                 # self._native = pa.Table.from_arrays(cols, schema=schema.pa_schema)
                 pdf = pd.DataFrame(df, columns=schema.names)
+                for f in schema.fields:
+                    if pa.types.is_timestamp(f.type) or pa.types.is_date(f.type):
+                        pdf[f.name] = pd.to_datetime(pdf[f.name])
                 schema = _input_schema(schema).assert_not_empty()
                 self._native = pa.Table.from_pandas(
                     pdf, schema=schema.pa_schema, preserve_index=False, safe=True

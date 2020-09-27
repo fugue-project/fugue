@@ -40,6 +40,34 @@ class ExecutionEngineTests(object):
             assert copy.copy(self.engine) is self.engine
             assert copy.deepcopy(self.engine) is self.engine
 
+        def test_to_df_general(self):
+            e = self.engine
+            o = ArrayDataFrame(
+                [[1.1, 2.2], [3.3, 4.4]],
+                "a:double,b:double",
+                dict(a=1),
+            )
+            # all engines should accept these types of inputs
+            # should take fugue.DataFrame
+            df_eq(o, e.to_df(o), throw=True)
+            # should take array, shema and metadata
+            df_eq(
+                o,
+                e.to_df([[1.1, 2.2], [3.3, 4.4]], "a:double,b:double", dict(a=1)),
+                throw=True,
+            )
+            # should take pandas dataframe
+            pdf = pd.DataFrame([[1.1, 2.2], [3.3, 4.4]], columns=["a", "b"])
+            df_eq(o, e.to_df(pdf, metadata=dict(a=1)), throw=True)
+
+            # should convert string to datetime in to_df
+            df_eq(
+                e.to_df([["2020-01-01"]], "a:datetime"),
+                [[datetime(2020, 1, 1)]],
+                "a:datetime",
+                throw=True,
+            )
+
         def test_map(self):
             def noop(cursor, data):
                 return data
