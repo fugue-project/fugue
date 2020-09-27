@@ -14,8 +14,9 @@ from triad.exceptions import InvalidOperationError
 
 
 class ArrowDataFrameTests(DataFrameTests.Tests):
-    def df(self, data: Any = None, schema: Any = None,
-           metadata: Any = None) -> ArrowDataFrame:
+    def df(
+        self, data: Any = None, schema: Any = None, metadata: Any = None
+    ) -> ArrowDataFrame:
         return ArrowDataFrame(data, schema, metadata)
 
 

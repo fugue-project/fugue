@@ -89,7 +89,7 @@ class DaskDataFrame(DataFrame):
         return False
 
     def as_local(self) -> LocalDataFrame:
-        return PandasDataFrame(self.as_pandas(), self.schema)
+        return PandasDataFrame(self.as_pandas(), self.schema, self.metadata)
 
     @property
     def is_bounded(self) -> bool:

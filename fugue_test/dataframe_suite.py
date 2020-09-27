@@ -40,6 +40,10 @@ class DataFrameTests(object):
             df = self.df([], "a:str,b:int")
             assert df.empty
 
+        def test_datetime(self):
+            df = self.df([["2020-01-01"], [None]], "a:datetime")
+            assert [[datetime(2020, 1, 1)], [None]] == df.as_array(type_safe=True)
+
         def test_peek(self):
             df = self.df([], "x:str,y:double")
             raises(FugueDataFrameEmptyError, lambda: df.peek_array())
