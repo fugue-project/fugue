@@ -17,6 +17,11 @@ import pickle
 
 
 class ExecutionEngineTests(object):
+    """ExecutionEngine level general test suite.
+    Any new :class:`~fugue.execution.execution_engine.ExecutionEngine`
+    should pass this test suite.
+    """
+
     class Tests(TestCase):
         @classmethod
         def setUpClass(cls):
