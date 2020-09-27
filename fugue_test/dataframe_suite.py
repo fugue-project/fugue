@@ -16,6 +16,10 @@ from triad.collections.schema import Schema
 
 
 class DataFrameTests(object):
+    """DataFrame level general test suite.
+    All new DataFrame types should pass this test suite.
+    """
+
     class Tests(TestCase):
         @classmethod
         def setUpClass(cls):

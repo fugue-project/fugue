@@ -1,4 +1,6 @@
+import datetime
 import os
+import pickle
 from typing import Any, Dict, Iterable, List
 from unittest import TestCase
 
@@ -18,11 +20,16 @@ from fugue.extensions.transformer import (
     cotransformer,
     transformer,
 )
-from fugue.workflow.workflow import _FugueInteractiveWorkflow, FugueWorkflow
-import pickle
+from fugue.workflow.workflow import FugueWorkflow, _FugueInteractiveWorkflow
 
 
 class BuiltInTests(object):
+    """Workflow level general test suite. It is a more general end to end
+    test suite than :class:`~fugue_test.execution_suite.ExecutionEngineTests`.
+    Any new :class:`~fugue.execution.execution_engine.ExecutionEngine`
+    should also pass this test suite.
+    """
+
     class Tests(TestCase):
         @classmethod
         def setUpClass(cls):
@@ -363,6 +370,15 @@ class BuiltInTests(object):
 
                 a[["x"]].rename(x="xx").assert_eq(ArrayDataFrame([[1], [2]], "xx:long"))
 
+        def test_datetime_in_workflow(self):
+            with self.dag() as dag:
+                a = dag.df([["2020-01-01"]], "a:date").transform(transform_datetime_df)
+                b = dag.df(
+                    [[datetime.date(2020, 1, 1), datetime.datetime(2020, 1, 2)]],
+                    "a:date,b:datetime",
+                )
+                b.assert_eq(a)
+
         @pytest.fixture(autouse=True)
         def init_tmpdir(self, tmpdir):
             self.tmpdir = tmpdir
@@ -544,3 +560,10 @@ def mock_co_tf4_ex(df1: List[Dict[str, Any]], p=1) -> List[List[Any]]:
     if k == 2:
         raise NotImplementedError
     return [[df1[0]["a"], len(df1), p]]
+
+
+# schema: a:date,b:datetime
+def transform_datetime_df(df: pd.DataFrame) -> pd.DataFrame:
+    df["b"] = "2020-01-02"
+    df["b"] = pd.to_datetime(df["b"])
+    return df
