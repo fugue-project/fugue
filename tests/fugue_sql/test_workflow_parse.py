@@ -13,19 +13,25 @@ from pytest import raises
 
 def test_create_data():
     w = FugueWorkflow().df([[0], [1]], "a:int")
-    assert_eq("""
+    assert_eq(
+        """
     a=create [[0],[1]] schema a:int
-    """, w.workflow)
+    """,
+        w.workflow,
+    )
 
 
 def test_create():
     dag = FugueWorkflow()
     dag.create(mock_create1, params=dict(n=1))
     dag.create(mock_create2, schema="a:int", params=dict(n=1))
-    assert_eq("""
+    assert_eq(
+        """
     a=create using mock_create1 params n:1
     b=create using mock_create2(n=1) schema a:int
-    """, dag)
+    """,
+        dag,
+    )
 
 
 def test_process():
@@ -38,8 +44,11 @@ def test_process():
     dag.process(
         dag.create(mock_create1, params=dict(n=5)),
         dag.create(mock_create1, params=dict(n=6)),
-        using=mock_processor1, params=dict(n=7))
-    assert_eq("""
+        using=mock_processor1,
+        params=dict(n=7),
+    )
+    assert_eq(
+        """
     a=create using mock_create1 params n:1
     b=create using mock_create1 params n:2
     process a,b using mock_processor1(n=3)
@@ -48,7 +57,9 @@ def test_process():
         (create using mock_create1(n=5)),
         (create using mock_create1(n=6))
         using mock_processor1(n=7)
-    """, dag)
+    """,
+        dag,
+    )
 
     # anonymous, nested anonymous
     dag = FugueWorkflow()
@@ -56,32 +67,41 @@ def test_process():
     b = a.partition(by=["a"]).process(mock_processor3)
     c = a.process(mock_processor3)
     dag.process(b, c, using=mock_processor1)
-    assert_eq("""
+    assert_eq(
+        """
     create using mock_create1 params n:1
     process using mock_processor3
     process  # nested
         (process prepartition by a using mock_processor3),
         (process using mock_processor3)
         using mock_processor1
-    """, dag)
+    """,
+        dag,
+    )
 
     # no last dataframe
     with raises(FugueSQLError):
-        assert_eq("""
+        assert_eq(
+            """
         process using mock_processor3
-        """, None)
+        """,
+            None,
+        )
 
     # dict like dataframes
     dag = FugueWorkflow()
     a = dag.create(mock_create1, params=dict(n=1))
     b = dag.create(mock_create1, params=dict(n=2))
     dag.process(dict(df1=a, df2=b), using=mock_processor1)
-    assert_eq("""
+    assert_eq(
+        """
     process
         df1=(create using mock_create1(n=1)),
         df2:(create using mock_create1(n=2))
         using mock_processor1
-    """, dag)
+    """,
+        dag,
+    )
 
 
 def test_zip():
@@ -89,20 +109,26 @@ def test_zip():
     a1 = dag.create(mock_create1, params=dict(n=1))
     a2 = dag.create(mock_create1, params=dict(n=2))
     a1.zip(a2)
-    assert_eq("""
+    assert_eq(
+        """
     a=create using mock_create1 params n:1
     zip a,(create using mock_create1 params n:2)
-    """, dag)
+    """,
+        dag,
+    )
 
     dag = FugueWorkflow()
     a1 = dag.create(mock_create1, params=dict(n=1))
     a2 = dag.create(mock_create1, params=dict(n=2))
     a1.zip(a2, how="left_outer", partition=dict(by=["a"], presort="b DESC"))
-    assert_eq("""
+    assert_eq(
+        """
     a=create using mock_create1 params n:1
     zip a,(create using mock_create1 params n:2) left
         outer by a presort b desc
-    """, dag)
+    """,
+        dag,
+    )
 
 
 def test_cotransform():
@@ -111,34 +137,47 @@ def test_cotransform():
     a2 = dag.create(mock_create1, params=dict(n=2))
     z = dag.zip(a1, a2)
     t = z.partition(num=3).transform(mock_cotransformer1, params=dict(n=3))
-    assert_eq("""
+    assert_eq(
+        """
     zip 
         (create using mock_create1 params n:1),
         (create using mock_create1 params n:2)
     transform prepartition 3 using mock_cotransformer1(n=3)
-    """, dag)
+    """,
+        dag,
+    )
 
 
 def test_transform():
-    w = (FugueWorkflow().df([[0], [1]], "a:int")
-         .transform(mock_transformer, schema=Schema("a:int"), params=dict(n=2))
-         )
-    assert_eq("""
+    w = (
+        FugueWorkflow()
+        .df([[0], [1]], "a:int")
+        .transform(mock_transformer, schema=Schema("a:int"), params=dict(n=2))
+    )
+    assert_eq(
+        """
     create [[0],[1]] schema a:int
     transform using mock_transformer(n=2) schema a:int
-    """, w.workflow)
+    """,
+        w.workflow,
+    )
 
-    w = (FugueWorkflow().df([[0], [1]], "a:int")
-         .partition(by=["a"], presort="b DESC", num="ROWCOUNT/2")
-         .transform(mock_transformer, schema="*", params=dict(n=2))
-         )
-    assert_eq("""
+    w = (
+        FugueWorkflow()
+        .df([[0], [1]], "a:int")
+        .partition(by=["a"], presort="b DESC", num="ROWCOUNT/2")
+        .transform(mock_transformer, schema="*", params=dict(n=2))
+    )
+    assert_eq(
+        """
     create [[0],[1]] schema a:int
     
     transform 
         prepartition ROWCOUNT / 2 by a presort b desc
         using mock_transformer(n=2) schema *
-    """, w.workflow)
+    """,
+        w.workflow,
+    )
 
 
 def test_output():
@@ -147,11 +186,14 @@ def test_output():
     a.partition(num=4).output(mock_output)
     b = dag.create(mock_create1, params=dict(n=2))
     dag.output(a, b, using=mock_output, params=dict(n=3))
-    assert_eq("""
+    assert_eq(
+        """
     a=create using mock_create1(n=1)
     output prepartition 4 using mock_output
     output a, (create using mock_create1(n=2)) using mock_output(n=3)
-    """, dag)
+    """,
+        dag,
+    )
 
 
 def test_persist_checkpoint_broadcast():
@@ -166,7 +208,8 @@ def test_persist_checkpoint_broadcast():
     dag.create(mock_create1).checkpoint()
     dag.create(mock_create1).checkpoint("xy z")
     dag.create(mock_create1).checkpoint("xy z").broadcast()
-    assert_eq("""
+    assert_eq(
+        """
     create using mock_create1 persist
     a=create using mock_create1 persist a.b
 
@@ -177,9 +220,32 @@ def test_persist_checkpoint_broadcast():
     a?? create using mock_create1
     a=create using mock_create1 checkpoint "xy z"
     a??create using mock_create1 checkpoint "xy z" broadcast
-    """, dag)
+    """,
+        dag,
+    )
 
+
+def test_select_nested():
+    dag = FugueWorkflow()
+    a = dag.create(mock_create1, params=dict(n=1))
+    b = dag.create(mock_create1, params=dict(n=2))
+    dag.select("select * from (select * from a.b)")
+    dag.select("select * from", dag.create(mock_create1), "AS b")
+    dag.select("select * from", dag.create(mock_create1), "TABLESAMPLE (5 PERCENT)")
+    dag.select("select * from (select * from", dag.create(mock_create1), ")")
+    assert_eq(
+        """
+    a=create using mock_create1(n=1)
+    b=create using mock_create1(n=2)
     
+    # nested query
+    select * from (select * from a.b)
+    select * from (create using mock_create1) AS b
+    select * from (create using mock_create1) TABLESAMPLE(5 PERCENT)
+    select * from (select * from (create using mock_create1))
+    """,
+        dag,
+    )
 
 
 def test_select():
@@ -196,14 +262,10 @@ def test_select():
     z = dag.select("select * FROM", y, "where t = 100")
     dag.select("select a.* from", a, "AS a join", b, "AS b on a.a == b.a")
 
-    dag.select("select * from (select * from a.b)")
-    dag.select("select * from", dag.create(mock_create1), "TABLESAMPLE (5 PERCENT)")
-    dag.select("select * from", dag.create(mock_create1), "AS b")
-    dag.select("select * from (select * from", dag.create(mock_create1), ")")
-
     dag.select("select * from", a, "AS a").persist().broadcast().show()
     dag.select("select * from", a, "AS a").persist("a.b.c").broadcast().show()
-    assert_eq("""
+    assert_eq(
+        """
     a=create using mock_create1(n=1)
     b=create using mock_create1(n=2)
     
@@ -226,18 +288,12 @@ def test_select():
     # multiple dependencies
     select a.* from a join b on a.a==b.a
 
-    # nested query
-    select * from (select * from a.b)
-
-    # nested fugue extensions
-    select * from (create using mock_create1) TABLESAMPLE(5 PERCENT)
-    select * from (create using mock_create1) AS b
-    select * from (select * from (create using mock_create1))
-
     # persist & checkpoint & broadcast
     select * from a persist broadcast print
     select * from a persist a.b.c broadcast print
-    """, dag)
+    """,
+        dag,
+    )
 
 
 def test_print():
@@ -245,12 +301,15 @@ def test_print():
     a = dag.create(mock_create1, params=dict(n=1))
     a.show()
     b = dag.create(mock_create1, params=dict(n=2))
-    dag.show(a, b, rows=5, show_count=True, title="\"b   B")
-    assert_eq("""
+    dag.show(a, b, rows=5, show_count=True, title='"b   B')
+    assert_eq(
+        """
     a=create using mock_create1(n=1)
     print
     print a, (create using mock_create1(n=2)) rows 5 rowcount title "\\"b   B"
-    """, dag)
+    """,
+        dag,
+    )
 
 
 def test_save():
@@ -262,7 +321,8 @@ def test_save():
     a.save("xx.csv", fmt="csv", mode="error", single=True, header=True)
     a.partition(by=["x"]).save("xx", mode="overwrite")
     b = dag.create(mock_create1, params=dict(n=2)).save("xx", mode="overwrite")
-    assert_eq("""
+    assert_eq(
+        """
     a=create using mock_create1(n=1)
     save overwrite parquet "xx"
     save a append "xx"
@@ -270,7 +330,9 @@ def test_save():
     save to single csv "xx.csv"(header=True)
     save prepartition by x overwrite "xx"
     save (create using mock_create1(n=2)) overwrite "xx"
-    """, dag)
+    """,
+        dag,
+    )
 
 
 def test_load():
@@ -279,12 +341,15 @@ def test_load():
     dag.load("xx", fmt="csv")
     dag.load("xx", columns="a:int,b:str")
     dag.load("xx", columns=["a", "b"], header=True)
-    assert_eq("""
+    assert_eq(
+        """
     load "xx"
     load csv "xx"
     load "xx" columns a:int, b:str
     load "xx"(header=True) columns a, b
-    """, dag)
+    """,
+        dag,
+    )
 
 
 def assert_eq(expr, expected: FugueWorkflow):
@@ -306,9 +371,7 @@ def mock_create2(n=2) -> List[List[Any]]:
 
 # schema: b:int
 def mock_processor1(
-    df1: List[List[Any]],
-    df2: List[List[Any]],
-    n=1
+    df1: List[List[Any]], df2: List[List[Any]], n=1
 ) -> Iterable[List[Any]]:
     for i in range(len(df1)):
         row1 = df1[i]
@@ -317,9 +380,7 @@ def mock_processor1(
 
 
 def mock_processor2(
-    df1: List[List[Any]],
-    df2: List[List[Any]],
-    n=1
+    df1: List[List[Any]], df2: List[List[Any]], n=1
 ) -> Iterable[List[Any]]:
     for i in range(len(df1)):
         row1 = df1[i]
@@ -338,9 +399,7 @@ def mock_transformer(df: LocalDataFrame, n=0) -> LocalDataFrame:
 
 # schema: b:int
 def mock_cotransformer1(
-    df1: List[List[Any]],
-    df2: List[List[Any]],
-    n=1
+    df1: List[List[Any]], df2: List[List[Any]], n=1
 ) -> Iterable[List[Any]]:
     for i in range(len(df1)):
         row1 = df1[i]
@@ -349,9 +408,7 @@ def mock_cotransformer1(
 
 
 def mock_cotransformer2(
-    df1: List[List[Any]],
-    df2: List[List[Any]],
-    n=1
+    df1: List[List[Any]], df2: List[List[Any]], n=1
 ) -> Iterable[List[Any]]:
     for i in range(len(df1)):
         row1 = df1[i]

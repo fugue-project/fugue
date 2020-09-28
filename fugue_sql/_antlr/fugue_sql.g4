@@ -101,16 +101,7 @@ fugueSingleTask
     ;
 
 fugueNestableTask
-    : fugueNestableTaskNoSelect
-    | fugueSelectTask
-    ;
-
-fugueSelectTask:
-    (assign=fugueAssignment)? (partition=fuguePrepartition)? q=query (persist=fuguePersist)? (broadcast=fugueBroadcast)?
-    ;
-
-fugueNestableTaskNoSelect:
-    (assign=fugueAssignment)? df=fugueNestableTaskCollectionNoSelect (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    : (assign=fugueAssignment)? q=query (persist=fuguePersist)? (broadcast=fugueBroadcast)?
     ;
 
 fugueNestableTaskCollectionNoSelect
@@ -767,6 +758,7 @@ multiInsertQueryBody
 
 queryTerm
     : queryPrimary                                                                       #queryTermDefault
+    | fugueNestableTaskCollectionNoSelect                                                #fugueTerm
     | left=queryTerm {fugue_sqlParser.legacy_setops_precedence_enbled}?
         operator=(INTERSECT | UNION | EXCEPT | SETMINUS) setQuantifier? right=queryTerm  #setOperation
     | left=queryTerm {not fugue_sqlParser.legacy_setops_precedence_enbled}?
@@ -990,7 +982,6 @@ identifierComment
 relationPrimary
     : multipartIdentifier sample? tableAlias  #tableName
     | '(' query ')' sample? tableAlias        #aliasedQuery
-    | '(' fugueNestableTaskNoSelect ')' sample? tableAlias        #aliasedFugueNested
     | '(' relation ')' sample? tableAlias     #aliasedRelation
     | inlineTable                             #inlineTableDefault2
     | functionTable                           #tableValuedFunction

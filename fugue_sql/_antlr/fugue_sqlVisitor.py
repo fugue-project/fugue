@@ -29,16 +29,6 @@ class fugue_sqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by fugue_sqlParser#fugueSelectTask.
-    def visitFugueSelectTask(self, ctx:fugue_sqlParser.FugueSelectTaskContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by fugue_sqlParser#fugueNestableTaskNoSelect.
-    def visitFugueNestableTaskNoSelect(self, ctx:fugue_sqlParser.FugueNestableTaskNoSelectContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by fugue_sqlParser#fugueNestableTaskCollectionNoSelect.
     def visitFugueNestableTaskCollectionNoSelect(self, ctx:fugue_sqlParser.FugueNestableTaskCollectionNoSelectContext):
         return self.visitChildren(ctx)
@@ -894,6 +884,11 @@ class fugue_sqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by fugue_sqlParser#fugueTerm.
+    def visitFugueTerm(self, ctx:fugue_sqlParser.FugueTermContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by fugue_sqlParser#setOperation.
     def visitSetOperation(self, ctx:fugue_sqlParser.SetOperationContext):
         return self.visitChildren(ctx)
@@ -1136,11 +1131,6 @@ class fugue_sqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by fugue_sqlParser#aliasedQuery.
     def visitAliasedQuery(self, ctx:fugue_sqlParser.AliasedQueryContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by fugue_sqlParser#aliasedFugueNested.
-    def visitAliasedFugueNested(self, ctx:fugue_sqlParser.AliasedFugueNestedContext):
         return self.visitChildren(ctx)
 
 

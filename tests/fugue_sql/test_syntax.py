@@ -31,15 +31,15 @@ def test_assign_syntax():
 
 def test_partition_syntax():
     good_single_syntax(
-        "a = ", ["", "hash", "even", "rand"], "  prepartition 100 ", " select a",
+        "a = transform", ["", "hash", "even", "rand"], "  prepartition 100 using a",
         ignore_case=True,
         simple_assign=True)
     good_single_syntax(
-        "a = prepartition 100 ", ["by a,b,c"], ["presort a asc, b desc"], " select a",
+        "a = transform prepartition 100 ", ["by a,b,c"], ["presort a asc, b desc"], " using a",
         ignore_case=True,
         simple_assign=True)
     good_single_syntax(
-        "a = prepartition by a", ["presort a asc, b desc"], " select a",
+        "a = transform prepartition by a", ["presort a asc, b desc"], " using a",
         ignore_case=True,
         simple_assign=True)
 
