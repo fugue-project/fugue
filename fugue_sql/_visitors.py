@@ -341,12 +341,6 @@ class _Extensions(_VisitorBase):
             data["dfs"], how=data.get("how", "inner"), partition=partition_spec
         )
 
-    def visitFugueNestableTaskNoSelect(
-        self, ctx: fp.FugueNestableTaskNoSelectContext
-    ) -> None:
-        data = self.get_dict(ctx, "df")
-        self._process_assignable(data["df"], ctx)
-
     def visitFugueOutputTask(self, ctx: fp.FugueOutputTaskContext):
         data = self.get_dict(ctx, "dfs", "using", "params", "partition")
         if "dfs" not in data:
@@ -397,11 +391,13 @@ class _Extensions(_VisitorBase):
             **data.get("params", {}),
         )
 
-    def visitFugueSelectTask(self, ctx: fp.FugueSelectTaskContext) -> None:
-        data = self.get_dict(ctx, "partition", "q")
+    def visitFugueNestableTask(self, ctx: fp.FugueNestableTaskContext) -> None:
+        data = self.get_dict(ctx, "q")
         statements = list(self._beautify_sql(data["q"]))
-        # print(statements, self.ctxToStr(ctx), "-")
-        df = self.workflow.select(*statements)
+        if len(statements) == 1 and isinstance(statements[0], WorkflowDataFrame):
+            df: Any = statements[0]
+        else:
+            df = self.workflow.select(*statements)
         self._process_assignable(df, ctx)
 
     def visitQuery(self, ctx: fp.QueryContext) -> Iterable[Any]:
@@ -415,8 +411,7 @@ class _Extensions(_VisitorBase):
             yield "FROM"
             yield self.last
         else:
-            for x in self._get_query_elements(ctx):
-                yield x
+            yield from self._get_query_elements(ctx)
 
     def visitTableName(self, ctx: fp.TableNameContext) -> Iterable[Any]:
         table_name = self.ctxToStr(ctx.multipartIdentifier(), delimit="")
@@ -428,37 +423,42 @@ class _Extensions(_VisitorBase):
             table = self.variables[table_name]
         if isinstance(table, str):
             yield table
-            for x in self._get_query_elements(ctx.sample()):
-                yield x
-            for x in self._get_query_elements(ctx.tableAlias()):
-                yield x
+            yield from self._get_query_elements(ctx.sample())
+            yield from self._get_query_elements(ctx.tableAlias())
         else:
             yield table
-            for x in self._get_query_elements(ctx.sample()):
-                yield x
+            yield from self._get_query_elements(ctx.sample())
             if ctx.tableAlias().strictIdentifier() is not None:
-                for x in self._get_query_elements(ctx.tableAlias()):
-                    yield x
+                yield from self._get_query_elements(ctx.tableAlias())
             else:
                 yield "AS"
                 yield table_name
 
-    def visitAliasedFugueNested(
-        self, ctx: fp.AliasedFugueNestedContext
+    def visitFugueNestableTaskCollectionNoSelect(
+        self, ctx: fp.FugueNestableTaskCollectionNoSelectContext
     ) -> Iterable[Any]:
-        sub = _Extensions(
-            self.sql,
-            self.hooks,
-            workflow=self.workflow,
-            variables=self.variables,
-            last=self._last,
-        )
-        sub.visit(ctx.fugueNestableTaskNoSelect())
-        yield sub.last
-        for x in self._get_query_elements(ctx.sample()):
-            yield x
-        for x in self._get_query_elements(ctx.tableAlias()):
-            yield x
+        last = self._last
+        for i in range(ctx.getChildCount()):
+            n = ctx.getChild(i)
+            sub = _Extensions(
+                self.sql,
+                self.hooks,
+                workflow=self.workflow,
+                variables=self.variables,
+                last=last,
+            )
+            yield sub.visit(n)
+
+    def visitAliasedQuery(self, ctx: fp.AliasedQueryContext) -> Iterable[Any]:
+        sub = list(self._get_query_elements(ctx.query()))
+        if len(sub) == 1 and isinstance(sub[0], WorkflowDataFrame):
+            yield sub[0]
+        else:
+            yield "("
+            yield from sub
+            yield ")"
+        yield from self._get_query_elements(ctx.sample())
+        yield from self._get_query_elements(ctx.tableAlias())
 
     def _beautify_sql(self, statements: Iterable[Any]) -> Iterable[Any]:
         current = ""
@@ -493,20 +493,15 @@ class _Extensions(_VisitorBase):
         for i in range(node.getChildCount()):
             n = node.getChild(i)
             if isinstance(n, fp.TableNameContext):
-                for x in self.visitTableName(n):
-                    yield x
-            elif isinstance(n, fp.AliasedFugueNestedContext):
-                for x in self.visitAliasedFugueNested(n):
-                    yield x
-            elif isinstance(n, fp.QueryContext):
-                for x in self.visitQuery(n):
-                    yield x
+                yield from self.visitTableName(n)
             elif isinstance(n, fp.OptionalFromClauseContext):
-                for x in self.visitOptionalFromClause(n):
-                    yield x
+                yield from self.visitOptionalFromClause(n)
+            elif isinstance(n, fp.FugueTermContext):
+                yield from self.visitFugueTerm(n)
+            elif isinstance(n, fp.AliasedQueryContext):
+                yield from self.visitAliasedQuery(n)
             else:
-                for x in self._get_query_elements(n):
-                    yield x
+                yield from self._get_query_elements(n)
 
     def _process_assignable(self, df: WorkflowDataFrame, ctx: Tree):
         data = self.get_dict(ctx, "assign", "persist", "broadcast")
