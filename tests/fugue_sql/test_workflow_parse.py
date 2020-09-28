@@ -230,7 +230,7 @@ def test_select_nested():
     a = dag.create(mock_create1, params=dict(n=1))
     b = dag.create(mock_create1, params=dict(n=2))
     dag.select("select * from (select * from a.b)")
-    dag.select("select * from", dag.create(mock_create1), "AS b")
+    dag.select("select * from", dag.create(mock_create1), "AS bb")
     dag.select("select * from", dag.create(mock_create1), "TABLESAMPLE (5 PERCENT)")
     dag.select("select * from (select * from", dag.create(mock_create1), ")")
     assert_eq(
@@ -240,7 +240,7 @@ def test_select_nested():
     
     # nested query
     select * from (select * from a.b)
-    select * from (create using mock_create1) AS b
+    select * from (create using mock_create1) AS bb
     select * from (create using mock_create1) TABLESAMPLE(5 PERCENT)
     select * from (select * from (create using mock_create1))
     """,
@@ -291,6 +291,51 @@ def test_select():
     # persist & checkpoint & broadcast
     select * from a persist broadcast print
     select * from a persist a.b.c broadcast print
+    """,
+        dag,
+    )
+
+
+def test_general_set_op():
+    dag = FugueWorkflow()
+    a = dag.create(mock_create1, params=dict(n=1))
+    b = dag.create(mock_create1, params=dict(n=2))
+    dag.select("select * from", a, "AS a union all select * from", b, "AS b")
+    dag.select(
+        "SELECT * FROM", dag.create(mock_create1), "union select * from", b, "AS b"
+    )
+    dag.select(
+        "SELECT * FROM",
+        dag.create(mock_create1),
+        "intersect distinct SELECT * FROM",
+        a.process(mock_processor1),
+    )
+    dag.select(
+        "select * from",
+        dag.create(mock_create1),
+        "union SELECT * FROM",
+        a.process(mock_processor1),
+    )
+    c = dag.create(mock_create1, params=dict(n=2))
+    dag.select(
+        "SELECT * FROM",
+        c.transform(mock_transformer2),
+        "union SELECT * FROM",
+        c.process(mock_processor1),
+    )
+    assert_eq(
+        """
+    a=create using mock_create1(n=1)
+    b=create using mock_create1(n=2)
+    
+    select * from a union all select * from b
+    create using mock_create1 union select * from b
+    create using mock_create1 intersect distinct process a using mock_processor1
+    select * from (create using mock_create1) union process a using mock_processor1
+
+    # operation on omitted dependencies should work as expected
+    c=create using mock_create1(n=2)
+    transform using mock_transformer2 union process using mock_processor1
     """,
         dag,
     )
@@ -394,6 +439,11 @@ def mock_processor3(df: List[List[Any]]) -> List[List[Any]]:
 
 
 def mock_transformer(df: LocalDataFrame, n=0) -> LocalDataFrame:
+    pass
+
+
+# schema: *
+def mock_transformer2(df: LocalDataFrame, n=0) -> LocalDataFrame:
     pass
 
 

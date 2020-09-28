@@ -11,14 +11,15 @@ from typing import (
 )
 
 import pyarrow as pa
+from antlr4.Token import CommonToken
 from antlr4.tree.Tree import TerminalNode, Token, Tree
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrames
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
 from fugue_sql._antlr import FugueSQLParser as fp
 from fugue_sql._antlr import FugueSQLVisitor
-from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
 from fugue_sql._parse import FugueSQL, _to_tokens
+from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_bool
@@ -449,6 +450,25 @@ class _Extensions(_VisitorBase):
             )
             yield sub.visit(n)
 
+    def visitSetOperation(self, ctx: fp.SetOperationContext) -> Iterable[Any]:
+        def get_sub(_ctx: Tree) -> List[Any]:
+
+            sub = list(
+                self.visitFugueTerm(_ctx)
+                if isinstance(_ctx, fp.FugueTermContext)
+                else self._get_query_elements(_ctx)
+            )
+            if len(sub) == 1 and isinstance(sub[0], WorkflowDataFrame):
+                return ["SELECT * FROM", sub[0]]
+            else:
+                return sub
+
+        yield from get_sub(ctx.left)
+        yield from self._get_query_elements(ctx.operator)
+        if ctx.setQuantifier() is not None:
+            yield from self._get_query_elements(ctx.setQuantifier())
+        yield from get_sub(ctx.right)
+
     def visitAliasedQuery(self, ctx: fp.AliasedQueryContext) -> Iterable[Any]:
         sub = list(self._get_query_elements(ctx.query()))
         if len(sub) == 1 and isinstance(sub[0], WorkflowDataFrame):
@@ -487,6 +507,9 @@ class _Extensions(_VisitorBase):
     def _get_query_elements(self, node: Tree) -> Iterable[Any]:  # noqa: C901
         if node is None:
             return
+        if isinstance(node, CommonToken):
+            yield self.sql.raw_code[node.start : node.stop + 1]
+            return
         if isinstance(node, TerminalNode):
             token = node.getSymbol()
             yield self.sql.raw_code[token.start : token.stop + 1]
@@ -500,6 +523,8 @@ class _Extensions(_VisitorBase):
                 yield from self.visitFugueTerm(n)
             elif isinstance(n, fp.AliasedQueryContext):
                 yield from self.visitAliasedQuery(n)
+            elif isinstance(n, fp.SetOperationContext):
+                yield from self.visitSetOperation(n)
             else:
                 yield from self._get_query_elements(n)
 
