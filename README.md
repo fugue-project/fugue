@@ -49,3 +49,71 @@ Alternatively, you should get decent performance if running its docker image on 
 ```
 docker run -p 8888:8888 fugueproject/tutorials:latest
 ```
+
+## Contributing Code
+
+There are three steps to setting-up a development environment
+1. Create a virtual environment with your choice of environment manager
+2. Install the requirements
+3. Install the git hook scripts
+
+### Creating an environment
+
+Below are examples for how to create and activate an environment in virtualenv and conda.
+
+**Using virtualenv**
+```
+python3 -m venv venv
+. venv/bin/activate
+
+```
+
+**Using conda**
+```
+conda create --name fugue-dev
+conda activate fugue-dev
+```
+
+### Installing requirements
+
+The Fugue repo has a Makefile that can be used to install the requirements. It supports installation in both
+pip and conda.
+
+**Pip install requirements**
+```
+make setupinpip
+```
+
+**Conda install requirements**
+
+```
+make setupinconda
+```
+
+**Manually install requirements**
+
+For Windows users who don't have the `make` command, you can use your package manager of choice. For pip:
+
+```
+pip3 install -r requirements.txt
+```
+
+For Anaconda users, first install pip in the newly created environment. If pip install is used without installing pip, conda will use
+the system-wide pip
+
+```
+conda install pip
+pip install -r requirements.txt
+```
+
+**Notes for Windows Users**
+
+For Windows users, you will need to download Microsoft C++ Build Tools found [here](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+
+### Installing git hook scripts
+
+Fugue has pre-commit hooks to check if code is appropriate to be commited. The previous `make` command installs this. 
+If you installed the requirements manually, install the git hook scripts with:
+```
+pre-commit install
+```
