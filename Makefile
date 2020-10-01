@@ -18,10 +18,12 @@ help:
 
 setupinpip:
 	pip3 install -r requirements.txt
+	pre-commit install
 
 setupinconda:
 	conda install pip
 	pip install -r requirements.txt
+	pre-commit install
 
 docs:
 	rm -rf docs/api

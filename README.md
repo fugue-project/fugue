@@ -112,7 +112,8 @@ For Windows users, you will need to download Microsoft C++ Build Tools found [he
 
 ### Installing git hook scripts
 
-Fugue has pre-commit hooks to check if code is appropriate to be commited. To install the git hook scripts:
+Fugue has pre-commit hooks to check if code is appropriate to be commited. The previous `make` command install this. 
+If you installed the requirements, install the git hook scripts with:
 ```
 pre-commit install
 ```
