@@ -50,6 +50,7 @@ Alternatively, you should get decent performance if running its docker image on 
 docker run -p 8888:8888 fugueproject/tutorials:latest
 ```
 
+
 ## Contributing Code
 
 There are three steps to setting-up a development environment
@@ -99,7 +100,7 @@ pip3 install -r requirements.txt
 ```
 
 For Anaconda users, first install pip in the newly created environment. If pip install is used without installing pip, conda will use
-the system-wise pip
+the system-wide pip
 
 ```
 conda install pip
@@ -112,8 +113,8 @@ For Windows users, you will need to download Microsoft C++ Build Tools found [he
 
 ### Installing git hook scripts
 
-Fugue has pre-commit hooks to check if code is appropriate to be commited. The previous `make` command install this. 
-If you installed the requirements, install the git hook scripts with:
+Fugue has pre-commit hooks to check if code is appropriate to be commited. The previous `make` command installs this. 
+If you installed the requirements manually, install the git hook scripts with:
 ```
 pre-commit install
 ```
