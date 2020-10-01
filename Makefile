@@ -5,15 +5,14 @@
 
 help:
 	@echo "The following make targets are available:"
-	@echo "  setupinpip    use pip to install requirements in current env"
-	@echo "	 setupinconda  use conda to install requirements in current env"
-	@echo "	 dev 		   install all deps for dev env (assumes venv is present)"
-	@echo "  docs		   create pydocs for all relveant modules (assumes venv is present)"
-	@echo "	 package	   package for pypi"
-	@echo "	 test		   run all tests with coverage (assumes venv is present)"
-	@echo "	 testcore	   run all tests excluding spark tests with coverage (assumes venv is present)"
-	@echo "	 testspark	   run all tests of spark (assumes venv is present)"
-	@echo "	 sql		   fugue sql code gen"
+	@echo "  setupinpip		use pip to install requirements in current env"
+	@echo "	 setupinconda	use conda to install requirements in current env"
+	@echo "  docs 			create pydocs for all relveant modules (assumes venv is present)"
+	@echo "	 package 		package for pypi"
+	@echo "	 test 			run all tests with coverage (assumes venv is present)"
+	@echo "	 testcore 		run all tests excluding spark tests with coverage (assumes venv is present)"
+	@echo "	 testspark 		run all tests of spark (assumes venv is present)"
+	@echo "	 sql			fugue sql code gen"
 
 
 setupinpip:
