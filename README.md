@@ -76,10 +76,6 @@ conda activate fugue-dev
 
 ### Installing requirements
 
-Windows
-
-For Windows users, you will need to download Microsoft C++ Build Tools found [here](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-
 The Fugue repo has a Makefile that can be used to install the requirements. It supports installation in both
 pip and conda.
 
@@ -109,6 +105,10 @@ the system-wise pip
 conda install pip
 pip install -r requirements.txt
 ```
+
+**Notes for Windows Users**
+
+For Windows users, you will need to download Microsoft C++ Build Tools found [here](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
 
 ### Installing git hook scripts
 
