@@ -29,7 +29,7 @@ RUN pip3 install jupyter \
 # RUN docker run hello-world
 
 # To solve add-apt-repository : command not found
-RUN apt-get -y install software-properties-common
+# RUN apt-get -y install software-properties-common
 
 # Install Java
 RUN \
