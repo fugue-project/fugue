@@ -3,29 +3,31 @@ from typing import Any, Callable, Iterable, List, Optional, Union
 
 import dask.dataframe as pd
 import pyarrow as pa
+from fugue._utils.io import load_df, save_df
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
 )
 from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
-from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame, DataFrames
+from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
     ExecutionEngine,
     SQLEngine,
 )
-from fugue._utils.io import load_df, save_df
-from fugue_dask.dataframe import DEFAULT_CONFIG, DaskDataFrame
-from fugue_dask._utils import DASK_UTILS
+from qpd_dask import run_sql_on_dask
+from qpd_dask.engine import QPDDaskEngine as QPDDaskSQLEngine
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.threading import RunOnce
-from qpd_dask import run_sql_on_dask
+
+from fugue_dask._utils import DASK_UTILS
+from fugue_dask.dataframe import DEFAULT_CONFIG, DaskDataFrame
 
 
 class QPDDaskEngine(SQLEngine):
@@ -67,6 +69,7 @@ class DaskExecutionEngine(ExecutionEngine):
         self._fs = FileSystem()
         self._log = logging.getLogger()
         self._default_sql_engine = QPDDaskEngine(self)
+        self._qpd_engine = QPDDaskSQLEngine()
 
     def __repr__(self) -> str:
         return "DaskExecutionEngine"
@@ -219,50 +222,26 @@ class DaskExecutionEngine(ExecutionEngine):
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         how = how.lower().replace("_", "").replace(" ", "")
-        if how == "cross":
-            d1 = self.to_df(df1).native
-            d2 = self.to_df(df2).native
-            d1["__cross_join_index__"] = 1
-            d2["__cross_join_index__"] = 1
-            d = d1.merge(d2, on=("__cross_join_index__")).drop(
-                "__cross_join_index__", axis=1
+        if how in ["semi", "anti"]:
+            how = "left_" + how
+        else:
+            how = (
+                how.replace("left", "left_")
+                .replace("right", "right_")
+                .replace("full", "full_")
             )
-            return DaskDataFrame(d.reset_index(drop=True), output_schema, metadata)
-        if how in ["semi", "leftsemi"]:
-            d1 = self.to_df(df1).native
-            d2 = self.to_df(df2).native[key_schema.names]
-            d = d1.merge(d2, on=key_schema.names, how="inner")
-            return DaskDataFrame(d.reset_index(drop=True), output_schema, metadata)
-        if how in ["anti", "leftanti"]:
-            d1 = self.to_df(df1).native
-            d2 = self.to_df(df2).native[key_schema.names]
-            if DASK_UTILS.empty(d1) or DASK_UTILS.empty(d2):
-                return df1
-            d2["__anti_join_dummy__"] = 1.0
-            d = d1.merge(d2, on=key_schema.names, how="left")
-            d = d[d["__anti_join_dummy__"].isnull()]
-            return DaskDataFrame(
-                d.drop(["__anti_join_dummy__"], axis=1).reset_index(drop=True),
-                output_schema,
-                metadata,
-            )
+        pdf1 = self._qpd_engine.to_df(self.to_df(df1).native)
+        pdf2 = self._qpd_engine.to_df(self.to_df(df2).native)
+        d = self._qpd_engine.to_native(
+            self._qpd_engine.join(pdf1, pdf2, join_type=how, on=key_schema.names)
+        )
         fix_left, fix_right = False, False
-        if how in ["leftouter"]:
-            how = "left"
-            self._validate_outer_joinable(df2.schema, key_schema)
+        if how == "left_outer":
             fix_right = True
-        if how in ["rightouter"]:
-            how = "right"
-            self._validate_outer_joinable(df1.schema, key_schema)
+        if how == "right_outer":
             fix_left = True
-        if how in ["fullouter"]:
-            how = "outer"
-            self._validate_outer_joinable(df1.schema, key_schema)
-            self._validate_outer_joinable(df2.schema, key_schema)
+        if how == "full_outer":
             fix_left, fix_right = True, True
-        d1 = self.to_df(df1).native
-        d2 = self.to_df(df2).native
-        d = d1.merge(d2, on=key_schema.names, how=how)
         if fix_left:
             d = self._fix_nan(
                 d, output_schema, df1.schema.exclude(list(df2.schema.keys())).keys()

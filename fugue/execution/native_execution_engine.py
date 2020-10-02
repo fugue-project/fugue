@@ -3,6 +3,7 @@ from typing import Any, Callable, Iterable, List, Optional, Union
 
 import pandas as pd
 import pyarrow as pa
+from fugue._utils.io import load_df, save_df
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
@@ -22,7 +23,7 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
-from fugue._utils.io import load_df, save_df
+from qpd_pandas.engine import QPDPandasEngine
 from sqlalchemy import create_engine
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
@@ -37,8 +38,8 @@ class SqliteEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def __init__(self, execution_engine: ExecutionEngine) -> None:
-        return super().__init__(execution_engine)
+    def __init__(self, execution_engine: ExecutionEngine):
+        super().__init__(execution_engine)
 
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:
         sql_engine = create_engine("sqlite:///:memory:")
@@ -62,6 +63,7 @@ class NativeExecutionEngine(ExecutionEngine):
         self._fs = FileSystem()
         self._log = logging.getLogger()
         self._default_sql_engine = SqliteEngine(self)
+        self._qpd_engine = QPDPandasEngine()
 
     def __repr__(self) -> str:
         return "NativeExecutionEngine"
@@ -155,48 +157,26 @@ class NativeExecutionEngine(ExecutionEngine):
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         how = how.lower().replace("_", "").replace(" ", "")
-        if how == "cross":
-            d1 = df1.as_pandas()
-            d2 = df2.as_pandas()
-            d1["__cross_join_index__"] = 1
-            d2["__cross_join_index__"] = 1
-            d = d1.merge(d2, on=("__cross_join_index__")).drop(
-                "__cross_join_index__", axis=1
+        if how in ["semi", "anti"]:
+            how = "left_" + how
+        else:
+            how = (
+                how.replace("left", "left_")
+                .replace("right", "right_")
+                .replace("full", "full_")
             )
-            return PandasDataFrame(d.reset_index(drop=True), output_schema, metadata)
-        if how in ["semi", "leftsemi"]:
-            d1 = df1.as_pandas()
-            d2 = df2.as_pandas()[key_schema.names]
-            d = d1.merge(d2, on=key_schema.names, how="inner")
-            return PandasDataFrame(d.reset_index(drop=True), output_schema, metadata)
-        if how in ["anti", "leftanti"]:
-            d1 = df1.as_pandas()
-            d2 = df2.as_pandas()[key_schema.names]
-            d2["__anti_join_dummy__"] = 1.0
-            d = d1.merge(d2, on=key_schema.names, how="left")
-            d = d[d.iloc[:, -1].isnull()]
-            return PandasDataFrame(
-                d.drop(["__anti_join_dummy__"], axis=1).reset_index(drop=True),
-                output_schema,
-                metadata,
-            )
+        pdf1 = self._qpd_engine.to_df(df1.as_pandas())
+        pdf2 = self._qpd_engine.to_df(df2.as_pandas())
+        d = self._qpd_engine.to_native(
+            self._qpd_engine.join(pdf1, pdf2, join_type=how, on=key_schema.names)
+        )
         fix_left, fix_right = False, False
-        if how in ["leftouter"]:
-            how = "left"
-            self._validate_outer_joinable(df2.schema, key_schema)
+        if how == "left_outer":
             fix_right = True
-        if how in ["rightouter"]:
-            how = "right"
-            self._validate_outer_joinable(df1.schema, key_schema)
+        if how == "right_outer":
             fix_left = True
-        if how in ["fullouter"]:
-            how = "outer"
-            self._validate_outer_joinable(df1.schema, key_schema)
-            self._validate_outer_joinable(df2.schema, key_schema)
+        if how == "full_outer":
             fix_left, fix_right = True, True
-        d1 = df1.as_pandas()
-        d2 = df2.as_pandas()
-        d = d1.merge(d2, on=key_schema.names, how=how)
         if fix_left:
             d = self._fix_nan(
                 d, output_schema, df1.schema.exclude(list(df2.schema.keys())).keys()
@@ -237,7 +217,9 @@ class NativeExecutionEngine(ExecutionEngine):
         df = self.to_df(df)
         save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
 
-    def _validate_outer_joinable(self, schema: Schema, key_schema: Schema) -> None:
+    def _validate_outer_joinable(
+        self, schema: Schema, key_schema: Schema
+    ) -> None:  # pragma: no cover
         # TODO: this is to prevent wrong behavior of pandas, we may not need it
         # s = schema - key_schema
         # if any(pa.types.is_boolean(v) or pa.types.is_integer(v) for v in s.types):
