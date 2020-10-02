@@ -1,14 +1,6 @@
 {
-	"name": "Python 3",
-	"build": {
-		"dockerfile": "Dockerfile",
-		"context": "..",
-		"args": {
-			"VARIANT": "3.7",
-			"INSTALL_NODE": "false",
-			"NODE_VERSION": "lts/*"
-		}
-	},
+	"name": "Fugue Development Environment",
+	"image": "fugueproject/devenv:latest",
 	"settings": {
 		"terminal.integrated.shell.linux": "/bin/bash",
 		"python.pythonPath": "/usr/local/bin/python",
