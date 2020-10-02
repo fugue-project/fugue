@@ -3,10 +3,10 @@ from typing import Optional
 import dask.dataframe as pd
 import pandas
 import pyarrow as pa
-from triad.utils.pandas_like import PandasLikeUtils
+from qpd_dask.engine import DaskUtils as DaskUtilsBase
 
 
-class DaskUtils(PandasLikeUtils[pd.DataFrame]):
+class DaskUtils(DaskUtilsBase):
     def as_arrow(
         self, df: pd.DataFrame, schema: Optional[pa.Schema] = None
     ) -> pa.Table:

@@ -1,8 +1,7 @@
 import logging
-from typing import Any, Callable, Iterable, List, Optional, Union
+from typing import Any, Callable, List, Optional, Union
 
 import dask.dataframe as pd
-import pyarrow as pa
 from fugue._utils.io import load_df, save_df
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
@@ -26,7 +25,7 @@ from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.threading import RunOnce
 
-from fugue_dask._utils import DASK_UTILS
+from fugue_dask._utils import DaskUtils
 from fugue_dask.dataframe import DEFAULT_CONFIG, DaskDataFrame
 
 
@@ -85,6 +84,11 @@ class DaskExecutionEngine(ExecutionEngine):
     @property
     def default_sql_engine(self) -> SQLEngine:
         return self._default_sql_engine
+
+    @property
+    def pl_utils(self) -> DaskUtils:
+        """Pandas-like dataframe utils"""
+        return DaskUtils()
 
     def stop(self) -> None:  # pragma: no cover
         """It does nothing"""
@@ -198,7 +202,7 @@ class DaskExecutionEngine(ExecutionEngine):
             result = pdf.native.map_partitions(_map, meta=output_schema.pandas_dtype)
         else:
             df = self.repartition(df, PartitionSpec(num=partition_spec.num_partitions))
-            result = DASK_UTILS.safe_groupby_apply(
+            result = self.pl_utils.safe_groupby_apply(
                 df.native,
                 partition_spec.partition_by,
                 _map,
@@ -221,35 +225,12 @@ class DaskExecutionEngine(ExecutionEngine):
         metadata: Any = None,
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
-        how = how.lower().replace("_", "").replace(" ", "")
-        if how in ["semi", "anti"]:
-            how = "left_" + how
-        else:
-            how = (
-                how.replace("left", "left_")
-                .replace("right", "right_")
-                .replace("full", "full_")
-            )
-        pdf1 = self._qpd_engine.to_df(self.to_df(df1).native)
-        pdf2 = self._qpd_engine.to_df(self.to_df(df2).native)
-        d = self._qpd_engine.to_native(
-            self._qpd_engine.join(pdf1, pdf2, join_type=how, on=key_schema.names)
+        d = self.pl_utils.join(
+            self.to_df(df1).native,
+            self.to_df(df2).native,
+            join_type=how,
+            on=key_schema.names,
         )
-        fix_left, fix_right = False, False
-        if how == "left_outer":
-            fix_right = True
-        if how == "right_outer":
-            fix_left = True
-        if how == "full_outer":
-            fix_left, fix_right = True, True
-        if fix_left:
-            d = self._fix_nan(
-                d, output_schema, df1.schema.exclude(list(df2.schema.keys())).keys()
-            )
-        if fix_right:
-            d = self._fix_nan(
-                d, output_schema, df2.schema.exclude(list(df1.schema.keys())).keys()
-            )
         return DaskDataFrame(d.reset_index(drop=True), output_schema, metadata)
 
     def load_df(
@@ -281,23 +262,3 @@ class DaskExecutionEngine(ExecutionEngine):
             )
         df = self.to_df(df).as_local()
         save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
-
-    def _validate_outer_joinable(self, schema: Schema, key_schema: Schema) -> None:
-        # TODO: this is to prevent wrong behavior of pandas, we may not need it
-        # s = schema - key_schema
-        # if any(pa.types.is_boolean(v) or pa.types.is_integer(v) for v in s.types):
-        #    raise NotImplementedError(
-        #        f"{schema} excluding {key_schema} is not outer joinable"
-        #    )
-        return
-
-    def _fix_nan(
-        self, df: pd.DataFrame, schema: Schema, keys: Iterable[str]
-    ) -> pd.DataFrame:
-        if DASK_UTILS.empty(df):
-            return df
-        for key in keys:
-            if pa.types.is_floating(schema[key].type):
-                continue
-            df[key] = df[key].where(df[key].notnull(), None)
-        return df
