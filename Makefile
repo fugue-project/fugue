@@ -5,6 +5,8 @@
 
 help:
 	@echo "The following make targets are available:"
+	@echo "  setupinpip	use pip to install requirements in current env"
+	@echo "	 setupinconda	use conda to install requirements in current env"
 	@echo "	 devenv		create venv and install all deps for dev env (assumes python3 cmd exists)"
 	@echo "	 dev 		install all deps for dev env (assumes venv is present)"
 	@echo "  docs		create pydocs for all relveant modules (assumes venv is present)"
@@ -14,6 +16,15 @@ help:
 	@echo "	 testspark	run all tests of spark (assumes venv is present)"
 	@echo "	 sql		fugue sql code gen"
 
+
+setupinpip:
+	pip3 install -r requirements.txt
+	pre-commit install
+
+setupinconda:
+	conda install pip
+	pip install -r requirements.txt
+	pre-commit install
 
 devenv:
 	pip3 install -r requirements.txt
