@@ -77,7 +77,7 @@ conda activate fugue-dev
 ### Installing requirements
 
 The Fugue repo has a Makefile that can be used to install the requirements. It supports installation in both
-pip and conda. Instructions to install `make` for Windows users can be found below.
+pip and conda. Instructions to install `make` for Windows users can be found later.
 
 **Pip install requirements**
 ```
@@ -92,7 +92,7 @@ make setupinconda
 
 **Manually install requirements**
 
-For Windows users who don't have the `make` command, you can use your package manager of choice. For pip:
+To install without using the Makefile, you can use your package manager of choice. For pip:
 
 ```
 pip3 install -r requirements.txt
