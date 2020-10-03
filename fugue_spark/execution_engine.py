@@ -284,6 +284,59 @@ class SparkExecutionEngine(ExecutionEngine):
             res = d1.join(d2, on=key_schema.names, how=how).select(*cols)
         return self.to_df(res, output_schema, metadata)
 
+    def union(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        d1 = self.to_df(df1).native
+        d2 = self.to_df(df2).native
+        d = d1.union(d2)
+        if distinct:
+            d = d.distinct()
+        return self.to_df(d, df1.schema, metadata)
+
+    def subtract(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        d1 = self.to_df(df1).native
+        d2 = self.to_df(df2).native
+        if distinct:
+            d: Any = d1.subtract(d2)
+        else:
+            d = d1.exceptAll(d2)
+        return self.to_df(d, df1.schema, metadata)
+
+    def intersect(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        d1 = self.to_df(df1).native
+        d2 = self.to_df(df2).native
+        if distinct:
+            d: Any = d1.intersect(d2)
+        else:
+            d = d1.intersectAll(d2)
+        return self.to_df(d, df1.schema, metadata)
+
     def load_df(
         self,
         path: Union[str, List[str]],

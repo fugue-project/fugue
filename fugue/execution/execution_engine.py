@@ -260,14 +260,14 @@ class ExecutionEngine(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def exclude(
+    def subtract(
         self,
         df1: DataFrame,
         df2: DataFrame,
         distinct: bool = True,
         metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
-        """Exclude ``df2`` from ``df1``
+        """``df1 - df1``
 
         :param df1: the first dataframe
         :param df2: the second dataframe

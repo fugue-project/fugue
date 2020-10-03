@@ -354,21 +354,45 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
 
-        def test_exclude(self):
+        def test_subtract(self):
             e = self.engine
             a = e.to_df([[1, 2, 3], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
             b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
-            c = e.exclude(a, b)
+            c = e.subtract(a, b)
             df_eq(
                 c,
                 [[1, 2, 3]],
                 "a:double,b:double,c:int",
                 throw=True,
             )
-            c = e.exclude(a, b, distinct=False)
+            c = e.subtract(a, b, distinct=False)
             df_eq(
                 c,
                 [[1, 2, 3], [1, 2, 3]],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
+
+        def test_intersect(self):
+            e = self.engine
+            a = e.to_df(
+                [[1, 2, 3], [4, None, 6], [4, None, 6]], "a:double,b:double,c:int"
+            )
+            b = e.to_df(
+                [[1, 2, 33], [4, None, 6], [4, None, 6], [4, None, 6]],
+                "a:double,b:double,c:int",
+            )
+            c = e.intersect(a, b)
+            df_eq(
+                c,
+                [[4, None, 6]],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
+            c = e.intersect(a, b, distinct=False)
+            df_eq(
+                c,
+                [[4, None, 6], [4, None, 6]],
                 "a:double,b:double,c:int",
                 throw=True,
             )

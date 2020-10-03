@@ -176,7 +176,7 @@ class NativeExecutionEngine(ExecutionEngine):
         d = self.pl_utils.union(df1.as_pandas(), df2.as_pandas(), unique=distinct)
         return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
 
-    def exclude(
+    def subtract(
         self,
         df1: DataFrame,
         df2: DataFrame,

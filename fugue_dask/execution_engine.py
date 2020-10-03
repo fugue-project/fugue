@@ -246,7 +246,7 @@ class DaskExecutionEngine(ExecutionEngine):
         )
         return DaskDataFrame(d.reset_index(drop=True), df1.schema, metadata)
 
-    def exclude(
+    def subtract(
         self,
         df1: DataFrame,
         df2: DataFrame,
