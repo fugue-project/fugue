@@ -400,6 +400,20 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
 
+        def test_distinct(self):
+            e = self.engine
+            a = e.to_df(
+                [[4, None, 6], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int"
+            )
+            c = e.distinct(a, metadata=dict(a=1))
+            df_eq(
+                c,
+                [[4, None, 6], [1, 2, 3]],
+                "a:double,b:double,c:int",
+                metadata=dict(a=1),
+                throw=True,
+            )
+
         def test__serialize_by_partition(self):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
