@@ -163,6 +163,45 @@ class NativeExecutionEngine(ExecutionEngine):
         )
         return PandasDataFrame(d.reset_index(drop=True), output_schema, metadata)
 
+    def union(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        d = self.pl_utils.union(df1.as_pandas(), df2.as_pandas(), unique=distinct)
+        return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+
+    def exclude(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        d = self.pl_utils.except_df(df1.as_pandas(), df2.as_pandas(), unique=distinct)
+        return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+
+    def intersect(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        d = self.pl_utils.intersect(df1.as_pandas(), df2.as_pandas(), unique=distinct)
+        return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+
     def load_df(
         self,
         path: Union[str, List[str]],

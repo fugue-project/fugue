@@ -17,7 +17,6 @@ from fugue.execution.execution_engine import (
     SQLEngine,
 )
 from qpd_dask import run_sql_on_dask
-from qpd_dask.engine import QPDDaskEngine as QPDDaskSQLEngine
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
@@ -35,8 +34,8 @@ class QPDDaskEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def __init__(self, execution_engine: ExecutionEngine) -> None:
-        return super().__init__(execution_engine)
+    def __init__(self, execution_engine: ExecutionEngine):
+        super().__init__(execution_engine)
 
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:
         dask_dfs = {
@@ -68,7 +67,6 @@ class DaskExecutionEngine(ExecutionEngine):
         self._fs = FileSystem()
         self._log = logging.getLogger()
         self._default_sql_engine = QPDDaskEngine(self)
-        self._qpd_engine = QPDDaskSQLEngine()
 
     def __repr__(self) -> str:
         return "DaskExecutionEngine"
@@ -232,6 +230,51 @@ class DaskExecutionEngine(ExecutionEngine):
             on=key_schema.names,
         )
         return DaskDataFrame(d.reset_index(drop=True), output_schema, metadata)
+
+    def union(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        d = self.pl_utils.union(
+            self.to_df(df1).native, self.to_df(df2).native, unique=distinct
+        )
+        return DaskDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+
+    def exclude(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        d = self.pl_utils.except_df(
+            self.to_df(df1).native, self.to_df(df2).native, unique=distinct
+        )
+        return DaskDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+
+    def intersect(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        d = self.pl_utils.intersect(
+            self.to_df(df1).native, self.to_df(df2).native, unique=distinct
+        )
+        return DaskDataFrame(d.reset_index(drop=True), df1.schema, metadata)
 
     def load_df(
         self,

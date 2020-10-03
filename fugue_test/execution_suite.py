@@ -327,6 +327,52 @@ class ExecutionEngineTests(object):
             c = e.join(a, b, how="anti", on=["a"])
             df_eq(c, [], "a:int,b:int", throw=True)
 
+        def test__join_with_null_keys(self):
+            # SQL will not match null values
+            e = self.engine
+            a = e.to_df([[1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
+            b = e.to_df([[1, 2, 33], [4, None, 63]], "a:double,b:double,d:int")
+            c = e.join(a, b, how="INNER")
+            df_eq(c, [[1, 2, 3, 33]], "a:double,b:double,c:int,d:int", throw=True)
+
+        def test_union(self):
+            e = self.engine
+            a = e.to_df([[1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
+            b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
+            c = e.union(a, b)
+            df_eq(
+                c,
+                [[1, 2, 3], [4, None, 6], [1, 2, 33]],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
+            c = e.union(a, b, distinct=False)
+            df_eq(
+                c,
+                [[1, 2, 3], [4, None, 6], [1, 2, 33], [4, None, 6]],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
+
+        def test_exclude(self):
+            e = self.engine
+            a = e.to_df([[1, 2, 3], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
+            b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
+            c = e.exclude(a, b)
+            df_eq(
+                c,
+                [[1, 2, 3]],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
+            c = e.exclude(a, b, distinct=False)
+            df_eq(
+                c,
+                [[1, 2, 3], [1, 2, 3]],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
+
         def test__serialize_by_partition(self):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")

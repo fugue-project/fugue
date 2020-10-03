@@ -234,6 +234,81 @@ class ExecutionEngine(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def union(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:  # pragma: no cover
+        """Join two dataframes
+
+        :param df1: the first dataframe
+        :param df2: the second dataframe
+        :param distinct: ``true`` for ``UNION`` (== ``UNION DISTINCT``),
+          ``false`` for ``UNION ALL``
+        :param metadata: dict-like object to add to the joined dataframe,
+          defaults to None
+        :return: the unioned dataframe
+
+        :Notice:
+
+        Currently, the schema of ``df1`` and ``df2`` must be identical, or
+        an exception will be thrown.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def exclude(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:  # pragma: no cover
+        """Exclude ``df2`` from ``df1``
+
+        :param df1: the first dataframe
+        :param df2: the second dataframe
+        :param distinct: ``true`` for ``EXCEPT`` (== ``EXCEPT DISTINCT``),
+          ``false`` for ``EXCEPT ALL``
+        :param metadata: dict-like object to add to the joined dataframe,
+          defaults to None
+        :return: the unioned dataframe
+
+        :Notice:
+
+        Currently, the schema of ``df1`` and ``df2`` must be identical, or
+        an exception will be thrown.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def intersect(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:  # pragma: no cover
+        """Intersect ``df1`` and ``df2``
+
+        :param df1: the first dataframe
+        :param df2: the second dataframe
+        :param distinct: ``true`` for ``INTERSECT`` (== ``INTERSECT DISTINCT``),
+          ``false`` for ``INTERSECT ALL``
+        :param metadata: dict-like object to add to the joined dataframe,
+          defaults to None
+        :return: the unioned dataframe
+
+        :Notice:
+
+        Currently, the schema of ``df1`` and ``df2`` must be identical, or
+        an exception will be thrown.
+        """
+        raise NotImplementedError
+
     def zip(
         self,
         df1: DataFrame,
