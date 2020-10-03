@@ -339,11 +339,12 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
             b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
-            c = e.union(a, b)
+            c = e.union(a, b, metadata=dict(a=1))
             df_eq(
                 c,
                 [[1, 2, 3], [4, None, 6], [1, 2, 33]],
                 "a:double,b:double,c:int",
+                metadata=dict(a=1),
                 throw=True,
             )
             c = e.union(a, b, distinct=False)
@@ -358,11 +359,12 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2, 3], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
             b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
-            c = e.subtract(a, b)
+            c = e.subtract(a, b, metadata=dict(a=1))
             df_eq(
                 c,
                 [[1, 2, 3]],
                 "a:double,b:double,c:int",
+                metadata=dict(a=1),
                 throw=True,
             )
             c = e.subtract(a, b, distinct=False)
@@ -382,11 +384,12 @@ class ExecutionEngineTests(object):
                 [[1, 2, 33], [4, None, 6], [4, None, 6], [4, None, 6]],
                 "a:double,b:double,c:int",
             )
-            c = e.intersect(a, b)
+            c = e.intersect(a, b, metadata=dict(a=1))
             df_eq(
                 c,
                 [[4, None, 6]],
                 "a:double,b:double,c:int",
+                metadata=dict(a=1),
                 throw=True,
             )
             c = e.intersect(a, b, distinct=False)

@@ -337,6 +337,14 @@ class SparkExecutionEngine(ExecutionEngine):
             d = d1.intersectAll(d2)
         return self.to_df(d, df1.schema, metadata)
 
+    def distinct(
+        self,
+        df: DataFrame,
+        metadata: Any = None,
+    ) -> DataFrame:
+        d = self.to_df(df).native.distinct()
+        return self.to_df(d, df.schema, metadata)
+
     def load_df(
         self,
         path: Union[str, List[str]],

@@ -229,7 +229,7 @@ class DaskExecutionEngine(ExecutionEngine):
             join_type=how,
             on=key_schema.names,
         )
-        return DaskDataFrame(d.reset_index(drop=True), output_schema, metadata)
+        return DaskDataFrame(d, output_schema, metadata)
 
     def union(
         self,
@@ -244,7 +244,7 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.pl_utils.union(
             self.to_df(df1).native, self.to_df(df2).native, unique=distinct
         )
-        return DaskDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+        return DaskDataFrame(d, df1.schema, metadata)
 
     def subtract(
         self,
@@ -259,7 +259,7 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.pl_utils.except_df(
             self.to_df(df1).native, self.to_df(df2).native, unique=distinct
         )
-        return DaskDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+        return DaskDataFrame(d, df1.schema, metadata)
 
     def intersect(
         self,
@@ -274,7 +274,15 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.pl_utils.intersect(
             self.to_df(df1).native, self.to_df(df2).native, unique=distinct
         )
-        return DaskDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+        return DaskDataFrame(d, df1.schema, metadata)
+
+    def distinct(
+        self,
+        df: DataFrame,
+        metadata: Any = None,
+    ) -> DataFrame:
+        d = self.pl_utils.drop_duplicates(self.to_df(df).native)
+        return DaskDataFrame(d, df.schema, metadata)
 
     def load_df(
         self,

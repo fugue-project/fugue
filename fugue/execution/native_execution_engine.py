@@ -202,6 +202,14 @@ class NativeExecutionEngine(ExecutionEngine):
         d = self.pl_utils.intersect(df1.as_pandas(), df2.as_pandas(), unique=distinct)
         return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
 
+    def distinct(
+        self,
+        df: DataFrame,
+        metadata: Any = None,
+    ) -> DataFrame:
+        d = self.pl_utils.drop_duplicates(df.as_pandas())
+        return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
+
     def load_df(
         self,
         path: Union[str, List[str]],

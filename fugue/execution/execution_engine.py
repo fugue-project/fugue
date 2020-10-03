@@ -224,7 +224,7 @@ class ExecutionEngine(ABC):
           ``inner``, ``left_outer``, ``right_outer``, ``full_outer``, ``cross``
         :param on: it can always be inferred, but if you provide, it will be
           validated against the inferred keys.
-        :param metadata: dict-like object to add to the joined dataframe,
+        :param metadata: dict-like object to add to the result dataframe,
           defaults to None
         :return: the joined dataframe
 
@@ -248,7 +248,7 @@ class ExecutionEngine(ABC):
         :param df2: the second dataframe
         :param distinct: ``true`` for ``UNION`` (== ``UNION DISTINCT``),
           ``false`` for ``UNION ALL``
-        :param metadata: dict-like object to add to the joined dataframe,
+        :param metadata: dict-like object to add to the result dataframe,
           defaults to None
         :return: the unioned dataframe
 
@@ -267,13 +267,13 @@ class ExecutionEngine(ABC):
         distinct: bool = True,
         metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
-        """``df1 - df1``
+        """``df1 - df2``
 
         :param df1: the first dataframe
         :param df2: the second dataframe
         :param distinct: ``true`` for ``EXCEPT`` (== ``EXCEPT DISTINCT``),
           ``false`` for ``EXCEPT ALL``
-        :param metadata: dict-like object to add to the joined dataframe,
+        :param metadata: dict-like object to add to the result dataframe,
           defaults to None
         :return: the unioned dataframe
 
@@ -298,7 +298,7 @@ class ExecutionEngine(ABC):
         :param df2: the second dataframe
         :param distinct: ``true`` for ``INTERSECT`` (== ``INTERSECT DISTINCT``),
           ``false`` for ``INTERSECT ALL``
-        :param metadata: dict-like object to add to the joined dataframe,
+        :param metadata: dict-like object to add to the result dataframe,
           defaults to None
         :return: the unioned dataframe
 
@@ -308,6 +308,23 @@ class ExecutionEngine(ABC):
         an exception will be thrown.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def distinct(
+        self,
+        df: DataFrame,
+        metadata: Any = None,
+    ) -> DataFrame:  # pragma: no cover
+        """Equivalent to ``SELECT DISTINCT * FROM df``
+
+        :param df: dataframe
+        :param metadata: dict-like object to add to the result dataframe,
+          defaults to None
+        :type metadata: Any, optional
+        :return: [description]
+        :rtype: DataFrame
+        """
+        pass
 
     def zip(
         self,
