@@ -14,6 +14,8 @@ from fugue.extensions._builtins import (
     Load,
     Rename,
     RunJoin,
+    Distinct,
+    RunSetOperation,
     RunSQLSelect,
     RunTransformer,
     Save,
@@ -379,6 +381,62 @@ class WorkflowDataFrame(DataFrame):
         :rtype: :class:`~.WorkflowDataFrame`
         """
         return self.join(*dfs, how="cross")
+
+    def union(self: TDF, *dfs: Any, distinct: bool = True) -> TDF:
+        """Union this dataframe with ``dfs``.
+
+        :param dfs: |DataFramesLikeObject|
+        :param distinct: whether to perform `distinct` after union,
+          default to True
+        :return: unioned dataframe
+
+        :Notice:
+
+        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+        exception will be thrown.
+        """
+        df = self.workflow.union(self, *dfs, distinct=distinct)
+        return self._to_self_type(df)
+
+    def subtract(self: TDF, *dfs: Any, distinct: bool = True) -> TDF:
+        """Subtract ``dfs`` from this dataframe.
+
+        :param dfs: |DataFramesLikeObject|
+        :param distinct: whether to perform `distinct` after subtraction,
+          default to True
+        :return: subtracted dataframe
+
+        :Notice:
+
+        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+        exception will be thrown.
+        """
+        df = self.workflow.subtract(self, *dfs, distinct=distinct)
+        return self._to_self_type(df)
+
+    def intersect(self: TDF, *dfs: Any, distinct: bool = True) -> TDF:
+        """Intersect this dataframe with ``dfs``.
+
+        :param dfs: |DataFramesLikeObject|
+        :param distinct: whether to perform `distinct` after intersection,
+          default to True
+        :return: intersected dataframe
+
+        :Notice:
+
+        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+        exception will be thrown.
+        """
+        df = self.workflow.intersect(self, *dfs, distinct=distinct)
+        return self._to_self_type(df)
+
+    def distinct(self: TDF) -> TDF:
+        """Get distinct dataframe. Equivalent to ``SELECT DISTINCT * FROM df``
+
+        :return: dataframe with unique records
+        """
+        df = self.workflow.process(self, using=Distinct)
+        return self._to_self_type(df)
 
     def checkpoint(self: TDF, namespace: Any = None) -> TDF:
         """[CURRENTLY NO EFFECT] set checkpoint for the current dataframe
@@ -885,7 +943,7 @@ class FugueWorkflow(object):
 
     def join(
         self, *dfs: Any, how: str, on: Optional[Iterable[str]] = None
-    ) -> WorkflowDataFrame:  # pragma: no cover
+    ) -> WorkflowDataFrame:
         """Join dataframes.
         |ReadJoin|
 
@@ -898,6 +956,70 @@ class FugueWorkflow(object):
         """
         _on: List[str] = list(on) if on is not None else []
         return self.process(*dfs, using=RunJoin, params=dict(how=how, on=_on))
+
+    def set_op(self, how: str, *dfs: Any, distinct: bool = True) -> WorkflowDataFrame:
+        """Union, subtract or intersect dataframes.
+
+        :param how: can accept ``union``, ``left_semi``, ``anti``, ``left_anti``,
+          ``inner``, ``left_outer``, ``right_outer``, ``full_outer``, ``cross``
+        :param dfs: |DataFramesLikeObject|
+        :param distinct: whether to perform `distinct` after the set operation,
+          default to True
+        :return: result dataframe of the set operation
+
+        :Notice:
+
+        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+        exception will be thrown.
+        """
+        return self.process(
+            *dfs, using=RunSetOperation, params=dict(how=how, distinct=distinct)
+        )
+
+    def union(self, *dfs: Any, distinct: bool = True) -> WorkflowDataFrame:
+        """Union dataframes in ``dfs``.
+
+        :param dfs: |DataFramesLikeObject|
+        :param distinct: whether to perform `distinct` after union,
+          default to True
+        :return: unioned dataframe
+
+        :Notice:
+
+        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+        exception will be thrown.
+        """
+        return self.set_op("union", *dfs, distinct=distinct)
+
+    def subtract(self, *dfs: Any, distinct: bool = True) -> WorkflowDataFrame:
+        """Subtract ``dfs[1:]`` from ``dfs[0]``.
+
+        :param dfs: |DataFramesLikeObject|
+        :param distinct: whether to perform `distinct` after subtraction,
+          default to True
+        :return: subtracted dataframe
+
+        :Notice:
+
+        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+        exception will be thrown.
+        """
+        return self.set_op("subtract", *dfs, distinct=distinct)
+
+    def intersect(self, *dfs: Any, distinct: bool = True) -> WorkflowDataFrame:
+        """Intersect dataframes in ``dfs``.
+
+        :param dfs: |DataFramesLikeObject|
+        :param distinct: whether to perform `distinct` after intersection,
+          default to True
+        :return: intersected dataframe
+
+        :Notice:
+
+        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+        exception will be thrown.
+        """
+        return self.set_op("intersect", *dfs, distinct=distinct)
 
     def zip(
         self,

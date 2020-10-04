@@ -1,4 +1,4 @@
-from typing import List, no_type_check
+from typing import List, no_type_check, Any
 
 from fugue.collections.partition import PartitionCursor
 from fugue.dataframe import (
@@ -81,6 +81,29 @@ class RunJoin(Processor):
         for i in range(1, len(dfs)):
             df = self.execution_engine.join(df, dfs[i], how=how, on=on)
         return df
+
+
+class RunSetOperation(Processor):
+    def process(self, dfs: DataFrames) -> DataFrame:
+        if len(dfs) == 1:
+            return dfs[0]
+        how = self.params.get_or_throw("how", str)
+        func: Any = {
+            "union": self.execution_engine.union,
+            "subtract": self.execution_engine.subtract,
+            "intersect": self.execution_engine.intersect,
+        }[how]
+        distinct = self.params.get("distinct", True)
+        df = dfs[0]
+        for i in range(1, len(dfs)):
+            df = func(df, dfs[i], distinct=distinct)
+        return df
+
+
+class Distinct(Processor):
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        return self.execution_engine.distinct(dfs[0])
 
 
 class RunSQLSelect(Processor):

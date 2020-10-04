@@ -254,6 +254,9 @@ class DaskExecutionEngine(ExecutionEngine):
         metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
+            distinct, NotImplementedError("EXCEPT ALL for DaskExecutionEngine")
+        )
+        assert_or_throw(
             df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
         )
         d = self.pl_utils.except_df(
@@ -268,6 +271,9 @@ class DaskExecutionEngine(ExecutionEngine):
         distinct: bool = True,
         metadata: Any = None,
     ) -> DataFrame:
+        assert_or_throw(
+            distinct, NotImplementedError("INTERSECT ALL for DaskExecutionEngine")
+        )
         assert_or_throw(
             df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
         )
