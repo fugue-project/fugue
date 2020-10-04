@@ -133,22 +133,50 @@ class ExecutionEngineTests(object):
                 return PandasDataFrame(df, schema)
 
             e = self.engine
-            # test datetime with nat
-            dt = datetime.now()
+            # test with multiple key with null values
             o = ArrayDataFrame(
-                [[dt, 2], [None, 2], [None, 1], [dt, 5], [None, 4]],
-                "a:datetime,b:int",
+                [[1, None, 1], [1, None, 0], [None, None, 1]],
+                "a:double,b:double,c:int",
                 dict(a=1),
             )
             c = e.map(
-                o, select_top, o.schema, PartitionSpec(by=["a"], presort="b DESC")
+                o, select_top, o.schema, PartitionSpec(by=["a", "b"], presort="c")
             )
-            df_eq(c, [[None, 4], [dt, 5]], "a:datetime,b:int", throw=True)
-            d = e.map(c, with_nat, "a:datetime,b:int,nat:datetime", PartitionSpec())
+            df_eq(
+                c,
+                [[1, None, 0], [None, None, 1]],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
+            # test datetime with nat
+            dt = datetime.now()
+            o = ArrayDataFrame(
+                [
+                    [dt, 2, 1],
+                    [None, 2, None],
+                    [None, 1, None],
+                    [dt, 5, 1],
+                    [None, 4, None],
+                ],
+                "a:datetime,b:int,c:double",
+                dict(a=1),
+            )
+            c = e.map(
+                o, select_top, o.schema, PartitionSpec(by=["a", "c"], presort="b DESC")
+            )
+            df_eq(
+                c,
+                [[None, 4, None], [dt, 5, 1]],
+                "a:datetime,b:int,c:double",
+                throw=True,
+            )
+            d = e.map(
+                c, with_nat, "a:datetime,b:int,c:double,nat:datetime", PartitionSpec()
+            )
             df_eq(
                 d,
-                [[None, 4, None], [dt, 5, None]],
-                "a:datetime,b:int,nat:datetime",
+                [[None, 4, None, None], [dt, 5, 1, None]],
+                "a:datetime,b:int,c:double,nat:datetime",
                 throw=True,
             )
             # test list
@@ -247,7 +275,7 @@ class ExecutionEngineTests(object):
                 c, [[1, "2", 6.0], [3, "4", None]], "a:int,b:str,c:double", throw=True
             )
             c = e.join(b, a, how="left_outer", on=["a"])
-            assert c.as_pandas().values.tolist()[1][2] is None
+            # assert c.as_pandas().values.tolist()[1][2] is None
             df_eq(
                 c, [[6.0, 1, "2"], [2.0, 7, None]], "c:double,a:int,b:str", throw=True
             )
@@ -255,7 +283,7 @@ class ExecutionEngineTests(object):
             a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
             b = e.to_df([["6", 1], ["2", 7]], "c:str,a:int")
             c = e.join(a, b, how="right_outer", on=["a"])
-            assert c.as_pandas().values.tolist()[1][1] is None
+            # assert c.as_pandas().values.tolist()[1][1] is None
             df_eq(c, [[1, "2", "6"], [7, None, "2"]], "a:int,b:str,c:str", throw=True)
 
             c = e.join(a, b, how="full_outer", on=["a"])
@@ -326,6 +354,95 @@ class ExecutionEngineTests(object):
             b = e.to_df([], "c:int,a:int")
             c = e.join(a, b, how="anti", on=["a"])
             df_eq(c, [], "a:int,b:int", throw=True)
+
+        def test__join_with_null_keys(self):
+            # SQL will not match null values
+            e = self.engine
+            a = e.to_df([[1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
+            b = e.to_df([[1, 2, 33], [4, None, 63]], "a:double,b:double,d:int")
+            c = e.join(a, b, how="INNER")
+            df_eq(c, [[1, 2, 3, 33]], "a:double,b:double,c:int,d:int", throw=True)
+
+        def test_union(self):
+            e = self.engine
+            a = e.to_df([[1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
+            b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
+            c = e.union(a, b, metadata=dict(a=1))
+            df_eq(
+                c,
+                [[1, 2, 3], [4, None, 6], [1, 2, 33]],
+                "a:double,b:double,c:int",
+                metadata=dict(a=1),
+                throw=True,
+            )
+            c = e.union(a, b, distinct=False)
+            df_eq(
+                c,
+                [[1, 2, 3], [4, None, 6], [1, 2, 33], [4, None, 6]],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
+
+        def test_subtract(self):
+            e = self.engine
+            a = e.to_df([[1, 2, 3], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
+            b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
+            c = e.subtract(a, b, metadata=dict(a=1))
+            df_eq(
+                c,
+                [[1, 2, 3]],
+                "a:double,b:double,c:int",
+                metadata=dict(a=1),
+                throw=True,
+            )
+            # TODO: EXCEPT ALL is not implemented (QPD issue)
+            # c = e.subtract(a, b, distinct=False)
+            # df_eq(
+            #     c,
+            #     [[1, 2, 3], [1, 2, 3]],
+            #     "a:double,b:double,c:int",
+            #     throw=True,
+            # )
+
+        def test_intersect(self):
+            e = self.engine
+            a = e.to_df(
+                [[1, 2, 3], [4, None, 6], [4, None, 6]], "a:double,b:double,c:int"
+            )
+            b = e.to_df(
+                [[1, 2, 33], [4, None, 6], [4, None, 6], [4, None, 6]],
+                "a:double,b:double,c:int",
+            )
+            c = e.intersect(a, b, metadata=dict(a=1))
+            df_eq(
+                c,
+                [[4, None, 6]],
+                "a:double,b:double,c:int",
+                metadata=dict(a=1),
+                throw=True,
+            )
+            # TODO: INTERSECT ALL is not implemented (QPD issue)
+            # c = e.intersect(a, b, distinct=False)
+            # df_eq(
+            #     c,
+            #     [[4, None, 6], [4, None, 6]],
+            #     "a:double,b:double,c:int",
+            #     throw=True,
+            # )
+
+        def test_distinct(self):
+            e = self.engine
+            a = e.to_df(
+                [[4, None, 6], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int"
+            )
+            c = e.distinct(a, metadata=dict(a=1))
+            df_eq(
+                c,
+                [[4, None, 6], [1, 2, 3]],
+                "a:double,b:double,c:int",
+                metadata=dict(a=1),
+                throw=True,
+            )
 
         def test__serialize_by_partition(self):
             e = self.engine

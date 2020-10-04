@@ -117,3 +117,20 @@ If you installed the requirements manually, install the git hook scripts with:
 ```
 pre-commit install
 ```
+
+
+## Update History
+
+### 0.4.1
+* Added set operations to programming interface: `union`, `subtract`, `intersect`
+* Added `distinct` to programming interface
+* Ensured partitioning follows SQL convention: groups with null keys are NOT removed
+* Switched `join`, `union`, `subtract`, `intersect`, `distinct` to QPD implementations, so they follow SQL convention
+* Set operations in Fugue SQL can directly operate on Fugue statemens (e.g. `TRANSFORM USING t1 UNION TRANSFORM USING t2`)
+* Fixed bugs
+* Added onboarding document for contributors
+
+### <=0.4.0
+
+* Main features of Fugue core and Fugue SQL
+* Support backends: Pandas, Spark and Dask

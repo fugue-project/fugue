@@ -1,8 +1,8 @@
 import logging
-from typing import Any, Callable, Iterable, List, Optional, Union
+from typing import Any, Callable, List, Optional, Union
 
 import pandas as pd
-import pyarrow as pa
+from fugue._utils.io import load_df, save_df
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
@@ -22,13 +22,12 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
-from fugue._utils.io import load_df, save_df
+from qpd_pandas.engine import PandasUtils
 from sqlalchemy import create_engine
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
-from triad.utils.pandas_like import PD_UTILS
 
 
 class SqliteEngine(SQLEngine):
@@ -37,8 +36,8 @@ class SqliteEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def __init__(self, execution_engine: ExecutionEngine) -> None:
-        return super().__init__(execution_engine)
+    def __init__(self, execution_engine: ExecutionEngine):
+        super().__init__(execution_engine)
 
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:
         sql_engine = create_engine("sqlite:///:memory:")
@@ -77,6 +76,11 @@ class NativeExecutionEngine(ExecutionEngine):
     @property
     def default_sql_engine(self) -> SQLEngine:
         return self._default_sql_engine
+
+    @property
+    def pl_utils(self) -> PandasUtils:
+        """Pandas-like dataframe utils"""
+        return PandasUtils()
 
     def stop(self) -> None:  # pragma: no cover
         return
@@ -134,7 +138,7 @@ class NativeExecutionEngine(ExecutionEngine):
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()
 
-        result = PD_UTILS.safe_groupby_apply(
+        result = self.pl_utils.safe_groupby_apply(
             df.as_pandas(), partition_spec.partition_by, _map
         )
         return PandasDataFrame(result, output_schema, metadata)
@@ -154,58 +158,63 @@ class NativeExecutionEngine(ExecutionEngine):
         metadata: Any = None,
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
-        how = how.lower().replace("_", "").replace(" ", "")
-        if how == "cross":
-            d1 = df1.as_pandas()
-            d2 = df2.as_pandas()
-            d1["__cross_join_index__"] = 1
-            d2["__cross_join_index__"] = 1
-            d = d1.merge(d2, on=("__cross_join_index__")).drop(
-                "__cross_join_index__", axis=1
-            )
-            return PandasDataFrame(d.reset_index(drop=True), output_schema, metadata)
-        if how in ["semi", "leftsemi"]:
-            d1 = df1.as_pandas()
-            d2 = df2.as_pandas()[key_schema.names]
-            d = d1.merge(d2, on=key_schema.names, how="inner")
-            return PandasDataFrame(d.reset_index(drop=True), output_schema, metadata)
-        if how in ["anti", "leftanti"]:
-            d1 = df1.as_pandas()
-            d2 = df2.as_pandas()[key_schema.names]
-            d2["__anti_join_dummy__"] = 1.0
-            d = d1.merge(d2, on=key_schema.names, how="left")
-            d = d[d.iloc[:, -1].isnull()]
-            return PandasDataFrame(
-                d.drop(["__anti_join_dummy__"], axis=1).reset_index(drop=True),
-                output_schema,
-                metadata,
-            )
-        fix_left, fix_right = False, False
-        if how in ["leftouter"]:
-            how = "left"
-            self._validate_outer_joinable(df2.schema, key_schema)
-            fix_right = True
-        if how in ["rightouter"]:
-            how = "right"
-            self._validate_outer_joinable(df1.schema, key_schema)
-            fix_left = True
-        if how in ["fullouter"]:
-            how = "outer"
-            self._validate_outer_joinable(df1.schema, key_schema)
-            self._validate_outer_joinable(df2.schema, key_schema)
-            fix_left, fix_right = True, True
-        d1 = df1.as_pandas()
-        d2 = df2.as_pandas()
-        d = d1.merge(d2, on=key_schema.names, how=how)
-        if fix_left:
-            d = self._fix_nan(
-                d, output_schema, df1.schema.exclude(list(df2.schema.keys())).keys()
-            )
-        if fix_right:
-            d = self._fix_nan(
-                d, output_schema, df2.schema.exclude(list(df1.schema.keys())).keys()
-            )
+        d = self.pl_utils.join(
+            df1.as_pandas(), df2.as_pandas(), join_type=how, on=key_schema.names
+        )
         return PandasDataFrame(d.reset_index(drop=True), output_schema, metadata)
+
+    def union(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        d = self.pl_utils.union(df1.as_pandas(), df2.as_pandas(), unique=distinct)
+        return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+
+    def subtract(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            distinct, NotImplementedError("EXCEPT ALL for NativeExecutionEngine")
+        )
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        d = self.pl_utils.except_df(df1.as_pandas(), df2.as_pandas(), unique=distinct)
+        return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+
+    def intersect(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            distinct, NotImplementedError("INTERSECT ALL for NativeExecutionEngine")
+        )
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        d = self.pl_utils.intersect(df1.as_pandas(), df2.as_pandas(), unique=distinct)
+        return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+
+    def distinct(
+        self,
+        df: DataFrame,
+        metadata: Any = None,
+    ) -> DataFrame:
+        d = self.pl_utils.drop_duplicates(df.as_pandas())
+        return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
 
     def load_df(
         self,
@@ -236,21 +245,3 @@ class NativeExecutionEngine(ExecutionEngine):
             )
         df = self.to_df(df)
         save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
-
-    def _validate_outer_joinable(self, schema: Schema, key_schema: Schema) -> None:
-        # TODO: this is to prevent wrong behavior of pandas, we may not need it
-        # s = schema - key_schema
-        # if any(pa.types.is_boolean(v) or pa.types.is_integer(v) for v in s.types):
-        #    raise NotImplementedError(
-        #        f"{schema} excluding {key_schema} is not outer joinable"
-        #    )
-        return
-
-    def _fix_nan(
-        self, df: pd.DataFrame, schema: Schema, keys: Iterable[str]
-    ) -> pd.DataFrame:
-        for key in keys:
-            if pa.types.is_floating(schema[key].type):
-                continue
-            df[key] = df[key].where(pd.notna(df[key]), None)
-        return df

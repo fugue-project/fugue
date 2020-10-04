@@ -28,6 +28,9 @@ class BuiltInTests(object):
     test suite than :class:`~fugue_test.execution_suite.ExecutionEngineTests`.
     Any new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     should also pass this test suite.
+
+    Whenever you add method to FugueWorkflow and WorkflowDataFrame, you should
+    add correspondent tests here
     """
 
     class Tests(TestCase):
@@ -356,6 +359,110 @@ class BuiltInTests(object):
                 a = a.transform(mock_tf1)
                 aa = dag.select("* FROM", a)
                 dag.select("* FROM", b).assert_eq(aa)
+
+        def test_union(self):
+            with self.dag() as dag:
+                a = dag.df([[1, 10], [2, None], [2, None]], "x:long,y:double")
+                b = dag.df([[2, None], [2, 20]], "x:long,y:double")
+                c = dag.df([[1, 10], [2, 20]], "x:long,y:double")
+                a.union().assert_eq(a)
+                a.union(b, c).assert_eq(
+                    ArrayDataFrame(
+                        [
+                            [1, 10],
+                            [2, None],
+                            [2, 20],
+                        ],
+                        "x:long,y:double",
+                    )
+                )
+                a.union(b, c, distinct=False).assert_eq(
+                    ArrayDataFrame(
+                        [
+                            [1, 10],
+                            [2, None],
+                            [2, None],
+                            [2, None],
+                            [2, 20],
+                            [1, 10],
+                            [2, 20],
+                        ],
+                        "x:long,y:double",
+                    )
+                )
+
+        def test_intersect(self):
+            with self.dag() as dag:
+                a = dag.df([[1, 10], [2, None], [2, None]], "x:long,y:double")
+                b = dag.df([[2, None], [2, 20]], "x:long,y:double")
+                c = dag.df([[1, 10], [2, 20]], "x:long,y:double")
+                # d = dag.df([[1, 10], [2, 20], [2, None]], "x:long,y:double")
+                a.intersect(b).assert_eq(
+                    ArrayDataFrame(
+                        [[2, None]],
+                        "x:long,y:double",
+                    )
+                )
+                a.intersect(b, c).assert_eq(
+                    ArrayDataFrame(
+                        [],
+                        "x:long,y:double",
+                    )
+                )
+                # TODO: INTERSECT ALL is not implemented (QPD issue)
+                # a.intersect(b, distinct=False).assert_eq(
+                #     ArrayDataFrame(
+                #         [[2, None], [2, None]],
+                #         "x:long,y:double",
+                #     )
+                # )
+                # a.intersect(b, d, distinct=False).assert_eq(
+                #     ArrayDataFrame(
+                #         [[2, None], [2, None]],
+                #         "x:long,y:double",
+                #     )
+                # )
+
+        def test_subtract(self):
+            with self.dag() as dag:
+                a = dag.df([[1, 10], [2, None], [2, None]], "x:long,y:double")
+                b = dag.df([[2, None], [2, 20]], "x:long,y:double")
+                c = dag.df([[1, 10], [2, 20]], "x:long,y:double")
+                a.subtract(b).assert_eq(
+                    ArrayDataFrame(
+                        [[1, 10]],
+                        "x:long,y:double",
+                    )
+                )
+                a.subtract(c).assert_eq(
+                    ArrayDataFrame(
+                        [[2, None]],
+                        "x:long,y:double",
+                    )
+                )
+                # # TODO: EXCEPT ALL is not implemented (QPD issue)
+                # a.subtract(c, distinct=False).assert_eq(
+                #     ArrayDataFrame(
+                #         [[2, None], [2, None]],
+                #         "x:long,y:double",
+                #     )
+                # )
+                a.subtract(b, c).assert_eq(
+                    ArrayDataFrame(
+                        [],
+                        "x:long,y:double",
+                    )
+                )
+
+        def test_distinct(self):
+            with self.dag() as dag:
+                a = dag.df([[1, 10], [2, None], [2, None]], "x:long,y:double")
+                a.distinct().assert_eq(
+                    ArrayDataFrame(
+                        [[1, 10], [2, None]],
+                        "x:long,y:double",
+                    )
+                )
 
         def test_col_ops(self):
             with self.dag() as dag:

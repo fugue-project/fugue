@@ -224,7 +224,7 @@ class ExecutionEngine(ABC):
           ``inner``, ``left_outer``, ``right_outer``, ``full_outer``, ``cross``
         :param on: it can always be inferred, but if you provide, it will be
           validated against the inferred keys.
-        :param metadata: dict-like object to add to the joined dataframe,
+        :param metadata: dict-like object to add to the result dataframe,
           defaults to None
         :return: the joined dataframe
 
@@ -233,6 +233,98 @@ class ExecutionEngine(ABC):
         Please read :func:`this <fugue.dataframe.utils.get_join_schemas>`
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def union(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:  # pragma: no cover
+        """Join two dataframes
+
+        :param df1: the first dataframe
+        :param df2: the second dataframe
+        :param distinct: ``true`` for ``UNION`` (== ``UNION DISTINCT``),
+          ``false`` for ``UNION ALL``
+        :param metadata: dict-like object to add to the result dataframe,
+          defaults to None
+        :return: the unioned dataframe
+
+        :Notice:
+
+        Currently, the schema of ``df1`` and ``df2`` must be identical, or
+        an exception will be thrown.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def subtract(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:  # pragma: no cover
+        """``df1 - df2``
+
+        :param df1: the first dataframe
+        :param df2: the second dataframe
+        :param distinct: ``true`` for ``EXCEPT`` (== ``EXCEPT DISTINCT``),
+          ``false`` for ``EXCEPT ALL``
+        :param metadata: dict-like object to add to the result dataframe,
+          defaults to None
+        :return: the unioned dataframe
+
+        :Notice:
+
+        Currently, the schema of ``df1`` and ``df2`` must be identical, or
+        an exception will be thrown.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def intersect(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        distinct: bool = True,
+        metadata: Any = None,
+    ) -> DataFrame:  # pragma: no cover
+        """Intersect ``df1`` and ``df2``
+
+        :param df1: the first dataframe
+        :param df2: the second dataframe
+        :param distinct: ``true`` for ``INTERSECT`` (== ``INTERSECT DISTINCT``),
+          ``false`` for ``INTERSECT ALL``
+        :param metadata: dict-like object to add to the result dataframe,
+          defaults to None
+        :return: the unioned dataframe
+
+        :Notice:
+
+        Currently, the schema of ``df1`` and ``df2`` must be identical, or
+        an exception will be thrown.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def distinct(
+        self,
+        df: DataFrame,
+        metadata: Any = None,
+    ) -> DataFrame:  # pragma: no cover
+        """Equivalent to ``SELECT DISTINCT * FROM df``
+
+        :param df: dataframe
+        :param metadata: dict-like object to add to the result dataframe,
+          defaults to None
+        :type metadata: Any, optional
+        :return: [description]
+        :rtype: DataFrame
+        """
+        pass
 
     def zip(
         self,
