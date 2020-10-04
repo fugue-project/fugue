@@ -395,15 +395,14 @@ class ExecutionEngineTests(object):
                 metadata=dict(a=1),
                 throw=True,
             )
-            return
             # TODO: EXCEPT ALL is not implemented (QPD issue)
-            c = e.subtract(a, b, distinct=False)
-            df_eq(
-                c,
-                [[1, 2, 3], [1, 2, 3]],
-                "a:double,b:double,c:int",
-                throw=True,
-            )
+            # c = e.subtract(a, b, distinct=False)
+            # df_eq(
+            #     c,
+            #     [[1, 2, 3], [1, 2, 3]],
+            #     "a:double,b:double,c:int",
+            #     throw=True,
+            # )
 
         def test_intersect(self):
             e = self.engine
@@ -422,15 +421,14 @@ class ExecutionEngineTests(object):
                 metadata=dict(a=1),
                 throw=True,
             )
-            return
             # TODO: INTERSECT ALL is not implemented (QPD issue)
-            c = e.intersect(a, b, distinct=False)
-            df_eq(
-                c,
-                [[4, None, 6], [4, None, 6]],
-                "a:double,b:double,c:int",
-                throw=True,
-            )
+            # c = e.intersect(a, b, distinct=False)
+            # df_eq(
+            #     c,
+            #     [[4, None, 6], [4, None, 6]],
+            #     "a:double,b:double,c:int",
+            #     throw=True,
+            # )
 
         def test_distinct(self):
             e = self.engine

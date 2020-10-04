@@ -315,7 +315,7 @@ class SparkExecutionEngine(ExecutionEngine):
         d2 = self.to_df(df2).native
         if distinct:
             d: Any = d1.subtract(d2)
-        else:
+        else:  # pragma: no cover
             d = d1.exceptAll(d2)
         return self.to_df(d, df1.schema, metadata)
 
@@ -333,7 +333,7 @@ class SparkExecutionEngine(ExecutionEngine):
         d2 = self.to_df(df2).native
         if distinct:
             d: Any = d1.intersect(d2)
-        else:
+        else:  # pragma: no cover
             d = d1.intersectAll(d2)
         return self.to_df(d, df1.schema, metadata)
 

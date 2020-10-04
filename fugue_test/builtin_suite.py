@@ -365,8 +365,8 @@ class BuiltInTests(object):
                 a = dag.df([[1, 10], [2, None], [2, None]], "x:long,y:double")
                 b = dag.df([[2, None], [2, 20]], "x:long,y:double")
                 c = dag.df([[1, 10], [2, 20]], "x:long,y:double")
-                d = a.union(b, c)
-                d.assert_eq(
+                a.union().assert_eq(a)
+                a.union(b, c).assert_eq(
                     ArrayDataFrame(
                         [
                             [1, 10],
@@ -376,8 +376,7 @@ class BuiltInTests(object):
                         "x:long,y:double",
                     )
                 )
-                d = a.union(b, c, distinct=False)
-                d.assert_eq(
+                a.union(b, c, distinct=False).assert_eq(
                     ArrayDataFrame(
                         [
                             [1, 10],
