@@ -23,6 +23,7 @@ setup(
         "qpd>=0.2.4",
         "sqlalchemy",
         "pyarrow>=0.15.1",
+        "pandas>=1.0.2",
     ],
     extras_require={
         "sql": ["antlr4-python3-runtime", "jinja2"],
