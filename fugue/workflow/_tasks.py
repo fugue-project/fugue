@@ -56,7 +56,8 @@ class FugueTask(TaskSpec, ABC):
             deterministic=deterministic,
             lazy=lazy,
         )
-        self._persist: Any = None
+        self._persist = False
+        self._persist_value: Any = None
         self._broadcast = False
         self._checkpoint = False
         self._checkpoint_namespace: Optional[str] = None
@@ -71,7 +72,8 @@ class FugueTask(TaskSpec, ABC):
             self.deterministic,
             self.lazy,
             self.node_spec,
-            str(self._persist),
+            self._persist,
+            str(self._persist_value),
             self._broadcast,
             self._checkpoint,
             self._checkpoint_namespace,
@@ -104,13 +106,14 @@ class FugueTask(TaskSpec, ABC):
         self._checkpoint_namespace = None if namespace is None else str(namespace)
 
     def persist(self, level: Any) -> "FugueTask":
-        self._persist = "" if level is None else level
+        self._persist = True
+        self._persist_value = level
         return self
 
     def handle_persist(self, df: DataFrame, engine: ExecutionEngine) -> DataFrame:
-        if self._persist is None:
+        if not self._persist:
             return df
-        return engine.persist(df, None if self._persist == "" else self._persist)
+        return engine.persist(df, self._persist_value)
 
     def broadcast(self) -> "FugueTask":
         self._broadcast = True

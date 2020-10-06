@@ -24,8 +24,12 @@ from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.threading import RunOnce
 
+from fugue_dask._constants import (
+    FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS,
+    FUGUE_DASK_DEFAULT_CONF,
+)
 from fugue_dask._utils import DaskUtils
-from fugue_dask.dataframe import DEFAULT_CONFIG, DaskDataFrame
+from fugue_dask.dataframe import DaskDataFrame
 
 
 class QPDDaskEngine(SQLEngine):
@@ -61,7 +65,7 @@ class DaskExecutionEngine(ExecutionEngine):
     """
 
     def __init__(self, conf: Any = None):
-        p = ParamDict(DEFAULT_CONFIG)
+        p = ParamDict(FUGUE_DASK_DEFAULT_CONF)
         p.update(ParamDict(conf))
         super().__init__(p)
         self._fs = FileSystem()
@@ -113,7 +117,7 @@ class DaskExecutionEngine(ExecutionEngine):
           call this method to convert before doing anything
         """
         default_partitions = self.conf.get_or_throw(
-            "fugue.dask.dataframe.default.partitions", int
+            FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS, int
         )
         if isinstance(df, DataFrame):
             assert_or_throw(

@@ -8,6 +8,7 @@ from adagio.instances import (
     WorkflowHooks,
     WorkflowResultCache,
 )
+from fugue.constants import FUGUE_CONF_WORKFLOW_CONCURRENCY, FUGUE_DEFAULT_CONF
 from fugue.dataframe import DataFrame
 from fugue.execution.execution_engine import ExecutionEngine
 from fugue.execution.native_execution_engine import NativeExecutionEngine
@@ -33,7 +34,11 @@ class FugueWorkflowContext(WorkflowContext):
         self._results: Dict[Any, DataFrame] = {}
         if workflow_engine is None:
             workflow_engine = ParallelExecutionEngine(
-                self.execution_engine.conf.get("fugue.workflow.concurrency", 1), self
+                self.execution_engine.conf.get(
+                    FUGUE_CONF_WORKFLOW_CONCURRENCY,
+                    FUGUE_DEFAULT_CONF[FUGUE_CONF_WORKFLOW_CONCURRENCY],
+                ),
+                self,
             )
         super().__init__(
             cache=cache,

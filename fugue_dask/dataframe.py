@@ -4,11 +4,15 @@ import dask.dataframe as pd
 import pandas
 from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.dataframe import _input_schema
+from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
+
+from fugue_dask._constants import (
+    FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS,
+    FUGUE_DASK_DEFAULT_CONF,
+)
 from fugue_dask._utils import DASK_UTILS
-from fugue_dask._constants import DEFAULT_CONFIG
-from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 
 
 class DaskDataFrame(DataFrame):
@@ -41,9 +45,9 @@ class DaskDataFrame(DataFrame):
     ):
         try:
             if num_partitions <= 0:
-                num_partitions = DEFAULT_CONFIG.get_or_throw(
-                    "fugue.dask.dataframe.default.partitions", int
-                )
+                num_partitions = FUGUE_DASK_DEFAULT_CONF[
+                    FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS
+                ]
             if df is None:
                 schema = _input_schema(schema).assert_not_empty()
                 df = []

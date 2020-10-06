@@ -1,3 +1,6 @@
-from triad.collections.dict import ParamDict
+from typing import Dict, Any
 
-DEFAULT_CONFIG = ParamDict({"fugue.dask.dataframe.default.partitions": 16})
+FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS = "fugue.dask.dataframe.default.partitions"
+FUGUE_DASK_DEFAULT_CONF: Dict[str, Any] = {
+    FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS: 16
+}
