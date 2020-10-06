@@ -4,7 +4,10 @@ from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar
 
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
-from fugue.constants import FUGUE_CONF_WORKFLOW_AUTO_PERSIST
+from fugue.constants import (
+    FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
+    FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE,
+)
 from fugue.dataframe import DataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowError
@@ -455,7 +458,7 @@ class WorkflowDataFrame(DataFrame):
         :return: the persisted dataframe
         :rtype: :class:`~.WorkflowDataFrame`
         """
-        self._task.persist("" if level is None else level)
+        self._task.persist(level)
         return self
 
     def broadcast(self: TDF) -> TDF:
@@ -1178,8 +1181,10 @@ class FugueWorkflow(object):
             if len(self._graph.down[v]) > 1 and self.conf.get_or_throw(
                 FUGUE_CONF_WORKFLOW_AUTO_PERSIST, bool
             ):
-                self._spec.tasks[v]._persist = self.conf.get(
-                    "fugue.workflow.auto_persist_value", ""
+                self._spec.tasks[v].persist(
+                    self.conf.get_or_none(
+                        FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE, object
+                    )
                 )
         return WorkflowDataFrame(self, wt)
 
