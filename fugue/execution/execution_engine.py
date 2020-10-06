@@ -18,6 +18,7 @@ from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_size
 from triad.utils.string import validate_triad_var_name
+from fugue.constants import FUGUE_DEFAULT_CONF
 
 _DEFAULT_JOIN_KEYS: List[str] = []
 
@@ -76,7 +77,8 @@ class ExecutionEngine(ABC):
     """
 
     def __init__(self, conf: Any):
-        self._conf = ParamDict(conf)
+        _conf = ParamDict(conf)
+        self._conf = ParamDict({**FUGUE_DEFAULT_CONF, **_conf})
 
     @property
     def conf(self) -> ParamDict:

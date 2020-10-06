@@ -2,13 +2,18 @@ import inspect
 from typing import Any, Dict
 
 from fugue.workflow import FugueWorkflow, WorkflowDataFrame
-from fugue_sql._utils import fill_sql_template
-from fugue_sql._constants import FUGUE_SQL_DEFAULT_CONF
-from fugue_sql.exceptions import FugueSQLError
-from fugue_sql._parse import FugueSQL
-from fugue_sql._visitors import FugueSQLHooks, _Extensions
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
+
+from fugue_sql._constants import (
+    FUGUE_SQL_CONF_IGNORE_CASE,
+    FUGUE_SQL_CONF_SIMPLE_ASSIGN,
+    FUGUE_SQL_DEFAULT_CONF,
+)
+from fugue_sql._parse import FugueSQL
+from fugue_sql._utils import fill_sql_template
+from fugue_sql._visitors import FugueSQLHooks, _Extensions
+from fugue_sql.exceptions import FugueSQLError
 
 
 class FugueSQLWorkflow(FugueWorkflow):
@@ -56,10 +61,8 @@ class FugueSQLWorkflow(FugueWorkflow):
         sql = FugueSQL(
             code,
             "fugueLanguage",
-            ignore_case=self.conf.get_or_throw("fugue.sql.compile.ignore_case", bool),
-            simple_assign=self.conf.get_or_throw(
-                "fugue.sql.compile.simple_assign", bool
-            ),
+            ignore_case=self.conf.get_or_throw(FUGUE_SQL_CONF_IGNORE_CASE, bool),
+            simple_assign=self.conf.get_or_throw(FUGUE_SQL_CONF_SIMPLE_ASSIGN, bool),
         )
         dfs = {k: v for k, v in params.items() if isinstance(v, WorkflowDataFrame)}
         v = _Extensions(sql, FugueSQLHooks(), self, dfs)

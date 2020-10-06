@@ -4,17 +4,18 @@ from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar
 
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
+from fugue.constants import FUGUE_CONF_WORKFLOW_AUTO_PERSIST
 from fugue.dataframe import DataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowError
 from fugue.extensions._builtins import (
     AssertEqual,
     CreateData,
+    Distinct,
     DropColumns,
     Load,
     Rename,
     RunJoin,
-    Distinct,
     RunSetOperation,
     RunSQLSelect,
     RunTransformer,
@@ -1174,8 +1175,8 @@ class FugueWorkflow(object):
         for v in dep.dependency.values():
             v = v.split(".")[0]
             self._graph.add(name, v)
-            if len(self._graph.down[v]) > 1 and self.conf.get(
-                "fugue.workflow.auto_persist", False
+            if len(self._graph.down[v]) > 1 and self.conf.get_or_throw(
+                FUGUE_CONF_WORKFLOW_AUTO_PERSIST, bool
             ):
                 self._spec.tasks[v]._persist = self.conf.get(
                     "fugue.workflow.auto_persist_value", ""

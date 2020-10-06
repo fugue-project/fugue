@@ -19,15 +19,6 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
-from fugue_spark._constants import FUGUE_SPARK_DEFAULT_CONF
-from fugue_spark.dataframe import SparkDataFrame
-from fugue_spark._utils.convert import to_schema, to_spark_schema, to_type_safe_input
-from fugue_spark._utils.io import SparkIO
-from fugue_spark._utils.partition import (
-    even_repartition,
-    hash_repartition,
-    rand_repartition,
-)
 from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
@@ -38,6 +29,19 @@ from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.iter import EmptyAwareIterable
 from triad.utils.threading import RunOnce
+
+from fugue_spark._constants import (
+    FUGUE_SPARK_CONF_USE_PANDAS_UDF,
+    FUGUE_SPARK_DEFAULT_CONF,
+)
+from fugue_spark._utils.convert import to_schema, to_spark_schema, to_type_safe_input
+from fugue_spark._utils.io import SparkIO
+from fugue_spark._utils.partition import (
+    even_repartition,
+    hash_repartition,
+    rand_repartition,
+)
+from fugue_spark.dataframe import SparkDataFrame
 
 _TO_SPARK_JOIN_MAP: Dict[str, str] = {
     "inner": "inner",
@@ -234,7 +238,7 @@ class SparkExecutionEngine(ExecutionEngine):
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
         if (
-            self.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
+            self.conf.get_or_throw(FUGUE_SPARK_CONF_USE_PANDAS_UDF, bool)
             and len(partition_spec.partition_by) > 0
             and not any(pa.types.is_nested(t) for t in Schema(output_schema).types)
         ):
