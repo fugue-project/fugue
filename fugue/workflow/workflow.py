@@ -37,6 +37,7 @@ from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
 
+
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
 TDF = TypeVar("TDF", bound="WorkflowDataFrame")
@@ -132,7 +133,7 @@ class WorkflowDataFrame(DataFrame):
 
         Please read the :ref:`Processor Tutorial <tutorial:/tutorials/processor.ipynb>`
 
-        :param using: processor-like object
+        :param using: processor-like object, can't be a string expression
         :param schema: |SchemaLikeObject|, defaults to None. The processor
           will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.output_schema`
@@ -145,6 +146,9 @@ class WorkflowDataFrame(DataFrame):
         :return: result dataframe
         :rtype: :class:`~.WorkflowDataFrame`
         """
+        assert_or_throw(
+            not isinstance(using, str), f"processor {using} can't be string expression"
+        )
         if pre_partition is None:
             pre_partition = self._metadata.get("pre_partition", PartitionSpec())
         df = self.workflow.process(
@@ -158,7 +162,7 @@ class WorkflowDataFrame(DataFrame):
 
         Please read the :ref:`Outputter Tutorial <tutorial:/tutorials/outputter.ipynb>`
 
-        :param using: outputter-like object
+        :param using: outputter-like object, can't be a string expression
         :param params: |ParamsLikeObject| to run the outputter, defaults to None.
           The outputter will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.params`
@@ -166,6 +170,9 @@ class WorkflowDataFrame(DataFrame):
           The outputter will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
         """
+        assert_or_throw(
+            not isinstance(using, str), f"outputter {using} can't be string expression"
+        )
         if pre_partition is None:
             pre_partition = self._metadata.get("pre_partition", PartitionSpec())
         self.workflow.output(
@@ -232,7 +239,7 @@ class WorkflowDataFrame(DataFrame):
         Please read the
         :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
 
-        :param using: transformer-like object
+        :param using: transformer-like object, can't be a string expression
         :param schema: |SchemaLikeObject|, defaults to None. The transformer
           will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.output_schema`
@@ -247,6 +254,10 @@ class WorkflowDataFrame(DataFrame):
         :return: the transformed dataframe
         :rtype: :class:`~.WorkflowDataFrame`
         """
+        assert_or_throw(
+            not isinstance(using, str),
+            f"transformer {using} can't be string expression",
+        )
         if pre_partition is None:
             pre_partition = self._metadata.get("pre_partition", PartitionSpec())
         df = self.workflow.transform(
@@ -783,7 +794,7 @@ class FugueWorkflow(object):
 
         Please read the :ref:`Creator Tutorial <tutorial:/tutorials/creator.ipynb>`
 
-        :param using: creator-like object
+        :param using: creator-like object, can't be a string expression
         :param schema: |SchemaLikeObject|, defaults to None. The creator
           will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.output_schema`
@@ -795,6 +806,10 @@ class FugueWorkflow(object):
           :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
         :return: result dataframe
         """
+        assert_or_throw(
+            not isinstance(using, str),
+            f"creator {using} can't be string expression",
+        )
         task = Create(creator=using, schema=schema, params=params)
         return self.add(task)
 
@@ -811,7 +826,7 @@ class FugueWorkflow(object):
         Please read the :ref:`Processor Tutorial <tutorial:/tutorials/processor.ipynb>`
 
         :param dfs: |DataFramesLikeObject|
-        :param using: processor-like object
+        :param using: processor-like object, can't be a string expression
         :param schema: |SchemaLikeObject|, defaults to None. The processor
           will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.output_schema`
@@ -824,6 +839,10 @@ class FugueWorkflow(object):
 
         :return: result dataframe
         """
+        assert_or_throw(
+            not isinstance(using, str),
+            f"processor {using} can't be string expression",
+        )
         dfs = self._to_dfs(*dfs)
         task = Process(
             len(dfs),
@@ -845,7 +864,7 @@ class FugueWorkflow(object):
 
         Please read the :ref:`Outputter Tutorial <tutorial:/tutorials/outputter.ipynb>`
 
-        :param using: outputter-like object
+        :param using: outputter-like object, can't be a string expression
         :param params: |ParamsLikeObject| to run the outputter, defaults to None.
           The outputter will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.params`
@@ -853,6 +872,10 @@ class FugueWorkflow(object):
           The outputter will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
         """
+        assert_or_throw(
+            not isinstance(using, str),
+            f"outputter {using} can't be string expression",
+        )
         dfs = self._to_dfs(*dfs)
         task = Output(
             len(dfs),
@@ -1080,7 +1103,7 @@ class FugueWorkflow(object):
         :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
 
         :param dfs: |DataFramesLikeObject|
-        :param using: transformer-like object
+        :param using: transformer-like object, can't be a string expression
         :param schema: |SchemaLikeObject|, defaults to None. The transformer
           will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.output_schema`
@@ -1094,6 +1117,10 @@ class FugueWorkflow(object):
           defaults to empty list
         :return: the transformed dataframe
         """
+        assert_or_throw(
+            not isinstance(using, str),
+            f"transformer {using} can't be string expression",
+        )
         assert_or_throw(
             len(dfs) == 1,
             NotImplementedError("transform supports only single dataframe"),

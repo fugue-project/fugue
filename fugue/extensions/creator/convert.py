@@ -7,7 +7,7 @@ from fugue.exceptions import FugueInterfacelessError
 from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import to_function, to_instance
+from triad.utils.convert import to_function, to_instance, get_caller_global_local_vars
 from triad.utils.hash import to_uuid
 
 
@@ -23,14 +23,22 @@ def creator(schema: Any = None) -> Callable[[Any], "_FuncAsCreator"]:
     return deco
 
 
-def _to_creator(obj: Any, schema: Any = None) -> Creator:
+def _to_creator(
+    obj: Any,
+    schema: Any = None,
+    global_vars: Optional[Dict[str, Any]] = None,
+    local_vars: Optional[Dict[str, Any]] = None,
+) -> Creator:
+    global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
     exp: Optional[Exception] = None
     try:
-        return copy.copy(to_instance(obj, Creator))
+        return copy.copy(
+            to_instance(obj, Creator, global_vars=global_vars, local_vars=local_vars)
+        )
     except Exception as e:
         exp = e
     try:
-        f = to_function(obj)
+        f = to_function(obj, global_vars=global_vars, local_vars=local_vars)
         # this is for string expression of function with decorator
         if isinstance(f, Creator):
             return copy.copy(f)
