@@ -3,7 +3,7 @@ from typing import Any, Callable, List, Optional, Dict, no_type_check
 
 from fugue.dataframe import DataFrames
 from fugue.exceptions import FugueInterfacelessError
-from triad.utils.convert import to_function, to_instance
+from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 from fugue.extensions.outputter.outputter import Outputter
 from fugue._utils.interfaceless import FunctionWrapper
 from triad.utils.hash import to_uuid
@@ -21,14 +21,21 @@ def outputter() -> Callable[[Any], "_FuncAsOutputter"]:
     return deco
 
 
-def _to_outputter(obj: Any) -> Outputter:
+def _to_outputter(
+    obj: Any,
+    global_vars: Optional[Dict[str, Any]] = None,
+    local_vars: Optional[Dict[str, Any]] = None,
+) -> Outputter:
+    global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
     exp: Optional[Exception] = None
     try:
-        return copy.copy(to_instance(obj, Outputter))
+        return copy.copy(
+            to_instance(obj, Outputter, global_vars=global_vars, local_vars=local_vars)
+        )
     except Exception as e:
         exp = e
     try:
-        f = to_function(obj)
+        f = to_function(obj, global_vars=global_vars, local_vars=local_vars)
         # this is for string expression of function with decorator
         if isinstance(f, Outputter):
             return copy.copy(f)

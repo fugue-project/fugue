@@ -21,6 +21,7 @@ from fugue.extensions.transformer import (
     transformer,
 )
 from fugue.workflow.workflow import FugueWorkflow, _FugueInteractiveWorkflow
+from triad.utils.convert import get_full_type_path
 
 
 class BuiltInTests(object):
@@ -346,7 +347,7 @@ class BuiltInTests(object):
                     "AS t1 INNER JOIN",
                     b,
                     "AS t2 ON t1.x=t2.x",
-                    sql_engine="SqliteEngine",
+                    sql_engine=get_full_type_path(SqliteEngine),
                 ).assert_eq(c)
 
                 # no input

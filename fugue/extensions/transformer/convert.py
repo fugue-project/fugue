@@ -1,13 +1,13 @@
 import copy
-from typing import Any, Callable, List, Optional, Union, no_type_check
+from typing import Any, Callable, Dict, List, Optional, Union, no_type_check
 
+from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.transformer.transformer import CoTransformer, Transformer
-from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none
-from triad.utils.convert import to_function, to_instance
+from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 from triad.utils.hash import to_uuid
 
 
@@ -36,19 +36,31 @@ def cotransformer(schema: Any) -> Callable[[Any], "_FuncAsCoTransformer"]:
 
 
 def _to_transformer(  # noqa: C901
-    obj: Any, schema: Any = None
+    obj: Any,
+    schema: Any = None,
+    global_vars: Optional[Dict[str, Any]] = None,
+    local_vars: Optional[Dict[str, Any]] = None,
 ) -> Union[Transformer, CoTransformer]:
+    global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
     exp: Optional[Exception] = None
     try:
-        return copy.copy(to_instance(obj, Transformer))
+        return copy.copy(
+            to_instance(
+                obj, Transformer, global_vars=global_vars, local_vars=local_vars
+            )
+        )
     except Exception as e:
         exp = e
     try:
-        return copy.copy(to_instance(obj, CoTransformer))
+        return copy.copy(
+            to_instance(
+                obj, CoTransformer, global_vars=global_vars, local_vars=local_vars
+            )
+        )
     except Exception as e:
         exp = e
     try:
-        f = to_function(obj)
+        f = to_function(obj, global_vars=global_vars, local_vars=local_vars)
         # this is for string expression of function with decorator
         if isinstance(f, Transformer):
             return copy.copy(f)
@@ -57,7 +69,7 @@ def _to_transformer(  # noqa: C901
     except Exception as e:
         exp = e
     try:
-        f = to_function(obj)
+        f = to_function(obj, global_vars=global_vars, local_vars=local_vars)
         # this is for string expression of function with decorator
         if isinstance(f, CoTransformer):
             return copy.copy(f)
