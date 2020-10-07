@@ -22,8 +22,12 @@ from fugue_sql._parse import FugueSQL, _to_tokens
 from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import to_bool
+from triad.utils.convert import get_caller_global_local_vars, to_bool
 from triad.utils.pyarrow import to_pa_datatype
+from fugue.extensions.creator.convert import _to_creator
+from fugue.extensions.processor.convert import _to_processor
+from fugue.extensions.outputter.convert import _to_outputter
+from fugue.extensions.transformer.convert import _to_transformer
 
 
 class FugueSQLHooks(object):
@@ -228,6 +232,8 @@ class _Extensions(_VisitorBase):
         workflow: FugueWorkflow,
         variables: Optional[Dict[str, WorkflowDataFrame]] = None,
         last: Optional[WorkflowDataFrame] = None,
+        global_vars: Optional[Dict[str, Any]] = None,
+        local_vars: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(sql)
         self._workflow = workflow
@@ -236,6 +242,9 @@ class _Extensions(_VisitorBase):
             self._variables.update(variables)
         self._last: Optional[WorkflowDataFrame] = last
         self._hooks = hooks
+        self._global_vars, self._local_vars = get_caller_global_local_vars(
+            global_vars, local_vars
+        )
 
     @property
     def workflow(self) -> FugueWorkflow:
@@ -255,6 +264,14 @@ class _Extensions(_VisitorBase):
             raise FugueSQLError("latest dataframe does not exist")
         return self._last
 
+    @property
+    def global_vars(self) -> Dict[str, Any]:
+        return self._global_vars
+
+    @property
+    def local_vars(self) -> Dict[str, Any]:
+        return self._local_vars
+
     def visitFugueDataFrameSource(
         self, ctx: fp.FugueDataFrameSourceContext
     ) -> WorkflowDataFrame:
@@ -271,6 +288,8 @@ class _Extensions(_VisitorBase):
             workflow=self.workflow,
             variables=self.variables,
             last=self._last,
+            global_vars=self.global_vars,
+            local_vars=self.local_vars,
         )
         sub.visit(ctx.task)
         return sub.last
@@ -297,11 +316,16 @@ class _Extensions(_VisitorBase):
         if "dfs" not in data:
             data["dfs"] = DataFrames(self.last)
         p = data["params"]
+        using = _to_transformer(
+            p["using"],
+            schema=p.get("schema"),
+            global_vars=self.global_vars,
+            local_vars=self.local_vars,
+        )
         # ignore errors is not implemented
         return self.workflow.transform(
             data["dfs"],
-            using=p["using"],
-            schema=p.get("schema"),
+            using=using,
             params=p.get("params"),
             pre_partition=data.get("partition"),
         )
@@ -313,10 +337,15 @@ class _Extensions(_VisitorBase):
         if "dfs" not in data:
             data["dfs"] = DataFrames(self.last)
         p = data["params"]
+        using = _to_processor(
+            p["using"],
+            schema=p.get("schema"),
+            global_vars=self.global_vars,
+            local_vars=self.local_vars,
+        )
         return self.workflow.process(
             data["dfs"],
-            using=p["using"],
-            schema=p.get("schema"),
+            using=using,
             params=p.get("params"),
             pre_partition=data.get("partition"),
         )
@@ -324,9 +353,13 @@ class _Extensions(_VisitorBase):
     def visitFugueCreateTask(self, ctx: fp.FugueCreateTaskContext) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "params")
         p = data["params"]
-        return self.workflow.create(
-            using=p["using"], schema=p.get("schema"), params=p.get("params")
+        using = _to_creator(
+            p["using"],
+            schema=p.get("schema"),
+            global_vars=self.global_vars,
+            local_vars=self.local_vars,
         )
+        return self.workflow.create(using=using, params=p.get("params"))
 
     def visitFugueCreateDataTask(
         self, ctx: fp.FugueCreateDataTaskContext
@@ -346,9 +379,14 @@ class _Extensions(_VisitorBase):
         data = self.get_dict(ctx, "dfs", "using", "params", "partition")
         if "dfs" not in data:
             data["dfs"] = DataFrames(self.last)
+        using = _to_outputter(
+            data["using"],
+            global_vars=self.global_vars,
+            local_vars=self.local_vars,
+        )
         self.workflow.output(
             data["dfs"],
-            using=data["using"],
+            using=using,
             params=data.get("params"),
             pre_partition=data.get("partition"),
         )
@@ -447,6 +485,8 @@ class _Extensions(_VisitorBase):
                 workflow=self.workflow,
                 variables=self.variables,
                 last=last,
+                global_vars=self.global_vars,
+                local_vars=self.local_vars,
             )
             yield sub.visit(n)
 

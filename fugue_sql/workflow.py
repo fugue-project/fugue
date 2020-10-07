@@ -14,6 +14,7 @@ from fugue_sql._parse import FugueSQL
 from fugue_sql._utils import fill_sql_template
 from fugue_sql._visitors import FugueSQLHooks, _Extensions
 from fugue_sql.exceptions import FugueSQLError
+from triad.utils.convert import get_caller_global_local_vars
 
 
 class FugueSQLWorkflow(FugueWorkflow):
@@ -34,15 +35,20 @@ class FugueSQLWorkflow(FugueWorkflow):
 
     def __call__(self, code: str, *args: Any, **kwargs: Any):
         cf = inspect.currentframe()
-        local_vars: Dict[str, Any] = {}
-        if cf is not None and cf.f_back is not None:
-            local_vars = cf.f_back.f_locals
+        global_vars, local_vars = get_caller_global_local_vars()
+        global_vars = {
+            k: v
+            for k, v in global_vars.items()
+            if not isinstance(v, WorkflowDataFrame) or v.workflow is self
+        }
         local_vars = {
             k: v
             for k, v in local_vars.items()
             if not isinstance(v, WorkflowDataFrame) or v.workflow is self
         }
-        variables = self._sql(code, self._sql_vars, local_vars, *args, **kwargs)
+        variables = self._sql(
+            code, self._sql_vars, global_vars, local_vars, *args, **kwargs
+        )
         if cf is not None:
             for k, v in variables.items():
                 if isinstance(v, WorkflowDataFrame) and v.workflow is self:
@@ -65,6 +71,6 @@ class FugueSQLWorkflow(FugueWorkflow):
             simple_assign=self.conf.get_or_throw(FUGUE_SQL_CONF_SIMPLE_ASSIGN, bool),
         )
         dfs = {k: v for k, v in params.items() if isinstance(v, WorkflowDataFrame)}
-        v = _Extensions(sql, FugueSQLHooks(), self, dfs)
+        v = _Extensions(sql, FugueSQLHooks(), self, dfs, local_vars=params)
         v.visit(sql.tree)
         return v.variables
