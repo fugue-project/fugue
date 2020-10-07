@@ -121,7 +121,14 @@ pre-commit install
 
 ## Update History
 
+### 0.4.2
+
+* Require pandas 1.0 because of parquet schema
+* Improved Fugue SQL extension parsing logic
+* Doc for contributors to setup their environment
+
 ### 0.4.1
+
 * Added set operations to programming interface: `union`, `subtract`, `intersect`
 * Added `distinct` to programming interface
 * Ensured partitioning follows SQL convention: groups with null keys are NOT removed
