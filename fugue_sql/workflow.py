@@ -63,7 +63,10 @@ class FugueSQLWorkflow(FugueWorkflow):
             assert_or_throw(isinstance(a, Dict), f"args can only have dict: {a}")
             params.update(a)
         params.update(kwargs)
-        code = fill_sql_template(code, params)
+        template_params = dict(params)
+        if "self" in template_params:
+            del template_params["self"]
+        code = fill_sql_template(code, template_params)
         sql = FugueSQL(
             code,
             "fugueLanguage",
