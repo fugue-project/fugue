@@ -444,6 +444,38 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
 
+        def test_dropna(self):
+            e = self.engine
+            a = e.to_df(
+                [[4, None, 6], [1, 2, 3], [4, None, None]], "a:double,b:double,c:int"
+            )
+            c = e.dropna(a, metadata=(dict(a=1)))  # default
+            d = e.dropna(a, how="all")
+            f = e.dropna(a, how="any", thresh=2)
+            g = e.dropna(a, how="any", subset=["a", "c"])
+            h = e.dropna(a, how="any", thresh=1, subset=["a", "c"])
+            df_eq(
+                c,
+                [[1, 2, 3]],
+                "a:double,b:double,c:int",
+                metadata=dict(a=1),
+                throw=True,
+            )
+            df_eq(
+                d,
+                [[4, None, 6], [1, 2, 3], [4, None, None]],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
+            df_eq(f, [[4, None, 6], [1, 2, 3]], "a:double,b:double,c:int", throw=True)
+            df_eq(g, [[4, None, 6], [1, 2, 3]], "a:double,b:double,c:int", throw=True)
+            df_eq(
+                h,
+                [[4, None, 6], [1, 2, 3], [4, None, None]],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
+
         def test__serialize_by_partition(self):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")

@@ -106,6 +106,21 @@ class Distinct(Processor):
         return self.execution_engine.distinct(dfs[0])
 
 
+class Dropna(Processor):
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        how = self.params.get("how", "any")
+        assert_or_throw(
+            how in ["any", "all"],
+            FugueWorkflowError("how' needs to be either 'any' or 'all'"),
+        )
+        thresh = self.params.get_or_none("thresh", int)
+        subset = self.params.get_or_none("subset", list)
+        return self.execution_engine.dropna(
+            dfs[0], how=how, thresh=thresh, subset=subset
+        )
+
+
 class RunSQLSelect(Processor):
     def process(self, dfs: DataFrames) -> DataFrame:
         statement = self.params.get_or_throw("statement", str)

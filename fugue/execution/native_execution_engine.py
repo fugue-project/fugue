@@ -216,6 +216,19 @@ class NativeExecutionEngine(ExecutionEngine):
         d = self.pl_utils.drop_duplicates(df.as_pandas())
         return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
 
+    def dropna(
+        self,
+        df: DataFrame,
+        metadata: Any = None,
+        how: str = "any",
+        thresh: int = None,
+        subset: List[str] = None,
+    ) -> DataFrame:
+        d = df.as_pandas().dropna(
+            axis=0, how=how, thresh=thresh, subset=subset, inplace=False
+        )
+        return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
+
     def load_df(
         self,
         path: Union[str, List[str]],
