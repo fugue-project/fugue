@@ -469,25 +469,25 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 a = dag.df(
                     [[1, 10, 10], [None, 2, None], [2, None, 4]],
-                    "x:long,y:double,z:double",
+                    "x:double,y:double,z:double",
                 )
                 a.dropna().assert_eq(
                     ArrayDataFrame(
                         [[1, 10, 10]],
-                        "x:long,y:double,z:double",
+                        "x:double,y:double,z:double",
                     )
                 )
                 a.dropna(how="all").assert_eq(a)
                 a.dropna(thresh=2).assert_eq(
                     ArrayDataFrame(
                         [[1, 10, 10], [2, None, 4]],
-                        "x:long,y:double,z:double",
+                        "x:double,y:double,z:double",
                     )
                 )
                 a.dropna(how="any", subset=["x", "z"]).assert_eq(
                     ArrayDataFrame(
                         [[1, 10, 10], [2, None, 4]],
-                        "x:long,y:double,z:double",
+                        "x:double,y:double,z:double",
                     )
                 )
                 a.dropna(thresh=1, subset=["y", "z"]).assert_eq(a)

@@ -447,7 +447,7 @@ class ExecutionEngineTests(object):
         def test_dropna(self):
             e = self.engine
             a = e.to_df(
-                [[4, None, 6], [1, 2, 3], [4, None, None]], "a:double,b:double,c:int"
+                [[4, None, 6], [1, 2, 3], [4, None, None]], "a:double,b:double,c:double"
             )
             c = e.dropna(a, metadata=(dict(a=1)))  # default
             d = e.dropna(a, how="all")
@@ -457,22 +457,26 @@ class ExecutionEngineTests(object):
             df_eq(
                 c,
                 [[1, 2, 3]],
-                "a:double,b:double,c:int",
+                "a:double,b:double,c:double",
                 metadata=dict(a=1),
                 throw=True,
             )
             df_eq(
                 d,
                 [[4, None, 6], [1, 2, 3], [4, None, None]],
-                "a:double,b:double,c:int",
+                "a:double,b:double,c:double",
                 throw=True,
             )
-            df_eq(f, [[4, None, 6], [1, 2, 3]], "a:double,b:double,c:int", throw=True)
-            df_eq(g, [[4, None, 6], [1, 2, 3]], "a:double,b:double,c:int", throw=True)
+            df_eq(
+                f, [[4, None, 6], [1, 2, 3]], "a:double,b:double,c:double", throw=True
+            )
+            df_eq(
+                g, [[4, None, 6], [1, 2, 3]], "a:double,b:double,c:double", throw=True
+            )
             df_eq(
                 h,
                 [[4, None, 6], [1, 2, 3], [4, None, None]],
-                "a:double,b:double,c:int",
+                "a:double,b:double,c:double",
                 throw=True,
             )
 
