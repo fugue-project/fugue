@@ -336,7 +336,7 @@ class ExecutionEngine(ABC):
         how: str = "any",
         thresh: int = None,
         subset: List[str] = None,
-    ) -> DataFrame:
+    ) -> DataFrame:  # pragma: no cover
         """Drop NA recods from dataframe
 
         :param df: DataFrame
