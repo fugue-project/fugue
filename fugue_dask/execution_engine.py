@@ -294,6 +294,17 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.pl_utils.drop_duplicates(self.to_df(df).native)
         return DaskDataFrame(d, df.schema, metadata)
 
+    def dropna(
+        self,
+        df: DataFrame,
+        metadata: Any = None,
+        how: str = "any",
+        thresh: int = None,
+        subset: List[str] = None,
+    ) -> DataFrame:
+        d = self.to_df(df).native.dropna(how=how, thresh=thresh, subset=subset)
+        return DaskDataFrame(d, df.schema, metadata)
+
     def load_df(
         self,
         path: Union[str, List[str]],

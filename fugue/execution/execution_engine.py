@@ -328,6 +328,31 @@ class ExecutionEngine(ABC):
         """
         pass
 
+    @abstractmethod
+    def dropna(
+        self,
+        df: DataFrame,
+        metadata: Any = None,
+        how: str = "any",
+        thresh: int = None,
+        subset: List[str] = None,
+    ) -> DataFrame:  # pragma: no cover
+        """Drop NA recods from dataframe
+
+        :param df: DataFrame
+        :param metadata: dict-like object to add to the result dataframe,
+            defaults to None
+        :type metadata: Any, optional
+        :param how: 'any' or 'all'. 'any' drops rows that contain any nulls.
+          'all' drops rows that contain all nulls.
+        :param thresh: int, drops rows that have less than thresh non-null values
+        :param subset: list of columns to operate on
+
+        :return: DataFrame with NA records dropped
+        :rtype: DataFrame
+        """
+        pass
+
     def zip(
         self,
         df1: DataFrame,

@@ -15,6 +15,7 @@ from fugue.extensions._builtins import (
     AssertEqual,
     CreateData,
     Distinct,
+    Dropna,
     DropColumns,
     Load,
     Rename,
@@ -451,6 +452,15 @@ class WorkflowDataFrame(DataFrame):
         :return: dataframe with unique records
         """
         df = self.workflow.process(self, using=Distinct)
+        return self._to_self_type(df)
+
+    def dropna(self: TDF, **kwargs: Any) -> TDF:
+        """Drops records containing NA records
+
+        :param kwargs: parameters to pass to dropna (how, thresh, subset)
+        :return: dataframe with incomplete records dropped
+        """
+        df = self.workflow.process(self, using=Dropna, params=kwargs)
         return self._to_self_type(df)
 
     def checkpoint(self: TDF, namespace: Any = None) -> TDF:
