@@ -258,8 +258,14 @@ class SparkExecutionEngine(ExecutionEngine):
     def broadcast(self, df: DataFrame) -> SparkDataFrame:
         return self._broadcast_func(self.to_df(df))
 
-    def persist(self, df: DataFrame, level: Any = None) -> SparkDataFrame:
-        return self._persist_func(self.to_df(df), level)
+    def persist(
+        self,
+        df: DataFrame,
+        lazy: bool = False,
+        *args: Any,
+        **kwargs: Any,
+    ) -> SparkDataFrame:
+        return self._persist_func(self.to_df(df), kwargs.get("level", None))
 
     def register(self, df: DataFrame, name: str) -> SparkDataFrame:
         return self._register_func(self.to_df(df), name)

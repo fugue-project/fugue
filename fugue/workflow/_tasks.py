@@ -113,7 +113,7 @@ class FugueTask(TaskSpec, ABC):
     def handle_persist(self, df: DataFrame, engine: ExecutionEngine) -> DataFrame:
         if not self._persist:
             return df
-        return engine.persist(df, self._persist_value)
+        return engine.persist(df, level=self._persist_value)
 
     def broadcast(self) -> "FugueTask":
         self._broadcast = True

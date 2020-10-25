@@ -199,13 +199,67 @@ class ExecutionEngine(ABC):
 
     @abstractmethod
     def persist(
-        self, df: DataFrame, level: Any = None
+        self,
+        df: DataFrame,
+        lazy: bool = False,
+        *args: Any,
+        **kwargs: Any,
     ) -> DataFrame:  # pragma: no cover
         """Force materializing and caching the dataframe
 
         :param df: the input dataframe
-        :param level: parameter to pass to the underlying persist implementation
+        :param lazy: ``True``: first usage of the output will trigger persisting
+          to happen; ``False`` (eager): persist is forced to happend immediately.
+          Default to ``False``
+        :param *args: parameter to pass to the underlying persist implementation
+        :param *kwargs: parameter to pass to the underlying persist implementation
         :return: the persisted dataframe
+
+        :Notice:
+
+        ``persist`` can only guarantee the persisted dataframe will be computed
+        for only once. However this doesn't mean the backend really breaks up the
+        execution dependency at the persisting point. Commonly, it doesn't cause
+        any issue, but if your execution graph is long, it may cause expected
+        problems for example, stack overflow.
+
+        ``persist`` method is considered as weak checkpoint. Sometimes, it may be
+        necessary to use strong checkpint, which is :meth:`~.checkpoint`
+
+        """
+        raise NotImplementedError
+
+    def checkpoint(
+        self,
+        df: DataFrame,
+        path: str,
+        lazy: bool = False,
+        *args: Any,
+        **kwargs: Any,
+    ) -> DataFrame:  # pragma: no cover
+        """Save dataframe to given path and load back as a new dataframe
+
+        :param df: the input dataframe
+        :param path: the full absolute path to save the dataframe
+        :param lazy: ``True``: first usage of the output will trigger checkpointing
+          to happen; ``False`` (eager): checkpointing is forced to happend immediately.
+          Default to ``False``
+        :param *args: parameter to pass to the underlying persist implementation
+        :param *kwargs: parameter to pass to the underlying persist implementation
+        :return: the cached dataframe
+
+        :Notice:
+
+        ``checkpoint`` guarantees the cached dataframe will be computed
+        for only once and it also guarantees to break up any execution dependency for
+        this dataframe.
+
+        ``checkpoint`` method is considered as strong checkpoint. In most cases it
+        may be good enough to use weak checkpint, which is :meth:`~.persist`
+
+        In the following cases you may prefer ``checkpoint``:
+        * The execution graph is extremely complicated, you prabably even use for
+          loop when constructing the execution graph
         """
         raise NotImplementedError
 

@@ -146,7 +146,13 @@ class NativeExecutionEngine(ExecutionEngine):
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)
 
-    def persist(self, df: DataFrame, level: Any = None) -> DataFrame:
+    def persist(
+        self,
+        df: DataFrame,
+        lazy: bool = False,
+        *args: Any,
+        **kwargs: Any,
+    ) -> DataFrame:
         return self.to_df(df)
 
     def join(
