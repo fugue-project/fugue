@@ -520,7 +520,7 @@ class BuiltInTests(object):
 
         def test_io(self):
             path = os.path.join(self.tmpdir, "a")
-            path2 = os.path.join(self.tmpdir, "b.csv")
+            path2 = os.path.join(self.tmpdir, "b.test.csv")
             with self.dag() as dag:
                 b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
                 b.partition(num=3).save(path, fmt="parquet", single=True)
