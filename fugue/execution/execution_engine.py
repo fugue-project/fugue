@@ -258,6 +258,9 @@ class ExecutionEngine(ABC):
         may be good enough to use weak checkpint, which is :meth:`~.persist`
 
         In the following cases you may prefer ``checkpoint``:
+
+        * You need permanent/cross execution checkpoint
+        * The df is too big and it takes too much cluster memory
         * The execution graph is extremely complicated, you prabably even use for
           loop when constructing the execution graph
         """
