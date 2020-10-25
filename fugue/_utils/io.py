@@ -14,11 +14,11 @@ class FileParser(object):
     def __init__(self, uri: str, format_hint: Optional[str] = None):
         self._uri = urlparse(uri)
         if format_hint is None or format_hint == "":
-            assert_or_throw(
-                self.suffix in _FORMAT_MAP,
-                NotImplementedError(f"{self.suffix} is not supported"),
-            )
-            self._format = _FORMAT_MAP[self.suffix]
+            for k, v in _FORMAT_MAP.items():
+                if self.suffix.endswith(k):
+                    self._format = v
+                    return
+            raise NotImplementedError(f"{self.suffix} is not supported")
         else:
             assert_or_throw(
                 format_hint in _FORMAT_MAP.values(),

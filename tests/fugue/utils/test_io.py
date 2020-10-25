@@ -4,7 +4,7 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import FugueDataFrameInitError
-from fugue._utils.io import FileParser, load_df, save_df
+from fugue._utils.io import FileParser, load_df, save_df, _FORMAT_MAP
 from pytest import raises
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
@@ -18,11 +18,19 @@ def test_file_parser():
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
 
-    f = FileParser("s3://a/b/c.parquet")
-    assert "s3://a/b/c.parquet" == f.uri
+    for k, v in _FORMAT_MAP.items():
+        f = FileParser(f"s3://a/b/c{k}")
+        assert f"s3://a/b/c{k}" == f.uri
+        assert "s3" == f.scheme
+        assert f"/b/c{k}" == f.path
+        assert k == f.suffix
+        assert v == f.file_format
+
+    f = FileParser("s3://a/b/c.test.parquet")
+    assert "s3://a/b/c.test.parquet" == f.uri
     assert "s3" == f.scheme
-    assert "/b/c.parquet" == f.path
-    assert ".parquet" == f.suffix
+    assert "/b/c.test.parquet" == f.path
+    assert ".test.parquet" == f.suffix
     assert "parquet" == f.file_format
 
     f = FileParser("s3://a/b/c.ppp.gz", "csv")
@@ -83,8 +91,10 @@ def test_parquet_io(tmpdir):
     # overwrite = False
     raises(FileExistsError, lambda: save_df(df1, f1, mode="error"))
     # can't overwrite directory
-    raises(IsADirectoryError, lambda: save_df(
-        df1, folder, format_hint="parquet", mode="overwrite"))
+    raises(
+        IsADirectoryError,
+        lambda: save_df(df1, folder, format_hint="parquet", mode="overwrite"),
+    )
     # wrong mode
     raises(NotImplementedError, lambda: save_df(df1, f1, mode="dummy"))
 
@@ -114,8 +124,9 @@ def test_csv_io(tmpdir):
     assert [["2", 1.0]] == actual.as_array()
     raises(KeyError, lambda: load_df(path, columns="b:str,x:double", header=True))
 
-    raises(NotImplementedError, lambda: load_df(
-        path, columns="b:str,x:double", header=2))
+    raises(
+        NotImplementedError, lambda: load_df(path, columns="b:str,x:double", header=2)
+    )
 
 
 def test_json(tmpdir):
