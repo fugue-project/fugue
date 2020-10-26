@@ -65,11 +65,6 @@ class BuiltInTests(object):
                 dag.df([[0]], "a:int").persist().partition(num=2).show()
                 dag.df(dag.df([[0]], "a:int")).persist().broadcast().show()
 
-        def test_checkpoint_no_effect(self):
-            with self.dag() as dag:
-                dag.df([[0]], "a:int").checkpoint().partition(num=2).show()
-                dag.df(dag.df([[0]], "a:int")).checkpoint("dummy").broadcast().show()
-
         def test_create_process_output(self):
             with self.dag() as dag:
                 a = dag.create(mock_creator, params=dict(p=2))

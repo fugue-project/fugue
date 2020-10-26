@@ -59,8 +59,6 @@ class FugueTask(TaskSpec, ABC):
         self._persist = False
         self._persist_value: Any = None
         self._broadcast = False
-        self._checkpoint = False
-        self._checkpoint_namespace: Optional[str] = None
 
     def __uuid__(self) -> str:
         return to_uuid(
@@ -75,8 +73,6 @@ class FugueTask(TaskSpec, ABC):
             self._persist,
             str(self._persist_value),
             self._broadcast,
-            self._checkpoint,
-            self._checkpoint_namespace,
         )
 
     @abstractmethod
@@ -99,11 +95,6 @@ class FugueTask(TaskSpec, ABC):
 
     def __deepcopy__(self, memo: Any) -> "FugueTask":
         raise InvalidOperationError("can't copy")
-
-    def checkpoint(self, namespace: Any = None):
-        # TODO: currently checkpoint is not taking effect
-        self._checkpoint = True
-        self._checkpoint_namespace = None if namespace is None else str(namespace)
 
     def persist(self, level: Any) -> "FugueTask":
         self._persist = True

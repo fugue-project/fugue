@@ -1,22 +1,26 @@
+import os
 from collections import defaultdict
 from threading import RLock
 from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar
+from uuid import uuid4
 
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
 from fugue.constants import (
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE,
+    FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH,
 )
 from fugue.dataframe import DataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowError
 from fugue.extensions._builtins import (
     AssertEqual,
+    Checkpoint,
     CreateData,
     Distinct,
-    Dropna,
     DropColumns,
+    Dropna,
     Load,
     Rename,
     RunJoin,
@@ -37,7 +41,7 @@ from fugue.workflow._workflow_context import (
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
-
+from triad.utils.hash import to_uuid
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -463,14 +467,91 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(self, using=Dropna, params=kwargs)
         return self._to_self_type(df)
 
-    def checkpoint(self: TDF, namespace: Any = None) -> TDF:
-        """[CURRENTLY NO EFFECT] set checkpoint for the current dataframe
+    def checkpoint(
+        self: TDF,
+        path: str = "",
+        deterministic: bool = False,
+        fmt: str = "",
+        partition: Any = None,
+        single: bool = False,
+        namespace: Any = None,
+        **kwargs: Any,
+    ) -> TDF:
+        """Save this dataframe to a persistent storage and load back
 
-        :return: dataframe loaded from checkpoint
-        :rtype: :class:`~.WorkflowDataFrame`
+        :param path: output path, defaults to empty string. If path is empty
+          a generated path based on ``deterministic`` will be used
+        :param deterministic: whether this checkpoint is cross execution (True)
+          or not (False), defaults to False. It only takes effect when ``path``
+          is empty
+        :param fmt: format hint can accept ``parquet``, ``csv``, ``json``,
+          defaults to None, meaning to infer
+        :param partition: |PartitionLikeObject|, how to partition the
+          dataframe before saving, defaults to empty
+        :param single: force the output as a single file, defaults to False
+        :param namespace: a value to control determinism, defaults to None. It
+          takes effect only when ``path`` is empty and ``deterministic`` is True
+        :param kwargs: parameters to pass to the underlying framework
+
+        :Notice:
+
+        There are 3 use cases for checkpoint
+        * You want to save the give dataframe to a specified path, and then load
+          back to continue using it
+        * You want to cache the dataframe within one execution, and you want to
+          ensure the underlying execution engine will break up the compute dependency
+          of this dataframe. Or you want to cache it to file for memory and
+          performance concerns
+        * You want to cache the dataframe cross execution, so next time when you run
+          the entire workflow again, it can retrieve the data from file to save time
+
+        :Notice:
+
+        The third use case is not fully supported, the cross execution checkpoint is
+        not a well defined concept yet. So currently, only when the previous steps
+        are lazy, it can save time. For example if you use :meth:`~.persist` in any of
+        the previous steps, that computation will run again.
+
+        :Notice:
+
+        ``checkpoint`` guarantees the cached dataframe will be computed
+        for only once and it also guarantees to break up any execution dependency for
+        this dataframe.
+
+        ``checkpoint`` method is considered as strong checkpoint. In most cases it
+        may be good enough to use weak checkpint, which is :meth:`~.persist`
+
+        In the following cases you may prefer ``checkpoint``:
+
+        * You need permanent/cross execution checkpoint
+        * The dataframe is too big and it takes too much cluster memory
+        * The execution dependency to generate this dataframe is extremely complicated
         """
-        self._task.checkpoint(namespace)
-        return self
+        if path != "" and path is not None:
+            # case 1
+            mode = "overwrite"
+        else:
+            assert_or_throw(
+                fmt == "", FugueWorkflowError("fmt must be empty when path is not set")
+            )
+            filename = to_uuid(namespace, self.spec_uuid()) + ".parquet"
+            if not deterministic:
+                # case 2
+                path = os.path.join(self.workflow._checkpoint_path, filename)
+                mode = "use"
+            else:
+                # case 3
+                path = os.path.join(self.workflow._checkpoint_temp_path, filename)
+                mode = "overwrite"
+        if partition is None:
+            partition = self._metadata.get("pre_partition", PartitionSpec())
+        df = self.workflow.process(
+            self,
+            using=Checkpoint,
+            pre_partition=partition,
+            params=dict(path=path, fmt=fmt, mode=mode, single=single, params=kwargs),
+        )
+        return self._to_self_type(df)
 
     def persist(self: TDF, level: Any = None) -> TDF:
         """Persist the current dataframe
@@ -478,6 +559,17 @@ class WorkflowDataFrame(DataFrame):
         :param level: the parameter passed to the underlying framework, defaults to None
         :return: the persisted dataframe
         :rtype: :class:`~.WorkflowDataFrame`
+
+        :Notice:
+
+        ``persist`` can only guarantee the persisted dataframe will be computed
+        for only once. However this doesn't mean the backend really breaks up the
+        execution dependency at the persisting point. Commonly, it doesn't cause
+        any issue, but if your execution graph is long, it may cause expected
+        problems for example, stack overflow.
+
+        ``persist`` method is considered as weak checkpoint. Sometimes, it may be
+        necessary to use strong checkpint, which is :meth:`~.checkpoint`
         """
         self._task.persist(level)
         return self
@@ -734,6 +826,7 @@ class FugueWorkflow(object):
         self._workflow_ctx = self._to_ctx(*args, **kwargs)
         self._computed = False
         self._graph = _Graph()
+        self._execution_id = ""
 
     @property
     def conf(self) -> ParamDict:
@@ -741,6 +834,13 @@ class FugueWorkflow(object):
         :class:`~fugue.execution.execution_engine.ExecutionEngine` (if given)
         """
         return self._workflow_ctx.conf
+
+    @property
+    def execution_id(self) -> str:
+        assert_or_throw(
+            self._execution_id != "", FugueWorkflowError("execution id is not set")
+        )
+        return self._execution_id
 
     def spec_uuid(self) -> str:
         """UUID of the workflow spec (`description`)"""
@@ -768,11 +868,28 @@ class FugueWorkflow(object):
         to learn how to run in different ways and pros and cons.
         """
         with self._lock:
-            self._computed = False
-            if len(args) > 0 or len(kwargs) > 0:
-                self._workflow_ctx = self._to_ctx(*args, **kwargs)
-            self._workflow_ctx.run(self._spec, {})
-            self._computed = True
+            try:
+                self._computed = False
+                self._execution_id = str(uuid4())
+                if len(args) > 0 or len(kwargs) > 0:
+                    self._workflow_ctx = self._to_ctx(*args, **kwargs)
+                if self._checkpoint_temp_path != "":
+                    self._workflow_ctx.execution_engine.fs.makedirs(
+                        self._checkpoint_temp_path
+                    )
+                self._workflow_ctx.run(self._spec, {})
+                self._computed = True
+            finally:
+                if self._checkpoint_temp_path != "":
+                    try:
+                        self._workflow_ctx.execution_engine.fs.removetree(
+                            self._checkpoint_temp_path
+                        )
+                    except Exception as e:
+                        self._workflow_ctx.execution_engine.log.warn(
+                            "Unable to remove " + self._checkpoint_temp_path, e
+                        )
+                self._execution_id = ""
 
     def __enter__(self):
         return self
@@ -1232,6 +1349,16 @@ class FugueWorkflow(object):
         if len(args) == 1 and isinstance(args[0], FugueWorkflowContext):
             return args[0]
         return FugueWorkflowContext(*args, **kwargs)
+
+    @property
+    def _checkpoint_path(self) -> str:
+        return self.conf.get(FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH, "").strip()
+
+    @property
+    def _checkpoint_temp_path(self) -> str:
+        if self._checkpoint_path == "":
+            return ""
+        return os.path.join(self._checkpoint_path, self.execution_id)
 
 
 class _FugueInteractiveWorkflow(FugueWorkflow):

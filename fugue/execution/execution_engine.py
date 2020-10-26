@@ -222,47 +222,6 @@ class ExecutionEngine(ABC):
         execution dependency at the persisting point. Commonly, it doesn't cause
         any issue, but if your execution graph is long, it may cause expected
         problems for example, stack overflow.
-
-        ``persist`` method is considered as weak checkpoint. Sometimes, it may be
-        necessary to use strong checkpint, which is :meth:`~.checkpoint`
-
-        """
-        raise NotImplementedError
-
-    def checkpoint(
-        self,
-        df: DataFrame,
-        path: str,
-        lazy: bool = False,
-        *args: Any,
-        **kwargs: Any,
-    ) -> DataFrame:  # pragma: no cover
-        """Save dataframe to given path and load back as a new dataframe
-
-        :param df: the input dataframe
-        :param path: the full absolute path to save the dataframe
-        :param lazy: ``True``: first usage of the output will trigger checkpointing
-          to happen; ``False`` (eager): checkpointing is forced to happend immediately.
-          Default to ``False``
-        :param *args: parameter to pass to the underlying persist implementation
-        :param *kwargs: parameter to pass to the underlying persist implementation
-        :return: the cached dataframe
-
-        :Notice:
-
-        ``checkpoint`` guarantees the cached dataframe will be computed
-        for only once and it also guarantees to break up any execution dependency for
-        this dataframe.
-
-        ``checkpoint`` method is considered as strong checkpoint. In most cases it
-        may be good enough to use weak checkpint, which is :meth:`~.persist`
-
-        In the following cases you may prefer ``checkpoint``:
-
-        * You need permanent/cross execution checkpoint
-        * The df is too big and it takes too much cluster memory
-        * The execution graph is extremely complicated, you prabably even use for
-          loop when constructing the execution graph
         """
         raise NotImplementedError
 

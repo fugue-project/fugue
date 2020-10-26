@@ -2,10 +2,11 @@
 from fugue.extensions._builtins.creators import CreateData, Load
 from fugue.extensions._builtins.outputters import AssertEqual, Save, Show
 from fugue.extensions._builtins.processors import (
-    DropColumns,
-    Rename,
+    Checkpoint,
     Distinct,
+    DropColumns,
     Dropna,
+    Rename,
     RunJoin,
     RunSetOperation,
     RunSQLSelect,
