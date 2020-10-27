@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from triad.collections.dict import IndexedOrderedDict, ParamDict
 from triad.collections.schema import Schema
@@ -217,28 +217,51 @@ class PartitionSpec(object):
     def _parse_presort_exp(  # noqa: C901
         self, presort: Any
     ) -> IndexedOrderedDict[str, bool]:
-        if presort is None:
-            presort = ""
-        if not isinstance(presort, str):
-            return IndexedOrderedDict(presort)
-        presort = presort.strip()
+        if isinstance(presort, IndexedOrderedDict):
+            return presort
+
+        presort_list: List[Tuple[str, bool]] = []
         res: IndexedOrderedDict[str, bool] = IndexedOrderedDict()
-        if presort == "":
+        if presort is None:
             return res
-        for p in presort.split(","):
-            pp = p.strip().split()
-            key = pp[0].strip()
-            if len(pp) == 1:
-                value = True
-            elif len(pp) == 2:
-                if pp[1].strip().lower() == "asc":
-                    value = True
-                elif pp[1].strip().lower() == "desc":
-                    value = False
+
+        elif isinstance(presort, str):
+            presort = presort.strip()
+            if presort == "":
+                return res
+            for p in presort.split(","):
+                pp = p.strip().split()
+                key = pp[0].strip()
+                if len(pp) == 1:
+                    presort_list.append((key, True))
+                elif len(pp) == 2:
+                    if pp[1].strip().lower() == "asc":
+                        presort_list.append((key, True))
+                    elif pp[1].strip().lower() == "desc":
+                        presort_list.append((key, False))
+                    else:
+                        raise SyntaxError(f"Invalid expression {presort}")
                 else:
                     raise SyntaxError(f"Invalid expression {presort}")
-            else:
-                raise SyntaxError(f"Invalid expression {presort}")
+
+        elif isinstance(presort, list):
+            for p in presort:
+                if isinstance(p, str):
+                    aot(
+                        len(p.strip().split()) == 1,
+                        SyntaxError(f"Invalid expression {presort}"),
+                    )
+                    presort_list.append((p.strip(), True))
+                else:
+                    aot(len(p) == 2, SyntaxError(f"Invalid expression {presort}"))
+                    aot(
+                        isinstance(p, tuple)
+                        & (isinstance(p[0], str) & (isinstance(p[1], bool))),
+                        SyntaxError(f"Invalid expression {presort}"),
+                    )
+                    presort_list.append((p[0].strip(), p[1]))
+
+        for key, value in presort_list:
             if key in res:
                 raise SyntaxError(f"Invalid expression {presort} duplicated key {key}")
             res[key] = value
