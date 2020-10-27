@@ -66,6 +66,10 @@ def test_partition_spec():
     raises(SyntaxError, lambda: PartitionSpec(presort="a xsc,e desc"))
     raises(SyntaxError, lambda: PartitionSpec(presort="a asc,a desc"))
     raises(SyntaxError, lambda: PartitionSpec(presort="a b asc,a desc"))
+    raises(SyntaxError, lambda: PartitionSpec(presort=["a asc", ("b", True)]))
+    raises(SyntaxError, lambda: PartitionSpec(presort=[("a", "asc"), "b"]))
+    raises(SyntaxError, lambda: PartitionSpec(presort=[("a", ), ("b")]))
+    raises(SyntaxError, lambda: PartitionSpec(presort=["a", ["b", True]]))
 
     p = PartitionSpec(dict(partition_by=["a"], presort="d asc,e desc"))
     assert dict(a=True, d=True, e=False) == p.get_sorts(
@@ -88,6 +92,22 @@ def test_partition_spec():
     assert a.presort == c.presort
     c = PartitionSpec(b, presort=[("b", False), ("c", True)])
     assert a.presort == c.presort
+
+    a = PartitionSpec(by=["a"], presort="b DESC, c")
+    b = PartitionSpec(by=["a"], presort=[("c", True), ("b", False)])
+    c = PartitionSpec(by=["a"], presort=["c", ("b", False)])
+    d = PartitionSpec(by=["a"], presort=[("b", False), ("c", True)])
+    assert a.presort != b.presort
+    assert b.presort == c.presort
+    assert a.presort == d.presort
+
+    a = PartitionSpec(by=["a"], presort=["b","c"])
+    b = PartitionSpec(by=["a"], presort=[("b"), ("c")])
+    c = PartitionSpec(by=["a"], presort=[("b", True), ("c", True)])
+    d = PartitionSpec(by=["a"], presort="b asc, c")
+    assert a.presort == b.presort
+    assert a.presort == c.presort
+    assert a.presort == d.presort
 
 
 def test_partition_cursor():
