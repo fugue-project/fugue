@@ -1,22 +1,19 @@
-import os
 from collections import defaultdict
 from threading import RLock
 from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar
-from uuid import uuid4
 
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
 from fugue.constants import (
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE,
-    FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH,
 )
 from fugue.dataframe import DataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowError
 from fugue.extensions._builtins import (
     AssertEqual,
-    Checkpoint,
+    AssertNotEqual,
     CreateData,
     Distinct,
     DropColumns,
@@ -33,6 +30,7 @@ from fugue.extensions._builtins import (
     Zip,
 )
 from fugue.extensions.transformer.convert import _to_transformer
+from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, FugueTask, Output, Process
 from fugue.workflow._workflow_context import (
     FugueWorkflowContext,
@@ -41,7 +39,6 @@ from fugue.workflow._workflow_context import (
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
-from triad.utils.hash import to_uuid
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -229,6 +226,24 @@ class WorkflowDataFrame(DataFrame):
         :raises AssertionError: if not equal
         """
         self.workflow.assert_eq(self, *dfs, **params)
+
+    def assert_not_eq(self, *dfs: Any, **params: Any) -> None:
+        """Wrapper of :meth:`fugue.workflow.workflow.FugueWorkflow.assert_not_eq` to
+        compare this dataframe with other dataframes.
+
+        :param dfs: |DataFramesLikeObject|
+        :param digits: precision on float number comparison, defaults to 8
+        :param check_order: if to compare the row orders, defaults to False
+        :param check_schema: if compare schemas, defaults to True
+        :param check_content: if to compare the row values, defaults to True
+        :param check_metadata: if to compare the dataframe metadatas, defaults to True
+        :param no_pandas: if true, it will compare the string representations of the
+          dataframes, otherwise, it will convert both to pandas dataframe to compare,
+          defaults to False
+
+        :raises AssertionError: if any dataframe is equal to the first dataframe
+        """
+        self.workflow.assert_not_eq(self, *dfs, **params)
 
     def transform(
         self: TDF,
@@ -467,96 +482,105 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(self, using=Dropna, params=kwargs)
         return self._to_self_type(df)
 
-    def checkpoint(
+    def weak_checkpoint(self: TDF, lazy: bool = False, **kwargs: Any) -> TDF:
+        """Cache the dataframe in memory
+
+        :param lazy: whether it is a lazy checkpoint, defaults to False (eager)
+        :param kwargs: paramteters for the underlying execution engine function
+        :return: the cached dataframe
+
+        :Notice:
+
+        Weak checkpoint in most cases is the best choice for caching a dataframe to
+        avoid duplicated computation. However it does not guarantee to break up the
+        the compute dependency for this dataframe, so when you have very complicated
+        compute, you may encounter issues such as stack overflow. Also, weak checkpoint
+        normally caches the dataframe in memory, if memory is a concern, then you should
+        consider :meth:`~.strong_checkpoint`
+        """
+        self._task.set_checkpoint(WeakCheckpoint(lazy=lazy, **kwargs))
+        return self
+
+    def strong_checkpoint(
         self: TDF,
-        path: str = "",
-        deterministic: bool = False,
+        lazy: bool = False,
+        fmt: str = "",
+        partition: Any = None,
+        single: bool = False,
+        **kwargs: Any,
+    ) -> TDF:
+        """Cache the dataframe as a temporary file
+
+        :param lazy: whether it is a lazy checkpoint, defaults to False (eager)
+        :param fmt: format hint can accept ``parquet``, ``csv``, ``json``,
+          defaults to None, meaning to infer
+        :param partition: |PartitionLikeObject|, defaults to None.
+        :param single: force the output as a single file, defaults to False
+        :param kwargs: paramteters for the underlying execution engine function
+        :return: the cached dataframe
+
+        :Notice:
+
+        Strong checkpoint guarantees the output dataframe compute dependency is
+        from the temporary file. Use strong checkpoint only when
+        :meth:`~.weak_checkpoint` can't be used.
+
+        Strong checkpoint file will be removed after the execution of the workflow.
+        """
+        self._task.set_checkpoint(
+            FileCheckpoint(
+                deterministic=False,
+                lazy=lazy,
+                fmt=fmt,
+                partition=partition,
+                single=single,
+                **kwargs,
+            )
+        )
+        return self
+
+    def deterministic_checkpoint(
+        self: TDF,
+        lazy: bool = False,
         fmt: str = "",
         partition: Any = None,
         single: bool = False,
         namespace: Any = None,
         **kwargs: Any,
     ) -> TDF:
-        """Save this dataframe to a persistent storage and load back
+        """Cache the dataframe as a temporary file
 
-        :param path: output path, defaults to empty string. If path is empty
-          a generated path based on ``deterministic`` will be used
-        :param deterministic: whether this checkpoint is cross execution (True)
-          or not (False), defaults to False. It only takes effect when ``path``
-          is empty
+        :param lazy: whether it is a lazy checkpoint, defaults to False (eager)
         :param fmt: format hint can accept ``parquet``, ``csv``, ``json``,
           defaults to None, meaning to infer
-        :param partition: |PartitionLikeObject|, how to partition the
-          dataframe before saving, defaults to empty
+        :param partition: |PartitionLikeObject|, defaults to None.
         :param single: force the output as a single file, defaults to False
-        :param namespace: a value to control determinism, defaults to None. It
-          takes effect only when ``path`` is empty and ``deterministic`` is True
-        :param kwargs: parameters to pass to the underlying framework
+        :param kwargs: paramteters for the underlying execution engine function
+        :param namespace: a value to control determinism, defaults to None.
+        :return: the cached dataframe
 
         :Notice:
 
-        There are 3 use cases for checkpoint
-        * You want to save the give dataframe to a specified path, and then load
-          back to continue using it
-        * You want to cache the dataframe within one execution, and you want to
-          ensure the underlying execution engine will break up the compute dependency
-          of this dataframe. Or you want to cache it to file for memory and
-          performance concerns
-        * You want to cache the dataframe cross execution, so next time when you run
-          the entire workflow again, it can retrieve the data from file to save time
-
-        :Notice:
-
-        The third use case is not fully supported, the cross execution checkpoint is
-        not a well defined concept yet. So currently, only when the previous steps
-        are lazy, it can save time. For example if you use :meth:`~.persist` in any of
-        the previous steps, that computation will run again.
-
-        :Notice:
-
-        ``checkpoint`` guarantees the cached dataframe will be computed
-        for only once and it also guarantees to break up any execution dependency for
-        this dataframe.
-
-        ``checkpoint`` method is considered as strong checkpoint. In most cases it
-        may be good enough to use weak checkpint, which is :meth:`~.persist`
-
-        In the following cases you may prefer ``checkpoint``:
-
-        * You need permanent/cross execution checkpoint
-        * The dataframe is too big and it takes too much cluster memory
-        * The execution dependency to generate this dataframe is extremely complicated
+        The difference vs :meth:`~.strong_checkpoint` is that this checkpoint is not
+        removed after execution, so it can take effect cross execution if the dependent
+        compute logic is not changed.
         """
-        if path != "" and path is not None:
-            # case 1
-            mode = "overwrite"
-        else:
-            assert_or_throw(
-                fmt == "", FugueWorkflowError("fmt must be empty when path is not set")
+        self._task.set_checkpoint(
+            FileCheckpoint(
+                deterministic=True,
+                lazy=lazy,
+                fmt=fmt,
+                partition=partition,
+                single=single,
+                namespace=namespace,
+                **kwargs,
             )
-            filename = to_uuid(namespace, self.spec_uuid()) + ".parquet"
-            if not deterministic:
-                # case 2
-                path = os.path.join(self.workflow._checkpoint_path, filename)
-                mode = "use"
-            else:
-                # case 3
-                path = os.path.join(self.workflow._checkpoint_temp_path, filename)
-                mode = "overwrite"
-        if partition is None:
-            partition = self._metadata.get("pre_partition", PartitionSpec())
-        df = self.workflow.process(
-            self,
-            using=Checkpoint,
-            pre_partition=partition,
-            params=dict(path=path, fmt=fmt, mode=mode, single=single, params=kwargs),
         )
-        return self._to_self_type(df)
+        return self
 
-    def persist(self: TDF, level: Any = None) -> TDF:
+    def persist(self: TDF) -> TDF:
         """Persist the current dataframe
 
-        :param level: the parameter passed to the underlying framework, defaults to None
         :return: the persisted dataframe
         :rtype: :class:`~.WorkflowDataFrame`
 
@@ -571,8 +595,15 @@ class WorkflowDataFrame(DataFrame):
         ``persist`` method is considered as weak checkpoint. Sometimes, it may be
         necessary to use strong checkpint, which is :meth:`~.checkpoint`
         """
-        self._task.persist(level)
-        return self
+        return self.weak_checkpoint(
+            lazy=False,
+            level=self.workflow.conf.get_or_none(
+                FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE, object
+            ),
+        )
+
+    def checkpoint(self: TDF) -> TDF:
+        return self.strong_checkpoint(lazy=False)
 
     def broadcast(self: TDF) -> TDF:
         """Broadcast the current dataframe
@@ -826,7 +857,6 @@ class FugueWorkflow(object):
         self._workflow_ctx = self._to_ctx(*args, **kwargs)
         self._computed = False
         self._graph = _Graph()
-        self._execution_id = ""
 
     @property
     def conf(self) -> ParamDict:
@@ -834,13 +864,6 @@ class FugueWorkflow(object):
         :class:`~fugue.execution.execution_engine.ExecutionEngine` (if given)
         """
         return self._workflow_ctx.conf
-
-    @property
-    def execution_id(self) -> str:
-        assert_or_throw(
-            self._execution_id != "", FugueWorkflowError("execution id is not set")
-        )
-        return self._execution_id
 
     def spec_uuid(self) -> str:
         """UUID of the workflow spec (`description`)"""
@@ -868,28 +891,11 @@ class FugueWorkflow(object):
         to learn how to run in different ways and pros and cons.
         """
         with self._lock:
-            try:
-                self._computed = False
-                self._execution_id = str(uuid4())
-                if len(args) > 0 or len(kwargs) > 0:
-                    self._workflow_ctx = self._to_ctx(*args, **kwargs)
-                if self._checkpoint_temp_path != "":
-                    self._workflow_ctx.execution_engine.fs.makedirs(
-                        self._checkpoint_temp_path
-                    )
-                self._workflow_ctx.run(self._spec, {})
-                self._computed = True
-            finally:
-                if self._checkpoint_temp_path != "":
-                    try:
-                        self._workflow_ctx.execution_engine.fs.removetree(
-                            self._checkpoint_temp_path
-                        )
-                    except Exception as e:
-                        self._workflow_ctx.execution_engine.log.warn(
-                            "Unable to remove " + self._checkpoint_temp_path, e
-                        )
-                self._execution_id = ""
+            self._computed = False
+            if len(args) > 0 or len(kwargs) > 0:
+                self._workflow_ctx = self._to_ctx(*args, **kwargs)
+            self._workflow_ctx.run(self._spec, {})
+            self._computed = True
 
     def __enter__(self):
         return self
@@ -1300,7 +1306,7 @@ class FugueWorkflow(object):
         )
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
-        """Compare if these dataframes are equal. Is for internal, unit test
+        """Compare if these dataframes are equal. It's for internal, unit test
         purpose only. It will convert both dataframes to
         :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`, so it assumes
         all dataframes are small and fast enough to convert. DO NOT use it
@@ -1320,6 +1326,27 @@ class FugueWorkflow(object):
         """
         self.output(*dfs, using=AssertEqual, params=params)
 
+    def assert_not_eq(self, *dfs: Any, **params: Any) -> None:
+        """Assert if all dataframes are not equal to the first dataframe.
+        It's for internal, unit test purpose only. It will convert both dataframes to
+        :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`, so it assumes
+        all dataframes are small and fast enough to convert. DO NOT use it
+        on critical or expensive tasks.
+
+        :param dfs: |DataFramesLikeObject|
+        :param digits: precision on float number comparison, defaults to 8
+        :param check_order: if to compare the row orders, defaults to False
+        :param check_schema: if compare schemas, defaults to True
+        :param check_content: if to compare the row values, defaults to True
+        :param check_metadata: if to compare the dataframe metadatas, defaults to True
+        :param no_pandas: if true, it will compare the string representations of the
+          dataframes, otherwise, it will convert both to pandas dataframe to compare,
+          defaults to False
+
+        :raises AssertionError: if any dataframe equals to the first dataframe
+        """
+        self.output(*dfs, using=AssertNotEqual, params=params)
+
     def add(self, task: FugueTask, *args: Any, **kwargs: Any) -> WorkflowDataFrame:
         """This method should not be called directly by users. Use
         :meth:`~.create`, :meth:`~.process`, :meth:`~.output` instead
@@ -1335,9 +1362,12 @@ class FugueWorkflow(object):
             if len(self._graph.down[v]) > 1 and self.conf.get_or_throw(
                 FUGUE_CONF_WORKFLOW_AUTO_PERSIST, bool
             ):
-                self._spec.tasks[v].persist(
-                    self.conf.get_or_none(
-                        FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE, object
+                self._spec.tasks[v].set_checkpoint(
+                    WeakCheckpoint(
+                        lazy=False,
+                        level=self.conf.get_or_none(
+                            FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE, object
+                        ),
                     )
                 )
         return WorkflowDataFrame(self, wt)
@@ -1349,16 +1379,6 @@ class FugueWorkflow(object):
         if len(args) == 1 and isinstance(args[0], FugueWorkflowContext):
             return args[0]
         return FugueWorkflowContext(*args, **kwargs)
-
-    @property
-    def _checkpoint_path(self) -> str:
-        return self.conf.get(FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH, "").strip()
-
-    @property
-    def _checkpoint_temp_path(self) -> str:
-        if self._checkpoint_path == "":
-            return ""
-        return os.path.join(self._checkpoint_path, self.execution_id)
 
 
 class _FugueInteractiveWorkflow(FugueWorkflow):

@@ -19,19 +19,19 @@ def test_checkpoint():
     id2 = (
         FugueWorkflow()
         .df([[0]], "a:int32")
-        .checkpoint(namespace="1")
+        .deterministic_checkpoint(namespace="1")
         .workflow.spec_uuid()
     )
     id3 = (
         FugueWorkflow()
         .df([[0]], "a:int32")
-        .checkpoint(namespace=1)
+        .deterministic_checkpoint(namespace=1)
         .workflow.spec_uuid()
     )
     id4 = (
         FugueWorkflow()
         .df([[0]], "a:int32")
-        .checkpoint(namespace=1)
+        .deterministic_checkpoint(namespace=1)
         .workflow.spec_uuid()
     )
 
@@ -78,7 +78,7 @@ def test_auto_persist():
     id2 = dag2.spec_uuid()
 
     dag3 = FugueWorkflow(NativeExecutionEngine())
-    df1 = dag3.df([[0]], "a:int").persist("abc")
+    df1 = dag3.df([[0]], "a:int").weak_checkpoint(level="abc")
     df1.show()
     df1.show()
     id3 = dag3.spec_uuid()
@@ -104,40 +104,104 @@ def test_auto_persist():
     assert id2 != id3
 
 
-def test_workflow_determinism():
-    # TODO: need more thorough test, separate this to small ones and remove it
-    builder1 = FugueWorkflow()
-    a1 = builder1.create_data([[0], [0], [1]], "a:int32")
+def test_workflow_determinism_1():
+    dag1 = FugueWorkflow()
+    a1 = dag1.create_data([[0], [0], [1]], "a:int32")
     b1 = a1.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
     a1.show()
 
-    builder2 = FugueWorkflow()
-    a2 = builder2.create_data([[0], [0], [1]], Schema("a:int"))
-    b2 = a2.transform(mock_tf1, "*,b:int", pre_partition=dict(num="2", by=["a"]))
+    dag2 = FugueWorkflow()
+    a2 = dag2.create_data([[0], [0], [1]], "a:int32")
+    b2 = a2.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
     a2.show()
 
-    assert builder1.spec_uuid() == builder1.spec_uuid()
+    assert dag1.spec_uuid() == dag1.spec_uuid()
     assert a1.spec_uuid() == a2.spec_uuid()
     assert b1.spec_uuid() == b2.spec_uuid()
-    assert builder1.spec_uuid() == builder2.spec_uuid()
+    assert dag1.spec_uuid() == dag2.spec_uuid()
 
-    builder3 = FugueWorkflow()
-    a3 = builder2.create_data([[0], [0], [1]], Schema("a:int"))
-    b3 = a2.transform(mock_tf1, "*,b:str", pre_partition=dict(num="2", by=["a"]))
-    a3.show()
 
-    assert a1.spec_uuid() == a3.spec_uuid()
-    assert b1.spec_uuid() != b3.spec_uuid()
-    assert builder1.spec_uuid() != builder3.spec_uuid()
+def test_workflow_determinism_2():
+    dag1 = FugueWorkflow()
+    dag1.create_data([[0], [0], [1]], "a:int32")  # <----
+    a1 = dag1.create_data([[0], [0], [1]], "a:int32")
+    b1 = a1.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
+    a1.show()
 
-    builder3 = FugueWorkflow()
-    a3 = builder2.create_data([[0], [0], [1]], Schema("a:int"))
-    b3 = a2.transform(mock_tf1, "*,b:int", pre_partition=dict(num="200", by=["a"]))
-    a3.show()
+    dag2 = FugueWorkflow()
+    a2 = dag2.create_data([[0], [0], [1]], "a:int32")
+    b2 = a2.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
+    a2.show()
 
-    assert a1.spec_uuid() == a3.spec_uuid()
-    assert b1.spec_uuid() != b3.spec_uuid()
-    assert builder1.spec_uuid() != builder3.spec_uuid()
+    assert a1.spec_uuid() == a2.spec_uuid()
+    assert b1.spec_uuid() == b2.spec_uuid()
+    assert dag1.spec_uuid() != dag2.spec_uuid()
+
+
+def test_workflow_determinism_3():
+    dag1 = FugueWorkflow()
+    a1 = dag1.create_data([[0], [0], [1]], "a:int32")
+    b1 = a1.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
+    a1.show()
+
+    dag2 = FugueWorkflow()
+    a2 = dag2.create_data([[1], [10], [20]], "a:int32")  # <---
+    b2 = a2.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
+    a2.show()
+
+    assert a1.spec_uuid() != a2.spec_uuid()
+    assert b1.spec_uuid() != b2.spec_uuid()
+    assert dag1.spec_uuid() != dag2.spec_uuid()
+
+
+def test_workflow_determinism_4():
+    dag1 = FugueWorkflow()
+    a1 = dag1.create_data([[0], [0], [1]], "a:int32")
+    b1 = a1.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
+    a1.show()
+
+    dag2 = FugueWorkflow()
+    a2 = dag2.create_data([[0], [0], [1]], "a:int32")
+    b2 = a2.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=20))  # <---
+    a2.show()
+
+    assert a1.spec_uuid() == a2.spec_uuid()
+    assert b1.spec_uuid() != b2.spec_uuid()
+    assert dag1.spec_uuid() != dag2.spec_uuid()
+
+
+def test_workflow_determinism_5():
+    dag1 = FugueWorkflow()
+    a1 = dag1.create_data([[0], [0], [1]], "a:int32")
+    b1 = a1.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
+    a1.show()
+
+    dag2 = FugueWorkflow()
+    a2 = dag2.create_data([[0], [0], [1]], "a:int32")
+    b2 = a2.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
+    a2.show(rows=22)  # <---
+
+    assert a1.spec_uuid() == a2.spec_uuid()
+    assert b1.spec_uuid() == b2.spec_uuid()
+    assert dag1.spec_uuid() != dag2.spec_uuid()
+
+
+def test_workflow_determinism_5():
+    dag1 = FugueWorkflow()
+    dag1.create_data([[0], [0], [1]], "a:int32")
+    a1 = dag1.create_data([[0], [0], [1]], "a:int32")
+    b1 = dag1.create_data([[1], [0], [1]], "a:int32")
+    c1 = a1.union(b1)
+
+    dag2 = FugueWorkflow()
+    a2 = dag1.create_data([[0], [0], [1]], "a:int32")
+    b2 = dag1.create_data([[1], [0], [1]], "a:int32")
+    c2 = a1.union(b2)
+
+    assert a1.spec_uuid() == a2.spec_uuid()
+    assert b1.spec_uuid() == b2.spec_uuid()
+    assert c1.spec_uuid() == c2.spec_uuid()
+    assert dag1.spec_uuid() != dag2.spec_uuid()
 
 
 def mock_tf1(df: List[Dict[str, Any]], v: int = 1) -> Iterable[Dict[str, Any]]:

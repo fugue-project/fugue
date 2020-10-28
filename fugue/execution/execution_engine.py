@@ -7,6 +7,7 @@ from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
 )
+from fugue.constants import FUGUE_DEFAULT_CONF
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
@@ -18,7 +19,6 @@ from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_size
 from triad.utils.string import validate_triad_var_name
-from fugue.constants import FUGUE_DEFAULT_CONF
 
 _DEFAULT_JOIN_KEYS: List[str] = []
 

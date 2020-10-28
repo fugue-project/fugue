@@ -4,12 +4,14 @@ import pickle
 from typing import Any, Dict, Iterable, List
 from unittest import TestCase
 
+import numpy as np
 import pandas as pd
 import pytest
 from fugue import FileSystem, Schema
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.exceptions import FugueWorkflowError
 from fugue.execution import ExecutionEngine
 from fugue.execution.native_execution_engine import SqliteEngine
 from fugue.extensions.outputter import Outputter
@@ -21,7 +23,9 @@ from fugue.extensions.transformer import (
     transformer,
 )
 from fugue.workflow.workflow import FugueWorkflow, _FugueInteractiveWorkflow
+from pytest import raises
 from triad.utils.convert import get_full_type_path
+from fugue.collections.partition import PartitionSpec
 
 
 class BuiltInTests(object):
@@ -64,6 +68,124 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 dag.df([[0]], "a:int").persist().partition(num=2).show()
                 dag.df(dag.df([[0]], "a:int")).persist().broadcast().show()
+
+        def test_checkpoint(self):
+            with raises(FugueWorkflowError):
+                with self.dag() as dag:
+                    dag.df([[0]], "a:int").checkpoint()
+
+            self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(
+                self.tmpdir, "ck"
+            )
+            with self.dag() as dag:
+                a = dag.df([[0]], "a:int").checkpoint()
+                dag.df([[0]], "a:int").assert_eq(a)
+
+        def test_deterministic_checkpoint(self):
+            self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(
+                self.tmpdir, "ck"
+            )
+            temp_file = os.path.join(self.tmpdir, "t.parquet")
+
+            def mock_create(dummy: int = 1) -> pd.DataFrame:
+                return pd.DataFrame(np.random.rand(3, 2), columns=["a", "b"])
+
+            # base case without checkpoint, two runs should generate different result
+            with self.dag() as dag:
+                a = dag.create(mock_create)
+                a.save(temp_file)
+            with self.dag() as dag:
+                a = dag.create(mock_create)
+                b = dag.load(temp_file)
+                b.assert_not_eq(a)
+
+            # strong checkpoint is not cross execution, so result should be different
+            with self.dag() as dag:
+                a = dag.create(mock_create).strong_checkpoint()
+                a.save(temp_file)
+            with self.dag() as dag:
+                a = dag.create(mock_create).strong_checkpoint()
+                b = dag.load(temp_file)
+                b.assert_not_eq(a)
+
+            # with deterministic checkpoint, two runs should generate the same result
+            with self.dag() as dag:
+                dag.create(
+                    mock_create, params=dict(dummy=2)
+                )  # this should not affect a because it's not a dependency
+                a = dag.create(mock_create).deterministic_checkpoint()
+                a.save(temp_file)
+            with self.dag() as dag:
+                a = dag.create(mock_create).deterministic_checkpoint()
+                b = dag.load(temp_file)
+                b.assert_eq(a)
+            with self.dag() as dag:
+                # even change on the settings of deterministic checkpoint
+                # will affect determinism
+                a = dag.create(mock_create).deterministic_checkpoint(
+                    partition=PartitionSpec(num=2)
+                )
+                b = dag.load(temp_file)
+                b.assert_not_eq(a)
+
+        def test_deterministic_checkpoint_complex_dag(self):
+            self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(
+                self.tmpdir, "ck"
+            )
+            temp_file = os.path.join(self.tmpdir, "t.parquet")
+
+            def mock_create(dummy: int = 1) -> pd.DataFrame:
+                return pd.DataFrame(np.random.rand(3, 2), columns=["a", "b"])
+
+            # base case without checkpoint, two runs should generate different result
+            with self.dag() as dag:
+                a = dag.create(mock_create).drop(["a"])
+                b = dag.create(mock_create).drop(["a"])
+                c = a.union(b)
+                c.save(temp_file)
+            with self.dag() as dag:
+                a = dag.create(mock_create).drop(["a"])
+                b = dag.create(mock_create).drop(["a"])
+                c = a.union(b)
+                d = dag.load(temp_file)
+                d.assert_not_eq(c)
+
+            # strong checkpoint is not cross execution, so result should be different
+            with self.dag() as dag:
+                a = dag.create(mock_create).drop(["a"])
+                b = dag.create(mock_create).drop(["a"])
+                c = a.union(b).strong_checkpoint()
+                c.save(temp_file)
+            with self.dag() as dag:
+                a = dag.create(mock_create).drop(["a"])
+                b = dag.create(mock_create).drop(["a"])
+                c = a.union(b).strong_checkpoint()
+                d = dag.load(temp_file)
+                d.assert_not_eq(c)
+
+            # with deterministic checkpoint, two runs should generate the same result
+            with self.dag() as dag:
+                dag.create(
+                    mock_create, params=dict(dummy=2)
+                )  # this should not affect a because it's not a dependency
+                a = dag.create(mock_create).drop(["a"])
+                b = dag.create(mock_create).drop(["a"])
+                c = a.union(b).deterministic_checkpoint()
+                c.save(temp_file)
+            with self.dag() as dag:
+                a = dag.create(mock_create).drop(["a"])
+                b = dag.create(mock_create).drop(["a"])
+                c = a.union(b).deterministic_checkpoint()
+                d = dag.load(temp_file)
+                d.assert_eq(c)
+            with self.dag() as dag:
+                # even change on the settings of deterministic checkpoint
+                # will affect determinism
+                a = dag.create(mock_create).drop(["a"])
+                b = dag.create(mock_create).drop(["a"])
+                c = a.union(b).deterministic_checkpoint(partition=PartitionSpec(num=2))
+                d = dag.load(temp_file)
+                d.assert_not_eq(c)
 
         def test_create_process_output(self):
             with self.dag() as dag:

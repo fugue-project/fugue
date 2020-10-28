@@ -34,6 +34,14 @@ class AssertEqual(Outputter):
             df_eq(expected, dfs[i], throw=True, **self.params)
 
 
+class AssertNotEqual(Outputter):
+    def process(self, dfs: DataFrames) -> None:
+        assert_or_throw(len(dfs) > 1, FugueWorkflowError("can't accept single input"))
+        expected = dfs[0]
+        for i in range(1, len(dfs)):
+            assert not df_eq(expected, dfs[i], throw=False, **self.params)
+
+
 class Save(Outputter):
     def process(self, dfs: DataFrames) -> None:
         assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
