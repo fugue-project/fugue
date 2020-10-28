@@ -7,7 +7,6 @@ from fugue.extensions._builtins.outputters import (
     Show,
 )
 from fugue.extensions._builtins.processors import (
-    Checkpoint,
     Distinct,
     DropColumns,
     Dropna,
