@@ -456,6 +456,29 @@ class _Extensions(_VisitorBase):
             **data.get("params", {}),
         )
 
+    def visitFugueDropColumnsTask(self, ctx: fp.FugueDropColumnsTaskContext):
+        data = self.get_dict(ctx, "cols", "df")
+        if "df" in data:
+            df = data["df"]
+        else:
+            df = self.last
+        return df.drop(
+            columns=data["cols"],
+            if_exists=ctx.IF() is not None,
+        )
+
+    def visitFugueDropnaTask(self, ctx: fp.FugueDropnaTaskContext):
+        data = self.get_dict(ctx, "cols", "df")
+        if "df" in data:
+            df = data["df"]
+        else:
+            df = self.last
+        params: Dict[str, Any] = {}
+        params["how"] = "any" if ctx.ANY() is not None else "all"
+        if "cols" in data:
+            params["subset"] = data["cols"]
+        return df.dropna(**params)
+
     def visitFugueLoadTask(self, ctx: fp.FugueLoadTaskContext) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "fmt", "path", "params", "columns")
         return self.workflow.load(

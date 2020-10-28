@@ -112,6 +112,8 @@ fugueNestableTaskCollectionNoSelect
     | fugueCreateDataTask
     | fugueLoadTask
     | fugueSaveAndUseTask
+    | fugueDropColumnsTask
+    | fugueDropnaTask
     ;
 
 fugueTransformTask:
@@ -131,7 +133,7 @@ fugueDropColumnsTask:
     ;
 
 fugueDropnaTask:
-    DROP WHEN how=(ALL|ANY) (NULL|NULLS) (ON cols=fugueCols)? (FROM df=fugueDataFrame)?
+    DROP ROWS IF how=(ALL|ANY) (NULL|NULLS) (ON cols=fugueCols)? (FROM df=fugueDataFrame)?
     ;
 
 fugueZipTask:

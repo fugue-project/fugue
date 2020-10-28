@@ -435,6 +435,31 @@ def test_load():
     )
 
 
+def test_drop():
+    dag = FugueWorkflow()
+    a = dag.create(mock_create1)
+    b = a.drop(["a", "b"])
+    c = a.drop(["a", "b"], if_exists=True)
+
+    d = dag.create(mock_create1)
+    e = d.dropna(how="any")
+    f = d.dropna(how="all")
+    g = d.dropna(how="any", subset=["a", "c"])
+    assert_eq(
+        """
+    a=create using mock_create1
+    drop columns a,b
+    drop columns a,b if exists from a
+    
+    d=create using mock_create1
+    drop rows if any null
+    drop rows if all null from d
+    drop rows if any nulls on a,c from d
+    """,
+        dag,
+    )
+
+
 def assert_eq(expr, expected: FugueWorkflow):
     sql = FugueSQL(expr, "fugueLanguage", ignore_case=True, simple_assign=True)
     wf = FugueWorkflow()
