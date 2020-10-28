@@ -53,6 +53,7 @@ def test_partition_syntax():
 def test_persist_broadcast_checkpoint_syntax():
     good_single_syntax(
         "a = select a",
+        ["", "lazy"],
         [
             "",
             "PERSIst",
@@ -60,6 +61,7 @@ def test_persist_broadcast_checkpoint_syntax():
             "weak checkpoint (level='a.b.c')",
             "checkpoint",
             "deterministic checkpoint 'x'",
+            "deterministic checkpoint 'x' prepartition by a single (level=1)",
         ],
         ["BROADCAst"],
         ignore_case=True,
