@@ -439,6 +439,23 @@ class _Extensions(_VisitorBase):
             **data.get("params", {}),
         )
 
+    def visitFugueSaveAndUseTask(self, ctx: fp.FugueSaveAndUseTaskContext):
+        data = self.get_dict(
+            ctx, "partition", "df", "m", "single", "fmt", "path", "params"
+        )
+        if "df" in data:
+            df = data["df"]
+        else:
+            df = self.last
+        return df.save_and_use(
+            path=data["path"],
+            fmt=data.get("fmt", ""),
+            mode=data["m"],
+            partition=data.get("partition"),
+            single="single" in data,
+            **data.get("params", {}),
+        )
+
     def visitFugueLoadTask(self, ctx: fp.FugueLoadTaskContext) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "fmt", "path", "params", "columns")
         return self.workflow.load(

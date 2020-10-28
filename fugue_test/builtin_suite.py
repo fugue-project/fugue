@@ -649,6 +649,18 @@ class BuiltInTests(object):
                 a = dag.load(path2, header=True, columns="c:int,a:long")
                 a.assert_eq(dag.df([[6, 1], [2, 7]], "c:int,a:long"))
 
+        def test_save_and_use(self):
+            path = os.path.join(self.tmpdir, "a")
+            with self.dag() as dag:
+                b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
+                c = b.save_and_use(path, fmt="parquet")
+                b.assert_eq(c)
+
+            with self.dag() as dag:
+                b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
+                d = dag.load(path, fmt="parquet")
+                b.assert_eq(d)
+
 
 def mock_creator(p: int) -> DataFrame:
     return ArrayDataFrame([[p]], "a:int")

@@ -393,6 +393,31 @@ def test_save():
     )
 
 
+def test_save_and_use():
+    dag = FugueWorkflow()
+    a = dag.create(mock_create1, params=dict(n=1))
+    b = dag.create(mock_create1, params=dict(n=1))
+    a = a.save_and_use("xx", fmt="parquet", mode="overwrite")
+    b.save_and_use("xx", mode="append")
+    b.save_and_use("xx", mode="error")
+    a = a.save_and_use("xx.csv", fmt="csv", mode="error", single=True, header=True)
+    a = a.partition(by=["x"]).save_and_use("xx", mode="overwrite")
+    dag.create(mock_create1, params=dict(n=2)).save_and_use("xx", mode="overwrite")
+    assert_eq(
+        """
+    a=create using mock_create1(n=1)
+    b=create using mock_create1(n=1)
+    a=save and use a overwrite parquet "xx"
+    save and use b append "xx"
+    save and use b to "xx"
+    save and use a to single csv "xx.csv"(header=True)
+    save and use prepartition by x overwrite "xx"
+    save and use (create using mock_create1(n=2)) overwrite "xx"
+    """,
+        dag,
+    )
+
+
 def test_load():
     dag = FugueWorkflow()
     dag.load("xx")

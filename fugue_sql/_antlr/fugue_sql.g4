@@ -111,6 +111,7 @@ fugueNestableTaskCollectionNoSelect
     | fugueCreateTask
     | fugueCreateDataTask
     | fugueLoadTask
+    | fugueSaveAndUseTask
     ;
 
 fugueTransformTask:
@@ -147,6 +148,10 @@ fuguePrintTask:
 
 fugueSaveTask:
     SAVE (df=fugueDataFrame)? (partition=fuguePrepartition)? m=fugueSaveMode (single=fugueSingleFile)? (fmt=fugueFileFormat)? path=fuguePath (params=fugueParams)?
+    ;
+
+fugueSaveAndUseTask:
+    SAVE AND USE (df=fugueDataFrame)? (partition=fuguePrepartition)? m=fugueSaveMode (single=fugueSingleFile)? (fmt=fugueFileFormat)? path=fuguePath (params=fugueParams)?
     ;
 
 fugueSingleFile
