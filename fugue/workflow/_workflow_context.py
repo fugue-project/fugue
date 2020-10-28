@@ -8,13 +8,16 @@ from adagio.instances import (
     WorkflowHooks,
     WorkflowResultCache,
 )
+from adagio.specs import WorkflowSpec
 from fugue.constants import FUGUE_CONF_WORKFLOW_CONCURRENCY, FUGUE_DEFAULT_CONF
 from fugue.dataframe import DataFrame
 from fugue.execution.execution_engine import ExecutionEngine
 from fugue.execution.native_execution_engine import NativeExecutionEngine
+from fugue.workflow._checkpoint import CheckpointPath
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_instance
+from uuid import uuid4
 
 
 class FugueWorkflowContext(WorkflowContext):
@@ -32,6 +35,8 @@ class FugueWorkflowContext(WorkflowContext):
         self._fugue_engine = ee
         self._lock = RLock()
         self._results: Dict[Any, DataFrame] = {}
+        self._execution_id = ""
+        self._checkpoint_path = CheckpointPath(self.execution_engine)
         if workflow_engine is None:
             workflow_engine = ParallelExecutionEngine(
                 self.execution_engine.conf.get(
@@ -47,6 +52,20 @@ class FugueWorkflowContext(WorkflowContext):
             logger=ee.log,
             config=ee.conf,
         )
+
+    def run(self, spec: WorkflowSpec, conf: Dict[str, Any]) -> None:
+        try:
+            self._execution_id = str(uuid4())
+            self._checkpoint_path = CheckpointPath(self.execution_engine)
+            self._checkpoint_path.init_temp_path(self._execution_id)
+            super().run(spec, conf)
+        finally:
+            self._checkpoint_path.remove_temp_path()
+            self._execution_id = ""
+
+    @property
+    def checkpoint_path(self) -> CheckpointPath:
+        return self._checkpoint_path
 
     @property
     def execution_engine(self) -> ExecutionEngine:

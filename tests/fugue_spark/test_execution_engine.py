@@ -29,10 +29,11 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_to_df(self):
         e = self.engine
-        o = ArrayDataFrame([[1, 2]],
-                           "a:int,b:int",
-                           dict(a=1),
-                           )
+        o = ArrayDataFrame(
+            [[1, 2]],
+            "a:int,b:int",
+            dict(a=1),
+        )
         a = e.to_df(o)
         assert a is not o
         df_eq(a, o, throw=True)
@@ -41,19 +42,20 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_persist(self):
         e = self.engine
-        o = ArrayDataFrame([[1, 2]],
-                           "a:int,b:int",
-                           dict(a=1),
-                           )
+        o = ArrayDataFrame(
+            [[1, 2]],
+            "a:int,b:int",
+            dict(a=1),
+        )
         a = e.persist(o)
         df_eq(a, o, throw=True)
-        a = e.persist(o, StorageLevel.MEMORY_ONLY)
+        a = e.persist(o, level=StorageLevel.MEMORY_ONLY)
         df_eq(a, o, throw=True)
-        a = e.persist(o, "MEMORY_ONLY")
+        a = e.persist(o, level="MEMORY_ONLY")
         df_eq(a, o, throw=True)
         # this passed because persist is run once on ths same object
-        e.persist(a, "xyz")
-        raises(ValueError, lambda: e.persist(o, "xyz"))
+        e.persist(a, level="xyz")
+        raises(ValueError, lambda: e.persist(o, level="xyz"))
 
 
 class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
@@ -64,9 +66,8 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
     def make_engine(self):
         session = SparkSession.builder.getOrCreate()
         e = SparkExecutionEngine(
-            session,
-            {"test": True,
-             "fugue.spark.use_pandas_udf": True})
+            session, {"test": True, "fugue.spark.use_pandas_udf": True}
+        )
         assert e.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
         return e
 
@@ -90,8 +91,9 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
 
     def test_repartition(self):
         with self.dag() as dag:
-            a = dag.df([[0, 1], [0, 2], [0, 3], [0, 4], [
-                       1, 1], [1, 2], [1, 3]], "a:int,b:int")
+            a = dag.df(
+                [[0, 1], [0, 2], [0, 3], [0, 4], [1, 1], [1, 2], [1, 3]], "a:int,b:int"
+            )
             c = a.partition(algo="even", num="ROWCOUNT").transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[1, 1, 1, 1, 1, 1, 1]))
             c = a.partition(algo="even", num="ROWCOUNT/2").transform(count_partition)
@@ -107,15 +109,25 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
     def test_repartition_large(self):
         with self.dag() as dag:
             a = dag.df([[p, 0] for p in range(100)], "a:int,b:int")
-            c = a.partition(algo="even", by=["a"]).transform(
-                AssertMaxNTransform).persist()
-            c = a.partition(algo="even", num="ROWCOUNT/2", by=["a"]).transform(
-                AssertMaxNTransform, params=dict(n=2)).persist()
-            c = a.partition(algo="even", num="ROWCOUNT").transform(
-                AssertMaxNTransform).persist()
+            c = (
+                a.partition(algo="even", by=["a"])
+                .transform(AssertMaxNTransform)
+                .persist()
+            )
+            c = (
+                a.partition(algo="even", num="ROWCOUNT/2", by=["a"])
+                .transform(AssertMaxNTransform, params=dict(n=2))
+                .persist()
+            )
+            c = (
+                a.partition(algo="even", num="ROWCOUNT")
+                .transform(AssertMaxNTransform)
+                .persist()
+            )
             dag.output(c, using=assert_all_n, params=dict(n=1, l=100))
-            c = a.partition(
-                algo="even", num="ROWCOUNT/2").transform(AssertMaxNTransform)
+            c = a.partition(algo="even", num="ROWCOUNT/2").transform(
+                AssertMaxNTransform
+            )
             dag.output(c, using=assert_all_n, params=dict(n=2, l=50))
             c = a.partition(num=1).transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[100]))

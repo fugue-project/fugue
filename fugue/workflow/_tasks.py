@@ -11,6 +11,7 @@ from fugue.execution import ExecutionEngine
 from fugue.extensions.creator.convert import _to_creator
 from fugue.extensions.outputter.convert import _to_outputter
 from fugue.extensions.processor.convert import _to_processor
+from fugue.workflow._checkpoint import Checkpoint
 from fugue.workflow._workflow_context import FugueWorkflowContext
 from triad.collections.dict import ParamDict
 from triad.exceptions import InvalidOperationError
@@ -56,11 +57,9 @@ class FugueTask(TaskSpec, ABC):
             deterministic=deterministic,
             lazy=lazy,
         )
-        self._persist = False
-        self._persist_value: Any = None
+        self._checkpoint = Checkpoint()
         self._broadcast = False
-        self._checkpoint = False
-        self._checkpoint_namespace: Optional[str] = None
+        self._dependency_uuid: Any = None
 
     def __uuid__(self) -> str:
         return to_uuid(
@@ -71,12 +70,9 @@ class FugueTask(TaskSpec, ABC):
             self.metadata,
             self.deterministic,
             self.lazy,
-            self.node_spec,
-            self._persist,
-            str(self._persist_value),
-            self._broadcast,
+            self._get_dependency_uuid(),
             self._checkpoint,
-            self._checkpoint_namespace,
+            self._broadcast,
         )
 
     @abstractmethod
@@ -100,33 +96,22 @@ class FugueTask(TaskSpec, ABC):
     def __deepcopy__(self, memo: Any) -> "FugueTask":
         raise InvalidOperationError("can't copy")
 
-    def checkpoint(self, namespace: Any = None):
-        # TODO: currently checkpoint is not taking effect
-        self._checkpoint = True
-        self._checkpoint_namespace = None if namespace is None else str(namespace)
-
-    def persist(self, level: Any) -> "FugueTask":
-        self._persist = True
-        self._persist_value = level
+    def set_checkpoint(self, checkpoint: Checkpoint) -> "FugueTask":
+        self._checkpoint = checkpoint
         return self
 
-    def handle_persist(self, df: DataFrame, engine: ExecutionEngine) -> DataFrame:
-        if not self._persist:
-            return df
-        return engine.persist(df, self._persist_value)
+    def handle_checkpoint(self, df: DataFrame, ctx: TaskContext) -> DataFrame:
+        wfctx = self._get_workflow_context(ctx)
+        return self._checkpoint.run(self.__uuid__(), df, wfctx.checkpoint_path)
 
     def broadcast(self) -> "FugueTask":
         self._broadcast = True
         return self
 
-    def handle_broadcast(self, df: DataFrame, engine: ExecutionEngine) -> DataFrame:
+    def handle_broadcast(self, df: DataFrame, ctx: TaskContext) -> DataFrame:
         if not self._broadcast:
             return df
-        return engine.broadcast(df)
-
-    # def pre_partition(self, *args: Any, **kwargs: Any) -> "FugueTask":
-    #    self._pre_partition = PartitionSpec(*args, **kwargs)
-    #    return self
+        return self._get_execution_engine(ctx).broadcast(df)
 
     def _get_workflow_context(self, ctx: TaskContext) -> FugueWorkflowContext:
         wfctx = ctx.workflow_context
@@ -138,6 +123,21 @@ class FugueTask(TaskSpec, ABC):
 
     def _set_result(self, ctx: TaskContext, df: DataFrame) -> None:
         self._get_workflow_context(ctx).set_result(id(self), df)
+
+    def _get_dependency_uuid(self) -> Any:
+        # TODO: this should be a part of adagio!!
+        if self._dependency_uuid is not None:
+            return self._dependency_uuid
+        values: List[Any] = []
+        for k, v in self.node_spec.dependency.items():
+            t = v.split(".", 1)
+            assert_or_throw(len(t) == 2)
+            values.append(k)
+            values.append(t[1])
+            task = self.parent_workflow.tasks[t[0]]
+            values.append(task.__uuid__())
+        self._dependency_uuid = to_uuid(values)
+        return self._dependency_uuid
 
 
 class Create(FugueTask):
@@ -165,8 +165,8 @@ class Create(FugueTask):
         e = self._get_execution_engine(ctx)
         self._creator._execution_engine = e
         df = self._creator.create()
-        df = self.handle_persist(df, e)
-        df = self.handle_broadcast(df, e)
+        df = self.handle_checkpoint(df, ctx)
+        df = self.handle_broadcast(df, ctx)
         self._set_result(ctx, df)
         ctx.outputs["_0"] = df
 
@@ -213,8 +213,8 @@ class Process(FugueTask):
             df = self._processor.process(DataFrames(ctx.inputs))
         else:
             df = self._processor.process(DataFrames(ctx.inputs.values()))
-        df = self.handle_persist(df, e)
-        df = self.handle_broadcast(df, e)
+        df = self.handle_checkpoint(df, ctx)
+        df = self.handle_broadcast(df, ctx)
         self._set_result(ctx, df)
         ctx.outputs["_0"] = df
 

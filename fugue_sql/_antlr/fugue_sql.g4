@@ -101,7 +101,7 @@ fugueSingleTask
     ;
 
 fugueNestableTask
-    : (assign=fugueAssignment)? q=query (persist=fuguePersist)? (broadcast=fugueBroadcast)?
+    : (assign=fugueAssignment)? q=query (checkpoint=fugueCheckpoint)? (broadcast=fugueBroadcast)?
     ;
 
 fugueNestableTaskCollectionNoSelect
@@ -174,17 +174,14 @@ fuguePath
     : STRING
     ;
 
-fuguePersist
-    : PERSIST (value=fuguePersistValue)?
-    | checkpoint=CHECKPOINT (ns=fugueCheckpointNamespace)?
+fugueCheckpoint
+    : LAZY? (PERSIST | WEAK CHECKPOINT) (params=fugueParams)?                                                                                                               #fugueCheckpointWeak
+    | LAZY? STRONG? CHECKPOINT (partition=fuguePrepartition)? (single=fugueSingleFile)? (params=fugueParams)?                                        #fugueCheckpointStrong
+    | LAZY? DETERMINISTIC CHECKPOINT (ns=fugueCheckpointNamespace)? (partition=fuguePrepartition)? (single=fugueSingleFile)? (params=fugueParams)?   #fugueCheckpointDeterministic
     ;
 
 fugueCheckpointNamespace
     : STRING
-    ;
-
-fuguePersistValue
-    : multipartIdentifier
     ;
 
 fugueBroadcast:
@@ -211,7 +208,6 @@ fugueAssignment:
 
 fugueAssignmentSign
     : COLONEQUAL
-    | CHECKPOINTSIGN
     | {self.simpleAssign}? EQUAL
     ;
 
@@ -1801,7 +1797,9 @@ SINGLE: 'SINGLE';
 
 COLONEQUAL: ':=';
 CHECKPOINT: 'CHECKPOINT';
-CHECKPOINTSIGN: '??';
+WEAK: 'WEAK';
+STRONG: 'STRONG';
+DETERMINISTIC: 'DETERMINISTIC';
 
 //================================
 // End of the Fugue keywords list

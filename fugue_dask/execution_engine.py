@@ -215,7 +215,12 @@ class DaskExecutionEngine(ExecutionEngine):
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)
 
-    def persist(self, df: DataFrame, level: Any = None) -> DataFrame:
+    def persist(
+        self,
+        df: DataFrame,
+        lazy: bool = False,
+        **kwargs: Any,
+    ) -> DataFrame:
         return self.to_df(df).persist()
 
     def join(

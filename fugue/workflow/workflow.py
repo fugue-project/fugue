@@ -13,10 +13,11 @@ from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowError
 from fugue.extensions._builtins import (
     AssertEqual,
+    AssertNotEqual,
     CreateData,
     Distinct,
-    Dropna,
     DropColumns,
+    Dropna,
     Load,
     Rename,
     RunJoin,
@@ -29,6 +30,7 @@ from fugue.extensions._builtins import (
     Zip,
 )
 from fugue.extensions.transformer.convert import _to_transformer
+from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, FugueTask, Output, Process
 from fugue.workflow._workflow_context import (
     FugueWorkflowContext,
@@ -37,7 +39,6 @@ from fugue.workflow._workflow_context import (
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
-
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -225,6 +226,24 @@ class WorkflowDataFrame(DataFrame):
         :raises AssertionError: if not equal
         """
         self.workflow.assert_eq(self, *dfs, **params)
+
+    def assert_not_eq(self, *dfs: Any, **params: Any) -> None:
+        """Wrapper of :meth:`fugue.workflow.workflow.FugueWorkflow.assert_not_eq` to
+        compare this dataframe with other dataframes.
+
+        :param dfs: |DataFramesLikeObject|
+        :param digits: precision on float number comparison, defaults to 8
+        :param check_order: if to compare the row orders, defaults to False
+        :param check_schema: if compare schemas, defaults to True
+        :param check_content: if to compare the row values, defaults to True
+        :param check_metadata: if to compare the dataframe metadatas, defaults to True
+        :param no_pandas: if true, it will compare the string representations of the
+          dataframes, otherwise, it will convert both to pandas dataframe to compare,
+          defaults to False
+
+        :raises AssertionError: if any dataframe is equal to the first dataframe
+        """
+        self.workflow.assert_not_eq(self, *dfs, **params)
 
     def transform(
         self: TDF,
@@ -463,24 +482,115 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(self, using=Dropna, params=kwargs)
         return self._to_self_type(df)
 
-    def checkpoint(self: TDF, namespace: Any = None) -> TDF:
-        """[CURRENTLY NO EFFECT] set checkpoint for the current dataframe
+    def weak_checkpoint(self: TDF, lazy: bool = False, **kwargs: Any) -> TDF:
+        """Cache the dataframe in memory
 
-        :return: dataframe loaded from checkpoint
-        :rtype: :class:`~.WorkflowDataFrame`
+        :param lazy: whether it is a lazy checkpoint, defaults to False (eager)
+        :param kwargs: paramteters for the underlying execution engine function
+        :return: the cached dataframe
+
+        :Notice:
+
+        Weak checkpoint in most cases is the best choice for caching a dataframe to
+        avoid duplicated computation. However it does not guarantee to break up the
+        the compute dependency for this dataframe, so when you have very complicated
+        compute, you may encounter issues such as stack overflow. Also, weak checkpoint
+        normally caches the dataframe in memory, if memory is a concern, then you should
+        consider :meth:`~.strong_checkpoint`
         """
-        self._task.checkpoint(namespace)
+        self._task.set_checkpoint(WeakCheckpoint(lazy=lazy, **kwargs))
         return self
 
-    def persist(self: TDF, level: Any = None) -> TDF:
+    def strong_checkpoint(
+        self: TDF,
+        lazy: bool = False,
+        partition: Any = None,
+        single: bool = False,
+        **kwargs: Any,
+    ) -> TDF:
+        """Cache the dataframe as a temporary file
+
+        :param lazy: whether it is a lazy checkpoint, defaults to False (eager)
+        :param partition: |PartitionLikeObject|, defaults to None.
+        :param single: force the output as a single file, defaults to False
+        :param kwargs: paramteters for the underlying execution engine function
+        :return: the cached dataframe
+
+        :Notice:
+
+        Strong checkpoint guarantees the output dataframe compute dependency is
+        from the temporary file. Use strong checkpoint only when
+        :meth:`~.weak_checkpoint` can't be used.
+
+        Strong checkpoint file will be removed after the execution of the workflow.
+        """
+        self._task.set_checkpoint(
+            FileCheckpoint(
+                deterministic=False,
+                lazy=lazy,
+                partition=partition,
+                single=single,
+                **kwargs,
+            )
+        )
+        return self
+
+    def deterministic_checkpoint(
+        self: TDF,
+        lazy: bool = False,
+        partition: Any = None,
+        single: bool = False,
+        namespace: Any = None,
+        **kwargs: Any,
+    ) -> TDF:
+        """Cache the dataframe as a temporary file
+
+        :param lazy: whether it is a lazy checkpoint, defaults to False (eager)
+        :param partition: |PartitionLikeObject|, defaults to None.
+        :param single: force the output as a single file, defaults to False
+        :param kwargs: paramteters for the underlying execution engine function
+        :param namespace: a value to control determinism, defaults to None.
+        :return: the cached dataframe
+
+        :Notice:
+
+        The difference vs :meth:`~.strong_checkpoint` is that this checkpoint is not
+        removed after execution, so it can take effect cross execution if the dependent
+        compute logic is not changed.
+        """
+        self._task.set_checkpoint(
+            FileCheckpoint(
+                deterministic=True,
+                lazy=lazy,
+                partition=partition,
+                single=single,
+                namespace=namespace,
+                **kwargs,
+            )
+        )
+        return self
+
+    def persist(self: TDF) -> TDF:
         """Persist the current dataframe
 
-        :param level: the parameter passed to the underlying framework, defaults to None
         :return: the persisted dataframe
         :rtype: :class:`~.WorkflowDataFrame`
+
+        :Notice:
+
+        ``persist`` can only guarantee the persisted dataframe will be computed
+        for only once. However this doesn't mean the backend really breaks up the
+        execution dependency at the persisting point. Commonly, it doesn't cause
+        any issue, but if your execution graph is long, it may cause expected
+        problems for example, stack overflow.
+
+        ``persist`` method is considered as weak checkpoint. Sometimes, it may be
+        necessary to use strong checkpint, which is :meth:`~.checkpoint`
         """
-        self._task.persist(level)
-        return self
+        return self.weak_checkpoint(lazy=False)
+
+    def checkpoint(self: TDF) -> TDF:
+        return self.strong_checkpoint(lazy=False)
 
     def broadcast(self: TDF) -> TDF:
         """Broadcast the current dataframe
@@ -1183,7 +1293,7 @@ class FugueWorkflow(object):
         )
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
-        """Compare if these dataframes are equal. Is for internal, unit test
+        """Compare if these dataframes are equal. It's for internal, unit test
         purpose only. It will convert both dataframes to
         :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`, so it assumes
         all dataframes are small and fast enough to convert. DO NOT use it
@@ -1203,6 +1313,27 @@ class FugueWorkflow(object):
         """
         self.output(*dfs, using=AssertEqual, params=params)
 
+    def assert_not_eq(self, *dfs: Any, **params: Any) -> None:
+        """Assert if all dataframes are not equal to the first dataframe.
+        It's for internal, unit test purpose only. It will convert both dataframes to
+        :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`, so it assumes
+        all dataframes are small and fast enough to convert. DO NOT use it
+        on critical or expensive tasks.
+
+        :param dfs: |DataFramesLikeObject|
+        :param digits: precision on float number comparison, defaults to 8
+        :param check_order: if to compare the row orders, defaults to False
+        :param check_schema: if compare schemas, defaults to True
+        :param check_content: if to compare the row values, defaults to True
+        :param check_metadata: if to compare the dataframe metadatas, defaults to True
+        :param no_pandas: if true, it will compare the string representations of the
+          dataframes, otherwise, it will convert both to pandas dataframe to compare,
+          defaults to False
+
+        :raises AssertionError: if any dataframe equals to the first dataframe
+        """
+        self.output(*dfs, using=AssertNotEqual, params=params)
+
     def add(self, task: FugueTask, *args: Any, **kwargs: Any) -> WorkflowDataFrame:
         """This method should not be called directly by users. Use
         :meth:`~.create`, :meth:`~.process`, :meth:`~.output` instead
@@ -1218,9 +1349,12 @@ class FugueWorkflow(object):
             if len(self._graph.down[v]) > 1 and self.conf.get_or_throw(
                 FUGUE_CONF_WORKFLOW_AUTO_PERSIST, bool
             ):
-                self._spec.tasks[v].persist(
-                    self.conf.get_or_none(
-                        FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE, object
+                self._spec.tasks[v].set_checkpoint(
+                    WeakCheckpoint(
+                        lazy=False,
+                        level=self.conf.get_or_none(
+                            FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE, object
+                        ),
                     )
                 )
         return WorkflowDataFrame(self, wt)

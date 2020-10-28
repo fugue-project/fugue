@@ -25,7 +25,7 @@ def test_json():
     # str
     assert_eq("'1'", "1")
     assert_eq('"1"', "1")
-    assert_eq('"\\"x"', "\"x")
+    assert_eq('"\\"x"', '"x')
     assert_eq("'\\'x'", "'x")
     # bool
     assert_eq("True", True)
@@ -42,8 +42,8 @@ def test_json():
     assert_eq("(a:1,b=2)", {"a": 1, "b": 2})
     # array
     assert_eq("[]", list())
-    assert_eq("[\n1,'a'\n]", [1, 'a'])
-    assert_eq("[\n1,'a'\n,]", [1, 'a'])
+    assert_eq("[\n1,'a'\n]", [1, "a"])
+    assert_eq("[\n1,'a'\n,]", [1, "a"])
     # python arg like
     assert_eq("(a=1,b='x',c=True,d={x:3},)", dict(a=1, b="x", c=True, d=dict(x=3)))
 
@@ -90,20 +90,28 @@ def test_pre_partition():
         obj = json.dumps(v.visit(sql.tree).jsondict)
         assert json.dumps(expected.jsondict) == obj
 
-    assert_eq("prepartition 100",
-              PartitionSpec(num=100))
-    assert_eq("prepartition ROWCOUNT*\n3+ (12.5-CONCUrrency/2)",
-              PartitionSpec(num="ROWCOUNT*3+(12.5-CONCURRENCY/2)"))
-    assert_eq("prepartition by a, b",
-              PartitionSpec(by=["a", "b"]))
-    assert_eq("HASH PrePARTITION 100 BY a,b",
-              PartitionSpec(algo="hash", num=100, by=["a", "b"]))
-    assert_eq("EVEN prepartition 100 BY a,b",
-              PartitionSpec(algo="even", num=100, by=["a", "b"]))
-    assert_eq("rand prepartition 100 BY a,b",
-              PartitionSpec(algo="rand", num=100, by=["a", "b"]))
-    assert_eq("prepartition 100 presort a,\nb\ndesc",
-              PartitionSpec(num=100, presort="a asc, b desc"))
+    assert_eq("prepartition 100", PartitionSpec(num=100))
+    assert_eq(
+        "prepartition ROWCOUNT*\n3+ (12.5-CONCUrrency/2)",
+        PartitionSpec(num="ROWCOUNT*3+(12.5-CONCURRENCY/2)"),
+    )
+    assert_eq("prepartition by a, b", PartitionSpec(by=["a", "b"]))
+    assert_eq(
+        "HASH PrePARTITION 100 BY a,b",
+        PartitionSpec(algo="hash", num=100, by=["a", "b"]),
+    )
+    assert_eq(
+        "EVEN prepartition 100 BY a,b",
+        PartitionSpec(algo="even", num=100, by=["a", "b"]),
+    )
+    assert_eq(
+        "rand prepartition 100 BY a,b",
+        PartitionSpec(algo="rand", num=100, by=["a", "b"]),
+    )
+    assert_eq(
+        "prepartition 100 presort a,\nb\ndesc",
+        PartitionSpec(num=100, presort="a asc, b desc"),
+    )
 
 
 def test_params():
@@ -135,26 +143,16 @@ def test_single_output_common_expr():
         else:
             assert obj["schema"] == schema
 
-    assert_eq("using a.B.c",
-              "a.B.c",
-              None,
-              None)
-    assert_eq("using a.B.c()",
-              "a.B.c",
-              {},
-              None)
-    assert_eq("using a.B.c{}",
-              "a.B.c",
-              {},
-              None)
-    assert_eq("using a.B.c(a=1,b=2)",
-              "a.B.c",
-              dict(a=1, b=2),
-              None)
-    assert_eq("using a.B.c params a:1,b:2 schema a:int,b:int",
-              "a.B.c",
-              dict(a=1, b=2),
-              "a:int,b:int")
+    assert_eq("using a.B.c", "a.B.c", None, None)
+    assert_eq("using a.B.c()", "a.B.c", {}, None)
+    assert_eq("using a.B.c{}", "a.B.c", {}, None)
+    assert_eq("using a.B.c(a=1,b=2)", "a.B.c", dict(a=1, b=2), None)
+    assert_eq(
+        "using a.B.c params a:1,b:2 schema a:int,b:int",
+        "a.B.c",
+        dict(a=1, b=2),
+        "a:int,b:int",
+    )
 
 
 def test_assignment():
@@ -166,17 +164,4 @@ def test_assignment():
 
     assert_eq("aA:=", "aA", ":=")
     assert_eq("aA=", "aA", "=")
-    # assert_eq("aA??", "aA", "??")
-
-
-def test_persist():
-    def assert_eq(expr, is_checkpoint, value):
-        sql = FugueSQL(expr, "fuguePersist", ignore_case=True, simple_assign=True)
-        v = _VisitorBase(sql)
-        obj = v.visit(sql.tree)
-        assert (is_checkpoint, value) == obj
-
-    assert_eq("persist", False, None)
-    assert_eq("persist a.b.c", False, "a.b.c")
-    assert_eq("checkpoint", True, None)
     # assert_eq("aA??", "aA", "??")

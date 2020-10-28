@@ -1,7 +1,10 @@
-from fugue.extensions.outputter import Outputter
+from threading import RLock
+
 from fugue.dataframe import DataFrames
 from fugue.dataframe.utils import _df_eq as df_eq
-from threading import RLock
+from fugue.exceptions import FugueWorkflowError
+from fugue.extensions.outputter import Outputter
+from triad.utils.assertion import assert_or_throw
 
 
 class Show(Outputter):
@@ -25,15 +28,23 @@ class Show(Outputter):
 
 class AssertEqual(Outputter):
     def process(self, dfs: DataFrames) -> None:
-        assert len(dfs) > 1
+        assert_or_throw(len(dfs) > 1, FugueWorkflowError("can't accept single input"))
         expected = dfs[0]
         for i in range(1, len(dfs)):
             df_eq(expected, dfs[i], throw=True, **self.params)
 
 
+class AssertNotEqual(Outputter):
+    def process(self, dfs: DataFrames) -> None:
+        assert_or_throw(len(dfs) > 1, FugueWorkflowError("can't accept single input"))
+        expected = dfs[0]
+        for i in range(1, len(dfs)):
+            assert not df_eq(expected, dfs[i], throw=False, **self.params)
+
+
 class Save(Outputter):
     def process(self, dfs: DataFrames) -> None:
-        assert len(dfs) == 1
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
         kwargs = self.params.get("params", dict())
         path = self.params.get_or_throw("path", str)
         format_hint = self.params.get("fmt", "")

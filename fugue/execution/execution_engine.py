@@ -7,6 +7,7 @@ from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
 )
+from fugue.constants import FUGUE_DEFAULT_CONF
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
@@ -18,7 +19,6 @@ from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_size
 from triad.utils.string import validate_triad_var_name
-from fugue.constants import FUGUE_DEFAULT_CONF
 
 _DEFAULT_JOIN_KEYS: List[str] = []
 
@@ -199,13 +199,28 @@ class ExecutionEngine(ABC):
 
     @abstractmethod
     def persist(
-        self, df: DataFrame, level: Any = None
+        self,
+        df: DataFrame,
+        lazy: bool = False,
+        **kwargs: Any,
     ) -> DataFrame:  # pragma: no cover
         """Force materializing and caching the dataframe
 
         :param df: the input dataframe
-        :param level: parameter to pass to the underlying persist implementation
+        :param lazy: ``True``: first usage of the output will trigger persisting
+          to happen; ``False`` (eager): persist is forced to happend immediately.
+          Default to ``False``
+        :param *args: parameter to pass to the underlying persist implementation
+        :param *kwargs: parameter to pass to the underlying persist implementation
         :return: the persisted dataframe
+
+        :Notice:
+
+        ``persist`` can only guarantee the persisted dataframe will be computed
+        for only once. However this doesn't mean the backend really breaks up the
+        execution dependency at the persisting point. Commonly, it doesn't cause
+        any issue, but if your execution graph is long, it may cause expected
+        problems for example, stack overflow.
         """
         raise NotImplementedError
 

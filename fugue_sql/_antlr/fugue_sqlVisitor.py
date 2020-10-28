@@ -104,18 +104,23 @@ class fugue_sqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by fugue_sqlParser#fuguePersist.
-    def visitFuguePersist(self, ctx:fugue_sqlParser.FuguePersistContext):
+    # Visit a parse tree produced by fugue_sqlParser#fugueCheckpointWeak.
+    def visitFugueCheckpointWeak(self, ctx:fugue_sqlParser.FugueCheckpointWeakContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by fugue_sqlParser#fugueCheckpointStrong.
+    def visitFugueCheckpointStrong(self, ctx:fugue_sqlParser.FugueCheckpointStrongContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by fugue_sqlParser#fugueCheckpointDeterministic.
+    def visitFugueCheckpointDeterministic(self, ctx:fugue_sqlParser.FugueCheckpointDeterministicContext):
         return self.visitChildren(ctx)
 
 
     # Visit a parse tree produced by fugue_sqlParser#fugueCheckpointNamespace.
     def visitFugueCheckpointNamespace(self, ctx:fugue_sqlParser.FugueCheckpointNamespaceContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by fugue_sqlParser#fuguePersistValue.
-    def visitFuguePersistValue(self, ctx:fugue_sqlParser.FuguePersistValueContext):
         return self.visitChildren(ctx)
 
 

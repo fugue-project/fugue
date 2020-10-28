@@ -207,18 +207,36 @@ class _VisitorBase(FugueSQLVisitor):
     def visitFuguePath(self, ctx: fp.FuguePathContext) -> Any:
         return eval(self.ctxToStr(ctx))
 
-    def visitFuguePersist(self, ctx: fp.FuguePersistContext) -> Any:
-        if ctx.checkpoint:
-            if ctx.ns:
-                return True, self.visit(ctx.ns)
-            return True, None
+    def visitFugueCheckpointWeak(self, ctx: fp.FugueCheckpointWeakContext) -> Any:
+        lazy = ctx.LAZY() is not None
+        data = self.get_dict(ctx, "params")
+        if "params" not in data:
+            return lambda x: x.persist()
         else:
-            if ctx.value is None:
-                return False, None
-            return False, self.visit(ctx.value)
+            return lambda x: x.weak_checkpoint(lazy=lazy, **data["params"])
 
-    def visitFuguePersistValue(self, ctx: fp.FuguePersistValueContext) -> Any:
-        return self.ctxToStr(ctx, delimit="")
+    def visitFugueCheckpointStrong(self, ctx: fp.FugueCheckpointStrongContext) -> Any:
+        lazy = ctx.LAZY() is not None
+        data = self.get_dict(ctx, "partition", "single", "params")
+        return lambda x: x.strong_checkpoint(
+            lazy=lazy,
+            partition=data.get("partition"),
+            single="single" in data,
+            **data.get("params", {}),
+        )
+
+    def visitFugueCheckpointDeterministic(
+        self, ctx: fp.FugueCheckpointDeterministicContext
+    ) -> Any:
+        lazy = ctx.LAZY() is not None
+        data = self.get_dict(ctx, "ns", "partition", "single", "params")
+        return lambda x: x.deterministic_checkpoint(
+            lazy=lazy,
+            partition=data.get("partition"),
+            single="single" in data,
+            namespace=data.get("ns"),
+            **data.get("params", {}),
+        )
 
     def visitFugueCheckpointNamespace(self, ctx: fp.FugueCheckpointNamespaceContext):
         return str(eval(self.ctxToStr(ctx)))
@@ -569,24 +587,13 @@ class _Extensions(_VisitorBase):
                 yield from self._get_query_elements(n)
 
     def _process_assignable(self, df: WorkflowDataFrame, ctx: Tree):
-        data = self.get_dict(ctx, "assign", "persist", "broadcast")
+        data = self.get_dict(ctx, "assign", "checkpoint", "broadcast")
         if "assign" in data:
-            varname, sign = data["assign"]
+            varname, _ = data["assign"]
         else:
-            varname, sign = None, None
-        need_checkpoint = sign == "??"
-        if "persist" in data:
-            is_checkpoint, value = data["persist"]
-            if need_checkpoint or is_checkpoint:
-                assert_or_throw(
-                    is_checkpoint,
-                    FugueSQLSyntaxError("can't persist when checkpoint is specified"),
-                )
-                df = df.checkpoint(value)
-            else:
-                df = df.persist(value)
-        elif need_checkpoint:
-            df = df.checkpoint()
+            varname = None
+        if "checkpoint" in data:
+            df = data["checkpoint"](df)
         if "broadcast" in data:
             df = df.broadcast()
         if varname is not None:
