@@ -127,7 +127,7 @@ pre-commit install
 ### 0.4.3
 
 * Unified checkpoints and persist
-* Drop columns and na implementation in both programming and sql interfaces
+* Drop columns and na implementations in both programming and sql interfaces
 * Presort takes array as input
 * Fixed jinja template rendering issue
 * Fixed path format detection bug
