@@ -219,7 +219,6 @@ class DaskExecutionEngine(ExecutionEngine):
         self,
         df: DataFrame,
         lazy: bool = False,
-        *args: Any,
         **kwargs: Any,
     ) -> DataFrame:
         return self.to_df(df).persist()

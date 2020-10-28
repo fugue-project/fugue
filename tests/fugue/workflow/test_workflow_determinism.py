@@ -56,7 +56,7 @@ def test_auto_persist():
     id2 = dag2.spec_uuid()
 
     dag3 = FugueWorkflow(NativeExecutionEngine())
-    df1 = dag3.df([[0]], "a:int").persist()
+    df1 = dag3.df([[0]], "a:int").weak_checkpoint(level=None)
     df1.show()
     df1.show()
     id3 = dag3.spec_uuid()
@@ -96,7 +96,7 @@ def test_auto_persist():
     id2 = dag2.spec_uuid()
 
     dag3 = FugueWorkflow(NativeExecutionEngine())
-    df1 = dag3.df([[0]], "a:int").persist()
+    df1 = dag3.df([[0]], "a:int").weak_checkpoint(level=None)
     df1.show()
     id3 = dag3.spec_uuid()
 

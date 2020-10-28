@@ -40,18 +40,16 @@ class FileCheckpoint(Checkpoint):
         self,
         deterministic: bool,
         lazy: bool = False,
-        fmt: str = "",
         partition: Any = None,
         single: bool = False,
         namespace: Any = None,
         **save_kwargs: Any,
     ):
-        assert_or_throw(not lazy, NotImplementedError("FileCheckpoint can't be lazy"))
         super().__init__(
             to_file=True,
             deterministic=deterministic,
             lazy=lazy,
-            fmt=fmt,
+            fmt="",
             partition=PartitionSpec(partition),
             single=single,
             namespace=namespace,

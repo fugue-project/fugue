@@ -202,7 +202,6 @@ class ExecutionEngine(ABC):
         self,
         df: DataFrame,
         lazy: bool = False,
-        *args: Any,
         **kwargs: Any,
     ) -> DataFrame:  # pragma: no cover
         """Force materializing and caching the dataframe

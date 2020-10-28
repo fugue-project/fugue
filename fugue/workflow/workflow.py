@@ -504,7 +504,6 @@ class WorkflowDataFrame(DataFrame):
     def strong_checkpoint(
         self: TDF,
         lazy: bool = False,
-        fmt: str = "",
         partition: Any = None,
         single: bool = False,
         **kwargs: Any,
@@ -512,8 +511,6 @@ class WorkflowDataFrame(DataFrame):
         """Cache the dataframe as a temporary file
 
         :param lazy: whether it is a lazy checkpoint, defaults to False (eager)
-        :param fmt: format hint can accept ``parquet``, ``csv``, ``json``,
-          defaults to None, meaning to infer
         :param partition: |PartitionLikeObject|, defaults to None.
         :param single: force the output as a single file, defaults to False
         :param kwargs: paramteters for the underlying execution engine function
@@ -531,7 +528,6 @@ class WorkflowDataFrame(DataFrame):
             FileCheckpoint(
                 deterministic=False,
                 lazy=lazy,
-                fmt=fmt,
                 partition=partition,
                 single=single,
                 **kwargs,
@@ -542,7 +538,6 @@ class WorkflowDataFrame(DataFrame):
     def deterministic_checkpoint(
         self: TDF,
         lazy: bool = False,
-        fmt: str = "",
         partition: Any = None,
         single: bool = False,
         namespace: Any = None,
@@ -551,8 +546,6 @@ class WorkflowDataFrame(DataFrame):
         """Cache the dataframe as a temporary file
 
         :param lazy: whether it is a lazy checkpoint, defaults to False (eager)
-        :param fmt: format hint can accept ``parquet``, ``csv``, ``json``,
-          defaults to None, meaning to infer
         :param partition: |PartitionLikeObject|, defaults to None.
         :param single: force the output as a single file, defaults to False
         :param kwargs: paramteters for the underlying execution engine function
@@ -569,7 +562,6 @@ class WorkflowDataFrame(DataFrame):
             FileCheckpoint(
                 deterministic=True,
                 lazy=lazy,
-                fmt=fmt,
                 partition=partition,
                 single=single,
                 namespace=namespace,
@@ -595,12 +587,7 @@ class WorkflowDataFrame(DataFrame):
         ``persist`` method is considered as weak checkpoint. Sometimes, it may be
         necessary to use strong checkpint, which is :meth:`~.checkpoint`
         """
-        return self.weak_checkpoint(
-            lazy=False,
-            level=self.workflow.conf.get_or_none(
-                FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE, object
-            ),
-        )
+        return self.weak_checkpoint(lazy=False)
 
     def checkpoint(self: TDF) -> TDF:
         return self.strong_checkpoint(lazy=False)

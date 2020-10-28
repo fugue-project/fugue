@@ -199,27 +199,38 @@ def test_output():
 def test_persist_checkpoint_broadcast():
     dag = FugueWorkflow()
     dag.create(mock_create1).persist()
-    dag.create(mock_create1).persist("a.b")
+    dag.create(mock_create1).weak_checkpoint(lazy=True, level="a.b")
 
     dag.create(mock_create1).broadcast()
-    dag.create(mock_create1).persist("a.b").broadcast()
+    dag.create(mock_create1).weak_checkpoint(level="a.b").broadcast()
 
     dag.create(mock_create1).checkpoint()
-    dag.create(mock_create1).checkpoint()
-    dag.create(mock_create1).checkpoint("xy z")
-    dag.create(mock_create1).checkpoint("xy z").broadcast()
+    dag.create(mock_create1).strong_checkpoint(lazy=True)
+    dag.create(mock_create1).strong_checkpoint(lazy=True, x="xy z")
+    dag.create(mock_create1).strong_checkpoint(
+        lazy=False, partition=PartitionSpec(num=5), single=True, x="xy z"
+    ).broadcast()
+
+    dag.create(mock_create1).deterministic_checkpoint()
+    dag.create(mock_create1).deterministic_checkpoint(
+        lazy=False, partition=PartitionSpec(num=4), single=True, namespace="n", x=2
+    )
     assert_eq(
         """
     create using mock_create1 persist
-    a=create using mock_create1 persist a.b
+    a=create using mock_create1 lazy persist (level="a.b")
 
     create using mock_create1 broadcast
-    a=create using mock_create1 persist a.b broadcast
+    a=create using mock_create1 persist(level="a.b") broadcast
 
     create using mock_create1 checkpoint
-    a?? create using mock_create1
-    a=create using mock_create1 checkpoint "xy z"
-    a??create using mock_create1 checkpoint "xy z" broadcast
+    a= create using mock_create1 lazy strong checkpoint
+    a=create using mock_create1 lazy checkpoint(x="xy z")
+    a=create using mock_create1 checkpoint prepartition 5 single (x="xy z") broadcast
+
+    create using mock_create1 deterministic checkpoint
+    create using mock_create1 deterministic checkpoint "n"
+        prepartition 4 single params x=2
     """,
         dag,
     )
@@ -263,7 +274,9 @@ def test_select():
     dag.select("select a.* from", a, "AS a join", b, "AS b on a.a == b.a")
 
     dag.select("select * from", a, "AS a").persist().broadcast().show()
-    dag.select("select * from", a, "AS a").persist("a.b.c").broadcast().show()
+    dag.select("select * from", a, "AS a").weak_checkpoint(
+        level="a.b.c"
+    ).broadcast().show()
     assert_eq(
         """
     a=create using mock_create1(n=1)
@@ -290,7 +303,7 @@ def test_select():
 
     # persist & checkpoint & broadcast
     select * from a persist broadcast print
-    select * from a persist a.b.c broadcast print
+    select * from a persist (level="a.b.c") broadcast print
     """,
         dag,
     )

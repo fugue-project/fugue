@@ -262,10 +262,11 @@ class SparkExecutionEngine(ExecutionEngine):
         self,
         df: DataFrame,
         lazy: bool = False,
-        *args: Any,
         **kwargs: Any,
     ) -> SparkDataFrame:
-        return self._persist_func(self.to_df(df), kwargs.get("level", None))
+        return self._persist_func(
+            self.to_df(df), lazy=lazy, level=kwargs.get("level", None)
+        )
 
     def register(self, df: DataFrame, name: str) -> SparkDataFrame:
         return self._register_func(self.to_df(df), name)
@@ -402,14 +403,15 @@ class SparkExecutionEngine(ExecutionEngine):
         sdf = broadcast(df.native)
         return SparkDataFrame(sdf, df.schema, df.metadata)
 
-    def _persist(self, df: SparkDataFrame, level: Any) -> SparkDataFrame:
+    def _persist(self, df: SparkDataFrame, lazy: bool, level: Any) -> SparkDataFrame:
         if level is None:
             level = StorageLevel.MEMORY_AND_DISK
         if isinstance(level, str) and level in StorageLevel.__dict__:
             level = StorageLevel.__dict__[level]
         if isinstance(level, StorageLevel):
             df.native.persist()
-            self.log.info(f"Persist dataframe with {level}, count {df.count()}")
+            if not lazy:
+                self.log.info(f"Persist dataframe with {level}, count {df.count()}")
             return df
         raise ValueError(f"{level} is not supported persist type")  # pragma: no cover
 
