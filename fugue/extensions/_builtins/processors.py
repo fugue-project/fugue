@@ -172,6 +172,28 @@ class SelectColumns(Processor):
         return dfs[0][columns]
 
 
+class SaveAndUse(Processor):
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        kwargs = self.params.get("params", dict())
+        path = self.params.get_or_throw("path", str)
+        format_hint = self.params.get("fmt", "")
+        mode = self.params.get("mode", "overwrite")
+        partition_spec = self.partition_spec
+        force_single = self.params.get("single", False)
+
+        self.execution_engine.save_df(
+            df=dfs[0],
+            path=path,
+            format_hint=format_hint,
+            mode=mode,
+            partition_spec=partition_spec,
+            force_single=force_single,
+            **kwargs
+        )
+        return self.execution_engine.load_df(path=path, format_hint=format_hint)
+
+
 class _TransformerRunner(object):
     def __init__(
         self, df: DataFrame, transformer: Transformer, ignore_errors: List[type]

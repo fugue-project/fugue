@@ -111,6 +111,9 @@ fugueNestableTaskCollectionNoSelect
     | fugueCreateTask
     | fugueCreateDataTask
     | fugueLoadTask
+    | fugueSaveAndUseTask
+    | fugueDropColumnsTask
+    | fugueDropnaTask
     ;
 
 fugueTransformTask:
@@ -119,6 +122,18 @@ fugueTransformTask:
 
 fugueProcessTask:
     PROCESS (dfs=fugueDataFrames)? (partition=fuguePrepartition)? params=fugueSingleOutputExtensionCommon
+    ;
+
+fugueSaveAndUseTask:
+    SAVE AND USE (df=fugueDataFrame)? (partition=fuguePrepartition)? m=fugueSaveMode (single=fugueSingleFile)? (fmt=fugueFileFormat)? path=fuguePath (params=fugueParams)?
+    ;
+
+fugueDropColumnsTask:
+    DROP COLUMNS cols=fugueCols (IF EXISTS)? (FROM df=fugueDataFrame)?
+    ;
+
+fugueDropnaTask:
+    DROP ROWS IF how=(ALL|ANY) (NULL|NULLS) (ON cols=fugueCols)? (FROM df=fugueDataFrame)?
     ;
 
 fugueZipTask:

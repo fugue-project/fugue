@@ -393,6 +393,31 @@ def test_save():
     )
 
 
+def test_save_and_use():
+    dag = FugueWorkflow()
+    a = dag.create(mock_create1, params=dict(n=1))
+    b = dag.create(mock_create1, params=dict(n=1))
+    a = a.save_and_use("xx", fmt="parquet", mode="overwrite")
+    b.save_and_use("xx", mode="append")
+    b.save_and_use("xx", mode="error")
+    a = a.save_and_use("xx.csv", fmt="csv", mode="error", single=True, header=True)
+    a = a.partition(by=["x"]).save_and_use("xx", mode="overwrite")
+    dag.create(mock_create1, params=dict(n=2)).save_and_use("xx", mode="overwrite")
+    assert_eq(
+        """
+    a=create using mock_create1(n=1)
+    b=create using mock_create1(n=1)
+    a=save and use a overwrite parquet "xx"
+    save and use b append "xx"
+    save and use b to "xx"
+    save and use a to single csv "xx.csv"(header=True)
+    save and use prepartition by x overwrite "xx"
+    save and use (create using mock_create1(n=2)) overwrite "xx"
+    """,
+        dag,
+    )
+
+
 def test_load():
     dag = FugueWorkflow()
     dag.load("xx")
@@ -405,6 +430,31 @@ def test_load():
     load csv "xx"
     load "xx" columns a:int, b:str
     load "xx"(header=True) columns a, b
+    """,
+        dag,
+    )
+
+
+def test_drop():
+    dag = FugueWorkflow()
+    a = dag.create(mock_create1)
+    b = a.drop(["a", "b"])
+    c = a.drop(["a", "b"], if_exists=True)
+
+    d = dag.create(mock_create1)
+    e = d.dropna(how="any")
+    f = d.dropna(how="all")
+    g = d.dropna(how="any", subset=["a", "c"])
+    assert_eq(
+        """
+    a=create using mock_create1
+    drop columns a,b
+    drop columns a,b if exists from a
+    
+    d=create using mock_create1
+    drop rows if any null
+    drop rows if all null from d
+    drop rows if any nulls on a,c from d
     """,
         dag,
     )

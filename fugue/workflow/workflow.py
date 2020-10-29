@@ -25,6 +25,7 @@ from fugue.extensions._builtins import (
     RunSQLSelect,
     RunTransformer,
     Save,
+    SaveAndUse,
     SelectColumns,
     Show,
     Zip,
@@ -749,6 +750,41 @@ class WorkflowDataFrame(DataFrame):
             pre_partition=partition,
             params=dict(path=path, fmt=fmt, mode=mode, single=single, params=kwargs),
         )
+
+    def save_and_use(
+        self: TDF,
+        path: str,
+        fmt: str = "",
+        mode: str = "overwrite",
+        partition: Any = None,
+        single: bool = False,
+        **kwargs: Any,
+    ) -> TDF:
+        """Save this dataframe to a persistent storage and load back to use
+        in the following steps
+
+        :param path: output path
+        :param fmt: format hint can accept ``parquet``, ``csv``, ``json``,
+          defaults to None, meaning to infer
+        :param mode: can accept ``overwrite``, ``append``, ``error``,
+          defaults to "overwrite"
+        :param partition: |PartitionLikeObject|, how to partition the
+          dataframe before saving, defaults to empty
+        :param single: force the output as a single file, defaults to False
+        :param kwargs: parameters to pass to the underlying framework
+
+        For more details and examples, read
+        :ref:`Save & Load <tutorial:/tutorials/dag.ipynb#save-&-load>`.
+        """
+        if partition is None:
+            partition = self._metadata.get("pre_partition", PartitionSpec())
+        df = self.workflow.process(
+            self,
+            using=SaveAndUse,
+            pre_partition=partition,
+            params=dict(path=path, fmt=fmt, mode=mode, single=single, params=kwargs),
+        )
+        return self._to_self_type(df)
 
     @property
     def schema(self) -> Schema:  # pragma: no cover
