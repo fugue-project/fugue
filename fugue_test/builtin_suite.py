@@ -11,11 +11,11 @@ from fugue import FileSystem, Schema
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueWorkflowError
+from fugue.exceptions import FugueWorkflowError, FugueWorkflowValidationError
 from fugue.execution import ExecutionEngine
 from fugue.execution.native_execution_engine import SqliteEngine
-from fugue.extensions.outputter import Outputter
-from fugue.extensions.processor import Processor
+from fugue.extensions.outputter import Outputter, outputter
+from fugue.extensions.processor import Processor, processor
 from fugue.extensions.transformer import (
     CoTransformer,
     Transformer,
@@ -660,6 +660,131 @@ class BuiltInTests(object):
                 b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
                 d = dag.load(path, fmt="parquet")
                 b.assert_eq(d)
+
+        def test_transformer_validation(self):
+            # partitionby_has: b
+            # input_has: a
+            # schema: *
+            def t1(df: pd.DataFrame) -> pd.DataFrame:
+                return df
+
+            @transformer("*", partitionby_has=["b"], input_has=["a"])
+            def t2(df: pd.DataFrame) -> pd.DataFrame:
+                return df
+
+            class T3(Transformer):
+                @property
+                def validation_rules(self):
+                    return dict(partitionby_has=["b"], input_has=["a"])
+
+                def get_output_schema(self, df: DataFrame) -> Any:
+                    return df.schema
+
+                def transform(self, df: DataFrame) -> LocalDataFrame:
+                    return df.as_local()
+
+            for t in [t1, t2, T3]:
+                # compile time
+                with raises(FugueWorkflowValidationError):
+                    self.dag().df([[0, 1]], "a:int,b:int").transform(t)
+
+                # runtime
+                with raises(FugueWorkflowValidationError):
+                    with self.dag() as dag:
+                        dag.df([[0, 1]], "c:int,b:int").partition(by=["b"]).transform(t)
+
+                with self.dag() as dag:
+                    dag.df([[0, 1]], "a:int,b:int").partition(by=["b"]).transform(
+                        t
+                    ).assert_eq(dag.df([[0, 1]], "a:int,b:int"))
+
+        def test_processor_validation(self):
+            # input_has: a
+            def p1(dfs: DataFrames) -> DataFrame:
+                return dfs[0]
+
+            @processor(input_has=["a"])
+            def p2(dfs: DataFrames) -> DataFrame:
+                return dfs[0]
+
+            class P3(Processor):
+                @property
+                def validation_rules(self):
+                    return dict(input_has=["a"])
+
+                def process(self, dfs: DataFrames) -> DataFrame:
+                    return dfs[0]
+
+            for p in [p1, p2, P3]:
+                # run time
+                with raises(FugueWorkflowValidationError):
+                    with self.dag() as dag:
+                        df1 = dag.df([[0, 1]], "a:int,b:int")
+                        df2 = dag.df([[0, 1]], "c:int,d:int")
+                        dag.process([df1, df2], using=p)
+
+                with self.dag() as dag:
+                    df1 = dag.df([[0, 1]], "a:int,b:int")
+                    df2 = dag.df([[0, 1]], "a:int,b:int")
+                    dag.process([df1, df2], using=p).assert_eq(df1)
+
+            # input_has: a
+            # partitionby_has: b
+            def p4(dfs: DataFrames) -> DataFrame:
+                return dfs[0]
+
+            # compile time
+            with raises(FugueWorkflowValidationError):
+                dag = self.dag()
+                df = dag.df([[0, 1]], "a:int,b:int")
+                df.process(p4)
+
+            with self.dag() as dag:
+                dag.df([[0, 1]], "a:int,b:int").partition(by=["b"]).process(p4)
+
+        def test_outputter_validation(self):
+            # input_has: a
+            def o1(dfs: DataFrames) -> None:
+                pass
+
+            @outputter(input_has=["a"])
+            def o2(dfs: DataFrames) -> None:
+                pass
+
+            class O3(Outputter):
+                @property
+                def validation_rules(self):
+                    return dict(input_has=["a"])
+
+                def process(self, dfs: DataFrames) -> None:
+                    pass
+
+            for o in [o1, o2, O3]:
+                # run time
+                with raises(FugueWorkflowValidationError):
+                    with self.dag() as dag:
+                        df1 = dag.df([[0, 1]], "a:int,b:int")
+                        df2 = dag.df([[0, 1]], "c:int,d:int")
+                        dag.output([df1, df2], using=o)
+
+                with self.dag() as dag:
+                    df1 = dag.df([[0, 1]], "a:int,b:int")
+                    df2 = dag.df([[0, 1]], "a:int,b:int")
+                    dag.output([df1, df2], using=o)
+
+            # input_has: a
+            # partitionby_has: b
+            def o4(dfs: DataFrames) -> None:
+                pass
+
+            # compile time
+            with raises(FugueWorkflowValidationError):
+                dag = self.dag()
+                df = dag.df([[0, 1]], "a:int,b:int")
+                df.output(o4)
+
+            with self.dag() as dag:
+                dag.df([[0, 1]], "a:int,b:int").partition(by=["b"]).output(o4)
 
 
 def mock_creator(p: int) -> DataFrame:

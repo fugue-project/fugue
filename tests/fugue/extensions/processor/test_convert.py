@@ -96,6 +96,36 @@ def test__to_processor_determinism():
     assert to_uuid(a) == to_uuid(b)
 
 
+def test_to_processor_validation():
+    @processor("b:int", input_has=" a , b ")
+    def pv1(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+        for r in df:
+            r["b"] = 1
+            yield r
+
+    # input_has: a , b
+    # schema: b:int
+    def pv2(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+        for r in df:
+            r["b"] = 1
+            yield r
+
+    class MockProcessorV(Processor):
+        @property
+        def validation_rules(self):
+            return {"input_is": "a:int,b:int"}
+
+        def process(self, dfs):
+            return dfs[0]
+
+    a = _to_processor(pv1, None)
+    assert {"input_has": ["a", "b"]} == a.validation_rules
+    b = _to_processor(pv2, None)
+    assert {"input_has": ["a", "b"]} == b.validation_rules
+    c = _to_processor(MockProcessorV)
+    assert {"input_is": "a:int,b:int"} == c.validation_rules
+
+
 class T0(Processor):
     def process(self, dfs) -> DataFrame:
         return dfs[0]

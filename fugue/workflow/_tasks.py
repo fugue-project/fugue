@@ -187,6 +187,7 @@ class Process(FugueTask):
         self._processor = _to_processor(processor, schema)
         self._processor._params = ParamDict(params)
         self._processor._partition_spec = PartitionSpec(pre_partition)
+        self._processor.validate_on_compile()
         super().__init__(
             params=params,
             input_n=input_n,
@@ -210,9 +211,11 @@ class Process(FugueTask):
         e = self._get_execution_engine(ctx)
         self._processor._execution_engine = e
         if self._input_has_key:
-            df = self._processor.process(DataFrames(ctx.inputs))
+            inputs = DataFrames(ctx.inputs)
         else:
-            df = self._processor.process(DataFrames(ctx.inputs.values()))
+            inputs = DataFrames(ctx.inputs.values())
+        self._processor.validate_on_runtime(inputs)
+        df = self._processor.process(inputs)
         df = self.handle_checkpoint(df, ctx)
         df = self.handle_broadcast(df, ctx)
         self._set_result(ctx, df)
@@ -235,6 +238,7 @@ class Output(FugueTask):
         self._outputter = _to_outputter(outputter)
         self._outputter._params = ParamDict(params)
         self._outputter._partition_spec = PartitionSpec(pre_partition)
+        self._outputter.validate_on_compile()
         super().__init__(
             params=params,
             input_n=input_n,
@@ -257,8 +261,10 @@ class Output(FugueTask):
     def execute(self, ctx: TaskContext) -> None:
         self._outputter._execution_engine = self._get_execution_engine(ctx)
         if self._input_has_key:
-            self._outputter.process(DataFrames(ctx.inputs))
+            inputs = DataFrames(ctx.inputs)
         else:
-            self._outputter.process(DataFrames(ctx.inputs.values()))
+            inputs = DataFrames(ctx.inputs.values())
+        self._outputter.validate_on_runtime(inputs)
+        self._outputter.process(inputs)
         # TODO: output dummy to force cache to work, should we fix adagio?
         ctx.outputs["_0"] = ArrayDataFrame([], "_0:int")
