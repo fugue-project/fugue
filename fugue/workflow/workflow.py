@@ -1282,6 +1282,8 @@ class FugueWorkflow(object):
             NotImplementedError("transform supports only single dataframe"),
         )
         tf = _to_transformer(using, schema)
+        tf._partition_spec = PartitionSpec(pre_partition)  # type: ignore
+        tf.validate_on_compile()
         return self.process(
             *dfs,
             using=RunTransformer,

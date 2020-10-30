@@ -19,7 +19,41 @@ from triad.utils.convert import get_full_type_path, to_type
 from triad.utils.iter import EmptyAwareIterable, make_empty_aware
 from triad.utils.hash import to_uuid
 
-_COMMENT_SCHEMA_ANNOTATION = "schema:"
+_COMMENT_SCHEMA_ANNOTATION = "schema"
+
+
+def parse_comment_annotation(func: Callable, annotation: str) -> Optional[str]:
+    """Parse comment annotation above the function. It try to find
+    comment lines starts with the annotation from bottom up, and will use the first
+    occurrance as the result.
+
+    :param func: the function
+    :param annotation: the annotation string
+    :return: schema hint string
+
+    :Example:
+
+    .. code-block:: python
+
+        # schema: a:int,b:str
+        #schema:a:int,b:int # more comment
+        # some comment
+        def dummy():
+            pass
+
+        assert "a:int,b:int" == parse_comment_annotation(dummy, "schema:")
+    """
+    for orig in reversed((inspect.getcomments(func) or "").splitlines()):
+        start = orig.find(":")
+        if start <= 0:
+            continue
+        actual = orig[:start].replace("#", "", 1).strip()
+        if actual != annotation:
+            continue
+        end = orig.find("#", start)
+        s = orig[start + 1 : (end if end > 0 else len(orig))].strip()
+        return s
+    return None
 
 
 def parse_output_schema_from_comment(func: Callable) -> Optional[str]:
@@ -35,21 +69,18 @@ def parse_output_schema_from_comment(func: Callable) -> Optional[str]:
     .. code-block:: python
 
         # schema: a:int,b:str
-        #schema:a:int,b:int
+        #schema:a:int,b:int # more comment
         # some comment
         def dummy():
             pass
 
         assert "a:int,b:int" == parse_output_schema_from_comment(dummy)
     """
-    for comment in reversed((inspect.getcomments(func) or "").splitlines()):
-        comment = comment.replace(" ", "").replace("#", "")
-        if not comment.startswith(_COMMENT_SCHEMA_ANNOTATION):
-            continue
-        s = comment[len(_COMMENT_SCHEMA_ANNOTATION) :]
-        if s != "":
-            return s
-    return None
+    res = parse_comment_annotation(func, _COMMENT_SCHEMA_ANNOTATION)
+    if res is None:
+        return None
+    assert_or_throw(res != "", SyntaxError("incorrect schema annotation"))
+    return res.replace(" ", "")
 
 
 class FunctionWrapper(object):

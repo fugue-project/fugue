@@ -50,6 +50,13 @@ class FugueWorkflowError(FugueError):
         super().__init__(*args)
 
 
+class FugueWorkflowValidationError(FugueWorkflowError):
+    """Fugue workflow exceptions"""
+
+    def __init__(self, *args: Any):
+        super().__init__(*args)
+
+
 class FugueInterfacelessError(FugueError):
     """Fugue interfaceless exceptions"""
 

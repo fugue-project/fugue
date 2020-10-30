@@ -32,7 +32,7 @@ class RunTransformer(Processor):
         tf._partition_spec = self.partition_spec  # type: ignore
         ie = self.params.get("ignore_errors", [])
         self._ignore_errors = [to_type(x, Exception) for x in ie]
-
+        tf.validate_on_runtime(df)
         if isinstance(tf, Transformer):
             return self.transform(df, tf)
         else:

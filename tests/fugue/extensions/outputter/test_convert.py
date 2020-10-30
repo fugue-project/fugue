@@ -107,6 +107,31 @@ def test__to_outputter_determinism():
     assert to_uuid(a) == to_uuid(b)
 
 
+def test_to_outputter_validation():
+    @outputter(input_has=" a , b ")
+    def ov1(df: Iterable[Dict[str, Any]]) -> None:
+        pass
+
+    # input_has: a , b
+    def ov2(df: Iterable[Dict[str, Any]]) -> None:
+        pass
+
+    class MockOutputterV(Outputter):
+        @property
+        def validation_rules(self):
+            return {"input_is": "a:int,b:int"}
+
+        def process(self, dfs):
+            pass
+
+    a = _to_outputter(ov1, None)
+    assert {"input_has": ["a", "b"]} == a.validation_rules
+    b = _to_outputter(ov2, None)
+    assert {"input_has": ["a", "b"]} == b.validation_rules
+    c = _to_outputter(MockOutputterV)
+    assert {"input_is": "a:int,b:int"} == c.validation_rules
+
+
 class T0(Outputter):
     def process(self, dfs):
         pass

@@ -17,7 +17,7 @@ def creator(schema: Any = None) -> Callable[[Any], "_FuncAsCreator"]:
     Please read :ref:`Creator Tutorial <tutorial:/tutorials/creator.ipynb>`
     """
 
-    def deco(func: Callable) -> _FuncAsCreator:
+    def deco(func: Callable) -> "_FuncAsCreator":
         return _FuncAsCreator.from_func(func, schema)
 
     return deco

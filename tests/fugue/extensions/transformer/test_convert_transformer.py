@@ -74,6 +74,39 @@ def test__to_transformer_determinism():
     assert to_uuid(a) == to_uuid(b)
 
 
+def test_to_transformer_validation():
+    @transformer(["*", None, "b:int"], input_has=" a , b ")
+    def tv1(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+        for r in df:
+            r["b"] = 1
+            yield r
+
+    # input_has: a , b
+    # schema: *,b:int
+    def tv2(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+        for r in df:
+            r["b"] = 1
+            yield r
+
+    class MockTransformerV(Transformer):
+        @property
+        def validation_rules(self):
+            return {"input_is": "a:int,b:int"}
+
+        def get_output_schema(self, df):
+            pass
+
+        def transform(self, df):
+            pass
+
+    a = _to_transformer(tv1, None)
+    assert {"input_has": ["a", "b"]} == a.validation_rules
+    b = _to_transformer(tv2, None)
+    assert {"input_has": ["a", "b"]} == b.validation_rules
+    c = _to_transformer(MockTransformerV)
+    assert {"input_is": "a:int,b:int"} == c.validation_rules
+
+
 @transformer(["*", None, "b:int"])
 def t1(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
     for r in df:

@@ -48,6 +48,8 @@ def test_partition_spec():
     assert "d ASC,e DESC" == p2.presort_expr
     assert not p.empty
     assert not p2.empty
+    print(p)
+    print(f"{p}")
 
     # partition by overlaps with presort
     raises(SyntaxError, lambda: PartitionSpec(partition_by=[

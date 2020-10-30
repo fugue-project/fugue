@@ -9,6 +9,58 @@ from triad.utils.pyarrow import SchemaedDataPartitioner
 from triad.utils.hash import to_uuid
 
 
+def _parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa: C901
+    if isinstance(presort, IndexedOrderedDict):
+        return presort
+
+    presort_list: List[Tuple[str, bool]] = []
+    res: IndexedOrderedDict[str, bool] = IndexedOrderedDict()
+    if presort is None:
+        return res
+
+    elif isinstance(presort, str):
+        presort = presort.strip()
+        if presort == "":
+            return res
+        for p in presort.split(","):
+            pp = p.strip().split()
+            key = pp[0].strip()
+            if len(pp) == 1:
+                presort_list.append((key, True))
+            elif len(pp) == 2:
+                if pp[1].strip().lower() == "asc":
+                    presort_list.append((key, True))
+                elif pp[1].strip().lower() == "desc":
+                    presort_list.append((key, False))
+                else:
+                    raise SyntaxError(f"Invalid expression {presort}")
+            else:
+                raise SyntaxError(f"Invalid expression {presort}")
+
+    elif isinstance(presort, list):
+        for p in presort:
+            if isinstance(p, str):
+                aot(
+                    len(p.strip().split()) == 1,
+                    SyntaxError(f"Invalid expression {presort}"),
+                )
+                presort_list.append((p.strip(), True))
+            else:
+                aot(len(p) == 2, SyntaxError(f"Invalid expression {presort}"))
+                aot(
+                    isinstance(p, tuple)
+                    & (isinstance(p[0], str) & (isinstance(p[1], bool))),
+                    SyntaxError(f"Invalid expression {presort}"),
+                )
+                presort_list.append((p[0].strip(), p[1]))
+
+    for key, value in presort_list:
+        if key in res:
+            raise SyntaxError(f"Invalid expression {presort} duplicated key {key}")
+        res[key] = value
+    return res
+
+
 class PartitionSpec(object):
     """Fugue Partition Specification.
 
@@ -57,7 +109,7 @@ class PartitionSpec(object):
             len(self._partition_by) == len(set(self._partition_by)),
             SyntaxError(f"{self._partition_by} has duplicated keys"),
         )
-        self._presort = self._parse_presort_exp(p.get_or_none("presort", object))
+        self._presort = _parse_presort_exp(p.get_or_none("presort", object))
         if any(x in self._presort for x in self._partition_by):
             raise SyntaxError(
                 "partition by overlap with presort: "
@@ -66,6 +118,12 @@ class PartitionSpec(object):
         # TODO: currently, size limit not in use
         self._size_limit = to_size(p.get("size_limit", "0"))
         self._row_limit = p.get("row_limit", 0)
+
+    def __repr__(self) -> str:
+        return (
+            f"PartitionSpec(num='{self._num_partitions}', "
+            + f"by={self._partition_by}, presort='{self.presort_expr}')"
+        )
 
     @property
     def empty(self) -> bool:
@@ -213,59 +271,6 @@ class PartitionSpec(object):
             row_limit=self._row_limit,
             size_limit=self._size_limit,
         )
-
-    def _parse_presort_exp(  # noqa: C901
-        self, presort: Any
-    ) -> IndexedOrderedDict[str, bool]:
-        if isinstance(presort, IndexedOrderedDict):
-            return presort
-
-        presort_list: List[Tuple[str, bool]] = []
-        res: IndexedOrderedDict[str, bool] = IndexedOrderedDict()
-        if presort is None:
-            return res
-
-        elif isinstance(presort, str):
-            presort = presort.strip()
-            if presort == "":
-                return res
-            for p in presort.split(","):
-                pp = p.strip().split()
-                key = pp[0].strip()
-                if len(pp) == 1:
-                    presort_list.append((key, True))
-                elif len(pp) == 2:
-                    if pp[1].strip().lower() == "asc":
-                        presort_list.append((key, True))
-                    elif pp[1].strip().lower() == "desc":
-                        presort_list.append((key, False))
-                    else:
-                        raise SyntaxError(f"Invalid expression {presort}")
-                else:
-                    raise SyntaxError(f"Invalid expression {presort}")
-
-        elif isinstance(presort, list):
-            for p in presort:
-                if isinstance(p, str):
-                    aot(
-                        len(p.strip().split()) == 1,
-                        SyntaxError(f"Invalid expression {presort}"),
-                    )
-                    presort_list.append((p.strip(), True))
-                else:
-                    aot(len(p) == 2, SyntaxError(f"Invalid expression {presort}"))
-                    aot(
-                        isinstance(p, tuple)
-                        & (isinstance(p[0], str) & (isinstance(p[1], bool))),
-                        SyntaxError(f"Invalid expression {presort}"),
-                    )
-                    presort_list.append((p[0].strip(), p[1]))
-
-        for key, value in presort_list:
-            if key in res:
-                raise SyntaxError(f"Invalid expression {presort} duplicated key {key}")
-            res[key] = value
-        return res
 
     def _update_dict(self, d: Dict[str, Any], u: Dict[str, Any]) -> None:
         for k, v in u.items():

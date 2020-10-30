@@ -1,24 +1,32 @@
 import copy
 from typing import Any, Callable, Dict, List, Optional, no_type_check
 
+from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
+from fugue.extensions._utils import (
+    parse_validation_rules_from_comment,
+    to_validation_rules,
+)
 from fugue.extensions.processor.processor import Processor
-from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 from triad.utils.hash import to_uuid
 
 
-def processor(schema: Any = None) -> Callable[[Any], "_FuncAsProcessor"]:
+def processor(
+    schema: Any = None, **validation_rules: Any
+) -> Callable[[Any], "_FuncAsProcessor"]:
     """Decorator for processors
 
     Please read :ref:`Processor Tutorial <tutorial:/tutorials/processor.ipynb>`
     """
     # TODO: validation of schema if without * should be done at compile time
-    def deco(func: Callable) -> _FuncAsProcessor:
-        return _FuncAsProcessor.from_func(func, schema)
+    def deco(func: Callable) -> "_FuncAsProcessor":
+        return _FuncAsProcessor.from_func(
+            func, schema, validation_rules=to_validation_rules(validation_rules)
+        )
 
     return deco
 
@@ -28,9 +36,12 @@ def _to_processor(
     schema: Any = None,
     global_vars: Optional[Dict[str, Any]] = None,
     local_vars: Optional[Dict[str, Any]] = None,
+    validation_rules: Optional[Dict[str, Any]] = None,
 ) -> Processor:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
     exp: Optional[Exception] = None
+    if validation_rules is None:
+        validation_rules = {}
     try:
         return copy.copy(
             to_instance(obj, Processor, global_vars=global_vars, local_vars=local_vars)
@@ -43,13 +54,17 @@ def _to_processor(
         if isinstance(f, Processor):
             return copy.copy(f)
         # this is for functions without decorator
-        return _FuncAsProcessor.from_func(f, schema)
+        return _FuncAsProcessor.from_func(f, schema, validation_rules=validation_rules)
     except Exception as e:
         exp = e
     raise FugueInterfacelessError(f"{obj} is not a valid processor", exp)
 
 
 class _FuncAsProcessor(Processor):
+    @property
+    def validation_rules(self) -> Dict[str, Any]:
+        return self._validation_rules  # type: ignore
+
     @no_type_check
     def process(self, dfs: DataFrames) -> DataFrame:
         args: List[Any] = []
@@ -85,9 +100,12 @@ class _FuncAsProcessor(Processor):
 
     @no_type_check
     @staticmethod
-    def from_func(func: Callable, schema: Any) -> "_FuncAsProcessor":
+    def from_func(
+        func: Callable, schema: Any, validation_rules: Dict[str, Any]
+    ) -> "_FuncAsProcessor":
         if schema is None:
             schema = parse_output_schema_from_comment(func)
+        validation_rules.update(parse_validation_rules_from_comment(func))
         tr = _FuncAsProcessor()
         tr._wrapper = FunctionWrapper(
             func, "^e?(c|[dlsp]+)x*$", "^[dlsp]$"
@@ -95,6 +113,7 @@ class _FuncAsProcessor(Processor):
         tr._need_engine = tr._wrapper.input_code.startswith("e")
         tr._use_dfs = "c" in tr._wrapper.input_code
         tr._need_output_schema = "s" == tr._wrapper.output_code
+        tr._validation_rules = validation_rules
         tr._output_schema = Schema(schema)
         if len(tr._output_schema) == 0:
             assert_or_throw(

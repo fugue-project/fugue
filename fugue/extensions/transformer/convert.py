@@ -4,33 +4,45 @@ from typing import Any, Callable, Dict, List, Optional, Union, no_type_check
 from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.exceptions import FugueInterfacelessError
+from fugue.extensions._utils import (
+    to_validation_rules,
+    parse_validation_rules_from_comment,
+)
 from fugue.extensions.transformer.transformer import CoTransformer, Transformer
-from triad.collections.schema import Schema
-from triad.utils.assertion import assert_arg_not_none
+from triad import ParamDict, Schema
+from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 from triad.utils.hash import to_uuid
 
 
-def transformer(schema: Any) -> Callable[[Any], "_FuncAsTransformer"]:
+def transformer(
+    schema: Any, **validation_rules: Any
+) -> Callable[[Any], "_FuncAsTransformer"]:
     """Decorator for transformers
 
     Please read :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
     """
 
-    def deco(func: Callable) -> _FuncAsTransformer:
-        return _FuncAsTransformer.from_func(func, schema)
+    def deco(func: Callable) -> "_FuncAsTransformer":
+        return _FuncAsTransformer.from_func(
+            func, schema, validation_rules=to_validation_rules(validation_rules)
+        )
 
     return deco
 
 
-def cotransformer(schema: Any) -> Callable[[Any], "_FuncAsCoTransformer"]:
+def cotransformer(
+    schema: Any, **validation_rules: Any
+) -> Callable[[Any], "_FuncAsCoTransformer"]:
     """Decorator for cotransformers
 
     Please read :ref:`CoTransformer Tutorial <tutorial:/tutorials/cotransformer.ipynb>`
     """
 
-    def deco(func: Callable) -> _FuncAsCoTransformer:
-        return _FuncAsCoTransformer.from_func(func, schema)
+    def deco(func: Callable) -> "_FuncAsCoTransformer":
+        return _FuncAsCoTransformer.from_func(
+            func, schema, validation_rules=to_validation_rules(validation_rules)
+        )
 
     return deco
 
@@ -40,9 +52,12 @@ def _to_transformer(  # noqa: C901
     schema: Any = None,
     global_vars: Optional[Dict[str, Any]] = None,
     local_vars: Optional[Dict[str, Any]] = None,
+    validation_rules: Optional[Dict[str, Any]] = None,
 ) -> Union[Transformer, CoTransformer]:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
     exp: Optional[Exception] = None
+    if validation_rules is None:
+        validation_rules = {}
     try:
         return copy.copy(
             to_instance(
@@ -65,7 +80,9 @@ def _to_transformer(  # noqa: C901
         if isinstance(f, Transformer):
             return copy.copy(f)
         # this is for functions without decorator
-        return _FuncAsTransformer.from_func(f, schema)
+        return _FuncAsTransformer.from_func(
+            f, schema, validation_rules=validation_rules
+        )
     except Exception as e:
         exp = e
     try:
@@ -74,7 +91,9 @@ def _to_transformer(  # noqa: C901
         if isinstance(f, CoTransformer):
             return copy.copy(f)
         # this is for functions without decorator
-        return _FuncAsCoTransformer.from_func(f, schema)
+        return _FuncAsCoTransformer.from_func(
+            f, schema, validation_rules=validation_rules
+        )
     except Exception as e:
         exp = e
     raise FugueInterfacelessError(f"{obj} is not a valid transformer", exp)
@@ -83,6 +102,10 @@ def _to_transformer(  # noqa: C901
 class _FuncAsTransformer(Transformer):
     def get_output_schema(self, df: DataFrame) -> Any:
         return self._parse_schema(self._output_schema_arg, df)  # type: ignore
+
+    @property
+    def validation_rules(self) -> Dict[str, Any]:
+        return self._validation_rules  # type: ignore
 
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:
         return self._wrapper.run(  # type: ignore
@@ -106,21 +129,29 @@ class _FuncAsTransformer(Transformer):
         raise NotImplementedError  # pragma: no cover
 
     @staticmethod
-    def from_func(func: Callable, schema: Any) -> "_FuncAsTransformer":
+    def from_func(
+        func: Callable, schema: Any, validation_rules: Dict[str, Any]
+    ) -> "_FuncAsTransformer":
         if schema is None:
             schema = parse_output_schema_from_comment(func)
         if isinstance(schema, Schema):  # to be less strict on determinism
             schema = str(schema)
+        validation_rules.update(parse_validation_rules_from_comment(func))
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsTransformer()
         tr._wrapper = FunctionWrapper(func, "^[lsp]x*$", "^[lsp]$")  # type: ignore
         tr._output_schema_arg = schema  # type: ignore
+        tr._validation_rules = validation_rules  # type: ignore
         return tr
 
 
 class _FuncAsCoTransformer(CoTransformer):
     def get_output_schema(self, dfs: DataFrames) -> Any:
         return self._parse_schema(self._output_schema_arg, dfs)  # type: ignore
+
+    @property
+    def validation_rules(self) -> ParamDict:
+        return self._validation_rules  # type: ignore
 
     @no_type_check
     def transform(self, dfs: DataFrames) -> LocalDataFrame:
@@ -167,7 +198,14 @@ class _FuncAsCoTransformer(CoTransformer):
         return Schema(obj)
 
     @staticmethod
-    def from_func(func: Callable, schema: Any) -> "_FuncAsCoTransformer":
+    def from_func(
+        func: Callable, schema: Any, validation_rules: Dict[str, Any]
+    ) -> "_FuncAsCoTransformer":
+        assert_or_throw(
+            len(validation_rules) == 0,
+            NotImplementedError("CoTransformer does not support validation rules"),
+        )
+
         if schema is None:
             schema = parse_output_schema_from_comment(func)
         if isinstance(schema, Schema):  # to be less strict on determinism
@@ -177,4 +215,5 @@ class _FuncAsCoTransformer(CoTransformer):
         tr._wrapper = FunctionWrapper(func, "^(c|[lsp]+)x*$", "^[lsp]$")  # type: ignore
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
         tr._output_schema_arg = schema  # type: ignore
+        tr._validation_rules = {}  # type: ignore
         return tr
