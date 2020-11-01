@@ -1,13 +1,12 @@
 import os
-from typing import Any, Optional
-from uuid import uuid4
+from typing import Any
 
 from fugue.collections.partition import PartitionSpec
+from fugue.collections.yielded import Yielded
 from fugue.constants import FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH
 from fugue.dataframe import DataFrame
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowRuntimeError
 from fugue.execution.execution_engine import ExecutionEngine
-from fugue.workflow.yielded import Yielded
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
 
@@ -28,36 +27,23 @@ class Checkpoint(object):
         self.permanent = permanent
         self.lazy = lazy
         self.kwargs = dict(kwargs)
-        self._yield = False
-        self._yielded: Optional[Yielded] = None
 
-    def run(self, file_id: str, df: DataFrame, path: "CheckpointPath") -> DataFrame:
+    def run(self, df: DataFrame, path: "CheckpointPath") -> DataFrame:
         return df
 
-    def set_yield(self) -> None:
-        raise FugueWorkflowCompileError(f"yield is not allowed for {self}")
-
     @property
-    def yielded(self) -> Optional[Yielded]:
-        return self._yielded
+    def yielded(self) -> Yielded:
+        raise FugueWorkflowCompileError(f"yield is not allowed for {self}")
 
     @property
     def is_null(self) -> bool:
         return True
 
-    def __uuid__(self) -> str:
-        # _yield is not a part for determinism
-        return to_uuid(
-            self.to_file,
-            self.deterministic,
-            self.lazy,
-            self.kwargs,
-        )
-
 
 class FileCheckpoint(Checkpoint):
     def __init__(
         self,
+        file_id: str,
         deterministic: bool,
         permanent: bool,
         lazy: bool = False,
@@ -78,9 +64,11 @@ class FileCheckpoint(Checkpoint):
             save_kwargs=dict(save_kwargs),
         )
         self._yield_func: Any = None
+        self._file_id = to_uuid(file_id, namespace)
+        self._yielded = Yielded(self._file_id)
 
-    def run(self, file_id: str, df: DataFrame, path: "CheckpointPath") -> DataFrame:
-        fpath = path.get_temp_file(file_id, self.deterministic, self.permanent)
+    def run(self, df: DataFrame, path: "CheckpointPath") -> DataFrame:
+        fpath = path.get_temp_file(self._file_id, self.permanent)
         if not self.deterministic or not path.temp_file_exists(fpath):
             path.execution_engine.save_df(
                 df=df,
@@ -94,16 +82,16 @@ class FileCheckpoint(Checkpoint):
         result = path.execution_engine.load_df(
             path=fpath, format_hint=self.kwargs["fmt"]
         )
-        if self._yield:
-            self._yielded = Yielded(fpath)
+        self._yielded.set_value(fpath)
         return result
 
-    def set_yield(self) -> None:
+    @property
+    def yielded(self) -> Yielded:
         assert_or_throw(
             self.permanent,
             FugueWorkflowCompileError(f"yield is not allowed for {self}"),
         )
-        self._yield = True
+        return self._yielded
 
     @property
     def is_null(self) -> bool:
@@ -123,7 +111,7 @@ class WeakCheckpoint(Checkpoint):
             **kwargs,
         )
 
-    def run(self, file_id: str, df: DataFrame, path: "CheckpointPath") -> DataFrame:
+    def run(self, df: DataFrame, path: "CheckpointPath") -> DataFrame:
         return path.execution_engine.persist(df, lazy=self.lazy, **self.kwargs)
 
     @property
@@ -158,10 +146,8 @@ class CheckpointPath(object):
             except Exception as e:  # pragma: no cover
                 self._log.warn("Unable to remove " + self._temp_path, e)
 
-    def get_temp_file(self, file_id: str, deterministic: bool, permanent: bool) -> str:
+    def get_temp_file(self, file_id: str, permanent: bool) -> str:
         path = self._path if permanent else self._temp_path
-        if not deterministic:
-            file_id = str(uuid4())
         assert_or_throw(
             path != "",
             FugueWorkflowRuntimeError(

@@ -16,30 +16,25 @@ def test_create():
 def test_checkpoint():
     id0 = FugueWorkflow().df([[0]], "a:int32").workflow.spec_uuid()
     id1 = FugueWorkflow().df([[0]], "a:int32").checkpoint().workflow.spec_uuid()
-    id2 = (
-        FugueWorkflow()
-        .df([[0]], "a:int32")
-        .deterministic_checkpoint(namespace="1")
-        .workflow.spec_uuid()
-    )
-    id3 = (
-        FugueWorkflow()
-        .df([[0]], "a:int32")
-        .deterministic_checkpoint(namespace=1)
-        .workflow.spec_uuid()
-    )
-    id4 = (
-        FugueWorkflow()
-        .df([[0]], "a:int32")
-        .deterministic_checkpoint(namespace=1)
-        .workflow.spec_uuid()
-    )
+    # checkpoint doesn't change determinism
+    assert id0 == id1
 
-    assert id1 != id0
-    assert id1 != id2
-    assert id2 != id0
-    assert id2 != id3
-    assert id3 == id4
+
+def test_yield():
+    dag = FugueWorkflow()
+    dag.df([[0]], "a:int32").show()
+    id0 = dag.spec_uuid()
+    x = FugueWorkflow().df([[0]], "a:int32")
+    x.yield_as("x")
+    x.show()
+    id1 = x.workflow.spec_uuid()
+    x = FugueWorkflow().df([[0]], "a:int32")
+    x.deterministic_checkpoint().yield_as("y")
+    x.show()
+    id2 = x.workflow.spec_uuid()
+    # yield doesn't change determinism
+    assert id0 == id1
+    assert id0 == id2
 
 
 def test_auto_persist():
@@ -61,7 +56,7 @@ def test_auto_persist():
     df1.show()
     id3 = dag3.spec_uuid()
 
-    assert id1 != id2
+    assert id1 == id2
     assert id2 == id3
 
     dag2 = FugueWorkflow(
@@ -101,7 +96,7 @@ def test_auto_persist():
     id3 = dag3.spec_uuid()
 
     assert id1 == id2
-    assert id2 != id3
+    assert id2 == id3  # checkpoint, including auto_persist doesn't change determinism
 
 
 def test_workflow_determinism_1():

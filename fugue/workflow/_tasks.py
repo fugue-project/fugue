@@ -4,6 +4,7 @@ from typing import Any, List, Optional, no_type_check
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
 from fugue.collections.partition import PartitionSpec
+from fugue.collections.yielded import Yielded
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.exceptions import FugueWorkflowError
@@ -58,11 +59,11 @@ class FugueTask(TaskSpec, ABC):
             lazy=lazy,
         )
         self._checkpoint = Checkpoint()
-        self._yield_name = ""
         self._broadcast = False
         self._dependency_uuid: Any = None
 
     def __uuid__(self) -> str:
+        # _checkpoint is not part of determinism
         # _yield_name is not part of determinism
         return to_uuid(
             self.configs,
@@ -73,7 +74,6 @@ class FugueTask(TaskSpec, ABC):
             self.deterministic,
             self.lazy,
             self._get_dependency_uuid(),
-            self._checkpoint,
             self._broadcast,
         )
 
@@ -106,18 +106,13 @@ class FugueTask(TaskSpec, ABC):
     def has_checkpoint(self) -> bool:
         return not self._checkpoint.is_null
 
-    def yield_as(self, name: str) -> "FugueTask":
-        self._checkpoint.set_yield()
-        self._yield_name = name
-        return self
+    @property
+    def yielded(self) -> Yielded:
+        return self._checkpoint.yielded
 
     def handle_checkpoint(self, df: DataFrame, ctx: TaskContext) -> DataFrame:
         wfctx = self._get_workflow_context(ctx)
-        result = self._checkpoint.run(self.__uuid__(), df, wfctx.checkpoint_path)
-        yielded = self._checkpoint.yielded
-        if yielded is not None:
-            wfctx.set_yielded(self._yield_name, yielded)
-        return result
+        return self._checkpoint.run(df, wfctx.checkpoint_path)
 
     def broadcast(self) -> "FugueTask":
         self._broadcast = True

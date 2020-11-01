@@ -119,19 +119,34 @@ class BuiltInTests(object):
                     mock_create, params=dict(dummy=2)
                 )  # this should not affect a because it's not a dependency
                 a = dag.create(mock_create).deterministic_checkpoint()
+                id1 = a.spec_uuid()
                 a.save(temp_file)
             with self.dag() as dag:
                 a = dag.create(mock_create).deterministic_checkpoint()
                 b = dag.load(temp_file)
                 b.assert_eq(a)
             with self.dag() as dag:
-                # even change on the settings of deterministic checkpoint
-                # will affect determinism
+                # checkpoint specs itself doesn't change determinism
+                # of the previous steps
                 a = dag.create(mock_create).deterministic_checkpoint(
                     partition=PartitionSpec(num=2)
                 )
+                id2 = a.spec_uuid()
+                b = dag.load(temp_file)
+                b.assert_eq(a)
+            with self.dag() as dag:
+                # dependency change will affect determinism
+                a = dag.create(
+                    mock_create, params={"dummy": 2}
+                ).deterministic_checkpoint()
+                id3 = a.spec_uuid()
                 b = dag.load(temp_file)
                 b.assert_not_eq(a)
+
+            assert (
+                id1 == id2
+            )  # different types of checkpoint doesn't change dag determinism
+            assert id1 != id3
 
         def test_deterministic_checkpoint_complex_dag(self):
             self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(
@@ -175,7 +190,8 @@ class BuiltInTests(object):
                 )  # this should not affect a because it's not a dependency
                 a = dag.create(mock_create).drop(["a"])
                 b = dag.create(mock_create).drop(["a"])
-                c = a.union(b).deterministic_checkpoint()
+                c = a.union(b)
+                c.deterministic_checkpoint()
                 c.save(temp_file)
             with self.dag() as dag:
                 a = dag.create(mock_create).drop(["a"])
@@ -184,9 +200,16 @@ class BuiltInTests(object):
                 d = dag.load(temp_file)
                 d.assert_eq(c)
             with self.dag() as dag:
-                # even change on the settings of deterministic checkpoint
-                # will affect determinism
+                # checkpoint specs itself doesn't change determinism
+                # of the previous steps
                 a = dag.create(mock_create).drop(["a"])
+                b = dag.create(mock_create).drop(["a"])
+                c = a.union(b).deterministic_checkpoint(partition=PartitionSpec(num=2))
+                d = dag.load(temp_file)
+                d.assert_eq(c)
+            with self.dag() as dag:
+                # dependency change will affect determinism
+                a = dag.create(mock_create, params={"dummy": 2}).drop(["a"])
                 b = dag.create(mock_create).drop(["a"])
                 c = a.union(b).deterministic_checkpoint(partition=PartitionSpec(num=2))
                 d = dag.load(temp_file)
@@ -198,30 +221,34 @@ class BuiltInTests(object):
             )
 
             with raises(FugueWorkflowCompileError):
-                dag1 = self.dag()
-                dag1.df([[0]], "a:int").checkpoint().yield_as("x")
-                dag1.run()
+                self.dag().df([[0]], "a:int").checkpoint().yield_as("x")
 
             with raises(FugueWorkflowCompileError):
+                self.dag().df([[0]], "a:int").persist().yield_as("x")
+
+            def run_test(deterministic):
                 dag1 = self.dag()
-                dag1.df([[0]], "a:int").persist().yield_as("x")
+                df = dag1.df([[0]], "a:int")
+                if deterministic:
+                    df = df.deterministic_checkpoint()
+                df.yield_as("x")
+                id1 = dag1.spec_uuid()
+                dag2 = self.dag()
+                dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))
+                id2 = dag2.spec_uuid()
                 dag1.run()
+                dag2.run()
+                return id1, id2
 
-            dag1 = self.dag()
-            dag1.df([[0]], "a:int").yield_as("x")
-            dag1.run()
+            id1, id2 = run_test(False)
+            id3, id4 = run_test(False)
+            assert id1 == id3
+            assert id2 != id4  # non deterministic yield (direct yield)
 
-            dag2 = self.dag()
-            dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))
-            dag2.run()
-
-            dag1 = self.dag()
-            dag1.df([[0]], "a:int").deterministic_checkpoint().yield_as("x")
-            dag1.run()
-
-            dag2 = self.dag()
-            dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))
-            dag2.run()
+            id1, id2 = run_test(True)
+            id3, id4 = run_test(True)
+            assert id1 == id3
+            assert id2 == id4  # deterministic yield (yield deterministic checkpoint)
 
         def test_create_process_output(self):
             with self.dag() as dag:

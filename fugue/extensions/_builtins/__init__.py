@@ -1,5 +1,5 @@
 # flake8: noqa
-from fugue.extensions._builtins.creators import CreateData, Load
+from fugue.extensions._builtins.creators import CreateData, Load, LoadYielded
 from fugue.extensions._builtins.outputters import (
     AssertEqual,
     AssertNotEqual,

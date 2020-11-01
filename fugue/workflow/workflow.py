@@ -1,9 +1,11 @@
 from collections import defaultdict
 from threading import RLock
 from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar
+from uuid import uuid4
 
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
+from fugue.collections.yielded import Yielded
 from fugue.constants import (
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE,
@@ -41,10 +43,10 @@ from fugue.workflow._workflow_context import (
     FugueWorkflowContext,
     _FugueInteractiveWorkflowContext,
 )
-from fugue.workflow.yielded import Yielded
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
+from fugue.extensions._builtins.creators import LoadYielded
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -532,6 +534,7 @@ class WorkflowDataFrame(DataFrame):
         """
         self._task.set_checkpoint(
             FileCheckpoint(
+                file_id=str(uuid4()),
                 deterministic=False,
                 permanent=False,
                 lazy=lazy,
@@ -567,6 +570,7 @@ class WorkflowDataFrame(DataFrame):
         """
         self._task.set_checkpoint(
             FileCheckpoint(
+                file_id=self._task.__uuid__(),
                 deterministic=True,
                 permanent=True,
                 lazy=lazy,
@@ -578,12 +582,11 @@ class WorkflowDataFrame(DataFrame):
         )
         return self
 
-    def yield_as(self: TDF, name: str) -> TDF:
+    def yield_as(self: TDF, name: str) -> None:
         """Cache the dataframe in memory
 
         :param name: the name of the yielded dataframe that you will be able to
           use in ``.yields[name]``
-        :return: the original dataframe that is yielded
 
         :Notice:
 
@@ -599,15 +602,9 @@ class WorkflowDataFrame(DataFrame):
         and loaded back as a new dataframe.
         """
         if not self._task.has_checkpoint:
-            self._task.set_checkpoint(
-                FileCheckpoint(
-                    deterministic=False,
-                    permanent=True,
-                    lazy=False,
-                )
-            )
-        self._task.yield_as(name)
-        return self
+            # the following == a non determinitic, but permanent checkpoint
+            self.deterministic_checkpoint(namespace=str(uuid4()))
+        self.workflow._yields[name] = self._task.yielded
 
     def persist(self: TDF) -> TDF:
         """Persist the current dataframe
@@ -918,6 +915,7 @@ class FugueWorkflow(object):
         self._workflow_ctx = self._to_ctx(*args, **kwargs)
         self._computed = False
         self._graph = _Graph()
+        self._yields: Dict[str, Yielded] = {}
 
     @property
     def conf(self) -> ParamDict:
@@ -960,7 +958,7 @@ class FugueWorkflow(object):
 
     @property
     def yields(self) -> Dict[str, Yielded]:
-        return self._workflow_ctx.yields
+        return self._yields
 
     def __enter__(self):
         return self
@@ -1116,7 +1114,7 @@ class FugueWorkflow(object):
                     "schema and metadata must be None when data is Yielded"
                 ),
             )
-            return self.load(data.path)
+            return self.create(using=LoadYielded, params=dict(yielded=data))
         schema = None if schema is None else Schema(schema)
         return self.create(
             using=CreateData, params=dict(data=data, schema=schema, metadata=metadata)
