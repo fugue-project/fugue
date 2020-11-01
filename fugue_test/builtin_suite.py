@@ -8,10 +8,16 @@ import numpy as np
 import pandas as pd
 import pytest
 from fugue import FileSystem, Schema
+from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueWorkflowError, FugueWorkflowValidationError
+from fugue.exceptions import (
+    FugueWorkflowCompileError,
+    FugueWorkflowCompileValidationError,
+    FugueWorkflowError,
+    FugueWorkflowRuntimeValidationError,
+)
 from fugue.execution import ExecutionEngine
 from fugue.execution.native_execution_engine import SqliteEngine
 from fugue.extensions.outputter import Outputter, outputter
@@ -25,7 +31,6 @@ from fugue.extensions.transformer import (
 from fugue.workflow.workflow import FugueWorkflow, _FugueInteractiveWorkflow
 from pytest import raises
 from triad.utils.convert import get_full_type_path
-from fugue.collections.partition import PartitionSpec
 
 
 class BuiltInTests(object):
@@ -186,6 +191,37 @@ class BuiltInTests(object):
                 c = a.union(b).deterministic_checkpoint(partition=PartitionSpec(num=2))
                 d = dag.load(temp_file)
                 d.assert_not_eq(c)
+
+        def test_yield(self):
+            self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(
+                self.tmpdir, "ck"
+            )
+
+            with raises(FugueWorkflowCompileError):
+                dag1 = self.dag()
+                dag1.df([[0]], "a:int").checkpoint().yield_as("x")
+                dag1.run()
+
+            with raises(FugueWorkflowCompileError):
+                dag1 = self.dag()
+                dag1.df([[0]], "a:int").persist().yield_as("x")
+                dag1.run()
+
+            dag1 = self.dag()
+            dag1.df([[0]], "a:int").yield_as("x")
+            dag1.run()
+
+            dag2 = self.dag()
+            dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))
+            dag2.run()
+
+            dag1 = self.dag()
+            dag1.df([[0]], "a:int").deterministic_checkpoint().yield_as("x")
+            dag1.run()
+
+            dag2 = self.dag()
+            dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))
+            dag2.run()
 
         def test_create_process_output(self):
             with self.dag() as dag:
@@ -685,11 +721,11 @@ class BuiltInTests(object):
 
             for t in [t1, t2, T3]:
                 # compile time
-                with raises(FugueWorkflowValidationError):
+                with raises(FugueWorkflowCompileValidationError):
                     self.dag().df([[0, 1]], "a:int,b:int").transform(t)
 
                 # runtime
-                with raises(FugueWorkflowValidationError):
+                with raises(FugueWorkflowRuntimeValidationError):
                     with self.dag() as dag:
                         dag.df([[0, 1]], "c:int,b:int").partition(by=["b"]).transform(t)
 
@@ -717,7 +753,7 @@ class BuiltInTests(object):
 
             for p in [p1, p2, P3]:
                 # run time
-                with raises(FugueWorkflowValidationError):
+                with raises(FugueWorkflowRuntimeValidationError):
                     with self.dag() as dag:
                         df1 = dag.df([[0, 1]], "a:int,b:int")
                         df2 = dag.df([[0, 1]], "c:int,d:int")
@@ -734,7 +770,7 @@ class BuiltInTests(object):
                 return dfs[0]
 
             # compile time
-            with raises(FugueWorkflowValidationError):
+            with raises(FugueWorkflowCompileValidationError):
                 dag = self.dag()
                 df = dag.df([[0, 1]], "a:int,b:int")
                 df.process(p4)
@@ -761,7 +797,7 @@ class BuiltInTests(object):
 
             for o in [o1, o2, O3]:
                 # run time
-                with raises(FugueWorkflowValidationError):
+                with raises(FugueWorkflowRuntimeValidationError):
                     with self.dag() as dag:
                         df1 = dag.df([[0, 1]], "a:int,b:int")
                         df2 = dag.df([[0, 1]], "c:int,d:int")
@@ -778,7 +814,7 @@ class BuiltInTests(object):
                 pass
 
             # compile time
-            with raises(FugueWorkflowValidationError):
+            with raises(FugueWorkflowCompileValidationError):
                 dag = self.dag()
                 df = dag.df([[0, 1]], "a:int,b:int")
                 df.output(o4)

@@ -50,8 +50,29 @@ class FugueWorkflowError(FugueError):
         super().__init__(*args)
 
 
-class FugueWorkflowValidationError(FugueWorkflowError):
-    """Fugue workflow exceptions"""
+class FugueWorkflowCompileError(FugueWorkflowError):
+    """Fugue workflow compile time error"""
+
+    def __init__(self, *args: Any):
+        super().__init__(*args)
+
+
+class FugueWorkflowCompileValidationError(FugueWorkflowCompileError):
+    """Fugue workflow compile time validation error"""
+
+    def __init__(self, *args: Any):
+        super().__init__(*args)
+
+
+class FugueWorkflowRuntimeError(FugueWorkflowError):
+    """Fugue workflow compile time error"""
+
+    def __init__(self, *args: Any):
+        super().__init__(*args)
+
+
+class FugueWorkflowRuntimeValidationError(FugueWorkflowRuntimeError):
+    """Fugue workflow runtime validation error"""
 
     def __init__(self, *args: Any):
         super().__init__(*args)

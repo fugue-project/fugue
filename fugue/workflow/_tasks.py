@@ -58,10 +58,12 @@ class FugueTask(TaskSpec, ABC):
             lazy=lazy,
         )
         self._checkpoint = Checkpoint()
+        self._yield_name = ""
         self._broadcast = False
         self._dependency_uuid: Any = None
 
     def __uuid__(self) -> str:
+        # _yield_name is not part of determinism
         return to_uuid(
             self.configs,
             self.inputs,
@@ -100,9 +102,22 @@ class FugueTask(TaskSpec, ABC):
         self._checkpoint = checkpoint
         return self
 
+    @property
+    def has_checkpoint(self) -> bool:
+        return not self._checkpoint.is_null
+
+    def yield_as(self, name: str) -> "FugueTask":
+        self._checkpoint.set_yield()
+        self._yield_name = name
+        return self
+
     def handle_checkpoint(self, df: DataFrame, ctx: TaskContext) -> DataFrame:
         wfctx = self._get_workflow_context(ctx)
-        return self._checkpoint.run(self.__uuid__(), df, wfctx.checkpoint_path)
+        result = self._checkpoint.run(self.__uuid__(), df, wfctx.checkpoint_path)
+        yielded = self._checkpoint.yielded
+        if yielded is not None:
+            wfctx.set_yielded(self._yield_name, yielded)
+        return result
 
     def broadcast(self) -> "FugueTask":
         self._broadcast = True

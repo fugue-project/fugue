@@ -1,5 +1,6 @@
 from threading import RLock
 from typing import Any, Dict, Tuple
+from uuid import uuid4
 
 from adagio.instances import (
     NoOpCache,
@@ -14,10 +15,10 @@ from fugue.dataframe import DataFrame
 from fugue.execution.execution_engine import ExecutionEngine
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from fugue.workflow._checkpoint import CheckpointPath
+from fugue.workflow.yielded import Yielded
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_instance
-from uuid import uuid4
 
 
 class FugueWorkflowContext(WorkflowContext):
@@ -35,6 +36,7 @@ class FugueWorkflowContext(WorkflowContext):
         self._fugue_engine = ee
         self._lock = RLock()
         self._results: Dict[Any, DataFrame] = {}
+        self._yields: Dict[str, Yielded] = {}
         self._execution_id = ""
         self._checkpoint_path = CheckpointPath(self.execution_engine)
         if workflow_engine is None:
@@ -78,6 +80,14 @@ class FugueWorkflowContext(WorkflowContext):
     def get_result(self, key: Any) -> DataFrame:
         with self._lock:
             return self._results[key]
+
+    def set_yielded(self, key: str, yielded: Yielded) -> None:
+        with self._lock:
+            self._yields[key] = yielded
+
+    @property
+    def yields(self) -> Dict[str, Yielded]:
+        return self._yields
 
 
 class _FugueInteractiveWorkflowContext(FugueWorkflowContext):
