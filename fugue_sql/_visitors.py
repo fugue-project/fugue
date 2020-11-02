@@ -264,7 +264,7 @@ class _VisitorBase(FugueSQLVisitor):
             x.yield_as(yield_name)
             return x
 
-        return lambda name, x: _func(name, x, ctx.fugueYield().name)
+        return lambda name, x: _func(name, x, self.ctxToStr(ctx.fugueYield().name))
 
     def visitFugueCheckpointNamespace(self, ctx: fp.FugueCheckpointNamespaceContext):
         return str(eval(self.ctxToStr(ctx)))
