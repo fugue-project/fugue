@@ -236,6 +236,24 @@ def test_persist_checkpoint_broadcast():
     )
 
 
+def test_yield():
+    dag = FugueWorkflow()
+    dag.create(mock_create1).yield_as("a")
+    dag.create(mock_create1).yield_as("aa")
+    dag.create(mock_create1).deterministic_checkpoint().yield_as("c")
+    dag.create(mock_create1).deterministic_checkpoint().yield_as("bb")
+
+    assert_eq(
+        """
+    a=create using mock_create1 yield
+    b=create using mock_create1 yield as aa
+    c=create using mock_create1 deterministic checkpoint yield
+    d=create using mock_create1 deterministic checkpoint yield as bb
+    """,
+        dag,
+    )
+
+
 def test_select_nested():
     dag = FugueWorkflow()
     a = dag.create(mock_create1, params=dict(n=1))

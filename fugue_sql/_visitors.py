@@ -211,14 +211,14 @@ class _VisitorBase(FugueSQLVisitor):
         lazy = ctx.LAZY() is not None
         data = self.get_dict(ctx, "params")
         if "params" not in data:
-            return lambda x: x.persist()
+            return lambda name, x: x.persist()
         else:
-            return lambda x: x.weak_checkpoint(lazy=lazy, **data["params"])
+            return lambda name, x: x.weak_checkpoint(lazy=lazy, **data["params"])
 
     def visitFugueCheckpointStrong(self, ctx: fp.FugueCheckpointStrongContext) -> Any:
         lazy = ctx.LAZY() is not None
         data = self.get_dict(ctx, "partition", "single", "params")
-        return lambda x: x.strong_checkpoint(
+        return lambda name, x: x.strong_checkpoint(
             lazy=lazy,
             partition=data.get("partition"),
             single="single" in data,
@@ -228,15 +228,43 @@ class _VisitorBase(FugueSQLVisitor):
     def visitFugueCheckpointDeterministic(
         self, ctx: fp.FugueCheckpointDeterministicContext
     ) -> Any:
+        def _func(
+            name: str, x: WorkflowDataFrame, should_yield: bool, yield_name: Any
+        ) -> WorkflowDataFrame:
+            x.deterministic_checkpoint(
+                lazy=lazy,
+                partition=data.get("partition"),
+                single="single" in data,
+                namespace=data.get("ns"),
+                **data.get("params", {}),
+            )
+            if not should_yield:
+                return x
+            yield_name = yield_name or name
+            assert_or_throw(yield_name is not None, "yield name is not specified")
+            x.yield_as(yield_name)
+            return x
+
         lazy = ctx.LAZY() is not None
         data = self.get_dict(ctx, "ns", "partition", "single", "params")
-        return lambda x: x.deterministic_checkpoint(
-            lazy=lazy,
-            partition=data.get("partition"),
-            single="single" in data,
-            namespace=data.get("ns"),
-            **data.get("params", {}),
-        )
+        if ctx.fugueYield() is not None:
+            should_yield = True
+            yield_name: Any = ctx.fugueYield().name
+        else:
+            should_yield = False
+            yield_name = None
+        return lambda name, x: _func(name, x, should_yield, yield_name)
+
+    def visitFugueCheckpointYield(self, ctx: fp.FugueCheckpointYieldContext) -> Any:
+        def _func(
+            name: str, x: WorkflowDataFrame, yield_name: Any
+        ) -> WorkflowDataFrame:
+            yield_name = yield_name or name
+            assert_or_throw(yield_name is not None, "yield name is not specified")
+            x.yield_as(yield_name)
+            return x
+
+        return lambda name, x: _func(name, x, ctx.fugueYield().name)
 
     def visitFugueCheckpointNamespace(self, ctx: fp.FugueCheckpointNamespaceContext):
         return str(eval(self.ctxToStr(ctx)))
@@ -633,7 +661,7 @@ class _Extensions(_VisitorBase):
         else:
             varname = None
         if "checkpoint" in data:
-            df = data["checkpoint"](df)
+            data["checkpoint"](varname, df)
         if "broadcast" in data:
             df = df.broadcast()
         if varname is not None:
