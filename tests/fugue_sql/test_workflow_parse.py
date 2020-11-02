@@ -242,6 +242,7 @@ def test_yield():
     dag.create(mock_create1).yield_as("aa")
     dag.create(mock_create1).deterministic_checkpoint().yield_as("c")
     dag.create(mock_create1).deterministic_checkpoint().yield_as("bb")
+    dag.create(mock_create1).deterministic_checkpoint().yield_as("cc")
 
     assert_eq(
         """
@@ -249,6 +250,7 @@ def test_yield():
     create using mock_create1 yield as aa
     c=create using mock_create1 deterministic checkpoint yield
     d=create using mock_create1 deterministic checkpoint yield as bb
+    create using mock_create1 deterministic checkpoint yield as cc
     """,
         dag,
     )
