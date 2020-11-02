@@ -1,9 +1,12 @@
 import inspect
-from typing import Any, Dict
+from builtins import isinstance
+from typing import Any, Dict, Tuple
 
-from fugue.workflow import FugueWorkflow, WorkflowDataFrame
+from fugue import DataFrame, FugueWorkflow, WorkflowDataFrame
+from fugue.collections.yielded import Yielded
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
+from triad.utils.convert import get_caller_global_local_vars
 
 from fugue_sql._constants import (
     FUGUE_SQL_CONF_IGNORE_CASE,
@@ -14,7 +17,6 @@ from fugue_sql._parse import FugueSQL
 from fugue_sql._utils import fill_sql_template
 from fugue_sql._visitors import FugueSQLHooks, _Extensions
 from fugue_sql.exceptions import FugueSQLError
-from triad.utils.convert import get_caller_global_local_vars
 
 
 class FugueSQLWorkflow(FugueWorkflow):
@@ -63,17 +65,26 @@ class FugueSQLWorkflow(FugueWorkflow):
             assert_or_throw(isinstance(a, Dict), f"args can only have dict: {a}")
             params.update(a)
         params.update(kwargs)
-        template_params = dict(params)
-        if "self" in template_params:
-            del template_params["self"]
-        code = fill_sql_template(code, template_params)
+        params, dfs = self._split_params(params)
+        code = fill_sql_template(code, params)
         sql = FugueSQL(
             code,
             "fugueLanguage",
             ignore_case=self.conf.get_or_throw(FUGUE_SQL_CONF_IGNORE_CASE, bool),
             simple_assign=self.conf.get_or_throw(FUGUE_SQL_CONF_SIMPLE_ASSIGN, bool),
         )
-        dfs = {k: v for k, v in params.items() if isinstance(v, WorkflowDataFrame)}
         v = _Extensions(sql, FugueSQLHooks(), self, dfs, local_vars=params)
         v.visit(sql.tree)
         return v.variables
+
+    def _split_params(
+        self, params: Dict[str, Any]
+    ) -> Tuple[Dict[str, Any], Dict[str, WorkflowDataFrame]]:
+        p: Dict[str, Any] = {}
+        dfs: Dict[str, WorkflowDataFrame] = {}
+        for k, v in params.items():
+            if isinstance(v, (DataFrame, Yielded)):
+                dfs[k] = self.df(v)
+            else:
+                p[k] = v
+        return p, dfs

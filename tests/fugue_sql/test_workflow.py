@@ -1,5 +1,8 @@
+import os
+
 import pandas as pd
 from fugue.dataframe import DataFrame
+from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from fugue.workflow.workflow import WorkflowDataFrame
@@ -55,7 +58,8 @@ def test_jinja_keyword_in_sql():
         )
 
 
-def test_use_df():
+def test_use_df(tmpdir):
+    # df generated inside dag
     with FugueSQLWorkflow() as dag:
         a = dag.df([[0], [1]], "a:int")
         dag(
@@ -65,6 +69,35 @@ def test_use_df():
         """
         )
         dag["b"].assert_eq(a)
+
+    # external non-workflowdataframe
+    arr = ArrayDataFrame([[0], [1]], "a:int")
+    with FugueSQLWorkflow() as dag:
+        dag(
+            """
+        b=CREATE[[0], [1]] SCHEMA a: int
+        OUTPUT a, b USING assert_eq
+        """,
+            a=arr,
+        )
+        dag["b"].assert_eq(dag.df([[0], [1]], "a:int"))
+
+    # from yield
+    engine = NativeExecutionEngine(
+        conf={"fugue.workflow.checkpoint.path": os.path.join(tmpdir, "ck")}
+    )
+    with FugueSQLWorkflow(engine) as dag:
+        dag("CREATE[[0], [1]] SCHEMA a: int YIELD AS b")
+        res = dag.yields["b"]
+
+    with FugueSQLWorkflow(engine) as dag:
+        dag(
+            """
+        b=CREATE[[0], [1]] SCHEMA a: int
+        OUTPUT a, b USING assert_eq
+        """,
+            a=res,
+        )
 
 
 def test_use_param():

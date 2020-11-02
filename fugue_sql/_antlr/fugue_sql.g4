@@ -190,13 +190,18 @@ fuguePath
     ;
 
 fugueCheckpoint
-    : LAZY? (PERSIST | WEAK CHECKPOINT) (params=fugueParams)?                                                                                                               #fugueCheckpointWeak
-    | LAZY? STRONG? CHECKPOINT (partition=fuguePrepartition)? (single=fugueSingleFile)? (params=fugueParams)?                                        #fugueCheckpointStrong
-    | LAZY? DETERMINISTIC CHECKPOINT (ns=fugueCheckpointNamespace)? (partition=fuguePrepartition)? (single=fugueSingleFile)? (params=fugueParams)?   #fugueCheckpointDeterministic
+    : LAZY? (PERSIST | WEAK CHECKPOINT) (params=fugueParams)?                                                                                                   #fugueCheckpointWeak
+    | LAZY? STRONG? CHECKPOINT (partition=fuguePrepartition)? (single=fugueSingleFile)? (params=fugueParams)?                                                   #fugueCheckpointStrong
+    | LAZY? DETERMINISTIC CHECKPOINT (ns=fugueCheckpointNamespace)? (partition=fuguePrepartition)? (single=fugueSingleFile)? (params=fugueParams)? fugueYield?  #fugueCheckpointDeterministic
+    | fugueYield                                                                                                                                                #fugueCheckpointYield
     ;
 
 fugueCheckpointNamespace
     : STRING
+    ;
+
+fugueYield
+    : YIELD (AS name=fugueIdentifier)?
     ;
 
 fugueBroadcast:
@@ -1815,6 +1820,8 @@ CHECKPOINT: 'CHECKPOINT';
 WEAK: 'WEAK';
 STRONG: 'STRONG';
 DETERMINISTIC: 'DETERMINISTIC';
+
+YIELD: 'YIELD';
 
 //================================
 // End of the Fugue keywords list

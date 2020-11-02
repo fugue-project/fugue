@@ -1,5 +1,6 @@
 from fugue.extensions.creator import Creator
 from fugue.dataframe import DataFrame
+from fugue.collections.yielded import Yielded
 
 
 class CreateData(Creator):
@@ -21,3 +22,9 @@ class Load(Creator):
         return self.execution_engine.load_df(
             path=path, format_hint=format_hint, columns=columns, **kwargs
         )
+
+
+class LoadYielded(Creator):
+    def create(self) -> DataFrame:
+        yielded = self.params.get_or_throw("yielded", Yielded)
+        return self.execution_engine.load_df(path=yielded.path)

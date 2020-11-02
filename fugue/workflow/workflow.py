@@ -1,16 +1,22 @@
 from collections import defaultdict
 from threading import RLock
 from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar
+from uuid import uuid4
 
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
+from fugue.collections.yielded import Yielded
 from fugue.constants import (
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE,
 )
 from fugue.dataframe import DataFrame
 from fugue.dataframe.dataframes import DataFrames
-from fugue.exceptions import FugueWorkflowError
+from fugue.exceptions import (
+    FugueWorkflowCompileError,
+    FugueWorkflowError,
+    FugueWorkflowRuntimeError,
+)
 from fugue.extensions._builtins import (
     AssertEqual,
     AssertNotEqual,
@@ -40,6 +46,7 @@ from fugue.workflow._workflow_context import (
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
+from fugue.extensions._builtins.creators import LoadYielded
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -527,7 +534,9 @@ class WorkflowDataFrame(DataFrame):
         """
         self._task.set_checkpoint(
             FileCheckpoint(
+                file_id=str(uuid4()),
                 deterministic=False,
+                permanent=False,
                 lazy=lazy,
                 partition=partition,
                 single=single,
@@ -561,7 +570,9 @@ class WorkflowDataFrame(DataFrame):
         """
         self._task.set_checkpoint(
             FileCheckpoint(
+                file_id=self._task.__uuid__(),
                 deterministic=True,
+                permanent=True,
                 lazy=lazy,
                 partition=partition,
                 single=single,
@@ -570,6 +581,30 @@ class WorkflowDataFrame(DataFrame):
             )
         )
         return self
+
+    def yield_as(self: TDF, name: str) -> None:
+        """Cache the dataframe in memory
+
+        :param name: the name of the yielded dataframe that you will be able to
+          use in ``.yields[name]``
+
+        :Notice:
+
+        In only the following cases you can yield:
+
+        * you have not checkpointed (persisted) the dataframe, for example
+          ``df.yield_as("a")``
+        * you have used :meth:`~.deterministic_checkpoint`, for example
+          ``df.deterministic_checkpoint().yield_as("a")``
+
+        For the first case, the yield will also be a strong checkpoint so
+        whenever you yield a dataframe, the dataframe has been saved as a file
+        and loaded back as a new dataframe.
+        """
+        if not self._task.has_checkpoint:
+            # the following == a non determinitic, but permanent checkpoint
+            self.deterministic_checkpoint(namespace=str(uuid4()))
+        self.workflow._yields[name] = self._task.yielded
 
     def persist(self: TDF) -> TDF:
         """Persist the current dataframe
@@ -880,6 +915,7 @@ class FugueWorkflow(object):
         self._workflow_ctx = self._to_ctx(*args, **kwargs)
         self._computed = False
         self._graph = _Graph()
+        self._yields: Dict[str, Yielded] = {}
 
     @property
     def conf(self) -> ParamDict:
@@ -919,6 +955,10 @@ class FugueWorkflow(object):
                 self._workflow_ctx = self._to_ctx(*args, **kwargs)
             self._workflow_ctx.run(self._spec, {})
             self._computed = True
+
+    @property
+    def yields(self) -> Dict[str, Yielded]:
+        return self._yields
 
     def __enter__(self):
         return self
@@ -1050,16 +1090,31 @@ class FugueWorkflow(object):
     ) -> WorkflowDataFrame:
         """Create dataframe.
 
-        :param data: |DataFrameLikeObject|
+        :param data: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
         :param schema: |SchemaLikeObject|, defaults to None
         :param metadata: |ParamsLikeObject|, defaults to None
         :return: a dataframe of the current workflow
         """
         if isinstance(data, WorkflowDataFrame):
             assert_or_throw(
-                data.workflow is self, f"{data} does not belong to this workflow"
+                data.workflow is self,
+                FugueWorkflowCompileError(f"{data} does not belong to this workflow"),
+            )
+            assert_or_throw(
+                schema is None and metadata is None,
+                FugueWorkflowCompileError(
+                    "schema and metadata must be None when data is WorkflowDataFrame"
+                ),
             )
             return data
+        if isinstance(data, Yielded):
+            assert_or_throw(
+                schema is None and metadata is None,
+                FugueWorkflowCompileError(
+                    "schema and metadata must be None when data is Yielded"
+                ),
+            )
+            return self.create(using=LoadYielded, params=dict(yielded=data))
         schema = None if schema is None else Schema(schema)
         return self.create(
             using=CreateData, params=dict(data=data, schema=schema, metadata=metadata)
@@ -1070,7 +1125,7 @@ class FugueWorkflow(object):
     ) -> WorkflowDataFrame:
         """Create dataframe. Alias of :meth:`~.create_data`
 
-        :param data: |DataFrameLikeObject|
+        :param data: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
         :param schema: |SchemaLikeObject|, defaults to None
         :param metadata: |ParamsLikeObject|, defaults to None
         :return: a dataframe of the current workflow
@@ -1414,7 +1469,7 @@ class _FugueInteractiveWorkflow(FugueWorkflow):
     def run(self, *args: Any, **kwargs: Any) -> None:
         assert_or_throw(
             len(args) == 0 and len(kwargs) == 0,
-            FugueWorkflowError(
+            FugueWorkflowRuntimeError(
                 "can't reset workflow context in _FugueInteractiveWorkflow"
             ),
         )

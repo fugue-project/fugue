@@ -1,5 +1,6 @@
 from threading import RLock
 from typing import Any, Dict, Tuple
+from uuid import uuid4
 
 from adagio.instances import (
     NoOpCache,
@@ -17,7 +18,6 @@ from fugue.workflow._checkpoint import CheckpointPath
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_instance
-from uuid import uuid4
 
 
 class FugueWorkflowContext(WorkflowContext):
