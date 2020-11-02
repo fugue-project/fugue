@@ -246,7 +246,7 @@ def test_yield():
     assert_eq(
         """
     a=create using mock_create1 yield
-    b=create using mock_create1 yield as aa
+    create using mock_create1 yield as aa
     c=create using mock_create1 deterministic checkpoint yield
     d=create using mock_create1 deterministic checkpoint yield as bb
     """,
