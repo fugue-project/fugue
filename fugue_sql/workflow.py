@@ -48,7 +48,7 @@ class FugueSQLWorkflow(FugueWorkflow):
             for k, v in local_vars.items()
             if not isinstance(v, WorkflowDataFrame) or v.workflow is self
         }
-        variables = self.sql(
+        variables = self._sql(
             code, self._sql_vars, global_vars, local_vars, *args, **kwargs
         )
         if cf is not None:
@@ -56,7 +56,9 @@ class FugueSQLWorkflow(FugueWorkflow):
                 if isinstance(v, WorkflowDataFrame) and v.workflow is self:
                     self._sql_vars[k] = v
 
-    def sql(self, code: str, *args: Any, **kwargs: Any) -> Dict[str, WorkflowDataFrame]:
+    def _sql(
+        self, code: str, *args: Any, **kwargs: Any
+    ) -> Dict[str, WorkflowDataFrame]:
         # TODO: move dict construction to triad
         params: Dict[str, Any] = {}
         for a in args:
