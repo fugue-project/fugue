@@ -240,7 +240,7 @@ class _VisitorBase(FugueSQLVisitor):
             )
             if not should_yield:
                 return x
-            yield_name = yield_name or name
+            yield_name = self.ctxToStr(yield_name) if yield_name is not None else name
             assert_or_throw(yield_name is not None, "yield name is not specified")
             x.yield_as(yield_name)
             return x
@@ -259,12 +259,12 @@ class _VisitorBase(FugueSQLVisitor):
         def _func(
             name: str, x: WorkflowDataFrame, yield_name: Any
         ) -> WorkflowDataFrame:
-            yield_name = yield_name or name
+            yield_name = self.ctxToStr(yield_name) if yield_name is not None else name
             assert_or_throw(yield_name is not None, "yield name is not specified")
             x.yield_as(yield_name)
             return x
 
-        return lambda name, x: _func(name, x, self.ctxToStr(ctx.fugueYield().name))
+        return lambda name, x: _func(name, x, ctx.fugueYield().name)
 
     def visitFugueCheckpointNamespace(self, ctx: fp.FugueCheckpointNamespaceContext):
         return str(eval(self.ctxToStr(ctx)))
