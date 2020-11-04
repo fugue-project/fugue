@@ -3,6 +3,7 @@ from fugue.extensions._builtins.creators import CreateData, Load, LoadYielded
 from fugue.extensions._builtins.outputters import (
     AssertEqual,
     AssertNotEqual,
+    RunOutputTransformer,
     Save,
     Show,
 )

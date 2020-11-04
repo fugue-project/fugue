@@ -1,5 +1,6 @@
 from typing import Any, Dict, Iterable, List
 
+import pandas as pd
 from fugue.dataframe import ArrayDataFrame
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.transformer import Transformer, _to_transformer, transformer
@@ -105,6 +106,19 @@ def test_to_transformer_validation():
     assert {"input_has": ["a", "b"]} == b.validation_rules
     c = _to_transformer(MockTransformerV)
     assert {"input_is": "a:int,b:int"} == c.validation_rules
+
+
+def test_inside_class():
+    class Test(object):
+        # schema: *
+        # input_is: a:int , b :int
+        def t1(self, df: pd.DataFrame) -> pd.DataFrame:
+            return df
+
+    test = Test()
+    a = _to_transformer(test.t1)
+    assert isinstance(a, Transformer)
+    assert {"input_is": "a:int,b:int"} == a.validation_rules
 
 
 @transformer(["*", None, "b:int"])

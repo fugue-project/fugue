@@ -3,7 +3,7 @@ from typing import Any, Iterable, List
 import pytest
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.extensions._builtins.outputters import df_eq
+from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.extensions.transformer import Transformer, transformer
 from fugue.workflow.workflow import FugueWorkflow
 from fugue_spark.execution_engine import SparkExecutionEngine

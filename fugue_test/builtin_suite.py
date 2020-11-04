@@ -26,6 +26,7 @@ from fugue.extensions.transformer import (
     CoTransformer,
     Transformer,
     cotransformer,
+    output_transformer,
     transformer,
 )
 from fugue.workflow.workflow import FugueWorkflow, _FugueInteractiveWorkflow
@@ -309,6 +310,28 @@ class BuiltInTests(object):
                     "a:double,b:int,p:int",
                 ).assert_eq(c)
 
+        def test_local_instance_as_extension(self):
+            class _Mock(object):
+                # schema: *
+                def t1(self, df: pd.DataFrame) -> pd.DataFrame:
+                    return df
+
+                def t2(self, df: pd.DataFrame) -> pd.DataFrame:
+                    return df
+
+                def test(self):
+                    with FugueWorkflow() as dag_:
+                        a = dag_.df([[0], [1]], "a:int")
+                        b = a.transform(self.t1)
+                        b.assert_eq(a)
+
+            m = _Mock()
+            m.test()
+            with self.dag() as dag:
+                a = dag.df([[0], [1]], "a:int")
+                b = a.transform(m.t1).transform(m.t2, schema="*")
+                b.assert_eq(a)
+
         def test_transform_binary(self):
             with self.dag() as dag:
                 a = dag.df([[1, pickle.dumps([0, "a"])]], "a:int,b:bytes")
@@ -434,6 +457,53 @@ class BuiltInTests(object):
                 c = dag.zip(dict(df1=a)).transform(mock_co_tf3)
                 e = dag.df([[1, 3, 1]], "a:int,ct1:int,p:int")
                 e.assert_eq(c)
+
+        def test_output_transform(self):  # noqa: C901
+            tmpdir = str(self.tmpdir)
+
+            def incr():
+                fs = FileSystem().makedirs(tmpdir, recreate=True)
+                if fs.exists("a.txt"):
+                    n = int(fs.readtext("a.txt"))
+                else:
+                    n = 0
+                fs.writetext("a.txt", str(n + 1))
+                return n
+
+            def t1(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+                for row in df:
+                    incr()
+                    yield row
+
+            def t2(df: pd.DataFrame) -> None:
+                incr()
+
+            # schema: *
+            def t3(df: pd.DataFrame) -> pd.DataFrame:
+                incr()
+                return df
+
+            @transformer("*")
+            def t4(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+                for row in df:
+                    incr()
+                    yield row
+
+            @output_transformer()
+            def t5(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+                for row in df:
+                    incr()
+                    yield row
+
+            with self.dag() as dag:
+                a = dag.df([[1, 2], [3, 4]], "a:double,b:int")
+                a.output_transform(t1)  # +2
+                a.output_transform(t2)  # +1 or +2
+                a.output_transform(t3)  # +1 or +2
+                a.output_transform(t4)  # +2
+                a.output_transform(t5)  # +2
+
+            assert 8 <= incr()
 
         def test_join(self):
             with self.dag() as dag:
