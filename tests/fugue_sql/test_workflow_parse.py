@@ -184,14 +184,14 @@ def test_transform():
     )
 
 
-def test_output_transform():
+def test_out_transform():
     class OT(OutputTransformer):
         def process(self, df):
             return
 
     o = _to_output_transformer(OT)
     w = FugueWorkflow()
-    w.df([[0], [1]], "a:int").output_transform(o, params=dict(n=2))
+    w.df([[0], [1]], "a:int").out_transform(o, params=dict(n=2))
     assert_eq(
         """
     create [[0],[1]] schema a:int
@@ -203,7 +203,7 @@ def test_output_transform():
     w = FugueWorkflow()
     w.df([[0], [1]], "a:int").partition(
         by=["a"], presort="b DESC", num="ROWCOUNT/2"
-    ).output_transform(mock_transformer, params=dict(n=2))
+    ).out_transform(mock_transformer, params=dict(n=2))
     assert_eq(
         """
     create [[0],[1]] schema a:int

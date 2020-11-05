@@ -153,13 +153,13 @@ def test_workflow_determinism_4():
     dag1 = FugueWorkflow()
     a1 = dag1.create_data([[0], [0], [1]], "a:int32")
     b1 = a1.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
-    b1.output_transform(mock_tf1)
+    b1.out_transform(mock_tf1)
     a1.show()
 
     dag2 = FugueWorkflow()
     a2 = dag2.create_data([[0], [0], [1]], "a:int32")
     b2 = a2.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=20))  # <---
-    b2.output_transform(mock_tf1)
+    b2.out_transform(mock_tf1)
     a2.show()
 
     assert a1.spec_uuid() == a2.spec_uuid()
@@ -204,12 +204,12 @@ def test_workflow_determinism_6():
 def test_workflow_determinism_7():
     dag1 = FugueWorkflow()
     a1 = dag1.create_data([[0], [0], [1]], "a:int32")
-    a1.output_transform(mock_tf1)
+    a1.out_transform(mock_tf1)
     a1.show()
 
     dag2 = FugueWorkflow()
     a2 = dag2.create_data([[0], [0], [1]], "a:int32")
-    a2.output_transform(mock_tf1)
+    a2.out_transform(mock_tf1)
     a2.show()
 
     dag3 = FugueWorkflow()

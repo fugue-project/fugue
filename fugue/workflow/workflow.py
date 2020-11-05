@@ -305,7 +305,7 @@ class WorkflowDataFrame(DataFrame):
         )
         return self._to_self_type(df)
 
-    def output_transform(
+    def out_transform(
         self: TDF,
         using: Any,
         params: Any = None,
@@ -340,7 +340,7 @@ class WorkflowDataFrame(DataFrame):
         )
         if pre_partition is None:
             pre_partition = self._metadata.get("pre_partition", PartitionSpec())
-        self.workflow.output_transform(
+        self.workflow.out_transform(
             self,
             using=using,
             params=params,
@@ -1403,7 +1403,7 @@ class FugueWorkflow(object):
             pre_partition=pre_partition,
         )
 
-    def output_transform(
+    def out_transform(
         self,
         *dfs: Any,
         using: Any,

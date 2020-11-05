@@ -95,10 +95,10 @@ fugueSingleStatement:
 
 fugueSingleTask
     : fugueNestableTask
+    | fugueOutputTransformTask
     | fugueOutputTask
     | fuguePrintTask
     | fugueSaveTask
-    | fugueOutputTransformTask
     ;
 
 fugueNestableTask

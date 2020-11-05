@@ -388,7 +388,7 @@ class _Extensions(_VisitorBase):
             local_vars=self.local_vars,
         )
         # ignore errors is not implemented
-        self.workflow.output_transform(
+        self.workflow.out_transform(
             data["dfs"],
             using=using,
             params=data.get("params"),

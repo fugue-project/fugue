@@ -535,14 +535,14 @@ def serializedATN():
         buf.write("\2\2\2\u0199\u019a\3\2\2\2\u019a\u019b\3\2\2\2\u019b\u019c")
         buf.write("\7\2\2\3\u019c\3\3\2\2\2\u019d\u019e\5\6\4\2\u019e\u019f")
         buf.write("\7\2\2\3\u019f\5\3\2\2\2\u01a0\u01a6\5\b\5\2\u01a1\u01a6")
-        buf.write("\5\36\20\2\u01a2\u01a6\5 \21\2\u01a3\u01a6\5\"\22\2\u01a4")
-        buf.write("\u01a6\5$\23\2\u01a5\u01a0\3\2\2\2\u01a5\u01a1\3\2\2\2")
-        buf.write("\u01a5\u01a2\3\2\2\2\u01a5\u01a3\3\2\2\2\u01a5\u01a4\3")
-        buf.write("\2\2\2\u01a6\7\3\2\2\2\u01a7\u01a9\5> \2\u01a8\u01a7\3")
-        buf.write("\2\2\2\u01a8\u01a9\3\2\2\2\u01a9\u01aa\3\2\2\2\u01aa\u01ac")
-        buf.write("\5\u009eP\2\u01ab\u01ad\5\60\31\2\u01ac\u01ab\3\2\2\2")
-        buf.write("\u01ac\u01ad\3\2\2\2\u01ad\u01af\3\2\2\2\u01ae\u01b0\5")
-        buf.write("\66\34\2\u01af\u01ae\3\2\2\2\u01af\u01b0\3\2\2\2\u01b0")
+        buf.write("\5$\23\2\u01a2\u01a6\5\36\20\2\u01a3\u01a6\5 \21\2\u01a4")
+        buf.write("\u01a6\5\"\22\2\u01a5\u01a0\3\2\2\2\u01a5\u01a1\3\2\2")
+        buf.write("\2\u01a5\u01a2\3\2\2\2\u01a5\u01a3\3\2\2\2\u01a5\u01a4")
+        buf.write("\3\2\2\2\u01a6\7\3\2\2\2\u01a7\u01a9\5> \2\u01a8\u01a7")
+        buf.write("\3\2\2\2\u01a8\u01a9\3\2\2\2\u01a9\u01aa\3\2\2\2\u01aa")
+        buf.write("\u01ac\5\u009eP\2\u01ab\u01ad\5\60\31\2\u01ac\u01ab\3")
+        buf.write("\2\2\2\u01ac\u01ad\3\2\2\2\u01ad\u01af\3\2\2\2\u01ae\u01b0")
+        buf.write("\5\66\34\2\u01af\u01ae\3\2\2\2\u01af\u01b0\3\2\2\2\u01b0")
         buf.write("\t\3\2\2\2\u01b1\u01bb\5\f\7\2\u01b2\u01bb\5\16\b\2\u01b3")
         buf.write("\u01bb\5\26\f\2\u01b4\u01bb\5\30\r\2\u01b5\u01bb\5\32")
         buf.write("\16\2\u01b6\u01bb\5\34\17\2\u01b7\u01bb\5\20\t\2\u01b8")
@@ -3073,6 +3073,10 @@ class fugue_sqlParser ( Parser ):
             return self.getTypedRuleContext(fugue_sqlParser.FugueNestableTaskContext,0)
 
 
+        def fugueOutputTransformTask(self):
+            return self.getTypedRuleContext(fugue_sqlParser.FugueOutputTransformTaskContext,0)
+
+
         def fugueOutputTask(self):
             return self.getTypedRuleContext(fugue_sqlParser.FugueOutputTaskContext,0)
 
@@ -3083,10 +3087,6 @@ class fugue_sqlParser ( Parser ):
 
         def fugueSaveTask(self):
             return self.getTypedRuleContext(fugue_sqlParser.FugueSaveTaskContext,0)
-
-
-        def fugueOutputTransformTask(self):
-            return self.getTypedRuleContext(fugue_sqlParser.FugueOutputTransformTaskContext,0)
 
 
         def getRuleIndex(self):
@@ -3118,25 +3118,25 @@ class fugue_sqlParser ( Parser ):
             elif la_ == 2:
                 self.enterOuterAlt(localctx, 2)
                 self.state = 415
-                self.fugueOutputTask()
+                self.fugueOutputTransformTask()
                 pass
 
             elif la_ == 3:
                 self.enterOuterAlt(localctx, 3)
                 self.state = 416
-                self.fuguePrintTask()
+                self.fugueOutputTask()
                 pass
 
             elif la_ == 4:
                 self.enterOuterAlt(localctx, 4)
                 self.state = 417
-                self.fugueSaveTask()
+                self.fuguePrintTask()
                 pass
 
             elif la_ == 5:
                 self.enterOuterAlt(localctx, 5)
                 self.state = 418
-                self.fugueOutputTransformTask()
+                self.fugueSaveTask()
                 pass
 
 
