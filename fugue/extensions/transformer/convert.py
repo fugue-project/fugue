@@ -240,6 +240,13 @@ class _FuncAsCoTransformer(CoTransformer):
             schema = parse_output_schema_from_comment(func)
         if isinstance(schema, Schema):  # to be less strict on determinism
             schema = str(schema)
+        if isinstance(schema, str):
+            assert_or_throw(
+                "*" not in schema,
+                FugueInterfacelessError(
+                    "* can't be used on cotransformer output schema"
+                ),
+            )
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsCoTransformer()
         tr._wrapper = FunctionWrapper(func, "^(c|[lsp]+)x*$", "^[lsp]$")  # type: ignore
@@ -250,7 +257,7 @@ class _FuncAsCoTransformer(CoTransformer):
 
 
 class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
-    def get_output_schema(self, df: DataFrame) -> Any:
+    def get_output_schema(self, dfs: DataFrames) -> Any:
         return OUTPUT_TRANSFORMER_DUMMY_SCHEMA
 
     @no_type_check

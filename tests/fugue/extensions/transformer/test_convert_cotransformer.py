@@ -58,11 +58,6 @@ def test__to_transformer_determinism():
     assert a is not c
     assert to_uuid(a) == to_uuid(c)
 
-    a = _to_transformer(t4, "*,b:int")
-    b = _to_transformer("t4", "*,b:int")
-    assert a is not b
-    assert to_uuid(a) == to_uuid(b)
-
     a = _to_transformer(t4, "a:int,b:int")
     b = _to_transformer("t4", Schema("a:int,b:int"))
     assert a is not b
