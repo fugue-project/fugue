@@ -286,7 +286,7 @@ class WorkflowDataFrame(DataFrame):
         :Notice:
 
         :meth:`~.transform` can be lazy and will return the transformed dataframe,
-        :meth:`~.output_transform` is guaranteed to execute immediately (eager) and
+        :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
         return nothing
         """
         assert_or_throw(
@@ -313,7 +313,7 @@ class WorkflowDataFrame(DataFrame):
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
     ) -> None:
         """Transform this dataframe using transformer. It's a wrapper of
-        :meth:`fugue.workflow.workflow.FugueWorkflow.output_transform`
+        :meth:`fugue.workflow.workflow.FugueWorkflow.out_transform`
 
         Please read the
         :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
@@ -331,7 +331,7 @@ class WorkflowDataFrame(DataFrame):
         :Notice:
 
         :meth:`~.transform` can be lazy and will return the transformed dataframe,
-        :meth:`~.output_transform` is guaranteed to execute immediately (eager) and
+        :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
         return nothing
         """
         assert_or_throw(
@@ -1381,7 +1381,7 @@ class FugueWorkflow(object):
         :Notice:
 
         :meth:`~.transform` can be lazy and will return the transformed dataframe,
-        :meth:`~.output_transform` is guaranteed to execute immediately (eager) and
+        :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
         return nothing
         """
         assert_or_throw(
@@ -1427,7 +1427,7 @@ class FugueWorkflow(object):
           :meth:`~fugue.extensions.context.ExtensionContext.params`
         :param pre_partition: |PartitionLikeObject|, defaults to None. It's
           recommended to use the equivalent wayt, which is to call
-          :meth:`~.partition` and then call :meth:`~.output_transform` without this
+          :meth:`~.partition` and then call :meth:`~.out_transform` without this
           parameter
         :param ignore_errors: list of exception types the transformer can ignore,
           defaults to empty list
@@ -1435,7 +1435,7 @@ class FugueWorkflow(object):
         :Notice:
 
         :meth:`~.transform` can be lazy and will return the transformed dataframe,
-        :meth:`~.output_transform` is guaranteed to execute immediately (eager) and
+        :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
         return nothing
         """
         assert_or_throw(
