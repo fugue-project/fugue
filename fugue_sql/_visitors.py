@@ -27,7 +27,7 @@ from triad.utils.pyarrow import to_pa_datatype
 from fugue.extensions.creator.convert import _to_creator
 from fugue.extensions.processor.convert import _to_processor
 from fugue.extensions.outputter.convert import _to_outputter
-from fugue.extensions.transformer.convert import _to_transformer
+from fugue.extensions.transformer.convert import _to_transformer, _to_output_transformer
 
 
 class FugueSQLHooks(object):
@@ -373,6 +373,25 @@ class _Extensions(_VisitorBase):
             data["dfs"],
             using=using,
             params=p.get("params"),
+            pre_partition=data.get("partition"),
+        )
+
+    def visitFugueOutputTransformTask(
+        self, ctx: fp.FugueOutputTransformTaskContext
+    ) -> None:
+        data = self.get_dict(ctx, "partition", "dfs", "using", "params")
+        if "dfs" not in data:
+            data["dfs"] = DataFrames(self.last)
+        using = _to_output_transformer(
+            data["using"],
+            global_vars=self.global_vars,
+            local_vars=self.local_vars,
+        )
+        # ignore errors is not implemented
+        self.workflow.output_transform(
+            data["dfs"],
+            using=using,
+            params=data.get("params"),
             pre_partition=data.get("partition"),
         )
 
