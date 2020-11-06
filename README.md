@@ -124,6 +124,13 @@ pre-commit install
 
 ## Update History
 
+### 0.4.5
+
+* [Extension validation](https://github.com/fugue-project/fugue/issues/81) interface and interfaceless syntax
+* Passing dataframes cross workflow ([yield](https://github.com/fugue-project/fugue/pull/94))
+* [OUT TRANSFORM](https://github.com/fugue-project/fugue/issues/82) to transform and finish a branch of execution
+* Fixed a PandasDataFrame datetime [issue](https://github.com/fugue-project/triad/issues/59) that only happened in transformer interface approach
+
 ### 0.4.3
 
 * Unified checkpoints and persist

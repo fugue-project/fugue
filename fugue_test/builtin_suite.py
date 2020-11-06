@@ -863,13 +863,30 @@ class BuiltInTests(object):
                 a[["x"]].rename(x="xx").assert_eq(ArrayDataFrame([[1], [2]], "xx:long"))
 
         def test_datetime_in_workflow(self):
+            # schema: a:date,b:datetime
+            def t1(df: pd.DataFrame) -> pd.DataFrame:
+                df["b"] = "2020-01-02"
+                df["b"] = pd.to_datetime(df["b"])
+                return df
+
+            class T2(Transformer):
+                def get_output_schema(self, df):
+                    return df.schema
+
+                def transform(self, df):
+                    # test for issue https://github.com/fugue-project/fugue/issues/92
+                    return PandasDataFrame(df.as_pandas())
+
             with self.dag() as dag:
-                a = dag.df([["2020-01-01"]], "a:date").transform(transform_datetime_df)
+                a = dag.df([["2020-01-01"]], "a:date").transform(t1)
                 b = dag.df(
                     [[datetime.date(2020, 1, 1), datetime.datetime(2020, 1, 2)]],
                     "a:date,b:datetime",
                 )
                 b.assert_eq(a)
+                c = dag.df([["2020-01-01", "2020-01-01 00:00:00"]], "a:date,b:datetime")
+                c.transform(T2).assert_eq(c)
+                c.partition(by=["a"]).transform(T2).assert_eq(c)
 
         @pytest.fixture(autouse=True)
         def init_tmpdir(self, tmpdir):
@@ -1189,10 +1206,3 @@ def mock_co_tf4_ex(df1: List[Dict[str, Any]], p=1) -> List[List[Any]]:
     if k == 2:
         raise NotImplementedError
     return [[df1[0]["a"], len(df1), p]]
-
-
-# schema: a:date,b:datetime
-def transform_datetime_df(df: pd.DataFrame) -> pd.DataFrame:
-    df["b"] = "2020-01-02"
-    df["b"] = pd.to_datetime(df["b"])
-    return df
