@@ -1,20 +1,23 @@
+import copy
 from typing import Any, Dict, Iterable, List
 
 import pandas as pd
-from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
-from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.pandas_dataframe import PandasDataFrame
-from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.execution import ExecutionEngine
 from fugue._utils.interfaceless import (
     FunctionWrapper,
     _parse_function,
-    parse_output_schema_from_comment,
+    is_class_method,
     parse_comment_annotation,
+    parse_output_schema_from_comment,
 )
+from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
+from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue.dataframe.iterable_dataframe import IterableDataFrame
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
+from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.execution import ExecutionEngine
 from pytest import raises
-from triad.utils.iter import EmptyAwareIterable
 from triad.utils.hash import to_uuid
+from triad.utils.iter import EmptyAwareIterable
 
 
 def test_parse_comment_annotation():
@@ -68,6 +71,19 @@ def test_parse_output_schema_from_comment():
     raises(SyntaxError, lambda: parse_output_schema_from_comment(d))
 
 
+def test_is_class_method():
+    def f1():
+        pass
+
+    class F(object):
+        def f2(self):
+            pass
+
+    assert not is_class_method(f1)
+    assert is_class_method(F.f2)
+    assert not is_class_method(F().f2)
+
+
 def test_parse_function():
     _parse_function(f1, "^edlp$", "n")
     _parse_function(f2, "^xxxx$", "n")
@@ -86,14 +102,17 @@ def test_parse_function():
     _parse_function(f13, "^e?(c|[dl]+)x*$", "n")
     _parse_function(f14, "^e?(c|[dl]+)x*$", "n")
     raises(TypeError, lambda: _parse_function(f15, "^e?(c|[dl]+)x*$", "n"))
+    _parse_function(f14, "^0?e?(c|[dl]+)x*$", "n")
+    _parse_function(f16, "^0e?(c|[dl]+)x*$", "n")
 
 
 def test_function_wrapper():
-    for f in [f20, f21, f22, f23, f24, f25, f26, f30, f31, f32]:
+    for f in [f20, f21, f212, f22, f23, f24, f25, f26, f30, f31, f32]:
         df = ArrayDataFrame([[0]], "a:int")
         w = FunctionWrapper(f, "^[ldsp][ldsp]$", "[ldsp]")
         res = w.run([df], dict(a=df), ignore_unknown=False, output_schema="a:int")
         df_eq(res, [[0], [0]], "a:int", throw=True)
+        w.run([df], dict(a=df), ignore_unknown=False, output=False)
 
     # test other data types, simple operations
     w = FunctionWrapper(f27)
@@ -120,12 +139,41 @@ def test_function_wrapper():
     assert 7 == w.run([], dict(a=1, b=2, c=4), ignore_unknown=True)
     assert 7 == w.run([], dict(a=1, b=2, c=4), ignore_unknown=False)
 
+    # test method inside class
+    class Test(object):
+        def t(self, a=1, b=2) -> int:
+            return a + b
 
-def test_function_wrapper_determinisn():
+    test = Test()
+    # instance method test
+    w = FunctionWrapper(test.t, "^0?.*", ".*")
+    assert 4 == w.run([], kwargs={"b": 3}, ignore_unknown=True)
+    assert 5 == w.run([2], kwargs={"b": 3}, ignore_unknown=True)
+
+
+def test_function_wrapper_determinism():
     w1 = FunctionWrapper(f20, "^[ldsp][ldsp]$", "[ldsp]")
     w2 = FunctionWrapper(f20, "^[ldsp][ldsp]$", "[ldsp]")
     assert w1 is not w2
     assert to_uuid(w1) == to_uuid(w2)
+
+
+def test_function_wrapper_copy():
+    class Test(object):
+        def __init__(self):
+            self.n = 0
+
+        def t(self) -> None:
+            self.n += 1
+
+    test = Test()
+    w1 = FunctionWrapper(test.t, "", "n")
+    w2 = copy.copy(w1)
+    w3 = copy.deepcopy(w1)
+    w1.run([], {}, output=False)
+    w2.run([], {}, output=False)
+    w3.run([], {}, output=False)
+    assert 3 == test.n
 
 
 def f1(e: ExecutionEngine, a: DataFrame, b: LocalDataFrame, c: pd.DataFrame) -> None:
@@ -188,12 +236,22 @@ def f15(e: ExecutionEngine, dfs1: DataFrames, dfs2: DataFrames, a, b) -> None:
     pass
 
 
+def f16(self, e: ExecutionEngine, df1: DataFrame, df2: LocalDataFrame, a, b) -> None:
+    pass
+
+
 def f20(e: List[List[Any]], a: Iterable[List[Any]]) -> LocalDataFrame:
     e += list(a)
-    return ArrayDataFrame(e, "a:int")
+    return IterableDataFrame(e, "a:int")
 
 
 def f21(e: List[Dict[str, Any]], a: Iterable[Dict[str, Any]]) -> DataFrame:
+    e += list(a)
+    arr = [[x["a"]] for x in e]
+    return IterableDataFrame(arr, "a:int")
+
+
+def f212(e: List[Dict[str, Any]], a: Iterable[Dict[str, Any]]) -> DataFrame:
     e += list(a)
     arr = [[x["a"]] for x in e]
     return ArrayDataFrame(arr, "a:int")

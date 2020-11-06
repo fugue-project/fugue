@@ -1,3 +1,4 @@
+import copy
 import inspect
 import re
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, get_type_hints
@@ -16,8 +17,8 @@ from fugue.dataframe.utils import to_local_df
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_full_type_path, to_type
-from triad.utils.iter import EmptyAwareIterable, make_empty_aware
 from triad.utils.hash import to_uuid
+from triad.utils.iter import EmptyAwareIterable, make_empty_aware
 
 _COMMENT_SCHEMA_ANNOTATION = "schema"
 
@@ -83,10 +84,26 @@ def parse_output_schema_from_comment(func: Callable) -> Optional[str]:
     return res.replace(" ", "")
 
 
+def is_class_method(func: Callable) -> bool:
+    sig = inspect.signature(func)
+    # TODO: this is not the best way
+    return "self" in sig.parameters
+
+
 class FunctionWrapper(object):
-    def __init__(self, func: Callable, params_re: str = ".*", return_re: str = ".*"):
-        self._params, self._rt = _parse_function(func, params_re, return_re)
+    def __init__(
+        self,
+        func: Callable,
+        params_re: str = ".*",
+        return_re: str = ".*",
+    ):
+        self._class_method, self._params, self._rt = _parse_function(
+            func, params_re, return_re
+        )
         self._func = func
+
+    def __deepcopy__(self, memo: Any) -> Any:
+        return copy.copy(self)
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return self._func(*args, **kwargs)
@@ -108,6 +125,7 @@ class FunctionWrapper(object):
         kwargs: Dict[str, Any],
         ignore_unknown: bool = False,
         output_schema: Any = None,
+        output: bool = True,
     ) -> Any:
         p: Dict[str, Any] = {}
         for i in range(len(args)):
@@ -136,6 +154,10 @@ class FunctionWrapper(object):
         elif not ignore_unknown and len(p) > 0:
             raise ValueError(f"{p} are not acceptable parameters")
         rt = self._func(**rargs)
+        if not output:
+            if isinstance(self._rt, _DataFrameParamBase):
+                self._rt.count(rt)
+            return
         if isinstance(self._rt, _DataFrameParamBase):
             return self._rt.to_output_df(rt, output_schema)
         return rt
@@ -143,13 +165,18 @@ class FunctionWrapper(object):
 
 def _parse_function(
     func: Callable, params_re: str = ".*", return_re: str = ".*"
-) -> Tuple[IndexedOrderedDict[str, "_FuncParam"], "_FuncParam"]:
+) -> Tuple[bool, IndexedOrderedDict[str, "_FuncParam"], "_FuncParam"]:
     sig = inspect.signature(func)
     annotations = get_type_hints(func)
     res: IndexedOrderedDict[str, "_FuncParam"] = IndexedOrderedDict()
+    class_method = False
     for k, w in sig.parameters.items():
-        anno = annotations.get(k, w.annotation)
-        res[k] = _parse_param(anno, w)
+        if k == "self":
+            res[k] = _SelfParam(w)
+            class_method = True
+        else:
+            anno = annotations.get(k, w.annotation)
+            res[k] = _parse_param(anno, w)
     anno = annotations.get("return", sig.return_annotation)
     rt = _parse_param(anno, None, none_as_other=False)
     params_str = "".join(x.code for x in res.values())
@@ -159,7 +186,7 @@ def _parse_function(
     assert_or_throw(
         re.match(return_re, rt.code), TypeError(f"Return type not valid {rt}")
     )
-    return res, rt
+    return class_method, res, rt
 
 
 def _parse_param(  # noqa: C901
@@ -238,6 +265,9 @@ class _DataFrameParamBase(_FuncParam):
     def to_output_df(self, df: Any, schema: Any) -> DataFrame:  # pragma: no cover
         raise NotImplementedError
 
+    def count(self, df: Any) -> int:  # pragma: no cover
+        raise NotImplementedError
+
 
 class _DataFrameParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
@@ -252,6 +282,12 @@ class _DataFrameParam(_DataFrameParamBase):
             f"Output schema mismatch {output.schema} vs {schema}",
         )
         return output
+
+    def count(self, df: DataFrame) -> int:
+        if df.is_bounded:
+            return df.count()
+        else:
+            return sum(1 for _ in df.as_array_iterable())
 
 
 class _LocalDataFrameParam(_DataFrameParamBase):
@@ -268,6 +304,12 @@ class _LocalDataFrameParam(_DataFrameParamBase):
         )
         return output
 
+    def count(self, df: LocalDataFrame) -> int:
+        if df.is_bounded:
+            return df.count()
+        else:
+            return sum(1 for _ in df.as_array_iterable())
+
 
 class _ListListParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
@@ -279,6 +321,9 @@ class _ListListParam(_DataFrameParamBase):
     def to_output_df(self, output: List[List[Any]], schema: Any) -> DataFrame:
         return ArrayDataFrame(output, schema)
 
+    def count(self, df: List[List[Any]]) -> int:
+        return len(df)
+
 
 class _IterableListParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
@@ -289,6 +334,9 @@ class _IterableListParam(_DataFrameParamBase):
 
     def to_output_df(self, output: Iterable[List[Any]], schema: Any) -> DataFrame:
         return IterableDataFrame(output, schema)
+
+    def count(self, df: Iterable[List[Any]]) -> int:
+        return sum(1 for _ in df)
 
 
 class _EmptyAwareIterableListParam(_DataFrameParamBase):
@@ -302,6 +350,9 @@ class _EmptyAwareIterableListParam(_DataFrameParamBase):
         self, output: EmptyAwareIterable[List[Any]], schema: Any
     ) -> DataFrame:
         return IterableDataFrame(output, schema)
+
+    def count(self, df: EmptyAwareIterable[List[Any]]) -> int:
+        return sum(1 for _ in df)
 
 
 class _ListDictParam(_DataFrameParamBase):
@@ -320,6 +371,9 @@ class _ListDictParam(_DataFrameParamBase):
 
         return IterableDataFrame(get_all(), schema)
 
+    def count(self, df: List[Dict[str, Any]]) -> int:
+        return len(df)
+
 
 class _IterableDictParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
@@ -336,6 +390,9 @@ class _IterableDictParam(_DataFrameParamBase):
                 yield [row[x] for x in schema.names]
 
         return IterableDataFrame(get_all(), schema)
+
+    def count(self, df: Iterable[Dict[str, Any]]) -> int:
+        return sum(1 for _ in df)
 
 
 class _EmptyAwareIterableDictParam(_DataFrameParamBase):
@@ -356,6 +413,9 @@ class _EmptyAwareIterableDictParam(_DataFrameParamBase):
 
         return IterableDataFrame(get_all(), schema)
 
+    def count(self, df: EmptyAwareIterable[Dict[str, Any]]) -> int:
+        return sum(1 for _ in df)
+
 
 class _PandasParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
@@ -367,10 +427,18 @@ class _PandasParam(_DataFrameParamBase):
     def to_output_df(self, output: pd.DataFrame, schema: Any) -> DataFrame:
         return PandasDataFrame(output, schema)
 
+    def count(self, df: pd.DataFrame) -> int:
+        return df.shape[0]
+
 
 class _NoneParam(_FuncParam):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "NoneType", "n")
+
+
+class _SelfParam(_FuncParam):
+    def __init__(self, param: Optional[inspect.Parameter]):
+        super().__init__(param, "[Self]", "0")
 
 
 class _OtherParam(_FuncParam):

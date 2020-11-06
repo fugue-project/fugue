@@ -1,7 +1,8 @@
 from typing import Any
 
-from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
+from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, ArrayDataFrame
 from fugue.extensions.context import ExtensionContext
+from fugue.extensions.transformer.constants import OUTPUT_TRANSFORMER_DUMMY_SCHEMA
 
 
 class Transformer(ExtensionContext):
@@ -88,6 +89,18 @@ class Transformer(ExtensionContext):
         raise NotImplementedError
 
 
+class OutputTransformer(Transformer):
+    def process(self, df: LocalDataFrame) -> None:  # pragma: no cover
+        raise NotImplementedError
+
+    def get_output_schema(self, df: DataFrame) -> Any:
+        return OUTPUT_TRANSFORMER_DUMMY_SCHEMA
+
+    def transform(self, df: LocalDataFrame) -> LocalDataFrame:
+        self.process(df)
+        return ArrayDataFrame([], OUTPUT_TRANSFORMER_DUMMY_SCHEMA)
+
+
 class CoTransformer(ExtensionContext):
     """The interface to process logical partitions of a :ref:`zipped dataframe
     <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`.
@@ -168,3 +181,15 @@ class CoTransformer(ExtensionContext):
         :return: transformed dataframe
         """
         raise NotImplementedError
+
+
+class OutputCoTransformer(CoTransformer):
+    def process(self, dfs: DataFrames) -> None:  # pragma: no cover
+        raise NotImplementedError
+
+    def get_output_schema(self, dfs: DataFrames) -> Any:
+        return OUTPUT_TRANSFORMER_DUMMY_SCHEMA
+
+    def transform(self, dfs: DataFrames) -> LocalDataFrame:
+        self.process(dfs)
+        return ArrayDataFrame([], OUTPUT_TRANSFORMER_DUMMY_SCHEMA)

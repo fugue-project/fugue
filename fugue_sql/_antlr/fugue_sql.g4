@@ -95,6 +95,7 @@ fugueSingleStatement:
 
 fugueSingleTask
     : fugueNestableTask
+    | fugueOutputTransformTask
     | fugueOutputTask
     | fuguePrintTask
     | fugueSaveTask
@@ -162,6 +163,10 @@ fuguePrintTask:
 
 fugueSaveTask:
     SAVE (df=fugueDataFrame)? (partition=fuguePrepartition)? m=fugueSaveMode (single=fugueSingleFile)? (fmt=fugueFileFormat)? path=fuguePath (params=fugueParams)?
+    ;
+
+fugueOutputTransformTask:
+    OUTTRANSFORM (dfs=fugueDataFrames)? (partition=fuguePrepartition)? USING using=fugueExtension (params=fugueParams)?
     ;
 
 fugueSingleFile
@@ -1802,6 +1807,7 @@ BROADCAST: 'BROADCAST';
 PARAMS: 'PARAMS';
 PROCESS: 'PROCESS';
 OUTPUT: 'OUTPUT';
+OUTTRANSFORM: 'OUTTRANSFORM';
 ROWCOUNT: 'ROWCOUNT';
 CONCURRENCY: 'CONCURRENCY';
 PREPARTITION: 'PREPARTITION';

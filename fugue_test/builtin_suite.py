@@ -24,8 +24,12 @@ from fugue.extensions.outputter import Outputter, outputter
 from fugue.extensions.processor import Processor, processor
 from fugue.extensions.transformer import (
     CoTransformer,
+    OutputCoTransformer,
+    OutputTransformer,
     Transformer,
     cotransformer,
+    output_cotransformer,
+    output_transformer,
     transformer,
 )
 from fugue.workflow.workflow import FugueWorkflow, _FugueInteractiveWorkflow
@@ -72,7 +76,7 @@ class BuiltInTests(object):
         def test_create_show(self):
             with self.dag() as dag:
                 dag.df([[0]], "a:int").persist().partition(num=2).show()
-                dag.df(dag.df([[0]], "a:int")).persist().broadcast().show()
+                dag.df(dag.df([[0]], "a:int")).persist().broadcast().show(title="t")
 
         def test_checkpoint(self):
             with raises(FugueWorkflowError):
@@ -309,6 +313,28 @@ class BuiltInTests(object):
                     "a:double,b:int,p:int",
                 ).assert_eq(c)
 
+        def test_local_instance_as_extension(self):
+            class _Mock(object):
+                # schema: *
+                def t1(self, df: pd.DataFrame) -> pd.DataFrame:
+                    return df
+
+                def t2(self, df: pd.DataFrame) -> pd.DataFrame:
+                    return df
+
+                def test(self):
+                    with FugueWorkflow() as dag_:
+                        a = dag_.df([[0], [1]], "a:int")
+                        b = a.transform(self.t1)
+                        b.assert_eq(a)
+
+            m = _Mock()
+            m.test()
+            with self.dag() as dag:
+                a = dag.df([[0], [1]], "a:int")
+                b = a.transform(m.t1).transform(m.t2, schema="*")
+                b.assert_eq(a)
+
         def test_transform_binary(self):
             with self.dag() as dag:
                 a = dag.df([[1, pickle.dumps([0, "a"])]], "a:int,b:bytes")
@@ -434,6 +460,157 @@ class BuiltInTests(object):
                 c = dag.zip(dict(df1=a)).transform(mock_co_tf3)
                 e = dag.df([[1, 3, 1]], "a:int,ct1:int,p:int")
                 e.assert_eq(c)
+
+        def test_out_transform(self):  # noqa: C901
+            tmpdir = str(self.tmpdir)
+
+            def incr():
+                fs = FileSystem().makedirs(tmpdir, recreate=True)
+                if fs.exists("a.txt"):
+                    n = int(fs.readtext("a.txt"))
+                else:
+                    n = 0
+                fs.writetext("a.txt", str(n + 1))
+                return n
+
+            def t1(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+                for row in df:
+                    incr()
+                    yield row
+
+            # partitionby_has: b
+            def t2(df: pd.DataFrame) -> None:
+                incr()
+
+            # schema: *
+            # partitionby_has: b
+            def t3(df: pd.DataFrame) -> pd.DataFrame:
+                incr()
+                return df
+
+            @transformer("*", partitionby_has=["b"])
+            def t4(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+                for row in df:
+                    incr()
+                    yield row
+
+            @output_transformer(partitionby_has=["b"])
+            def t5(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+                for row in df:
+                    incr()
+                    yield row
+
+            class T6(Transformer):
+                def get_output_schema(self, df):
+                    return df.schema
+
+                def transform(self, df):
+                    incr()
+                    return df
+
+            class T7(OutputTransformer):
+                @property
+                def validation_rules(self):
+                    return {"partitionby_has": "b"}
+
+                def process(self, df):
+                    incr()
+
+            def t8(df: pd.DataFrame) -> None:
+                incr()
+                raise NotImplementedError
+
+            with self.dag() as dag:
+                a = dag.df([[1, 2], [3, 4]], "a:double,b:int")
+                a.out_transform(t1)  # +2
+                a.partition(by=["b"]).out_transform(t2)  # +1 or +2
+                a.partition(by=["b"]).out_transform(t3)  # +1 or +2
+                a.partition(by=["b"]).out_transform(t4)  # +2
+                a.partition(by=["b"]).out_transform(t5)  # +2
+                a.out_transform(T6)  # +1
+                a.partition(by=["b"]).out_transform(T7)  # +1
+                a.out_transform(t8, ignore_errors=[NotImplementedError])
+                raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t2))
+                raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t3))
+                raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t4))
+                raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t5))
+                raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(T7))
+
+            assert 11 <= incr()
+
+        def test_output_cotransform(self):  # noqa: C901
+            tmpdir = str(self.tmpdir)
+
+            def incr():
+                fs = FileSystem().makedirs(tmpdir, recreate=True)
+                if fs.exists("a.txt"):
+                    n = int(fs.readtext("a.txt"))
+                else:
+                    n = 0
+                fs.writetext("a.txt", str(n + 1))
+                return n
+
+            def t1(
+                df: Iterable[Dict[str, Any]], df2: pd.DataFrame
+            ) -> Iterable[Dict[str, Any]]:
+                for row in df:
+                    incr()
+                    yield row
+
+            def t2(dfs: DataFrames) -> None:
+                incr()
+
+            def t3(df: pd.DataFrame, df2: pd.DataFrame) -> pd.DataFrame:
+                incr()
+                return df
+
+            @cotransformer("a:double,b:int")
+            def t4(
+                df: Iterable[Dict[str, Any]], df2: pd.DataFrame
+            ) -> Iterable[Dict[str, Any]]:
+                for row in df:
+                    incr()
+                    yield row
+
+            @output_cotransformer()
+            def t5(
+                df: Iterable[Dict[str, Any]], df2: pd.DataFrame
+            ) -> Iterable[Dict[str, Any]]:
+                for row in df:
+                    incr()
+                    yield row
+
+            class T6(CoTransformer):
+                def get_output_schema(self, dfs):
+                    return dfs[0].schema
+
+                def transform(self, dfs):
+                    incr()
+                    return dfs[0]
+
+            class T7(OutputCoTransformer):
+                def process(self, dfs):
+                    incr()
+
+            def t8(df: pd.DataFrame, df2: pd.DataFrame) -> pd.DataFrame:
+                incr()
+                raise NotImplementedError
+
+            with self.dag() as dag:
+                a0 = dag.df([[1, 2], [3, 4]], "a:double,b:int")
+                a1 = dag.df([[1, 2], [3, 4]], "aa:double,b:int")
+                a = dag.zip(a0, a1)
+                a.out_transform(t1)  # +2
+                a.out_transform(t2)  # +1 or +2
+                a.out_transform(t3)  # +1 or +2
+                a.out_transform(t4)  # +2
+                b = dag.zip(dict(df=a0, df2=a1))
+                b.out_transform(t5)  # +2
+                a.out_transform(T6)  # +1
+                a.out_transform(T7)  # +1
+                a.out_transform(t8, ignore_errors=[NotImplementedError])  # +1
+
+            assert 11 <= incr()
 
         def test_join(self):
             with self.dag() as dag:

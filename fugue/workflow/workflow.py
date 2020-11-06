@@ -27,6 +27,7 @@ from fugue.extensions._builtins import (
     Load,
     Rename,
     RunJoin,
+    RunOutputTransformer,
     RunSetOperation,
     RunSQLSelect,
     RunTransformer,
@@ -36,7 +37,8 @@ from fugue.extensions._builtins import (
     Show,
     Zip,
 )
-from fugue.extensions.transformer.convert import _to_transformer
+from fugue.extensions._builtins.creators import LoadYielded
+from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
 from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, FugueTask, Output, Process
 from fugue.workflow._workflow_context import (
@@ -46,7 +48,6 @@ from fugue.workflow._workflow_context import (
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
-from fugue.extensions._builtins.creators import LoadYielded
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -281,6 +282,12 @@ class WorkflowDataFrame(DataFrame):
           defaults to empty list
         :return: the transformed dataframe
         :rtype: :class:`~.WorkflowDataFrame`
+
+        :Notice:
+
+        :meth:`~.transform` can be lazy and will return the transformed dataframe,
+        :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
+        return nothing
         """
         assert_or_throw(
             not isinstance(using, str),
@@ -297,6 +304,49 @@ class WorkflowDataFrame(DataFrame):
             ignore_errors=ignore_errors,
         )
         return self._to_self_type(df)
+
+    def out_transform(
+        self: TDF,
+        using: Any,
+        params: Any = None,
+        pre_partition: Any = None,
+        ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
+    ) -> None:
+        """Transform this dataframe using transformer. It's a wrapper of
+        :meth:`fugue.workflow.workflow.FugueWorkflow.out_transform`
+
+        Please read the
+        :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+
+        :param using: transformer-like object, can't be a string expression
+        :param params: |ParamsLikeObject| to run the processor, defaults to None.
+          The transformer will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.params`
+        :param pre_partition: |PartitionLikeObject|, defaults to None. It's
+          recommended to use the equivalent wayt, which is to call
+          :meth:`~.partition` and then call :meth:`~.transform` without this parameter
+        :param ignore_errors: list of exception types the transformer can ignore,
+          defaults to empty list
+
+        :Notice:
+
+        :meth:`~.transform` can be lazy and will return the transformed dataframe,
+        :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
+        return nothing
+        """
+        assert_or_throw(
+            not isinstance(using, str),
+            f"output transformer {using} can't be string expression",
+        )
+        if pre_partition is None:
+            pre_partition = self._metadata.get("pre_partition", PartitionSpec())
+        self.workflow.out_transform(
+            self,
+            using=using,
+            params=params,
+            pre_partition=pre_partition,
+            ignore_errors=ignore_errors,
+        )
 
     def join(self: TDF, *dfs: Any, how: str, on: Optional[Iterable[str]] = None) -> TDF:
         """Join this dataframe with dataframes. It's a wrapper of
@@ -1327,6 +1377,12 @@ class FugueWorkflow(object):
         :param ignore_errors: list of exception types the transformer can ignore,
           defaults to empty list
         :return: the transformed dataframe
+
+        :Notice:
+
+        :meth:`~.transform` can be lazy and will return the transformed dataframe,
+        :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
+        return nothing
         """
         assert_or_throw(
             not isinstance(using, str),
@@ -1343,6 +1399,59 @@ class FugueWorkflow(object):
             *dfs,
             using=RunTransformer,
             schema=None,
+            params=dict(transformer=tf, ignore_errors=ignore_errors, params=params),
+            pre_partition=pre_partition,
+        )
+
+    def out_transform(
+        self,
+        *dfs: Any,
+        using: Any,
+        params: Any = None,
+        pre_partition: Any = None,
+        ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
+    ) -> None:
+        """Transform dataframes using transformer, it materializes the execution
+        immediately and returns nothing
+
+        Please read the
+        :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+
+        :param dfs: |DataFramesLikeObject|
+        :param using: transformer-like object, can't be a string expression
+        :param schema: |SchemaLikeObject|, defaults to None. The transformer
+          will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.output_schema`
+        :param params: |ParamsLikeObject| to run the processor, defaults to None.
+          The transformer will be able to access this value from
+          :meth:`~fugue.extensions.context.ExtensionContext.params`
+        :param pre_partition: |PartitionLikeObject|, defaults to None. It's
+          recommended to use the equivalent wayt, which is to call
+          :meth:`~.partition` and then call :meth:`~.out_transform` without this
+          parameter
+        :param ignore_errors: list of exception types the transformer can ignore,
+          defaults to empty list
+
+        :Notice:
+
+        :meth:`~.transform` can be lazy and will return the transformed dataframe,
+        :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
+        return nothing
+        """
+        assert_or_throw(
+            not isinstance(using, str),
+            f"output transformer {using} can't be string expression",
+        )
+        assert_or_throw(
+            len(dfs) == 1,
+            NotImplementedError("output transform supports only single dataframe"),
+        )
+        tf = _to_output_transformer(using)
+        tf._partition_spec = PartitionSpec(pre_partition)  # type: ignore
+        tf.validate_on_compile()
+        self.output(
+            *dfs,
+            using=RunOutputTransformer,
             params=dict(transformer=tf, ignore_errors=ignore_errors, params=params),
             pre_partition=pre_partition,
         )

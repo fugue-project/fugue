@@ -3,12 +3,16 @@ from typing import Any, Iterable, List
 
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
+from fugue.extensions import OutputTransformer
+from fugue.extensions.transformer.convert import _to_output_transformer
 from fugue.workflow.workflow import FugueWorkflow
-from fugue_sql.exceptions import FugueSQLError
+from pytest import raises
+from triad.collections.schema import Schema
+
 from fugue_sql._parse import FugueSQL
 from fugue_sql._visitors import FugueSQLHooks, _Extensions, _VisitorBase
-from triad.collections.schema import Schema
-from pytest import raises
+from fugue_sql.exceptions import FugueSQLError
+from triad.utils.convert import get_caller_global_local_vars
 
 
 def test_create_data():
@@ -177,6 +181,38 @@ def test_transform():
         using mock_transformer(n=2) schema *
     """,
         w.workflow,
+    )
+
+
+def test_out_transform():
+    class OT(OutputTransformer):
+        def process(self, df):
+            return
+
+    o = _to_output_transformer(OT)
+    w = FugueWorkflow()
+    w.df([[0], [1]], "a:int").out_transform(o, params=dict(n=2))
+    assert_eq(
+        """
+    create [[0],[1]] schema a:int
+    outtransform using OT(n=2)
+    """,
+        w,
+    )
+    
+    w = FugueWorkflow()
+    w.df([[0], [1]], "a:int").partition(
+        by=["a"], presort="b DESC", num="ROWCOUNT/2"
+    ).out_transform(mock_transformer, params=dict(n=2))
+    assert_eq(
+        """
+    create [[0],[1]] schema a:int
+    
+    outtransform 
+        prepartition ROWCOUNT / 2 by a presort b desc
+        using mock_transformer(n=2)
+    """,
+        w,
     )
 
 
@@ -481,9 +517,12 @@ def test_drop():
 
 
 def assert_eq(expr, expected: FugueWorkflow):
+    global_vars, local_vars = get_caller_global_local_vars()
     sql = FugueSQL(expr, "fugueLanguage", ignore_case=True, simple_assign=True)
     wf = FugueWorkflow()
-    v = _Extensions(sql, FugueSQLHooks(), wf)
+    v = _Extensions(
+        sql, FugueSQLHooks(), wf, global_vars=global_vars, local_vars=local_vars
+    )
     obj = v.visit(sql.tree)
     assert expected.spec_uuid() == v.workflow.spec_uuid()
 
