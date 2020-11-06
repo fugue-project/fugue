@@ -116,6 +116,11 @@ class NativeExecutionEngine(ExecutionEngine):
             df = to_local_df(df)
             cursor.set(df.peek_array(), 0, 0)
             output_df = map_func(cursor, df)
+            if (
+                isinstance(output_df, PandasDataFrame)
+                and output_df.schema != output_schema
+            ):
+                output_df = PandasDataFrame(output_df.native, output_schema)
             assert_or_throw(
                 output_df.schema == output_schema,
                 f"map output {output_df.schema} mismatches given {output_schema}",
