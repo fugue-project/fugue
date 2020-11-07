@@ -239,6 +239,32 @@ class NativeExecutionEngine(ExecutionEngine):
         )
         return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
 
+    def fillna(
+        self,
+        df: DataFrame,
+        value: Any,
+        metadata: Any = None,
+        subset: List[str] = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            (not isinstance(value, list)) and (value is not None),
+            ValueError("fillna value can not None or a list"),
+        )
+        if isinstance(value, dict):
+            assert_or_throw(
+                (None not in value.values()) and (any(value.values())),
+                ValueError(
+                    "fillna dict can not contain None and needs at least one value"
+                ),
+            )
+            mapping = value
+        else:
+            # If subset is none, apply to all columns
+            subset = subset or df.schema.names
+            mapping = {col: value for col in subset}
+        d = df.as_pandas().fillna(mapping, inplace=False)
+        return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
+
     def load_df(
         self,
         path: Union[str, List[str]],

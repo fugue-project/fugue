@@ -368,6 +368,26 @@ class ExecutionEngine(ABC):
         """
         pass
 
+    @abstractmethod
+    def fillna(
+        self, df: DataFrame, value: Any, metadata: Any = None, subset: List[str] = None
+    ) -> DataFrame:  # pragma: no cover
+        """
+        :param df: DataFrame
+        :param value: if scalar, fills all columns with same value.
+            if dictionary, fills NA using the keys as column names and the
+            values as the replacement values.
+        :param metadata: dict-like object to add to the result dataframe,
+            defaults to None
+        :type metadata: Any, optional
+        :param subset: list of columns to operate on. ignored if value is
+        a dictionary
+
+        :return: DataFrame with NA records filled
+        :rtype: DataFrame
+        """
+        pass
+
     def zip(
         self,
         df1: DataFrame,

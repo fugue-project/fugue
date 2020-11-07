@@ -310,6 +310,26 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.to_df(df).native.dropna(how=how, thresh=thresh, subset=subset)
         return DaskDataFrame(d, df.schema, metadata)
 
+    def fillna(
+        self,
+        df: DataFrame,
+        value: Any,
+        metadata: Any = None,
+        subset: List[str] = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            (not isinstance(value, list)) and (value is not None),
+            ValueError("fillna value can not be a list or None"),
+        )
+        if isinstance(value, dict):
+            mapping = value
+        else:
+            # If subset is none, apply to all columns
+            subset = subset or df.schema.names
+            mapping = {col: value for col in subset}
+        d = self.to_df(df).native.fillna(mapping, inplace=False)
+        return DaskDataFrame(d, df.schema, metadata)
+
     def load_df(
         self,
         path: Union[str, List[str]],
