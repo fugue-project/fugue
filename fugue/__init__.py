@@ -17,11 +17,15 @@ from fugue.execution.native_execution_engine import NativeExecutionEngine, Sqlit
 from fugue.extensions.creator import Creator, creator
 from fugue.extensions.outputter import Outputter, outputter
 from fugue.extensions.processor import Processor, processor
-from fugue.extensions.transformer import (
+from fugue.extensions import (
     CoTransformer,
+    OutputCoTransformer,
+    OutputTransformer,
     Transformer,
     transformer,
     cotransformer,
+    output_transformer,
+    output_cotransformer,
 )
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
 from fugue.workflow._workflow_context import FugueWorkflowContext
