@@ -509,7 +509,6 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
             df_eq(g, d, throw=True)
-            # test
             raises(ValueError, lambda: e.fillna(a, {"b": None, c: "99"}))
             raises(ValueError, lambda: e.fillna(a, None))
             raises(ValueError, lambda: e.fillna(a, ["b"]))
