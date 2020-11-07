@@ -556,7 +556,7 @@ class WorkflowDataFrame(DataFrame):
             values as the replacement values.
         :param subset: list of columns to operate on. ignored if value is
         a dictionary
-        :return: dataframe with incomplete records dropped
+        :return: dataframe with NA records filled
         """
         params = dict(value=value, subset=subset)
         params = {k: v for k, v in params.items() if v is not None}
