@@ -17,7 +17,7 @@ from fugue.execution.native_execution_engine import NativeExecutionEngine, Sqlit
 from fugue.extensions.creator import Creator, creator
 from fugue.extensions.outputter import Outputter, outputter
 from fugue.extensions.processor import Processor, processor
-from fugue.extensions import (
+from fugue.extensions.transformer import (
     CoTransformer,
     OutputCoTransformer,
     OutputTransformer,
