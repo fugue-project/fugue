@@ -115,6 +115,7 @@ fugueNestableTaskCollectionNoSelect
     | fugueSaveAndUseTask
     | fugueDropColumnsTask
     | fugueDropnaTask
+    | fugueFillnaTask
     ;
 
 fugueTransformTask:
@@ -135,6 +136,10 @@ fugueDropColumnsTask:
 
 fugueDropnaTask:
     DROP ROWS IF how=(ALL|ANY) (NULL|NULLS) (ON cols=fugueCols)? (FROM df=fugueDataFrame)?
+    ;
+
+fugueFillnaTask:
+    FILL (NULL|NULLS) params=fugueParams (FROM df=fugueDataFrame)?
     ;
 
 fugueZipTask:
@@ -1798,6 +1803,7 @@ nonReserved
 // Start of the Fugue keywords list
 //==================================
 
+FILL: 'FILL';
 HASH: 'HASH';
 RAND: 'RAND';
 EVEN: 'EVEN';

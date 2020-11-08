@@ -526,6 +526,14 @@ class _Extensions(_VisitorBase):
             params["subset"] = data["cols"]
         return df.dropna(**params)
 
+    def visitFugueFillnaTask(self, ctx: fp.FugueFillnaTaskContext):
+        data = self.get_dict(ctx, "params", "df")
+        if "df" in data:
+            df = data["df"]
+        else:
+            df = self.last
+        return df.fillna(value=data["params"])
+
     def visitFugueLoadTask(self, ctx: fp.FugueLoadTaskContext) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "fmt", "path", "params", "columns")
         return self.workflow.load(

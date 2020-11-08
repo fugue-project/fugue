@@ -515,6 +515,22 @@ def test_drop():
         dag,
     )
 
+def test_fill():
+    dag = FugueWorkflow()
+    a = dag.df([[None, 1], [1, None]], "a:int, b:int")
+    b = a.fillna({"a": 99, "b": -99})
+    assert_eq(
+        """
+    a=create [[NULL, 1],[1, NULL]] schema a:int, b:int
+    fill nulls params a:99, b:-99 from a""",
+        dag,
+    )
+    assert_eq(
+        """
+    create [[NULL, 1],[1, NULL]] schema a:int, b:int
+    fill nulls (a:99, b:-99)""",
+        dag,
+    )
 
 def assert_eq(expr, expected: FugueWorkflow):
     global_vars, local_vars = get_caller_global_local_vars()
