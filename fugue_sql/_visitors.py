@@ -532,10 +532,6 @@ class _Extensions(_VisitorBase):
             df = data["df"]
         else:
             df = self.last
-        print("SEEE OUTPUT")
-        print(data["params"])
-        # if "cols" in data:
-        #     params["subset"] = data["cols"]
         return df.fillna(value=data["params"])
 
     def visitFugueLoadTask(self, ctx: fp.FugueLoadTaskContext) -> WorkflowDataFrame:
