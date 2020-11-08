@@ -16,6 +16,8 @@ help:
 	@echo "	 testspark	run all tests of spark (assumes venv is present)"
 	@echo "	 sql		fugue sql code gen"
 
+clean:
+	find . -name "__pycache__" |xargs rm -rf
 
 setupinpip:
 	pip3 install -r requirements.txt

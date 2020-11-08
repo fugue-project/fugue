@@ -19,9 +19,13 @@ from fugue.extensions.outputter import Outputter, outputter
 from fugue.extensions.processor import Processor, processor
 from fugue.extensions.transformer import (
     CoTransformer,
+    OutputCoTransformer,
+    OutputTransformer,
     Transformer,
     transformer,
     cotransformer,
+    output_transformer,
+    output_cotransformer,
 )
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
 from fugue.workflow._workflow_context import FugueWorkflowContext
