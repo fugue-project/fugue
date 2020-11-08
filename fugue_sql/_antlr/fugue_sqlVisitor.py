@@ -59,6 +59,11 @@ class fugue_sqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by fugue_sqlParser#fugueFillnaTask.
+    def visitFugueFillnaTask(self, ctx:fugue_sqlParser.FugueFillnaTaskContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by fugue_sqlParser#fugueZipTask.
     def visitFugueZipTask(self, ctx:fugue_sqlParser.FugueZipTaskContext):
         return self.visitChildren(ctx)
