@@ -229,10 +229,10 @@ class NativeExecutionEngine(ExecutionEngine):
     def dropna(
         self,
         df: DataFrame,
-        metadata: Any = None,
         how: str = "any",
         thresh: int = None,
         subset: List[str] = None,
+        metadata: Any = None,
     ) -> DataFrame:
         d = df.as_pandas().dropna(
             axis=0, how=how, thresh=thresh, subset=subset, inplace=False
@@ -243,8 +243,8 @@ class NativeExecutionEngine(ExecutionEngine):
         self,
         df: DataFrame,
         value: Any,
-        metadata: Any = None,
         subset: List[str] = None,
+        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             (not isinstance(value, list)) and (value is not None),

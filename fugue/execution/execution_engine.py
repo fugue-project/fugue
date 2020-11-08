@@ -347,21 +347,21 @@ class ExecutionEngine(ABC):
     def dropna(
         self,
         df: DataFrame,
-        metadata: Any = None,
         how: str = "any",
         thresh: int = None,
         subset: List[str] = None,
+        metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
         """Drop NA recods from dataframe
 
         :param df: DataFrame
-        :param metadata: dict-like object to add to the result dataframe,
-            defaults to None
-        :type metadata: Any, optional
         :param how: 'any' or 'all'. 'any' drops rows that contain any nulls.
           'all' drops rows that contain all nulls.
         :param thresh: int, drops rows that have less than thresh non-null values
         :param subset: list of columns to operate on
+        :param metadata: dict-like object to add to the result dataframe,
+            defaults to None
+        :type metadata: Any, optional
 
         :return: DataFrame with NA records dropped
         :rtype: DataFrame
@@ -370,18 +370,18 @@ class ExecutionEngine(ABC):
 
     @abstractmethod
     def fillna(
-        self, df: DataFrame, value: Any, metadata: Any = None, subset: List[str] = None
+        self, df: DataFrame, value: Any, subset: List[str] = None, metadata: Any = None
     ) -> DataFrame:  # pragma: no cover
         """
         :param df: DataFrame
         :param value: if scalar, fills all columns with same value.
             if dictionary, fills NA using the keys as column names and the
             values as the replacement values.
+        :param subset: list of columns to operate on. ignored if value is
+        a dictionary
         :param metadata: dict-like object to add to the result dataframe,
             defaults to None
         :type metadata: Any, optional
-        :param subset: list of columns to operate on. ignored if value is
-        a dictionary
 
         :return: DataFrame with NA records filled
         :rtype: DataFrame

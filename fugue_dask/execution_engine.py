@@ -302,10 +302,10 @@ class DaskExecutionEngine(ExecutionEngine):
     def dropna(
         self,
         df: DataFrame,
-        metadata: Any = None,
         how: str = "any",
         thresh: int = None,
         subset: List[str] = None,
+        metadata: Any = None,
     ) -> DataFrame:
         d = self.to_df(df).native.dropna(how=how, thresh=thresh, subset=subset)
         return DaskDataFrame(d, df.schema, metadata)
@@ -314,8 +314,8 @@ class DaskExecutionEngine(ExecutionEngine):
         self,
         df: DataFrame,
         value: Any,
-        metadata: Any = None,
         subset: List[str] = None,
+        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             (not isinstance(value, list)) and (value is not None),
