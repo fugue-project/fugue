@@ -522,8 +522,13 @@ def test_fill():
     assert_eq(
         """
     a=create [[NULL, 1],[1, NULL]] schema a:int, b:int
-    FILL NULLS PARAMS a:99, b:-99 FROM a
-    """,
+    fill nulls params a:99, b:-99 from a""",
+        dag,
+    )
+    assert_eq(
+        """
+    create [[NULL, 1],[1, NULL]] schema a:int, b:int
+    fill nulls (a:99, b:-99)""",
         dag,
     )
 
