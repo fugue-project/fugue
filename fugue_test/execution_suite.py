@@ -480,6 +480,39 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
 
+        def test_fillna(self):
+            e = self.engine
+            a = e.to_df(
+                [[4, None, 6], [1, 2, 3], [4, None, None]], "a:double,b:double,c:double"
+            )
+            c = e.fillna(a, value=1, metadata=(dict(a=1)))
+            d = e.fillna(a, {"b": 99, "c": -99})
+            f = e.fillna(a, value=-99, subset=["c"])
+            g = e.fillna(a, {"b": 99, "c": -99}, subset=["c"])  # subset ignored
+            df_eq(
+                c,
+                [[4, 1, 6], [1, 2, 3], [4, 1, 1]],
+                "a:double,b:double,c:double",
+                metadata=dict(a=1),
+                throw=True,
+            )
+            df_eq(
+                d,
+                [[4, 99, 6], [1, 2, 3], [4, 99, -99]],
+                "a:double,b:double,c:double",
+                throw=True,
+            )
+            df_eq(
+                f,
+                [[4, None, 6], [1, 2, 3], [4, None, -99]],
+                "a:double,b:double,c:double",
+                throw=True,
+            )
+            df_eq(g, d, throw=True)
+            raises(ValueError, lambda: e.fillna(a, {"b": None, c: "99"}))
+            raises(ValueError, lambda: e.fillna(a, None))
+            raises(ValueError, lambda: e.fillna(a, ["b"]))
+
         def test__serialize_by_partition(self):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")

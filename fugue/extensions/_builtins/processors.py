@@ -121,6 +121,25 @@ class Dropna(Processor):
         )
 
 
+class Fillna(Processor):
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        value = self.params.get_or_none("value", object)
+        assert_or_throw(
+            (not isinstance(value, list)) and (value is not None),
+            FugueWorkflowError("fillna value cannot be None or list"),
+        )
+        if isinstance(value, dict):
+            assert_or_throw(
+                (None not in value.values()) and (any(value.values())),
+                FugueWorkflowError(
+                    "fillna dict can't contain None and must have len > 1"
+                ),
+            )
+        subset = self.params.get_or_none("subset", list)
+        return self.execution_engine.fillna(dfs[0], value=value, subset=subset)
+
+
 class RunSQLSelect(Processor):
     def process(self, dfs: DataFrames) -> DataFrame:
         statement = self.params.get_or_throw("statement", str)

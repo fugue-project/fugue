@@ -11,6 +11,7 @@ from fugue.extensions._builtins.processors import (
     Distinct,
     DropColumns,
     Dropna,
+    Fillna,
     Rename,
     RunJoin,
     RunSetOperation,

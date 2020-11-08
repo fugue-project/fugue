@@ -24,6 +24,7 @@ from fugue.extensions._builtins import (
     Distinct,
     DropColumns,
     Dropna,
+    Fillna,
     Load,
     Rename,
     RunJoin,
@@ -531,13 +532,35 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(self, using=Distinct)
         return self._to_self_type(df)
 
-    def dropna(self: TDF, **kwargs: Any) -> TDF:
+    def dropna(
+        self: TDF, how: str = "any", thresh: int = None, subset: List[str] = None
+    ) -> TDF:
         """Drops records containing NA records
 
-        :param kwargs: parameters to pass to dropna (how, thresh, subset)
+        :param how: 'any' or 'all'. 'any' drops rows that contain any nulls.
+          'all' drops rows that contain all nulls.
+        :param thresh: int, drops rows that have less than thresh non-null values
+        :param subset: list of columns to operate on
         :return: dataframe with incomplete records dropped
         """
-        df = self.workflow.process(self, using=Dropna, params=kwargs)
+        params = dict(how=how, thresh=thresh, subset=subset)
+        params = {k: v for k, v in params.items() if v is not None}
+        df = self.workflow.process(self, using=Dropna, params=params)
+        return self._to_self_type(df)
+
+    def fillna(self: TDF, value: Any, subset: List[str] = None) -> TDF:
+        """Fills NA values with replacement values
+
+        :param value: if scalar, fills all columns with same value.
+            if dictionary, fills NA using the keys as column names and the
+            values as the replacement values.
+        :param subset: list of columns to operate on. ignored if value is
+        a dictionary
+        :return: dataframe with NA records filled
+        """
+        params = dict(value=value, subset=subset)
+        params = {k: v for k, v in params.items() if v is not None}
+        df = self.workflow.process(self, using=Fillna, params=params)
         return self._to_self_type(df)
 
     def weak_checkpoint(self: TDF, lazy: bool = False, **kwargs: Any) -> TDF:

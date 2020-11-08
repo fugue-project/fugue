@@ -359,12 +359,38 @@ class SparkExecutionEngine(ExecutionEngine):
     def dropna(
         self,
         df: DataFrame,
-        metadata: Any = None,
         how: str = "any",
         thresh: int = None,
         subset: List[str] = None,
+        metadata: Any = None,
     ) -> DataFrame:
         d = self.to_df(df).native.dropna(how=how, thresh=thresh, subset=subset)
+        return self.to_df(d, df.schema, metadata)
+
+    def fillna(
+        self,
+        df: DataFrame,
+        value: Any,
+        subset: List[str] = None,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            (not isinstance(value, list)) and (value is not None),
+            ValueError("fillna value can not be a list or None"),
+        )
+        if isinstance(value, dict):
+            assert_or_throw(
+                (None not in value.values()) and (any(value.values())),
+                ValueError(
+                    "fillna dict can not contain None and needs at least one value"
+                ),
+            )
+            mapping = value
+        else:
+            # If subset is none, apply to all columns
+            subset = subset or df.schema.names
+            mapping = {col: value for col in subset}
+        d = self.to_df(df).native.fillna(mapping)
         return self.to_df(d, df.schema, metadata)
 
     def load_df(

@@ -849,6 +849,39 @@ class BuiltInTests(object):
                 )
                 a.dropna(thresh=1, subset=["y", "z"]).assert_eq(a)
 
+        def test_fillna(self):
+            with self.dag() as dag:
+                a = dag.df(
+                    [[1, 10, 10], [None, 2, None], [2, None, 4]],
+                    "x:double,y:double,z:double",
+                )
+                a.fillna(-99).assert_eq(
+                    ArrayDataFrame(
+                        [[1, 10, 10], [-99, 2, -99], [2, -99, 4]],
+                        "x:double,y:double,z:double",
+                    )
+                )
+                a.fillna(-99, subset=["y"]).assert_eq(
+                    ArrayDataFrame(
+                        [[1, 10, 10], [None, 2, None], [2, -99, 4]],
+                        "x:double,y:double,z:double",
+                    )
+                )
+                # Subset is ignored if value is a dict
+                a.fillna({"y": 0, "z": -99}, subset=["y"]).assert_eq(
+                    ArrayDataFrame(
+                        [[1, 10, 10], [None, 2, -99], [2, 0, 4]],
+                        "x:double,y:double,z:double",
+                    )
+                )
+            with raises(FugueWorkflowError):
+                with self.dag() as dag:
+                    dag.df([[None, 1]], "a:int,b:int").fillna({"a": None, "b": 1})
+
+            with raises(FugueWorkflowError):
+                with self.dag() as dag:
+                    dag.df([[None, 1]], "a:int,b:int").fillna(None)
+
         def test_col_ops(self):
             with self.dag() as dag:
                 a = dag.df([[1, 10], [2, 20]], "x:long,y:long")
