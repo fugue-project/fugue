@@ -124,6 +124,11 @@ pre-commit install
 
 ## Update History
 
+### 0.4.6
+
+* Fixed import [issue](https://github.com/fugue-project/fugue/issues/99) with OutputTransformer
+* Added [fillna](https://github.com/fugue-project/fugue/issues/95) as a built-in transform, including SQL implementation
+
 ### 0.4.5
 
 * [Extension validation](https://github.com/fugue-project/fugue/issues/81) interface and interfaceless syntax
