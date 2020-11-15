@@ -124,6 +124,10 @@ pre-commit install
 
 ## Update History
 
+### 0.4.7
+
+* Add hook to print/show, see [this](https://github.com/fugue-project/fugue/issues/104).
+
 ### 0.4.6
 
 * Fixed import [issue](https://github.com/fugue-project/fugue/issues/99) with OutputTransformer

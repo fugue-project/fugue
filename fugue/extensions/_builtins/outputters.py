@@ -1,5 +1,5 @@
 from threading import RLock
-from typing import List, no_type_check
+from typing import Callable, List, Optional, no_type_check
 
 from fugue.collections.partition import PartitionCursor
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
@@ -18,6 +18,7 @@ from triad.utils.convert import to_type
 
 class Show(Outputter):
     LOCK = RLock()
+    _hook: Optional[Callable] = None
 
     def process(self, dfs: DataFrames) -> None:
         # TODO: how do we make sure multiple dfs are printed together?
@@ -29,10 +30,32 @@ class Show(Outputter):
         heads = [df.head(rows) for df in df_arr]
         counts = [df.count() if show_count else -1 for df in df_arr]
         with Show.LOCK:
-            if title is not None:
-                print(title)
-            for df, head, count in zip(df_arr, heads, counts):
-                df._show(head_rows=head, rows=rows, count=count, title=None)
+            if Show._hook is None:
+                if title is not None:
+                    print(title)
+                for df, head, count in zip(df_arr, heads, counts):
+                    df._show(head_rows=head, rows=rows, count=count, title=None)
+            else:
+                for df, head, count in zip(df_arr, heads, counts):
+                    Show._hook(
+                        schema=df.schema,
+                        head_rows=head,
+                        title=title,
+                        rows=rows,
+                        count=count,
+                    )
+
+    @staticmethod
+    def set_hook(show_func: Callable):
+        """This is to set the globle show/print method. It is
+        not for users to use directly.
+
+        :param show_func: the print function with `schema:Schema`,
+          `head_rows:List[List[Any]]`, `title:Optional[str]`,
+          `rows:int`, `count:int`. `rows` is the number of rows to display,
+          `count` is -1 if not computed.
+        """
+        Show._hook = show_func
 
 
 class AssertEqual(Outputter):
