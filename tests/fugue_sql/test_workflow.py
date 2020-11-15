@@ -6,6 +6,7 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from fugue.workflow.workflow import WorkflowDataFrame
+from fugue.extensions._builtins.outputters import Show
 from pytest import raises
 
 from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
@@ -36,6 +37,16 @@ def test_conf_override():
 
 
 def test_show():
+    class _CustomShow(object):
+        def __init__(self):
+            self.called = False
+
+        def show(self, schema, head_rows, title, rows, count):
+            print(schema, head_rows)
+            print(title, rows, count)
+            self.called = True
+
+    cs = _CustomShow()
     with FugueSQLWorkflow() as dag:
         dag(
             """
@@ -45,6 +56,19 @@ def test_show():
         PRINT a, b
         """
         )
+    assert not cs.called
+    Show.set_hook(cs.show)
+    with FugueSQLWorkflow() as dag:
+        dag(
+            """
+        a = CREATE[[0], [1]] SCHEMA a: int
+        b = CREATE[[0], [1]] SCHEMA a: int
+        PRINT a, b ROWS 10 ROWCOUNT TITLE "abc"
+        PRINT a, b
+        """
+        )
+
+    assert cs.called
 
 
 def test_jinja_keyword_in_sql():
