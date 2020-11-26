@@ -223,6 +223,8 @@ def _parse_param(  # noqa: C901
         return _IterableDictParam(param)
     if annotation is EmptyAwareIterable[Dict[str, Any]]:
         return _EmptyAwareIterableDictParam(param)
+    if annotation is Iterable[pd.DataFrame]:
+        return _IterablePandasParam(param)
     if param is not None and param.kind == param.VAR_POSITIONAL:
         return _PositionalParam(param)
     if param is not None and param.kind == param.VAR_KEYWORD:
@@ -429,6 +431,20 @@ class _PandasParam(_DataFrameParamBase):
 
     def count(self, df: pd.DataFrame) -> int:
         return df.shape[0]
+
+
+class _IterablePandasParam(_DataFrameParamBase):
+    def __init__(self, param: Optional[inspect.Parameter]):
+        super().__init__(param, "Iterable[pd.DataFrame]", "q")
+
+    def to_input_data(self, df: DataFrame) -> Iterable[pd.DataFrame]:
+        return iter(df.as_pandas())
+
+    def to_output_df(self, output: Iterable[pd.DataFrame], schema: Any) -> DataFrame:
+        return PandasDataFrame(pd.concat(list(output)), schema)
+
+    def count(self, df: Iterable[pd.DataFrame]) -> int:
+        return sum(_.shape[0] for _ in df)
 
 
 class _NoneParam(_FuncParam):
