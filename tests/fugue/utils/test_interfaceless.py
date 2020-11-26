@@ -331,4 +331,4 @@ def f33() -> Iterable[pd.DataFrame]:
 
 def f34(e: pd.DataFrame, a: LocalDataFrame) -> Iterable[pd.DataFrame]:
     a = ArrayDataFrame(a, "a:int").as_pandas()
-    return [e, a]
+    return iter([e, a])
