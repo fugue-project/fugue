@@ -146,7 +146,7 @@ class _FuncAsTransformer(Transformer):
         validation_rules.update(parse_validation_rules_from_comment(func))
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsTransformer()
-        tr._wrapper = FunctionWrapper(func, "^[lsp]x*$", "^[lsp]$")  # type: ignore
+        tr._wrapper = FunctionWrapper(func, "^[lsp]x*$", "^[lspq]$")  # type: ignore
         tr._output_schema_arg = schema  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
         return tr

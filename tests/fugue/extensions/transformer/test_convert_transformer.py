@@ -48,6 +48,11 @@ def test__to_transformer():
     assert isinstance(e, Transformer)
     f = _to_transformer("t5")
     assert isinstance(f, Transformer)
+    g = _to_transformer("t6", "*,b:int")
+    assert isinstance(g, Transformer)
+    h = _to_transformer("t7")
+    assert isinstance(h, Transformer)
+    raises(FugueInterfacelessError, lambda: _to_transformer("t8"))
 
 
 def test__to_transformer_determinism():
@@ -153,6 +158,20 @@ def t5(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
     for r in df:
         r["b"] = 1
         yield r
+
+def t6(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
+    for r in df:
+        r["b"] = 1
+        yield r
+
+# schema: *
+def t7(df: pd.DataFrame) -> Iterable[pd.DataFrame]:
+    yield df
+
+# Invalid because Iterable[pd.DataFrame] is an input
+# schema: *
+def t8(df: Iterable[pd.DataFrame]) -> pd.DataFrame:
+    return pd.concat(list(df))
 
 
 class MockTransformer(Transformer):

@@ -105,12 +105,13 @@ def test_parse_function():
     _parse_function(f14, "^0?e?(c|[dl]+)x*$", "n")
     _parse_function(f16, "^0e?(c|[dl]+)x*$", "n")
     _parse_function(f33, "^$", "q")
+    raises(TypeError, lambda: _parse_function(f34, "^[sq]$", "q"))
 
 
 def test_function_wrapper():
-    for f in [f20, f21, f212, f22, f23, f24, f25, f26, f30, f31, f32, f34]:
+    for f in [f20, f21, f212, f22, f23, f24, f25, f26, f30, f31, f32, f35]:
         df = ArrayDataFrame([[0]], "a:int")
-        w = FunctionWrapper(f, "^[ldspq][ldspq]$", "[ldspq]")
+        w = FunctionWrapper(f, "^[ldsp][ldsp]$", "[ldspq]")
         res = w.run([df], dict(a=df), ignore_unknown=False, output_schema="a:int")
         df_eq(res, [[0], [0]], "a:int", throw=True)
         w.run([df], dict(a=df), ignore_unknown=False, output=False)
@@ -329,6 +330,10 @@ def f32(
 def f33() -> Iterable[pd.DataFrame]:
     pass
 
-def f34(e: pd.DataFrame, a: LocalDataFrame) -> Iterable[pd.DataFrame]:
+def f34(e: Iterable[pd.DataFrame]):
+    pass
+
+def f35(e: pd.DataFrame, a: LocalDataFrame) -> Iterable[pd.DataFrame]:
+    e = PandasDataFrame(e, "a:int").as_pandas()
     a = ArrayDataFrame(a, "a:int").as_pandas()
     return iter([e, a])
