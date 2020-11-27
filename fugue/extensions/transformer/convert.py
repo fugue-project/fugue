@@ -249,7 +249,9 @@ class _FuncAsCoTransformer(CoTransformer):
             )
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsCoTransformer()
-        tr._wrapper = FunctionWrapper(func, "^(c|[lsp]+)x*$", "^[lsp]$")  # type: ignore
+        tr._wrapper = FunctionWrapper(  # type: ignore
+            func, "^(c|[lsp]+)x*$", "^[lspq]$"
+        )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
         tr._output_schema_arg = schema  # type: ignore
         tr._validation_rules = {}  # type: ignore
