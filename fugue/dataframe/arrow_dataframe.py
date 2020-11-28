@@ -124,12 +124,63 @@ class ArrowDataFrame(LocalBoundedDataFrame):
         table = pa.Table.from_arrays(cols, schema=schema.pa_schema)
         return ArrowDataFrame(table)
 
-    def rename(self, columns: Dict[str, str]) -> "DataFrame":
+    def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
             schema = self.schema.rename(columns)
         except Exception as e:
             raise FugueDataFrameOperationError(e)
         df = pa.Table.from_arrays(self.native.columns, schema=schema.pa_schema)
+        return ArrowDataFrame(df)
+
+    def alter_columns(self, columns: Any) -> DataFrame:
+        new_schema = self._get_altered_schema(columns)
+        if new_schema == self.schema:
+            return self
+        cols: List[pa.Array] = []
+        for i in range(len(new_schema)):
+            # TODO: this following logic may be generalized for entire arrow dataframe?
+            col = self.native.columns[i]
+            new_type = new_schema.get_value_by_index(i).type
+            old_type = self.schema.get_value_by_index(i).type
+            if new_type.equals(old_type):
+                cols.append(col)
+            elif pa.types.is_date(new_type):
+                # -> date
+                col = pa.Array.from_pandas(pd.to_datetime(col.to_pandas()).dt.date)
+                cols.append(col)
+            elif pa.types.is_timestamp(new_type):
+                # -> datetime
+                col = pa.Array.from_pandas(pd.to_datetime(col.to_pandas()))
+                cols.append(col)
+            elif pa.types.is_string(new_type):
+                if pa.types.is_date(old_type):
+                    # date -> str
+                    series = pd.to_datetime(col.to_pandas()).dt.date
+                    ns = series.isnull()
+                    series = series.astype(str)
+                    col = pa.Array.from_pandas(series.mask(ns, None))
+                elif pa.types.is_timestamp(old_type):
+                    # datetime -> str
+                    series = pd.to_datetime(col.to_pandas())
+                    ns = series.isnull()
+                    series = series.astype(str)
+                    col = pa.Array.from_pandas(series.mask(ns, None))
+                elif pa.types.is_boolean(old_type):
+                    # bool -> str
+                    series = col.to_pandas()
+                    ns = series.isnull()
+                    series = (
+                        series.mask(series == 0, "False")
+                        .mask(series != 0, "True")
+                        .mask(ns, None)
+                    )
+                    col = pa.Array.from_pandas(series)
+                else:
+                    col = col.cast(new_type, safe=True)
+                cols.append(col)
+            else:
+                cols.append(col.cast(new_type, safe=True))
+        df = pa.Table.from_arrays(cols, schema=new_schema.pa_schema)
         return ArrowDataFrame(df)
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:

@@ -187,6 +187,17 @@ class DataFrame(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def alter_columns(self, columns: Any) -> "DataFrame":  # pragma: no cover
+        """Rename the dataframe using a mapping dict
+
+        :param columns: |SchemaLikeObject|,
+          all columns should be contained by the dataframe schema
+        :return: a new dataframe with altered columns, the order of the
+          original schema will not change
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def _select_cols(self, cols: List[Any]) -> "DataFrame":  # pragma: no cover
         raise NotImplementedError
 
@@ -336,6 +347,30 @@ class DataFrame(ABC):
                 except Exception:  # pragma: no cover
                     print(self.metadata)
                 print("")
+
+    def _get_altered_schema(self, subschema: Any) -> Schema:
+        sub = Schema(subschema)
+        assert_or_throw(
+            sub.names in self.schema,
+            FugueDataFrameOperationError(f"{sub.names} are not all in {self.schema}"),
+        )
+        for k, v in sub.items():
+            old_type = self.schema[k].type
+            new_type = v.type
+            if not old_type.equals(new_type):
+                assert_or_throw(
+                    not pa.types.is_struct(old_type)
+                    and not pa.types.is_list(old_type)
+                    and not pa.types.is_binary(old_type),
+                    NotImplementedError(f"can't convert from {old_type}"),
+                )
+                assert_or_throw(
+                    not pa.types.is_struct(new_type)
+                    and not pa.types.is_list(new_type)
+                    and not pa.types.is_binary(new_type),
+                    NotImplementedError(f"can't convert to {new_type}"),
+                )
+        return Schema([(k, sub.get(k, v)) for k, v in self.schema.items()])
 
 
 class LocalDataFrame(DataFrame):
@@ -539,17 +574,25 @@ def _input_schema(schema: Any) -> Schema:
 
 
 def _enforce_type(df: pd.DataFrame, schema: Schema) -> pd.DataFrame:
-    # TODO: does this have higher latency?
+    # TODO: should this be moved to pandas like utils?
     for k, v in schema.items():
         s = df[k]
         if pa.types.is_string(v.type):
             ns = s.isnull()
-            s = s.astype(str)
-            s[ns] = None
+            s = s.astype(str).mask(ns, None)
+        elif pa.types.is_boolean(v.type):
+            ns = s.isnull()
+            if pd.api.types.is_string_dtype(s.dtype):
+                try:
+                    s = s.str.lower() == "true"
+                except AttributeError:
+                    s = s.fillna(0).astype(bool)
+            else:
+                s = s.fillna(0).astype(bool)
+            s = s.mask(ns, None)
         elif pa.types.is_integer(v.type) or pa.types.is_boolean(v.type):
             ns = s.isnull()
-            s = s.fillna(0).astype(v.type.to_pandas_dtype())
-            s[ns] = None
+            s = s.fillna(0).astype(v.type.to_pandas_dtype()).mask(ns, None)
         elif not pa.types.is_struct(v.type) and not pa.types.is_list(v.type):
             s = s.astype(v.type.to_pandas_dtype())
         df[k] = s

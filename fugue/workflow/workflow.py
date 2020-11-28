@@ -774,6 +774,9 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(self, using=Rename, params=dict(columns=m))
         return self._to_self_type(df)
 
+    def alter_columns(self: TDF, columns: Any) -> TDF:
+        raise NotImplementedError
+
     def zip(
         self: TDF,
         *dfs: Any,
