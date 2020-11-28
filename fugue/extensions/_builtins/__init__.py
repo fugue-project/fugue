@@ -8,6 +8,7 @@ from fugue.extensions._builtins.outputters import (
     Show,
 )
 from fugue.extensions._builtins.processors import (
+    AlterColumns,
     Distinct,
     DropColumns,
     Dropna,
