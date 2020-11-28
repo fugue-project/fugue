@@ -520,6 +520,10 @@ class BuiltInTests(object):
                 incr()
                 raise NotImplementedError
 
+            def t9(df: pd.DataFrame) -> Iterable[pd.DataFrame]:
+                incr()
+                yield df
+
             with self.dag() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:double,b:int")
                 a.out_transform(t1)  # +2
@@ -529,14 +533,15 @@ class BuiltInTests(object):
                 a.partition(by=["b"]).out_transform(t5)  # +2
                 a.out_transform(T6)  # +1
                 a.partition(by=["b"]).out_transform(T7)  # +1
-                a.out_transform(t8, ignore_errors=[NotImplementedError])
+                a.out_transform(t8, ignore_errors=[NotImplementedError])  # +1
+                a.out_transform(t9)  # +1
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t2))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t3))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t4))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t5))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(T7))
 
-            assert 11 <= incr()
+            assert 12 <= incr()
 
         def test_output_cotransform(self):  # noqa: C901
             tmpdir = str(self.tmpdir)

@@ -437,9 +437,6 @@ class _IterablePandasParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "Iterable[pd.DataFrame]", "q")
 
-    def to_input_data(self, df: DataFrame) -> Iterable[pd.DataFrame]:
-        raise TypeError("Iterable[pd.DataFrame] is not acceptable as input")
-
     def to_output_df(self, output: Iterable[pd.DataFrame], schema: Any) -> DataFrame:
         return PandasDataFrame(pd.concat(list(output)), schema)
 
