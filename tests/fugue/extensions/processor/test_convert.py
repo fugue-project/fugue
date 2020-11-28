@@ -1,5 +1,6 @@
 from typing import Any, Dict, Iterable, List
 
+import pandas as pd
 from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.exceptions import FugueInterfacelessError
@@ -50,6 +51,9 @@ def test__to_processor():
     assert isinstance(_to_processor(t7, "a:int"), Processor)
     raises(FugueInterfacelessError, lambda: _to_processor(t7))
     assert isinstance(_to_processor(t8), Processor)
+    assert isinstance(_to_processor(t9), Processor)
+    assert isinstance(_to_processor(t10), Processor)
+    assert isinstance(_to_processor(t11), Processor)
 
 
 def test_run_processor():
@@ -167,6 +171,18 @@ def t7(dfs: DataFrames) -> List[List[Any]]:
 
 # schema: a:int
 def t8(e: ExecutionEngine, df1: DataFrame, df2: DataFrame) -> List[List[Any]]:
+    pass
+
+
+def t9(e: ExecutionEngine, df1: DataFrame, df2: DataFrame) -> pd.DataFrame:
+    pass
+
+
+def t10(e: ExecutionEngine, df1: DataFrame, df2: DataFrame) -> Iterable[pd.DataFrame]:
+    pass
+
+
+def t11(e: ExecutionEngine, df1: DataFrame, df2: DataFrame, **kwargs) -> Iterable[pd.DataFrame]:
     pass
 
 

@@ -47,6 +47,10 @@ def test__to_transformer():
     raises(FugueInterfacelessError, lambda: _to_transformer("t4", None))
     e = _to_transformer("t4", "a:int,b:int")
     assert isinstance(e, CoTransformer)
+    f = _to_transformer("t5", "a:int,b:int")
+    assert isinstance(f, CoTransformer)
+    g = _to_transformer("t6", "a:int,b:int")
+    assert isinstance(g, CoTransformer)
 
 
 def test__to_transformer_determinism():
@@ -94,6 +98,16 @@ def t4(df1: Iterable[List[Any]], df2: pd.DataFrame) -> Iterable[List[Any]]:
     for r in df1:
         r += [1]
         yield r
+
+
+def t5(df1: pd.DataFrame, df2: pd.DataFrame) -> Iterable[pd.DataFrame]:
+    for df in [df1, df2]:
+        yield df
+
+
+def t6(df1: pd.DataFrame, df2: pd.DataFrame, **kwargs) -> Iterable[pd.DataFrame]:
+    for df in [df1, df2]:
+        yield df
 
 
 class MockTransformer(CoTransformer):
