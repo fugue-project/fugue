@@ -1,5 +1,6 @@
 from typing import Any, Dict, Iterable, List
 
+import pandas as pd
 from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.exceptions import FugueInterfacelessError
@@ -45,6 +46,8 @@ def test__to_creator():
     assert isinstance(_to_creator(t7, "a:int"), Creator)
     raises(FugueInterfacelessError, lambda: _to_creator(t7))
     assert isinstance(_to_creator(t8), Creator)
+    assert isinstance(_to_creator(t9), Creator)
+    assert isinstance(_to_creator(t10), Creator)
 
 def test_run_creator():
     o1 = _to_creator(t3)
@@ -117,4 +120,11 @@ def t7() -> List[List[Any]]:
 
 # schema: a:int
 def t8(e: ExecutionEngine, a, b) -> List[List[Any]]:
+    pass
+
+
+def t9(e: ExecutionEngine, a, b) -> Iterable[pd.DataFrame]:
+    pass
+
+def t10(e: ExecutionEngine, a, b, **kwargs) -> Iterable[pd.DataFrame]:
     pass

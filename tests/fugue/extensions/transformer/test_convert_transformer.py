@@ -168,7 +168,7 @@ def t6(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
 def t7(df: pd.DataFrame) -> Iterable[pd.DataFrame]:
     yield df
 
-# Invalid because Iterable[pd.DataFrame] is an input
+# Iterable[pd.DataFrame] is not a valid input
 # schema: *
 def t8(df: Iterable[pd.DataFrame]) -> pd.DataFrame:
     return pd.concat(list(df))
