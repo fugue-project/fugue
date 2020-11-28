@@ -1,4 +1,4 @@
-# Fugue
+# Replicate
 
 [![GitHub release](https://img.shields.io/github/release/fugue-project/fugue.svg)](https://GitHub.com/fugue-project/fugue)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/fugue.svg)](https://pypi.python.org/pypi/fugue/)
@@ -50,73 +50,40 @@ Alternatively, you should get decent performance if running its docker image on 
 docker run -p 8888:8888 fugueproject/tutorials:latest
 ```
 
-## Contributing Code
-
-There are three steps to setting-up a development environment
-1. Create a virtual environment with your choice of environment manager
-2. Install the requirements
-3. Install the git hook scripts
-
-### Creating an environment
-
-Below are examples for how to create and activate an environment in virtualenv and conda.
-
-**Using virtualenv**
-```
-python3 -m venv venv
-. venv/bin/activate
+## Install
 
 ```
-
-**Using conda**
-```
-conda create --name fugue-dev
-conda activate fugue-dev
+pip install -U replicate
 ```
 
-### Installing requirements
+## Get started
 
-The Fugue repo has a Makefile that can be used to install the requirements. It supports installation in both
-pip and conda. Instructions to install `make` for Windows users can be found later.
+If you prefer **training scripts and the CLI**, [follow the our tutorial to learn how Replicate works](https://replicate.ai/docs/tutorial).
 
-**Pip install requirements**
-```
-make setupinpip
-```
+If you prefer **working in notebooks**, <a href="https://colab.research.google.com/drive/1vjZReg--45P-NZ4j8TXAJFWuepamXc7K" target="_blank">follow our notebook tutorial on Colab</a>.
 
-**Conda install requirements**
+If you like to **learn concepts first**, [read our guide about how Replicate works](https://replicate.ai/docs/learn/how-it-works).
 
-```
-make setupinconda
-```
+## Get involved
 
-**Manually install requirements**
+Everyone uses version control for software, but it is much less common in machine learning.
 
-For Windows users who don't have the `make` command, you can use your package manager of choice. For pip:
+Why is this? We spent a year talking to people in the ML community and this is what we found out:
 
-```
-pip3 install -r requirements.txt
-```
+- **Git doesn’t work well with machine learning.** It can’t handle large files, it can’t handle key/value metadata like metrics, and it can’t commit automatically in your training script. There are some solutions for this, but they feel like band-aids.
+- **It should be open source.** There are a number of proprietary solutions, but something so foundational needs to be built by and for the ML community.
+- **It needs to be small, easy to use, and extensible.** We found people struggling to integrate with “AI Platforms”. We want to make a tool that does one thing well and can be combined with other tools to produce the system you need.
 
-For Anaconda users, first install pip in the newly created environment. If pip install is used without installing pip, conda will use
-the system-wide pip
+We think the ML community needs a good version control system. But, version control systems are complex, and to make this a reality we need your help.
 
-```
-conda install pip
-pip install -r requirements.txt
-```
+Have you strung together some shell scripts to build this for yourself? Are you interested in the problem of making machine learning reproducible?
 
-**Notes for Windows Users**
+Here are some ways you can help out:
 
-For Windows users, you will need to download Microsoft C++ Build Tools found [here](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+- [Join our Slack to chat to us and other contributors.](https://discord.gg/QmzJApGjyE)
+- [Have your say about what you want from a version control system on our public roadmap.](https://github.com/replicate/replicate/projects/1)
+- [Try your hand at one of our issues labelled "help wanted".](https://github.com/replicate/replicate/labels/help%20wanted)
 
-`make` is a GNU command that does not come with Windows. An installer can be downloaded [here](http://gnuwin32.sourceforge.net/packages/make.htm)
-After installing, add the bin to your PATH environment variable.
+## Contributing & development environment
 
-### Installing git hook scripts
-
-Fugue has pre-commit hooks to check if code is appropriate to be committed. The previous `make` command installs this.
-If you installed the requirements manually, install the git hook scripts with:
-```
-pre-commit install
-```
+[Take a look at our contributing instructions.](CONTRIBUTING.md)
