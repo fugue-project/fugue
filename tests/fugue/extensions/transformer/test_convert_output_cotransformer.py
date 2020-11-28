@@ -47,6 +47,8 @@ def test__to_output_transformer():
     assert isinstance(e, CoTransformer)
     f = _to_output_transformer("t5")
     assert isinstance(f, CoTransformer)
+    g = _to_output_transformer("t6")
+    assert isinstance(g, CoTransformer)
 
 
 def test__to_output_transformer_determinism():
