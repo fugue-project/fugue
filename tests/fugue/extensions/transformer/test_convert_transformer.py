@@ -161,10 +161,12 @@ def t5(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
         r["b"] = 1
         yield r
 
+
 def t6(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
     for r in df:
         r["b"] = 1
         yield r
+
 
 # schema: *
 def t7(df: pd.DataFrame) -> Iterable[pd.DataFrame]:

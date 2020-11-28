@@ -169,7 +169,7 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
         assert_or_throw(schema is None, "schema must be None for output transformers")
         validation_rules.update(parse_validation_rules_from_comment(func))
         tr = _FuncAsOutputTransformer()
-        tr._wrapper = FunctionWrapper(func, "^[lsp]x*z?$", "^[lspn]$")  # type: ignore
+        tr._wrapper = FunctionWrapper(func, "^[lsp]x*z?$", "^[lspnq]$")  # type: ignore
         tr._output_schema_arg = None  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
         return tr
@@ -296,7 +296,7 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
 
         tr = _FuncAsOutputCoTransformer()
         tr._wrapper = FunctionWrapper(  # type: ignore
-            func, "^(c|[lsp]+)x*z?$", "^[lspn]$"
+            func, "^(c|[lsp]+)x*z?$", "^[lspnq]$"
         )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
         tr._output_schema_arg = None  # type: ignore

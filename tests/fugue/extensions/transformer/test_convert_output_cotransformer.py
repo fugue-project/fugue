@@ -82,6 +82,10 @@ def t5(df1: Iterable[List[Any]], df2: pd.DataFrame, **kwargs) -> None:
     pass
 
 
+def t6(df1: Iterable[List[Any]], df2: pd.DataFrame) -> Iterable[pd.DataFrame]:
+    pass
+
+
 class MockTransformer(CoTransformer):
     def get_output_schema(self, dfs):
         pass

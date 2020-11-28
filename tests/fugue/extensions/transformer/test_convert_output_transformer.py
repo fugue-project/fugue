@@ -1,5 +1,6 @@
 from typing import Any, Dict, Iterable, List
 
+import pandas as pd
 from fugue.dataframe import ArrayDataFrame
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.transformer import (
@@ -45,6 +46,8 @@ def test__to_output_transformer():
     assert isinstance(f, Transformer)
     g = _to_output_transformer("t6")
     assert isinstance(g, Transformer)
+    h = _to_output_transformer("t7")
+    assert isinstance(h, Transformer)
 
 
 def test__to_output_transformer_determinism():
@@ -112,6 +115,11 @@ def t5(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
 
 
 def t6(df: Iterable[List[Any]], **kwargs) -> None:
+    pass
+
+
+# Consistency with transformer
+def t7(df: pd.DataFrame) -> Iterable[pd.DataFrame]:
     pass
 
 

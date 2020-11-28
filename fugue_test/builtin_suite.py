@@ -601,6 +601,11 @@ class BuiltInTests(object):
                 incr()
                 raise NotImplementedError
 
+            def t9(df1: pd.DataFrame, df2: pd.DataFrame) -> Iterable[pd.DataFrame]:
+                incr()
+                for df in [df1, df2]:
+                    yield df
+
             with self.dag() as dag:
                 a0 = dag.df([[1, 2], [3, 4]], "a:double,b:int")
                 a1 = dag.df([[1, 2], [3, 4]], "aa:double,b:int")
@@ -614,8 +619,9 @@ class BuiltInTests(object):
                 a.out_transform(T6)  # +1
                 a.out_transform(T7)  # +1
                 a.out_transform(t8, ignore_errors=[NotImplementedError])  # +1
+                a.out_transform(t9)  # +1
 
-            assert 11 <= incr()
+            assert 12 <= incr()
 
         def test_join(self):
             with self.dag() as dag:
