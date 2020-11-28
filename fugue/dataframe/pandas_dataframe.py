@@ -5,7 +5,6 @@ import pyarrow as pa
 from fugue.dataframe.dataframe import (
     DataFrame,
     LocalBoundedDataFrame,
-    _enforce_type,
     _input_schema,
 )
 from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
@@ -64,7 +63,10 @@ class PandasDataFrame(LocalBoundedDataFrame):
             elif isinstance(df, Iterable):
                 schema = _input_schema(schema).assert_not_empty()
                 pdf = pd.DataFrame(df, columns=schema.names)
-                pdf = _enforce_type(pdf, schema)
+                pdf = PD_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True)
+                if PD_UTILS.empty(pdf):
+                    for k, v in schema.items():
+                        pdf[k] = pdf[k].astype(v.type.to_pandas_dtype())
                 apply_schema = False
             else:
                 raise ValueError(f"{df} is incompatible with PandasDataFrame")
@@ -168,4 +170,4 @@ class PandasDataFrame(LocalBoundedDataFrame):
                 ValueError(f"Pandas datafame column count doesn't match {schema}"),
             )
             pdf.columns = schema.names
-        return _enforce_type(pdf, schema), schema
+        return PD_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True), schema

@@ -10,6 +10,7 @@ from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
+from triad.utils.pandas_like import PD_UTILS
 
 
 class DataFrame(ABC):
@@ -127,7 +128,7 @@ class DataFrame(ABC):
     def as_pandas(self) -> pd.DataFrame:
         """Convert to pandas DataFrame"""
         pdf = pd.DataFrame(self.as_array(), columns=self.schema.names)
-        return _enforce_type(pdf, self.schema)
+        return PD_UTILS.enforce_type(pdf, self.schema.pa_schema, null_safe=True)
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
         """Convert to pyArrow DataFrame"""
@@ -571,29 +572,3 @@ def _get_schema_change(
 
 def _input_schema(schema: Any) -> Schema:
     return schema if isinstance(schema, Schema) else Schema(schema)
-
-
-def _enforce_type(df: pd.DataFrame, schema: Schema) -> pd.DataFrame:
-    # TODO: should this be moved to pandas like utils?
-    for k, v in schema.items():
-        s = df[k]
-        if pa.types.is_string(v.type):
-            ns = s.isnull()
-            s = s.astype(str).mask(ns, None)
-        elif pa.types.is_boolean(v.type):
-            ns = s.isnull()
-            if pd.api.types.is_string_dtype(s.dtype):
-                try:
-                    s = s.str.lower() == "true"
-                except AttributeError:
-                    s = s.fillna(0).astype(bool)
-            else:
-                s = s.fillna(0).astype(bool)
-            s = s.mask(ns, None)
-        elif pa.types.is_integer(v.type) or pa.types.is_boolean(v.type):
-            ns = s.isnull()
-            s = s.fillna(0).astype(v.type.to_pandas_dtype()).mask(ns, None)
-        elif not pa.types.is_struct(v.type) and not pa.types.is_list(v.type):
-            s = s.astype(v.type.to_pandas_dtype())
-        df[k] = s
-    return df
