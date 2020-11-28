@@ -199,7 +199,7 @@ def test_out_transform():
     """,
         w,
     )
-    
+
     w = FugueWorkflow()
     w.df([[0], [1]], "a:int").partition(
         by=["a"], presort="b DESC", num="ROWCOUNT/2"
@@ -425,8 +425,6 @@ def test_print():
         dag,
     )
 
-    
-
 
 def test_save():
     dag = FugueWorkflow()
@@ -493,6 +491,38 @@ def test_load():
     )
 
 
+def test_rename():
+    dag = FugueWorkflow()
+    a = dag.create(mock_create1)
+    b = a.rename({"a": "aa", "b": "bb"})
+    c = a.rename({"a": "aaa", "b": "bbb"})
+
+    assert_eq(
+        """
+    a=create using mock_create1
+    rename columns a:aa,b:bb
+    rename columns a:aaa,b:bbb from a
+    """,
+        dag,
+    )
+
+
+def test_alter_columns():
+    dag = FugueWorkflow()
+    a = dag.create(mock_create1)
+    a.alter_columns(Schema("a:str,b:str"))
+    a.alter_columns(Schema("a:float,b:double"))
+
+    assert_eq(
+        """
+    a=create using mock_create1
+    alter columns a:str, b:str
+    alter columns a:float, b:double from a
+    """,
+        dag,
+    )
+
+
 def test_drop():
     dag = FugueWorkflow()
     a = dag.create(mock_create1)
@@ -517,6 +547,7 @@ def test_drop():
         dag,
     )
 
+
 def test_fill():
     dag = FugueWorkflow()
     a = dag.df([[None, 1], [1, None]], "a:int, b:int")
@@ -534,6 +565,7 @@ def test_fill():
         dag,
     )
 
+
 def assert_eq(expr, expected: FugueWorkflow):
     global_vars, local_vars = get_caller_global_local_vars()
     sql = FugueSQL(expr, "fugueLanguage", ignore_case=True, simple_assign=True)
@@ -545,9 +577,9 @@ def assert_eq(expr, expected: FugueWorkflow):
     assert expected.spec_uuid() == v.workflow.spec_uuid()
 
 
-# schema: a:int
+# schema: a:int,b:int
 def mock_create1(n=2) -> List[List[Any]]:
-    return [[n]]
+    return [[n, n]]
 
 
 def mock_create2(n=2) -> List[List[Any]]:

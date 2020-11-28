@@ -71,6 +71,6 @@ testsql:
 	python3 -bb -m pytest tests/fugue_sql
 
 sql:
-	java -Xmx500M -jar bin/antlr-4.8-complete.jar -Dlanguage=Python3 -visitor -no-listener fugue_sql/_antlr/fugue_sql.g4
+	java -Xmx500M -jar bin/antlr-4.9-complete.jar -Dlanguage=Python3 -visitor -no-listener fugue_sql/_antlr/fugue_sql.g4
 	rm fugue_sql/_antlr/*.interp
 	rm fugue_sql/_antlr/*.tokens

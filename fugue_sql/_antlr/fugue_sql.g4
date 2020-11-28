@@ -113,6 +113,8 @@ fugueNestableTaskCollectionNoSelect
     | fugueCreateDataTask
     | fugueLoadTask
     | fugueSaveAndUseTask
+    | fugueRenameColumnsTask
+    | fugueAlterColumnsTask
     | fugueDropColumnsTask
     | fugueDropnaTask
     | fugueFillnaTask
@@ -128,6 +130,14 @@ fugueProcessTask:
 
 fugueSaveAndUseTask:
     SAVE AND USE (df=fugueDataFrame)? (partition=fuguePrepartition)? m=fugueSaveMode (single=fugueSingleFile)? (fmt=fugueFileFormat)? path=fuguePath (params=fugueParams)?
+    ;
+
+fugueRenameColumnsTask:
+    RENAME COLUMNS cols=fugueRenameExpression (FROM df=fugueDataFrame)?
+    ;
+
+fugueAlterColumnsTask:
+    ALTER COLUMNS cols=fugueSchema (FROM df=fugueDataFrame)?
     ;
 
 fugueDropColumnsTask:
@@ -304,6 +314,10 @@ fugueColumnIdentifier:
     fugueIdentifier
     ;
 
+fugueRenameExpression:
+    fugueRenamePair (',' fugueRenamePair)*
+    ;
+
 fugueWildSchema:
     fugueWildSchemaPair (',' fugueWildSchemaPair)*
     ;
@@ -329,6 +343,10 @@ fugueSchemaType
     : fugueIdentifier               #fugueSchemaSimpleType
     | '[' fugueSchemaType ']'       #fugueSchemaListType
     | '{' fugueSchema '}'           #fugueSchemaStructType
+    ;
+
+fugueRenamePair:
+    key=fugueSchemaKey ':' value=fugueSchemaKey
     ;
 
 // From https://github.com/antlr/grammars-v4/blob/master/json/JSON.g4

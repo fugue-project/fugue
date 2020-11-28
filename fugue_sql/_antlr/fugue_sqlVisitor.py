@@ -1,4 +1,4 @@
-# Generated from fugue_sql/_antlr/fugue_sql.g4 by ANTLR 4.8
+# Generated from fugue_sql/_antlr/fugue_sql.g4 by ANTLR 4.9
 from antlr4 import *
 if __name__ is not None and "." in __name__:
     from .fugue_sqlParser import fugue_sqlParser
@@ -46,6 +46,16 @@ class fugue_sqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by fugue_sqlParser#fugueSaveAndUseTask.
     def visitFugueSaveAndUseTask(self, ctx:fugue_sqlParser.FugueSaveAndUseTaskContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by fugue_sqlParser#fugueRenameColumnsTask.
+    def visitFugueRenameColumnsTask(self, ctx:fugue_sqlParser.FugueRenameColumnsTaskContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by fugue_sqlParser#fugueAlterColumnsTask.
+    def visitFugueAlterColumnsTask(self, ctx:fugue_sqlParser.FugueAlterColumnsTaskContext):
         return self.visitChildren(ctx)
 
 
@@ -269,6 +279,11 @@ class fugue_sqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by fugue_sqlParser#fugueRenameExpression.
+    def visitFugueRenameExpression(self, ctx:fugue_sqlParser.FugueRenameExpressionContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by fugue_sqlParser#fugueWildSchema.
     def visitFugueWildSchema(self, ctx:fugue_sqlParser.FugueWildSchemaContext):
         return self.visitChildren(ctx)
@@ -306,6 +321,11 @@ class fugue_sqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by fugue_sqlParser#fugueSchemaStructType.
     def visitFugueSchemaStructType(self, ctx:fugue_sqlParser.FugueSchemaStructTypeContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by fugue_sqlParser#fugueRenamePair.
+    def visitFugueRenamePair(self, ctx:fugue_sqlParser.FugueRenamePairContext):
         return self.visitChildren(ctx)
 
 

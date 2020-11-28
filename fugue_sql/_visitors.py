@@ -105,7 +105,15 @@ class _VisitorBase(FugueSQLVisitor):
     def visitFugueJsonNull(self, ctx: fp.FugueJsonKeyContext) -> Any:
         return None
 
-    def visitFugueWildSchema(self, ctx: fp.FugueWildSchemaContext) -> Schema:
+    def visitFugueRenamePair(self, ctx: fp.FugueRenamePairContext) -> Tuple:
+        return self.to_kv(ctx)
+
+    def visitFugueRenameExpression(
+        self, ctx: fp.FugueRenameExpressionContext
+    ) -> Dict[str, str]:
+        return dict(self.collectChildren(ctx, fp.FugueRenamePairContext))
+
+    def visitFugueWildSchema(self, ctx: fp.FugueWildSchemaContext) -> str:
         schema = ",".join(self.collectChildren(ctx, fp.FugueWildSchemaPairContext))
         if schema.count("*") > 1:
             raise FugueSQLSyntaxError(f"invalid {schema} * can appear at most once")
@@ -502,6 +510,22 @@ class _Extensions(_VisitorBase):
             single="single" in data,
             **data.get("params", {}),
         )
+
+    def visitFugueRenameColumnsTask(self, ctx: fp.FugueRenameColumnsTaskContext):
+        data = self.get_dict(ctx, "cols", "df")
+        if "df" in data:
+            df = data["df"]
+        else:
+            df = self.last
+        return df.rename(data["cols"])
+
+    def visitFugueAlterColumnsTask(self, ctx: fp.FugueAlterColumnsTaskContext):
+        data = self.get_dict(ctx, "cols", "df")
+        if "df" in data:
+            df = data["df"]
+        else:
+            df = self.last
+        return df.alter_columns(data["cols"])
 
     def visitFugueDropColumnsTask(self, ctx: fp.FugueDropColumnsTaskContext):
         data = self.get_dict(ctx, "cols", "df")
