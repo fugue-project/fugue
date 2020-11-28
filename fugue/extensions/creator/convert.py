@@ -81,7 +81,7 @@ class _FuncAsCreator(Creator):
         if schema is None:
             schema = parse_output_schema_from_comment(func)
         tr = _FuncAsCreator()
-        tr._wrapper = FunctionWrapper(func, "^e?x*$", "^[dlsp]$")  # type: ignore
+        tr._wrapper = FunctionWrapper(func, "^e?x*z?$", "^[dlspq]$")  # type: ignore
         tr._need_engine = tr._wrapper.input_code.startswith("e")
         tr._need_output_schema = "s" == tr._wrapper.output_code
         tr._output_schema = Schema(schema)

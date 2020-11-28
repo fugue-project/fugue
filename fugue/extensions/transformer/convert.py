@@ -146,7 +146,7 @@ class _FuncAsTransformer(Transformer):
         validation_rules.update(parse_validation_rules_from_comment(func))
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsTransformer()
-        tr._wrapper = FunctionWrapper(func, "^[lsp]x*$", "^[lsp]$")  # type: ignore
+        tr._wrapper = FunctionWrapper(func, "^[lsp]x*z?$", "^[lspq]$")  # type: ignore
         tr._output_schema_arg = schema  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
         return tr
@@ -169,7 +169,7 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
         assert_or_throw(schema is None, "schema must be None for output transformers")
         validation_rules.update(parse_validation_rules_from_comment(func))
         tr = _FuncAsOutputTransformer()
-        tr._wrapper = FunctionWrapper(func, "^[lsp]x*$", "^[lspn]$")  # type: ignore
+        tr._wrapper = FunctionWrapper(func, "^[lsp]x*z?$", "^[lspnq]$")  # type: ignore
         tr._output_schema_arg = None  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
         return tr
@@ -249,7 +249,9 @@ class _FuncAsCoTransformer(CoTransformer):
             )
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsCoTransformer()
-        tr._wrapper = FunctionWrapper(func, "^(c|[lsp]+)x*$", "^[lsp]$")  # type: ignore
+        tr._wrapper = FunctionWrapper(  # type: ignore
+            func, "^(c|[lsp]+)x*z?$", "^[lspq]$"
+        )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
         tr._output_schema_arg = schema  # type: ignore
         tr._validation_rules = {}  # type: ignore
@@ -294,7 +296,7 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
 
         tr = _FuncAsOutputCoTransformer()
         tr._wrapper = FunctionWrapper(  # type: ignore
-            func, "^(c|[lsp]+)x*$", "^[lspn]$"
+            func, "^(c|[lsp]+)x*z?$", "^[lspnq]$"
         )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
         tr._output_schema_arg = None  # type: ignore
