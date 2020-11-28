@@ -43,6 +43,8 @@ def test__to_output_transformer():
     assert isinstance(e, Transformer)
     f = _to_output_transformer("t5")
     assert isinstance(f, Transformer)
+    g = _to_output_transformer("t6")
+    assert isinstance(g, Transformer)
 
 
 def test__to_output_transformer_determinism():
@@ -107,6 +109,10 @@ def t5(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
     for r in df:
         r["b"] = 1
         yield r
+
+
+def t6(df: Iterable[List[Any]], **kwargs) -> None:
+    pass
 
 
 class MockTransformer(Transformer):

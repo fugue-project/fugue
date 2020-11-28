@@ -53,6 +53,7 @@ def test__to_processor():
     assert isinstance(_to_processor(t8), Processor)
     assert isinstance(_to_processor(t9), Processor)
     assert isinstance(_to_processor(t10), Processor)
+    assert isinstance(_to_processor(t11), Processor)
 
 
 def test_run_processor():
@@ -178,6 +179,10 @@ def t9(e: ExecutionEngine, df1: DataFrame, df2: DataFrame) -> pd.DataFrame:
 
 
 def t10(e: ExecutionEngine, df1: DataFrame, df2: DataFrame) -> Iterable[pd.DataFrame]:
+    pass
+
+
+def t11(e: ExecutionEngine, df1: DataFrame, df2: DataFrame, **kwargs) -> Iterable[pd.DataFrame]:
     pass
 
 

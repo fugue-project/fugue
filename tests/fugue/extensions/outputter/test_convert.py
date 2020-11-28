@@ -45,6 +45,7 @@ def test__to_outputter():
     assert isinstance(_to_outputter(t4), Outputter)
     assert isinstance(_to_outputter(t5), Outputter)
     assert isinstance(_to_outputter(t6), Outputter)
+    assert isinstance(_to_outputter(t7), Outputter)
 
 
 def test_run_outputter():
@@ -161,6 +162,10 @@ def t5(e: ExecutionEngine, dfs: DataFrames, a, b) -> None:
 
 
 def t6(dfs: DataFrames) -> None:
+    pass
+
+
+def t7(df7: DataFrames, **kwargs) -> None:
     pass
 
 

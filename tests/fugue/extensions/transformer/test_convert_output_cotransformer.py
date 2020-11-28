@@ -45,6 +45,8 @@ def test__to_output_transformer():
     assert "_x" not in d.__dict__
     e = _to_output_transformer("t4")
     assert isinstance(e, CoTransformer)
+    f = _to_output_transformer("t5")
+    assert isinstance(f, CoTransformer)
 
 
 def test__to_output_transformer_determinism():
@@ -73,6 +75,10 @@ def t1(df1: Iterable[Dict[str, Any]], df2: pd.DataFrame) -> None:
 
 
 def t4(df1: Iterable[List[Any]], df2: pd.DataFrame) -> None:
+    pass
+
+
+def t5(df1: Iterable[List[Any]], df2: pd.DataFrame, **kwargs) -> None:
     pass
 
 

@@ -90,7 +90,9 @@ class _FuncAsOutputter(Outputter):
     ) -> "_FuncAsOutputter":
         validation_rules.update(parse_validation_rules_from_comment(func))
         tr = _FuncAsOutputter()
-        tr._wrapper = FunctionWrapper(func, "^e?(c|[dlsp]+)x*$", "^n$")  # type: ignore
+        tr._wrapper = FunctionWrapper(  # type: ignore
+            func, "^e?(c|[dlsp]+)x*z?$", "^n$"
+        )
         tr._need_engine = tr._wrapper.input_code.startswith("e")
         tr._use_dfs = "c" in tr._wrapper.input_code
         tr._validation_rules = validation_rules
