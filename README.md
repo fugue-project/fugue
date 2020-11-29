@@ -1,4 +1,4 @@
-# Replicate
+# Fugue
 
 [![GitHub release](https://img.shields.io/github/release/fugue-project/fugue.svg)](https://GitHub.com/fugue-project/fugue)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/fugue.svg)](https://pypi.python.org/pypi/fugue/)
@@ -9,27 +9,87 @@
 
 [Join Fugue-Project on Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-he6tcazr-OCkj2GEv~J9UYoZT3FPM4g)
 
-Fugue is a pure abstraction layer that adapts to different computing frameworks
-such as Spark and Dask. It is to unify the core concepts of distributed computing and
-to help you decouple your logic from specific computing frameworks.
+Fugue is a pure abstraction layer that makes code portable across differing computing frameworks such as Pandas, Spark and Dask.
 
-## Installation
+* :rocket: **No need to choose compute frameworks**: Write code once, and then port it over to Pandas, Dask or Spark. Logic is decoupled from frameworks, allowing users to apply the same code to Pandas, Dask, and Spark with minimal changes. The framework adapts to your code.
+* :moneybag: **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Spark when ready. This drastically improves project iteration time and saves cluster expense. Unit tests scale seamlessly from local workflows to distributed computing workflows.
+* :wrench: **Optimizations for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic.
+
+## Who is it for
+
+* Big data practitioners looking to reduce compute costs and increase project velocity
+* Data scientists transitioning from local workflows (Pandas) to distributed computing workflows (Dask or Spark)
+* Data engineers scaling data pipelines to handle bigger data
+
+## Key Features
+
+Here is an example Fugue code snippet that illustrates some of the key features of the framework. A fillna function creates a new column named `filled`, which is the same as the column `val` except that the `None` values are filled.
+
+```python
+from typing import Iterable, Dict, Any, List
+
+# Creating sample data
+data = [
+    ["A", "2020-01-01", 10],
+    ["A", "2020-01-02", None],
+    ["A", "2020-01-03", 30],
+    ["B", "2020-01-01", 20],
+    ["B", "2020-01-02", None],
+    ["B", "2020-01-03", 40]
+]
+schema = "id:str,date:date,val:int"
+
+# schema: *, filled:int
+def fillna(df:Iterable[Dict[str,Any]],value:int=0) -> Iterable[Dict[str,Any]]:
+    for row in df:
+        for col in cols:
+            row["filled"] = (row["val"] or value)
+        yield row
+
+with FugueWorkflow() as dag:
+    df1 = dag.df(data, schema).transform(fillna)
+    df1.show()
 ```
-pip install fugue
+
+### Catch errors faster
+
+Fugue builds a [directed acyclic graph (DAG)](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/dag.html) before running code, allowing users to receive errors faster. This catches more errors before expensive jobs are run on a cluster. For example, mismatches in specified [schema](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/schema_dataframes.html#Schema) will raise errors. In the code above, the schema hint comment is read and the schema is enforced during execution. Schema is required for Fugue [extensions](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/extensions.html).
+
+### Cross-platform execution
+
+Notice that the `fillna` function written above is purely in native Python. The code will still run without Fugue. Fugue lets users write code in Python, and then port the logic to Pandas, Spark, or Dask. Users can focus on the logic, rather than on what engine it will be executed. To bring it to Spark, simply pass the `SparkExecutionEngine` into the `FugueWorkflow` as follows.
+
+```python
+from fugue_spark import SparkExecutionEngine
+
+with FugueWorkflow(SparkExecutionEngine) as dag:
+    df1 = dag.df(data, schema).transform(fillna)
+    df1.show()
 ```
 
-Fugue has these extras:
-* **sql**: to support [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/sql.html)
-* **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
-* **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
+### Spark optimizations
 
-For example a common use case is:
+Fugue makes Spark easier to use for people starting with distributed computing. For example, Fugue uses the constructed DAG to smartly [auto-persist](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/useful_config.html#Auto-Persist) dataframes used multiple times.
+
+### Access to underlying frameworks
+
+Fugue does not restrict users from There is still access for Spark RDDs if they need to be accessed.
+
+### [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/sql.html)
+
+A SQL-based language capable of expressing end-to-end workflows. It can also use functions defined in Python. The `fillna` code above is equivalent to the code below.
+
+```python
+with FugueSQLWorkflow() as dag:
+    df1 = dag.df(data, schema)
+    dag("""
+    SELECT id, date, val, ifnull(val, 1) filled
+    FROM df1
+    PRINT
+    """)
 ```
-pip install fugue[sql,spark]
-```
 
-
-## Docs and Tutorials
+## Get started
 
 To read the complete static docs, [click here](https://fugue.readthedocs.org)
 
@@ -50,40 +110,21 @@ Alternatively, you should get decent performance if running its docker image on 
 docker run -p 8888:8888 fugueproject/tutorials:latest
 ```
 
-## Install
-
+## Installation
 ```
-pip install -U replicate
+pip install fugue
 ```
 
-## Get started
+Fugue has these extras:
+* **sql**: to support [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/sql.html)
+* **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
+* **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
 
-If you prefer **training scripts and the CLI**, [follow the our tutorial to learn how Replicate works](https://replicate.ai/docs/tutorial).
+For example a common use case is:
+```
+pip install fugue[sql,spark]
+```
 
-If you prefer **working in notebooks**, <a href="https://colab.research.google.com/drive/1vjZReg--45P-NZ4j8TXAJFWuepamXc7K" target="_blank">follow our notebook tutorial on Colab</a>.
+## Contributing
 
-If you like to **learn concepts first**, [read our guide about how Replicate works](https://replicate.ai/docs/learn/how-it-works).
-
-## Get involved
-
-Everyone uses version control for software, but it is much less common in machine learning.
-
-Why is this? We spent a year talking to people in the ML community and this is what we found out:
-
-- **Git doesn’t work well with machine learning.** It can’t handle large files, it can’t handle key/value metadata like metrics, and it can’t commit automatically in your training script. There are some solutions for this, but they feel like band-aids.
-- **It should be open source.** There are a number of proprietary solutions, but something so foundational needs to be built by and for the ML community.
-- **It needs to be small, easy to use, and extensible.** We found people struggling to integrate with “AI Platforms”. We want to make a tool that does one thing well and can be combined with other tools to produce the system you need.
-
-We think the ML community needs a good version control system. But, version control systems are complex, and to make this a reality we need your help.
-
-Have you strung together some shell scripts to build this for yourself? Are you interested in the problem of making machine learning reproducible?
-
-Here are some ways you can help out:
-
-- [Join our Slack to chat to us and other contributors.](https://discord.gg/QmzJApGjyE)
-- [Have your say about what you want from a version control system on our public roadmap.](https://github.com/replicate/replicate/projects/1)
-- [Try your hand at one of our issues labelled "help wanted".](https://github.com/replicate/replicate/labels/help%20wanted)
-
-## Contributing & development environment
-
-[Take a look at our contributing instructions.](CONTRIBUTING.md)
+Feel free to message us on [Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ). We also have [contributing instructions](CONTRIBUTING.md).
