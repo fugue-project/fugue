@@ -7,29 +7,108 @@
 [![Coverage Status](https://coveralls.io/repos/github/fugue-project/fugue/badge.svg)](https://coveralls.io/github/fugue-project/fugue)
 [![Doc](https://readthedocs.org/projects/fugue/badge)](https://fugue.readthedocs.org)
 
-[Join Fugue-Project on Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-he6tcazr-OCkj2GEv~J9UYoZT3FPM4g)
+[Have questions? Chat with us on Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ)
 
-Fugue is a pure abstraction layer that adapts to different computing frameworks
-such as Spark and Dask. It is to unify the core concepts of distributed computing and
-to help you decouple your logic from specific computing frameworks.
+Fugue is a pure abstraction layer that makes code portable across differing computing frameworks such as Pandas, Spark and Dask.
 
-## Installation
+* :rocket: **Framework-agnostic code**: Write code once in native Python. Fugue makes it runnable on Pandas, Dask or Spark with minimal changes. Logic and code is decoupled from frameworks, even from Fugue itself. Fugue adapts user's code, as well as the underlying computing frameworks.
+* :moneybag: **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and saves cluster expense.  This lessens the frequency spinning up clusters to test code, and reduces expensive mistakes.
+* :wrench: **Friendlier interface for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic. A lot of Fugue users see performance gains in their Spark jobs. Fugue SQL extends Spark SQL to be a programming language.
+* :heavy_check_mark: **Highly testable code**: Fugue naturally makes logic more testable because the code is in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
+
+## Who is it for?
+
+* Big data practitioners looking to reduce compute costs and increase project velocity
+* Data practitioners who keep switching between data processing frameworks (Pandas, Spark, Dask)
+* Data engineers scaling data pipelines to handle bigger data in a consistent and reliable way
+* Data practitioners looking to write more testable code
+* Spark/Dask users who want to have an easier experience working with distributed computing
+* People who love using SQL. Fugue SQL extends standard SQL to be a programming language
+
+## Key Features
+
+Here is an example Fugue code snippet that illustrates some of the key features of the framework. A fillna function creates a new column named `filled`, which is the same as the column `value` except that the `None` values are filled.
+
+```python
+from typing import Iterable, Dict, Any, List
+
+# Creating sample data
+data = [
+    ["A", "2020-01-01", 10],
+    ["A", "2020-01-02", None],
+    ["A", "2020-01-03", 30],
+    ["B", "2020-01-01", 20],
+    ["B", "2020-01-02", None],
+    ["B", "2020-01-03", 40]
+]
+schema = "id:str,date:date,value:int"
+
+# schema: *, filled:int
+def fillna(df:Iterable[Dict[str,Any]],value:int=0) -> Iterable[Dict[str,Any]]:
+    for row in df:
+        for col in cols:
+            row["filled"] = (row["value"] or value)
+        yield row
+
+with FugueWorkflow() as dag:
+    df1 = dag.df(data, schema).transform(fillna)
+    df1.show()
 ```
-pip install fugue
+
+### Catch errors faster
+
+Fugue builds a [directed acyclic graph (DAG)](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/dag.html) before running code, allowing users to receive errors faster. This catches more errors before expensive jobs are run on a cluster. For example, mismatches in specified [schema](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/schema_dataframes.html#Schema) will raise errors. In the code above, the schema hint comment is read and the schema is enforced during execution. Schema is required for Fugue [extensions](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/extensions.html).
+
+### Cross-platform execution
+
+Notice that the `fillna` function written above is purely in native Python. The code will still run without Fugue. Fugue lets users write code in Python, and then port the logic to Pandas, Spark, or Dask. Users can focus on the logic, rather than on what engine it will be executed. To bring it to Spark, simply pass the `SparkExecutionEngine` into the `FugueWorkflow` as follows.
+
+```python
+from fugue_spark import SparkExecutionEngine
+
+with FugueWorkflow(SparkExecutionEngine) as dag:
+    df1 = dag.df(data, schema).transform(fillna)
+    df1.show()
 ```
 
-Fugue has these extras:
-* **sql**: to support [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/sql.html)
-* **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
-* **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
+Similarly for Dask, we can pass the `DaskExecutionEngine` into the `FugueWorkflow` instead.
 
-For example a common use case is:
+### Spark optimizations
+
+Fugue makes Spark easier to use for people starting with distributed computing. For example, Fugue uses the constructed DAG to smartly [auto-persist](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/useful_config.html#Auto-Persist) dataframes used multiple times. This often speeds up Spark jobs of users.
+
+### Access to framework configuration
+
+Even if Fugue tries to simplify the experience of using distributed computing frameworks, it does not restrict users from editing configuration when needed. For example, the Spark session can be configured with the following:
+
+```python
+from pyspark.sql import SparkSession
+from fugue_spark import SparkExecutionEngine
+
+spark_session = (SparkSession
+                 .builder
+                 .config("spark.executor.cores",4)
+                 .config("fugue.dummy","dummy")
+                 .getOrCreate())
+
+engine = SparkExecutionEngine(spark_session, {"additional_conf":"abc"})
 ```
-pip install fugue[sql,spark]
+
+### [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/sql.html)
+
+A SQL-based language capable of expressing end-to-end workflows. The `fillna` code above is equivalent to the code below. This is how to use a Python-defined transformer along with the standard SQL `SELECT` statement.
+
+```python
+with FugueSQLWorkflow() as dag:
+    df1 = dag.df(data, schema)
+    dag("""
+    SELECT id, date, value FROM df1
+    TRANSFORM USING fillna (value=10)
+    PRINT
+    """)
 ```
 
-
-## Docs and Tutorials
+## Get started
 
 To read the complete static docs, [click here](https://fugue.readthedocs.org)
 
@@ -50,121 +129,21 @@ Alternatively, you should get decent performance if running its docker image on 
 docker run -p 8888:8888 fugueproject/tutorials:latest
 ```
 
-## Contributing Code
-
-There are three steps to setting-up a development environment
-1. Create a virtual environment with your choice of environment manager
-2. Install the requirements
-3. Install the git hook scripts
-
-### Creating an environment
-
-Below are examples for how to create and activate an environment in virtualenv and conda.
-
-**Using virtualenv**
+## Installation
 ```
-python3 -m venv venv
-. venv/bin/activate
-
+pip install fugue
 ```
 
-**Using conda**
-```
-conda create --name fugue-dev
-conda activate fugue-dev
-```
+Fugue has these extras:
+* **sql**: to support [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/sql.html)
+* **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
+* **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
 
-### Installing requirements
-
-The Fugue repo has a Makefile that can be used to install the requirements. It supports installation in both
-pip and conda. Instructions to install `make` for Windows users can be found later.
-
-**Pip install requirements**
+For example a common use case is:
 ```
-make setupinpip
+pip install fugue[sql,spark]
 ```
 
-**Conda install requirements**
+## Contributing
 
-```
-make setupinconda
-```
-
-**Manually install requirements**
-
-For Windows users who don't have the `make` command, you can use your package manager of choice. For pip:
-
-```
-pip3 install -r requirements.txt
-```
-
-For Anaconda users, first install pip in the newly created environment. If pip install is used without installing pip, conda will use
-the system-wide pip
-
-```
-conda install pip
-pip install -r requirements.txt
-```
-
-**Notes for Windows Users**
-
-For Windows users, you will need to download Microsoft C++ Build Tools found [here](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-
-`make` is a GNU command that does not come with Windows. An installer can be downloaded [here](http://gnuwin32.sourceforge.net/packages/make.htm)
-After installing, add the bin to your PATH environment variable.
-
-### Installing git hook scripts
-
-Fugue has pre-commit hooks to check if code is appropriate to be committed. The previous `make` command installs this.
-If you installed the requirements manually, install the git hook scripts with:
-```
-pre-commit install
-```
-
-
-## Update History
-
-### 0.4.7
-
-* Add hook to print/show, see [this](https://github.com/fugue-project/fugue/issues/104).
-
-### 0.4.6
-
-* Fixed import [issue](https://github.com/fugue-project/fugue/issues/99) with OutputTransformer
-* Added [fillna](https://github.com/fugue-project/fugue/issues/95) as a built-in transform, including SQL implementation
-
-### 0.4.5
-
-* [Extension validation](https://github.com/fugue-project/fugue/issues/81) interface and interfaceless syntax
-* Passing dataframes cross workflow ([yield](https://github.com/fugue-project/fugue/pull/94))
-* [OUT TRANSFORM](https://github.com/fugue-project/fugue/issues/82) to transform and finish a branch of execution
-* Fixed a PandasDataFrame datetime [issue](https://github.com/fugue-project/triad/issues/59) that only happened in transformer interface approach
-
-### 0.4.3
-
-* Unified checkpoints and persist
-* Drop columns and na implementations in both programming and sql interfaces
-* Presort takes array as input
-* Fixed jinja template rendering issue
-* Fixed path format detection bug
-
-### 0.4.2
-
-* Require pandas 1.0 because of parquet schema
-* Improved Fugue SQL extension parsing logic
-* Doc for contributors to setup their environment
-
-### 0.4.1
-
-* Added set operations to programming interface: `union`, `subtract`, `intersect`
-* Added `distinct` to programming interface
-* Ensured partitioning follows SQL convention: groups with null keys are NOT removed
-* Switched `join`, `union`, `subtract`, `intersect`, `distinct` to QPD implementations, so they follow SQL convention
-* Set operations in Fugue SQL can directly operate on Fugue statemens (e.g. `TRANSFORM USING t1 UNION TRANSFORM USING t2`)
-* Fixed bugs
-* Added onboarding document for contributors
-
-### <=0.4.0
-
-* Main features of Fugue core and Fugue SQL
-* Support backends: Pandas, Spark and Dask
+Feel free to message us on [Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ). We also have [contributing instructions](CONTRIBUTING.md).
