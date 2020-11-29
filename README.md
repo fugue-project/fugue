@@ -15,10 +15,10 @@ Fugue is a pure abstraction layer that makes code portable across differing comp
 * :moneybag: **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and saves cluster expense. Unit tests scale seamlessly from local workflows to distributed computing workflows. This lessens the frequency spinning up clusters to test code.
 * :wrench: **Friendlier interface for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic. A lot of Fugue users see performance gains in their Spark jobs.
 
-## Who is it for
+## Who is it for?
 
 * Big data practitioners looking to reduce compute costs and increase project velocity
-* Data scientists transitioning from local workflows (Pandas) to distributed computing workflows (Dask or Spark)
+* Data practitioners who keep switching between data processing frameworks (Pandas, Spark, Dask)
 * Data engineers scaling data pipelines to handle bigger data in a consistent and reliable way
 * Spark/Dask users who want to have an easier experience working with distributed computing
 
