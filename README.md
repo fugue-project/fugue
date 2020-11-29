@@ -68,9 +68,11 @@ with FugueWorkflow(SparkExecutionEngine) as dag:
     df1.show()
 ```
 
+Similarly for Dask, we can pass the `DaskExecutionEngine` into the `FugueWorkflow` instead.
+
 ### Spark optimizations
 
-Fugue makes Spark easier to use for people starting with distributed computing. For example, Fugue uses the constructed DAG to smartly [auto-persist](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/useful_config.html#Auto-Persist) dataframes used multiple times.
+Fugue makes Spark easier to use for people starting with distributed computing. For example, Fugue uses the constructed DAG to smartly [auto-persist](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/useful_config.html#Auto-Persist) dataframes used multiple times. This often speeds up Spark jobs of users.
 
 ### Access to underlying frameworks
 
