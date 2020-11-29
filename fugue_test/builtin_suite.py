@@ -905,6 +905,9 @@ class BuiltInTests(object):
                 )
 
                 a[["x"]].rename(x="xx").assert_eq(ArrayDataFrame([[1], [2]], "xx:long"))
+                a.alter_columns("x:str").assert_eq(
+                    ArrayDataFrame([["1", 10], ["2", 20]], "x:str,y:long")
+                )
 
         def test_datetime_in_workflow(self):
             # schema: a:date,b:datetime

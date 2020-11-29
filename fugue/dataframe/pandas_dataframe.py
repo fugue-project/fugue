@@ -1,16 +1,16 @@
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
+import pyarrow as pa
 from fugue.dataframe.dataframe import (
     DataFrame,
     LocalBoundedDataFrame,
-    _enforce_type,
     _input_schema,
 )
+from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
-from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 
 
 class PandasDataFrame(LocalBoundedDataFrame):
@@ -63,7 +63,10 @@ class PandasDataFrame(LocalBoundedDataFrame):
             elif isinstance(df, Iterable):
                 schema = _input_schema(schema).assert_not_empty()
                 pdf = pd.DataFrame(df, columns=schema.names)
-                pdf = _enforce_type(pdf, schema)
+                pdf = PD_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True)
+                if PD_UTILS.empty(pdf):
+                    for k, v in schema.items():
+                        pdf[k] = pdf[k].astype(v.type.to_pandas_dtype())
                 apply_schema = False
             else:
                 raise ValueError(f"{df} is incompatible with PandasDataFrame")
@@ -103,13 +106,37 @@ class PandasDataFrame(LocalBoundedDataFrame):
             self.native[schema.names], schema, pandas_df_wrapper=True
         )
 
-    def rename(self, columns: Dict[str, str]) -> "DataFrame":
+    def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
             schema = self.schema.rename(columns)
         except Exception as e:
             raise FugueDataFrameOperationError(e)
         df = self.native.rename(columns=columns)
         return PandasDataFrame(df, schema, pandas_df_wrapper=True)
+
+    def alter_columns(self, columns: Any) -> DataFrame:
+        new_schema = self._get_altered_schema(columns)
+        if new_schema == self.schema:
+            return self
+        new_pdf = pd.DataFrame(self.native.to_dict(orient="series"))
+        for k, v in new_schema.items():
+            if not v.type.equals(self.schema[k].type):
+                old_type = self.schema[k].type
+                new_type = v.type
+                # int -> str
+                if pa.types.is_integer(old_type) and pa.types.is_string(new_type):
+                    series = new_pdf[k]
+                    ns = series.isnull()
+                    series = series.fillna(0).astype(int).astype(str)
+                    new_pdf[k] = series.mask(ns, None)
+                # bool -> str
+                elif pa.types.is_boolean(old_type) and pa.types.is_string(new_type):
+                    series = new_pdf[k]
+                    ns = series.isnull()
+                    positive = series != 0
+                    new_pdf[k] = "False"
+                    new_pdf[k] = new_pdf[k].mask(positive, "True").mask(ns, None)
+        return PandasDataFrame(new_pdf, new_schema)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
@@ -143,4 +170,4 @@ class PandasDataFrame(LocalBoundedDataFrame):
                 ValueError(f"Pandas datafame column count doesn't match {schema}"),
             )
             pdf.columns = schema.names
-        return _enforce_type(pdf, schema), schema
+        return PD_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True), schema

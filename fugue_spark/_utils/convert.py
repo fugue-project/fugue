@@ -54,7 +54,15 @@ def to_cast_expression(
         )
         if schema1[i].dataType != schema2[i].dataType:
             type2 = schema2[i].dataType.simpleString()
-            expr.append(f"CAST({schema1[i].name} AS {type2}) {schema2[i].name}")
+            if isinstance(schema1[i].dataType, pt.FractionalType) and isinstance(
+                schema2[i].dataType, pt.StringType
+            ):
+                expr.append(
+                    f"CAST(IF(isnan({schema1[i].name}), NULL, {schema1[i].name})"
+                    f" AS {type2}) {schema2[i].name}"
+                )
+            else:
+                expr.append(f"CAST({schema1[i].name} AS {type2}) {schema2[i].name}")
             has_cast = True
         else:
             if schema1[i].name != schema2[i].name:

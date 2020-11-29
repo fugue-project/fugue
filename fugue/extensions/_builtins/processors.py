@@ -168,13 +168,29 @@ class Zip(Processor):
 
 
 class Rename(Processor):
+    def validate_on_compile(self):
+        self.params.get_or_throw("columns", dict)
+
     def process(self, dfs: DataFrames) -> DataFrame:
         assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
         columns = self.params.get_or_throw("columns", dict)
         return dfs[0].rename(columns)
 
 
+class AlterColumns(Processor):
+    def validate_on_compile(self):
+        Schema(self.params.get_or_throw("columns", object))
+
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        columns = self.params.get_or_throw("columns", object)
+        return dfs[0].alter_columns(columns)
+
+
 class DropColumns(Processor):
+    def validate_on_compile(self):
+        self.params.get_or_throw("columns", list)
+
     def process(self, dfs: DataFrames) -> DataFrame:
         assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
         if_exists = self.params.get("if_exists", False)
@@ -185,6 +201,9 @@ class DropColumns(Processor):
 
 
 class SelectColumns(Processor):
+    def validate_on_compile(self):
+        self.params.get_or_throw("columns", list)
+
     def process(self, dfs: DataFrames) -> DataFrame:
         assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
         columns = self.params.get_or_throw("columns", list)

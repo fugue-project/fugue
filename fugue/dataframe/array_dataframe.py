@@ -72,12 +72,19 @@ class ArrayDataFrame(LocalBoundedDataFrame):
     def _select_cols(self, keys: List[Any]) -> DataFrame:
         return ArrayDataFrame(self, self.schema.extract(keys))
 
-    def rename(self, columns: Dict[str, str]) -> "DataFrame":
+    def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
             schema = self.schema.rename(columns)
         except Exception as e:
             raise FugueDataFrameOperationError(e)
         return ArrayDataFrame(self.native, schema)
+
+    def alter_columns(self, columns: Any) -> DataFrame:
+        new_schema = self._get_altered_schema(columns)
+        if new_schema == self.schema:
+            return self
+        temp = ArrayDataFrame(self.native, new_schema).as_array(type_safe=True)
+        return ArrayDataFrame(temp, new_schema)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False

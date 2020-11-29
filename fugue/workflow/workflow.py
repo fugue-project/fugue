@@ -18,6 +18,7 @@ from fugue.exceptions import (
     FugueWorkflowRuntimeError,
 )
 from fugue.extensions._builtins import (
+    AlterColumns,
     AssertEqual,
     AssertNotEqual,
     CreateData,
@@ -772,6 +773,26 @@ class WorkflowDataFrame(DataFrame):
             m.update(a)
         m.update(kwargs)
         df = self.workflow.process(self, using=Rename, params=dict(columns=m))
+        return self._to_self_type(df)
+
+    def alter_columns(self: TDF, columns: Any) -> TDF:
+        """Change column types
+
+        :param columns: |SchemaLikeObject|
+        :return: a new dataframe with the new column types
+        :rtype: :class:`~.WorkflowDataFrame`
+
+        :Notice:
+
+        The output dataframe will not change the order of original schema.
+
+        :Examples:
+
+        >>> df.alter_columns("a:int,b;str")
+        """
+        df = self.workflow.process(
+            self, using=AlterColumns, params=dict(columns=columns)
+        )
         return self._to_self_type(df)
 
     def zip(

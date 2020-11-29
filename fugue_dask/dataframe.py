@@ -2,6 +2,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import dask.dataframe as pd
 import pandas
+import pyarrow as pa
 from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
@@ -129,13 +130,42 @@ class DaskDataFrame(DataFrame):
     def as_pandas(self) -> pandas.DataFrame:
         return self.native.compute().reset_index(drop=True)
 
-    def rename(self, columns: Dict[str, str]) -> "DataFrame":
+    def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
             schema = self.schema.rename(columns)
         except Exception as e:
             raise FugueDataFrameOperationError(e)
         df = self.native.rename(columns=columns)
         return DaskDataFrame(df, schema, type_safe=False)
+
+    def alter_columns(self, columns: Any) -> DataFrame:
+        new_schema = self._get_altered_schema(columns)
+        if new_schema == self.schema:
+            return self
+        new_pdf = self.native.assign()
+        for k, v in new_schema.items():
+            if not v.type.equals(self.schema[k].type):
+                old_type = self.schema[k].type
+                new_type = v.type
+                # int -> str
+                if pa.types.is_integer(old_type) and pa.types.is_string(new_type):
+                    series = new_pdf[k]
+                    ns = series.isnull()
+                    series = series.fillna(0).astype(int).astype(str)
+                    new_pdf[k] = series.mask(ns, None)
+                # bool -> str
+                elif pa.types.is_boolean(old_type) and pa.types.is_string(new_type):
+                    series = new_pdf[k]
+                    ns = series.isnull()
+                    positive = series != 0
+                    new_pdf[k] = "False"
+                    new_pdf[k] = new_pdf[k].mask(positive, "True").mask(ns, None)
+                else:
+                    series = new_pdf[k]
+                    ns = series.isnull()
+                    series = series.astype(str)
+                    new_pdf[k] = series.mask(ns, None)
+        return DaskDataFrame(new_pdf, new_schema, type_safe=True)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False

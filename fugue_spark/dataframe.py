@@ -110,7 +110,7 @@ class SparkDataFrame(DataFrame):
     def as_pandas(self) -> pd.DataFrame:
         return self.native.toPandas()
 
-    def rename(self, columns: Dict[str, str]) -> "SparkDataFrame":
+    def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
             self.schema.rename(columns)
         except Exception as e:
@@ -119,6 +119,12 @@ class SparkDataFrame(DataFrame):
         for o, n in columns.items():
             df = df.withColumnRenamed(o, n)
         return SparkDataFrame(df)
+
+    def alter_columns(self, columns: Any) -> DataFrame:
+        new_schema = self._get_altered_schema(columns)
+        if new_schema == self.schema:
+            return self
+        return SparkDataFrame(self.native, new_schema)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
