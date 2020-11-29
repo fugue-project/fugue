@@ -11,16 +11,19 @@
 
 Fugue is a pure abstraction layer that makes code portable across differing computing frameworks such as Pandas, Spark and Dask.
 
-* :rocket: **No need to choose compute frameworks**: Write code once, and then port it over to Pandas, Dask or Spark. Logic is decoupled from frameworks, allowing users to apply the same code to Pandas, Dask, and Spark with minimal changes. The framework adapts to your code.
-* :moneybag: **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and saves cluster expense. Unit tests scale seamlessly from local workflows to distributed computing workflows. This lessens the frequency spinning up clusters to test code.
-* :wrench: **Friendlier interface for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic. A lot of Fugue users see performance gains in their Spark jobs.
+* :rocket: **Framework-agnostic code**: Write code once in native Python. Fugue makes it runnable on Pandas, Dask or Spark with minimal changes. Logic and code is decoupled from frameworks, even from Fugue itself. Fugue adapts user's code, as well as the underlying computing frameworks.
+* :moneybag: **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and saves cluster expense.  This lessens the frequency spinning up clusters to test code, and reduces expensive mistakes.
+* :wrench: **Friendlier interface for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic. A lot of Fugue users see performance gains in their Spark jobs. Fugue SQL extends Spark SQL to be a programming language. 
+* :heavy_check_mark: **Highly testable code**: Fugue naturally makes logic more testable because the code is in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
 
 ## Who is it for?
 
 * Big data practitioners looking to reduce compute costs and increase project velocity
 * Data practitioners who keep switching between data processing frameworks (Pandas, Spark, Dask)
 * Data engineers scaling data pipelines to handle bigger data in a consistent and reliable way
+* Data practitioners looking to write more testable code
 * Spark/Dask users who want to have an easier experience working with distributed computing
+* People who love using SQL. Fugue SQL extends standard SQL to be a programming language
 
 ## Key Features
 
@@ -74,9 +77,9 @@ Similarly for Dask, we can pass the `DaskExecutionEngine` into the `FugueWorkflo
 
 Fugue makes Spark easier to use for people starting with distributed computing. For example, Fugue uses the constructed DAG to smartly [auto-persist](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/useful_config.html#Auto-Persist) dataframes used multiple times. This often speeds up Spark jobs of users.
 
-### Access to underlying frameworks
+### Access to framework configuration
 
-Even if Fugue tries to simplify the experience of using distributed computing frameworks, it does not restrict users from accessing them when needed. For example, the Spark session can be configured with the following:
+Even if Fugue tries to simplify the experience of using distributed computing frameworks, it does not restrict users from editing configuration when needed. For example, the Spark session can be configured with the following:
 
 ```python
 from pyspark.sql import SparkSession
@@ -93,14 +96,14 @@ engine = SparkExecutionEngine(spark_session, {"additional_conf":"abc"})
 
 ### [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/sql.html)
 
-A SQL-based language capable of expressing end-to-end workflows. It can also use functions defined in Python. The `fillna` code above is equivalent to the code below.
+A SQL-based language capable of expressing end-to-end workflows. The `fillna` code above is equivalent to the code below. This is how to use a Python-defined transformer along with the standard SQL `SELECT` statement.
 
 ```python
 with FugueSQLWorkflow() as dag:
     df1 = dag.df(data, schema)
     dag("""
-    SELECT id, date, value, ifnull(value, 1) filled
-    FROM df1
+    SELECT id, date, value FROM df1
+    TRANSFORM USING fillna (value=10)
     PRINT
     """)
 ```
