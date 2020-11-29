@@ -24,7 +24,7 @@ Fugue is a pure abstraction layer that makes code portable across differing comp
 
 ## Key Features
 
-Here is an example Fugue code snippet that illustrates some of the key features of the framework. A fillna function creates a new column named `filled`, which is the same as the column `val` except that the `None` values are filled.
+Here is an example Fugue code snippet that illustrates some of the key features of the framework. A fillna function creates a new column named `filled`, which is the same as the column `value` except that the `None` values are filled.
 
 ```python
 from typing import Iterable, Dict, Any, List
@@ -38,13 +38,13 @@ data = [
     ["B", "2020-01-02", None],
     ["B", "2020-01-03", 40]
 ]
-schema = "id:str,date:date,val:int"
+schema = "id:str,date:date,value:int"
 
 # schema: *, filled:int
 def fillna(df:Iterable[Dict[str,Any]],value:int=0) -> Iterable[Dict[str,Any]]:
     for row in df:
         for col in cols:
-            row["filled"] = (row["val"] or value)
+            row["filled"] = (row["value"] or value)
         yield row
 
 with FugueWorkflow() as dag:
@@ -97,7 +97,7 @@ A SQL-based language capable of expressing end-to-end workflows. It can also use
 with FugueSQLWorkflow() as dag:
     df1 = dag.df(data, schema)
     dag("""
-    SELECT id, date, val, ifnull(val, 1) filled
+    SELECT id, date, value, ifnull(value, 1) filled
     FROM df1
     PRINT
     """)
