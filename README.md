@@ -13,7 +13,7 @@ Fugue is a pure abstraction layer that makes code portable across differing comp
 
 * :rocket: **Framework-agnostic code**: Write code once in native Python. Fugue makes it runnable on Pandas, Dask or Spark with minimal changes. Logic and code is decoupled from frameworks, even from Fugue itself. Fugue adapts user's code, as well as the underlying computing frameworks.
 * :moneybag: **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and saves cluster expense.  This lessens the frequency spinning up clusters to test code, and reduces expensive mistakes.
-* :wrench: **Friendlier interface for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic. A lot of Fugue users see performance gains in their Spark jobs. Fugue SQL extends Spark SQL to be a programming language. 
+* :wrench: **Friendlier interface for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic. A lot of Fugue users see performance gains in their Spark jobs. Fugue SQL extends Spark SQL to be a programming language.
 * :heavy_check_mark: **Highly testable code**: Fugue naturally makes logic more testable because the code is in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
 
 ## Who is it for?
