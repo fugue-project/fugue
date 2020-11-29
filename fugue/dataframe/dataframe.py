@@ -189,7 +189,7 @@ class DataFrame(ABC):
 
     @abstractmethod
     def alter_columns(self, columns: Any) -> "DataFrame":  # pragma: no cover
-        """Rename the dataframe using a mapping dict
+        """Change column types
 
         :param columns: |SchemaLikeObject|,
           all columns should be contained by the dataframe schema

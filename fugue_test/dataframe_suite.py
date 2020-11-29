@@ -246,6 +246,8 @@ class DataFrameTests(object):
             df = self.df([["a", True], ["b", False], ["c", None]], "a:str,b:bool")
             ndf = df.alter_columns("b:str")
             actual = ndf.as_array(type_safe=True)
+            # Capitalization doesn't matter
+            # and dataframes don't need to be consistent on capitalization
             expected1 = [["a", "True"], ["b", "False"], ["c", None]]
             expected2 = [["a", "true"], ["b", "false"], ["c", None]]
             assert expected1 == actual or expected2 == actual
@@ -331,3 +333,13 @@ class DataFrameTests(object):
                 [3, None],
             ] == ndf.as_array(type_safe=True)
             assert ndf.schema == "a:int,b:datetime"
+
+        def test_alter_columns_invalid(self):
+            # invalid conversion
+            with raises(Exception):
+                df = self.df(
+                    [["1", "x"], ["2", "y"], ["3", None]],
+                    "a:str,b:str",
+                )
+                ndf = df.alter_columns("b:int")
+                ndf.show()  # lazy dataframes will force to materialize
