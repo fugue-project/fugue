@@ -19,18 +19,17 @@ There are 4 main parts to the codebase
 
 * fugue - This contains the core of Fugue, including the fundamental classes such as DataFrames, ExecutionEngine, and Extensions.
 
-* fugue_dask - Dask specific components (DataFrame and ExecutionEngine)
+* fugue_sql - Fugue SQL is a Domain Specific Language (DSL) for Fugue
 
 * fugue_spark - Spark specific components (DataFrame and ExecutionEngine)
 
-* fugue_sql - Fugue SQL grammar and execution
-
+* fugue_dask - Dask specific components (DataFrame and ExecutionEngine)
 
 There are 2 main parts to tests
 
-* fugue_test - These are tests that need to be run across different execution engines (Pandas, Spark, Dask)
+* fugue_test - Contains suites for testing (dataframe, execution engine). These unify the concepts of distributed computing and ensure consistent behavior across different execution engines (Pandas, Spark, Dask).
 
-* tests - Tests that are execution engine specific.
+* tests - Contains all tests for the repository
 
 Lastly, there is documentation. Note that tutorials live in another [repository](https://github.com/fugue-project/tutorials).
 
