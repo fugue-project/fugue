@@ -7,7 +7,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/fugue-project/fugue/badge.svg)](https://coveralls.io/github/fugue-project/fugue)
 [![Doc](https://readthedocs.org/projects/fugue/badge)](https://fugue.readthedocs.org)
 
-[Join Fugue-Project on Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-he6tcazr-OCkj2GEv~J9UYoZT3FPM4g)
+[Join Fugue-Project on Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ)
 
 Fugue is a pure abstraction layer that makes code portable across differing computing frameworks such as Pandas, Spark and Dask.
 
@@ -19,7 +19,8 @@ Fugue is a pure abstraction layer that makes code portable across differing comp
 
 * Big data practitioners looking to reduce compute costs and increase project velocity
 * Data scientists transitioning from local workflows (Pandas) to distributed computing workflows (Dask or Spark)
-* Data engineers scaling data pipelines to handle bigger data
+* Data engineers scaling data pipelines to handle bigger data in a consistent and reliable way
+* Spark/Dask users who want to have an easier experience working with distributed computing
 
 ## Key Features
 
@@ -73,7 +74,20 @@ Fugue makes Spark easier to use for people starting with distributed computing. 
 
 ### Access to underlying frameworks
 
-Fugue does not restrict users from There is still access for Spark RDDs if they need to be accessed.
+Even if Fugue tries to simplify the experience of using distributed computing frameworks, it does not restrict users from accessing them when needed. For example, the Spark session can be configured with the following:
+
+```python
+from pyspark.sql import SparkSession
+from fugue_spark import SparkExecutionEngine
+
+spark_session = (SparkSession
+                 .builder
+                 .config("spark.executor.cores",4)
+                 .config("fugue.dummy","dummy")
+                 .getOrCreate())
+
+engine = SparkExecutionEngine(spark_session, {"additional_conf":"abc"})
+```
 
 ### [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/sql.html)
 
