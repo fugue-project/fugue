@@ -7,13 +7,13 @@
 [![Coverage Status](https://coveralls.io/repos/github/fugue-project/fugue/badge.svg)](https://coveralls.io/github/fugue-project/fugue)
 [![Doc](https://readthedocs.org/projects/fugue/badge)](https://fugue.readthedocs.org)
 
-[Join Fugue-Project on Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ)
+[Have questions? Chat with us on Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ)
 
 Fugue is a pure abstraction layer that makes code portable across differing computing frameworks such as Pandas, Spark and Dask.
 
 * :rocket: **No need to choose compute frameworks**: Write code once, and then port it over to Pandas, Dask or Spark. Logic is decoupled from frameworks, allowing users to apply the same code to Pandas, Dask, and Spark with minimal changes. The framework adapts to your code.
-* :moneybag: **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Spark when ready. This drastically improves project iteration time and saves cluster expense. Unit tests scale seamlessly from local workflows to distributed computing workflows.
-* :wrench: **Optimizations for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic.
+* :moneybag: **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and saves cluster expense. Unit tests scale seamlessly from local workflows to distributed computing workflows. This lessens the frequency spinning up clusters to test code.
+* :wrench: **Friendlier interface for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic.
 
 ## Who is it for
 
