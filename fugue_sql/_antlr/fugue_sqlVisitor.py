@@ -34,6 +34,11 @@ class fugue_sqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by fugue_sqlParser#fugueEngineSpecificQueryTask.
+    def visitFugueEngineSpecificQueryTask(self, ctx:fugue_sqlParser.FugueEngineSpecificQueryTaskContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by fugue_sqlParser#fugueTransformTask.
     def visitFugueTransformTask(self, ctx:fugue_sqlParser.FugueTransformTaskContext):
         return self.visitChildren(ctx)
@@ -111,6 +116,11 @@ class fugue_sqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by fugue_sqlParser#fugueOutputTransformTask.
     def visitFugueOutputTransformTask(self, ctx:fugue_sqlParser.FugueOutputTransformTaskContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by fugue_sqlParser#fugueSqlEngine.
+    def visitFugueSqlEngine(self, ctx:fugue_sqlParser.FugueSqlEngineContext):
         return self.visitChildren(ctx)
 
 

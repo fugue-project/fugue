@@ -6,6 +6,7 @@ from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.extensions import OutputTransformer
 from fugue.extensions.transformer.convert import _to_output_transformer
 from fugue.workflow.workflow import FugueWorkflow
+from fugue import SqliteEngine
 from pytest import raises
 from triad.collections.schema import Schema
 
@@ -360,6 +361,52 @@ def test_select():
     # persist & checkpoint & broadcast
     select * from a persist broadcast print
     select * from a persist (level="a.b.c") broadcast print
+    """,
+        dag,
+    )
+
+
+def test_select_with():
+    dag = FugueWorkflow()
+    dag.select(
+        "with x as ( select * from a ) , y as ( select * from b ) "
+        "select * from x union select * from y"
+    )
+    assert_eq(
+        """
+    with
+        x as (select * from a),
+        y as (select * from b)
+    select *   from x union select * from y
+    
+    """,
+        dag,
+    )
+
+
+def test_select_plus_engine():
+    class MockEngine(SqliteEngine):
+        def __init__(self, execution_engine, p: int = 0):
+            super().__init__(execution_engine)
+            self.p = p
+
+    dag = FugueWorkflow()
+    dag.select("select * from xyz", sql_engine=MockEngine)
+    dag.select("select * from xyz", sql_engine=MockEngine, sql_engine_params={"p": 2})
+
+    temp = dag.select("select a , b from a", sql_engine=MockEngine)
+    temp.transform(mock_transformer2)
+
+    temp = dag.select("select aa , bb from a", sql_engine=MockEngine)
+    dag.select("select aa + bb as t from", temp)
+    assert_eq(
+        """
+    connect MockEngine select * from xyz
+    connect MockEngine(p=2) select * from xyz
+    
+    transform (connect MockEngine select a,b from a) using mock_transformer2
+
+    select aa+bb as t from (connect MockEngine select aa,bb from a)
     """,
         dag,
     )

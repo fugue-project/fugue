@@ -1,6 +1,6 @@
 from collections import defaultdict
 from threading import RLock
-from typing import Any, Dict, Iterable, List, Optional, Set, TypeVar
+from typing import Any, Dict, Iterable, List, Optional, Set, Type, TypeVar
 from uuid import uuid4
 
 from adagio.specs import WorkflowSpec
@@ -17,6 +17,7 @@ from fugue.exceptions import (
     FugueWorkflowError,
     FugueWorkflowRuntimeError,
 )
+from fugue.execution import SQLEngine
 from fugue.extensions._builtins import (
     AlterColumns,
     AssertEqual,
@@ -47,9 +48,7 @@ from fugue.workflow._workflow_context import (
     FugueWorkflowContext,
     _FugueInteractiveWorkflowContext,
 )
-from triad.collections import Schema
-from triad.collections.dict import ParamDict
-from triad.utils.assertion import assert_or_throw
+from triad import ParamDict, Schema, assert_or_throw
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -1500,7 +1499,12 @@ class FugueWorkflow(object):
             pre_partition=pre_partition,
         )
 
-    def select(self, *statements: Any, sql_engine: Any = None) -> WorkflowDataFrame:
+    def select(
+        self,
+        *statements: Any,
+        sql_engine: Optional[Type[SQLEngine]] = None,
+        sql_engine_params: Any = None,
+    ) -> WorkflowDataFrame:
         """Execute ``SELECT`` statement using
         :class:`~fugue.execution.execution_engine.SQLEngine`
 
@@ -1535,7 +1539,13 @@ class FugueWorkflow(object):
         if not sql.upper().startswith("SELECT"):
             sql = "SELECT " + sql
         return self.process(
-            dfs, using=RunSQLSelect, params=dict(statement=sql, sql_engine=sql_engine)
+            dfs,
+            using=RunSQLSelect,
+            params=dict(
+                statement=sql,
+                sql_engine=sql_engine,
+                sql_engine_params=ParamDict(sql_engine_params),
+            ),
         )
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
