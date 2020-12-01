@@ -90,24 +90,33 @@ def test_even_repartition_with_cols(spark_session):
 
     # test with multiple keys and that are not the first positions
     df = _df(
-        [[1, 0, 1], [2, 0, 2], [3, 0, 3], [4, 0, 4], [5, 1, 1], [6, 1, 2], [7, 1, 3]],
-        "z:int,a:int,b:int",
+        [
+            [1, "a", 1],
+            [2, "b", 2],
+            [3, "c", 3],
+            [4, "d", 4],
+            [5, "e", 1],
+            [6, "f", 2],
+            [7, "g", 3],
+        ],
+        "z:int,a:str,b:int",
     )
-    res = (
-        even_repartition(spark_session, df, 0, ["a", "b"])
-        .rdd.mapPartitions(_pc)
-        .collect()
-    )
-    assert 7 == len(res)
-    assert 7 == len([x for x in res if x[3] == 1])
-
     res = (
         even_repartition(spark_session, df, 0, ["b", "z"])
         .rdd.mapPartitions(_pc)
         .collect()
     )
-    assert 7 == len(res)
-    assert 7 == len([x for x in res if x[3] == 1])
+    assert sorted(res) == sorted(
+        [
+            [1, "a", 1, 1],
+            [2, "b", 2, 1],
+            [3, "c", 3, 1],
+            [4, "d", 4, 1],
+            [5, "e", 1, 1],
+            [6, "f", 2, 1],
+            [7, "g", 3, 1],
+        ]
+    )
 
 
 def _pc(df):
