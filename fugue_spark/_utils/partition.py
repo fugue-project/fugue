@@ -65,7 +65,7 @@ def even_repartition(
         idf = (
             df.alias("df")
             .join(idx.alias("idx"), on=cols, how="inner")
-            .select(_PARTITION_DUMMY_KEY, "df.*")
+            .select(_PARTITION_DUMMY_KEY, *["df." + x for x in df.schema.names])
         )
 
         def _to_kv(rows: Iterable[Any]) -> Iterable[Any]:  # pragma: no cover

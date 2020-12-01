@@ -1,5 +1,14 @@
 # Release Notes
 
+## 0.4.8
+
+* Support **kwargs in interfaceless extensions, see [this](https://github.com/fugue-project/fugue/issues/107)
+* Support Iterable[pd.DataFrame] as output type, see [this](https://github.com/fugue-project/fugue/issues/106)
+* [Alter](https://github.com/fugue-project/fugue/issues/110) column types
+* [RENAME](https://github.com/fugue-project/fugue/issues/114) in Fugue SQL
+* [CONNECT](https://github.com/fugue-project/fugue/issues/112) different SQL service in Fugue SQL
+* Fixed Spark EVEN REPARTITION [issue](https://github.com/fugue-project/fugue/issues/119)
+
 ## 0.4.7
 
 * Add hook to print/show, see [this](https://github.com/fugue-project/fugue/issues/104).
