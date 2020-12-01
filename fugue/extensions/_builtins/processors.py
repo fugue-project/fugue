@@ -144,10 +144,13 @@ class RunSQLSelect(Processor):
     def process(self, dfs: DataFrames) -> DataFrame:
         statement = self.params.get_or_throw("statement", str)
         engine = self.params.get_or_none("sql_engine", object)
+        engine_params = self.params.get("sql_engine_params", ParamDict())
         if engine is None:
             engine = self.execution_engine.default_sql_engine
-        elif not isinstance(engine, SQLEngine):
-            engine = to_instance(engine, SQLEngine, args=[self.execution_engine])
+        else:
+            engine = to_instance(
+                engine, SQLEngine, args=[self.execution_engine], kwargs=engine_params
+            )
         return engine.select(dfs, statement)
 
 

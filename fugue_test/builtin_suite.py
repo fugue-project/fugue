@@ -34,7 +34,6 @@ from fugue.extensions.transformer import (
 )
 from fugue.workflow.workflow import FugueWorkflow, _FugueInteractiveWorkflow
 from pytest import raises
-from triad.utils.convert import get_full_type_path
 
 
 class BuiltInTests(object):
@@ -678,6 +677,15 @@ class BuiltInTests(object):
                 ).assert_eq(d)
 
         def test_select(self):
+            class MockEngine(SqliteEngine):
+                def __init__(self, execution_engine, p: int = 0):
+                    super().__init__(execution_engine)
+                    self.p = p
+
+                def select(self, dfs, statement):
+                    assert 2 == self.p  # assert set p value is working
+                    return super().select(dfs, statement)
+
             with self.dag() as dag:
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:long,y:long")
                 b = dag.df([[2, 20, 40], [3, 30, 90]], "x:long,y:long,z:long")
@@ -708,14 +716,15 @@ class BuiltInTests(object):
                     sql_engine=SqliteEngine,
                 ).assert_eq(c)
 
-                # specify sql engine
+                # specify sql engine and params
                 dag.select(
                     "SELECT t1.*,z AS zb FROM ",
                     a,
                     "AS t1 INNER JOIN",
                     b,
                     "AS t2 ON t1.x=t2.x",
-                    sql_engine=get_full_type_path(SqliteEngine),
+                    sql_engine=MockEngine,
+                    sql_engine_params={"p": 2},
                 ).assert_eq(c)
 
                 # no input

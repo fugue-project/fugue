@@ -106,7 +106,8 @@ fugueNestableTask
     ;
 
 fugueNestableTaskCollectionNoSelect
-    : fugueTransformTask
+    : fugueEngineSpecificQueryTask
+    | fugueTransformTask
     | fugueProcessTask
     | fugueZipTask
     | fugueCreateTask
@@ -118,6 +119,10 @@ fugueNestableTaskCollectionNoSelect
     | fugueDropColumnsTask
     | fugueDropnaTask
     | fugueFillnaTask
+    ;
+
+fugueEngineSpecificQueryTask:
+    fugueSqlEngine queryPrimary
     ;
 
 fugueTransformTask:
@@ -182,6 +187,10 @@ fugueSaveTask:
 
 fugueOutputTransformTask:
     OUTTRANSFORM (dfs=fugueDataFrames)? (partition=fuguePrepartition)? USING using=fugueExtension (params=fugueParams)?
+    ;
+
+fugueSqlEngine:
+    CONNECT using=fugueExtension (params=fugueParams)?
     ;
 
 fugueSingleFile
@@ -1852,6 +1861,8 @@ STRONG: 'STRONG';
 DETERMINISTIC: 'DETERMINISTIC';
 
 YIELD: 'YIELD';
+
+CONNECT: 'CONNECT';
 
 //================================
 // End of the Fugue keywords list
