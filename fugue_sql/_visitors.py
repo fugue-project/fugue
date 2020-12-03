@@ -196,6 +196,17 @@ class _VisitorBase(FugueSQLVisitor):
         sign = self.ctxToStr(ctx.sign, delimit="")
         return varname, sign
 
+    def visitFugueSampleMethod(self, ctx: fp.FugueSampleMethodContext) -> Tuple:
+        if ctx.rows is not None:
+            n: Any = int(self.ctxToStr(ctx.rows))
+        else:
+            n = None
+        if ctx.percentage is not None:
+            frac: Any = float(self.ctxToStr(ctx.percentage)) / 100.0
+        else:
+            frac = None
+        return n, frac
+
     def visitFugueZipType(self, ctx: fp.FugueZipTypeContext) -> str:
         return self.ctxToStr(ctx, delimit="_").lower()
 
@@ -568,6 +579,23 @@ class _Extensions(_VisitorBase):
         else:
             df = self.last
         return df.fillna(value=data["params"])
+
+    def visitFugueSampleTask(self, ctx: fp.FugueSampleTaskContext):
+        data = self.get_dict(ctx, "df")
+        if "df" in data:
+            df = data["df"]
+        else:
+            df = self.last
+        params: Dict[str, Any] = {}
+        params["replace"] = ctx.REPLACE() is not None
+        if ctx.seed is not None:
+            params["seed"] = int(self.ctxToStr(ctx.seed))
+        n, frac = self.visit(ctx.method)
+        if n is not None:
+            params["n"] = n
+        if frac is not None:
+            params["frac"] = frac
+        return df.sample(**params)
 
     def visitFugueLoadTask(self, ctx: fp.FugueLoadTaskContext) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "fmt", "path", "params", "columns")

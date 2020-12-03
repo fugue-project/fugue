@@ -119,6 +119,7 @@ fugueNestableTaskCollectionNoSelect
     | fugueDropColumnsTask
     | fugueDropnaTask
     | fugueFillnaTask
+    | fugueSampleTask
     ;
 
 fugueEngineSpecificQueryTask:
@@ -155,6 +156,10 @@ fugueDropnaTask:
 
 fugueFillnaTask:
     FILL (NULL|NULLS) params=fugueParams (FROM df=fugueDataFrame)?
+    ;
+
+fugueSampleTask:
+    SAMPLE REPLACE? method=fugueSampleMethod (SEED seed=INTEGER_VALUE)? (FROM df=fugueDataFrame)?
     ;
 
 fugueZipTask:
@@ -270,6 +275,11 @@ fugueSingleOutputExtensionCommon:
 
 fugueExtension:
     fugueIdentifier ('.' fugueIdentifier)*
+    ;
+
+fugueSampleMethod:
+    percentage=(INTEGER_VALUE | DECIMAL_VALUE) PERCENTLIT
+    | rows=INTEGER_VALUE ROWS 
     ;
 
 fugueZipType
@@ -1863,6 +1873,9 @@ DETERMINISTIC: 'DETERMINISTIC';
 YIELD: 'YIELD';
 
 CONNECT: 'CONNECT';
+
+SAMPLE: 'SAMPLE';
+SEED: 'SEED';
 
 //================================
 // End of the Fugue keywords list

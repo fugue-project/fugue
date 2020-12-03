@@ -34,6 +34,7 @@ from fugue.extensions._builtins import (
     RunSetOperation,
     RunSQLSelect,
     RunTransformer,
+    Sample,
     Save,
     SaveAndUse,
     SelectColumns,
@@ -561,6 +562,34 @@ class WorkflowDataFrame(DataFrame):
         params = dict(value=value, subset=subset)
         params = {k: v for k, v in params.items() if v is not None}
         df = self.workflow.process(self, using=Fillna, params=params)
+        return self._to_self_type(df)
+
+    def sample(
+        self: TDF,
+        n: Optional[int] = None,
+        frac: Optional[float] = None,
+        replace: bool = False,
+        seed: Optional[int] = None,
+    ) -> TDF:
+        """
+        Sample dataframe by number of rows or by fraction
+
+        :param n: number of rows to sample, one and only one of ``n`` and ``fact``
+          must be set
+        :param frac: fraction [0,1] to sample, one and only one of ``n`` and ``fact``
+          must be set
+        :param replace: whether replacement is allowed. With replacement,
+          there may be duplicated rows in the result, defaults to False
+        :param seed: seed for randomness, defaults to None
+
+        :return: sampled dataframe
+        """
+        params: Dict[str, Any] = dict(replace=replace, seed=seed)
+        if n is not None:
+            params["n"] = n
+        if frac is not None:
+            params["frac"] = frac
+        df = self.workflow.process(self, using=Sample, params=params)
         return self._to_self_type(df)
 
     def weak_checkpoint(self: TDF, lazy: bool = False, **kwargs: Any) -> TDF:

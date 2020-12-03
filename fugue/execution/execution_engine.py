@@ -413,7 +413,6 @@ class ExecutionEngine(ABC):
         :param seed: seed for randomness, defaults to None
         :param metadata: dict-like object to add to the result dataframe,
             defaults to None
-        :type metadata: Any, optional
 
         :return: sampled dataframe
         :rtype: DataFrame
