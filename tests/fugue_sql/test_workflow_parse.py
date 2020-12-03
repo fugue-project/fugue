@@ -597,6 +597,22 @@ def test_drop():
 
 def test_fill():
     dag = FugueWorkflow()
+    a = dag.create(mock_create1)
+    a.sample(frac=0.1, replace=False, seed=None)
+    a.sample(n=5, replace=True, seed=7)
+
+    assert_eq(
+        """
+    a=create using mock_create1
+    sample 10 percent
+    sample replace 5 rows seed 7 from a
+    """,
+        dag,
+    )
+
+
+def test_sample():
+    dag = FugueWorkflow()
     a = dag.df([[None, 1], [1, None]], "a:int, b:int")
     b = a.fillna({"a": 99, "b": -99})
     assert_eq(

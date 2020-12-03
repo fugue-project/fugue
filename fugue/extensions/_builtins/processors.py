@@ -213,6 +213,26 @@ class SelectColumns(Processor):
         return dfs[0][columns]
 
 
+class Sample(Processor):
+    def validate_on_compile(self):
+        n = self.params.get_or_none("n", int)
+        frac = self.params.get_or_none("frac", float)
+        assert_or_throw(
+            (n is None and frac is not None) or (n is not None and frac is None),
+            ValueError("one and only one of n and frac should be set"),
+        )
+
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        n = self.params.get_or_none("n", int)
+        frac = self.params.get_or_none("frac", float)
+        replace = self.params.get("replace", False)
+        seed = self.params.get_or_none("seed", int)
+        return self.execution_engine.sample(
+            dfs[0], n=n, frac=frac, replace=replace, seed=seed
+        )
+
+
 class SaveAndUse(Processor):
     def process(self, dfs: DataFrames) -> DataFrame:
         assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))

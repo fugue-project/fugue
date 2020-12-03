@@ -1,5 +1,6 @@
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from uuid import uuid4
 
 import pandas as pd
 import pyarrow as pa
@@ -392,6 +393,42 @@ class SparkExecutionEngine(ExecutionEngine):
             mapping = {col: value for col in subset}
         d = self.to_df(df).native.fillna(mapping)
         return self.to_df(d, df.schema, metadata)
+
+    def sample(
+        self,
+        df: DataFrame,
+        n: Optional[int] = None,
+        frac: Optional[float] = None,
+        replace: bool = False,
+        seed: Optional[int] = None,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            (n is None and frac is not None) or (n is not None and frac is None),
+            ValueError("one and only one of n and frac should be set"),
+        )
+        if frac is not None:
+            d = self.to_df(df).native.sample(
+                fraction=frac, withReplacement=replace, seed=seed
+            )
+            return self.to_df(d, df.schema, metadata)
+        else:
+            assert_or_throw(
+                seed is None,
+                NotImplementedError("seed can't be set when sampling by row count"),
+            )
+            assert_or_throw(
+                not replace,
+                NotImplementedError(
+                    "replacement is not supported when sampling by row count"
+                ),
+            )
+            temp_name = "__temp_" + str(uuid4()).split("-")[-1]
+            self.to_df(df).native.createOrReplaceTempView(temp_name)
+            d = self.spark_session.sql(
+                f"SELECT * FROM {temp_name} TABLESAMPLE({n} ROWS)"
+            )
+            return self.to_df(d, df.schema, metadata)
 
     def load_df(
         self,

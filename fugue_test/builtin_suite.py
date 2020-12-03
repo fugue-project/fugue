@@ -902,6 +902,18 @@ class BuiltInTests(object):
                 with self.dag() as dag:
                     dag.df([[None, 1]], "a:int,b:int").fillna(None)
 
+        def test_sample(self):
+            with self.dag() as dag:
+                a = dag.df(
+                    [[1, 10, 10], [None, 2, None], [2, None, 4]],
+                    "x:double,y:double,z:double",
+                )
+                a.sample(frac=0.5, replace=False, seed=0).show()
+
+            with self.dag() as dag:
+                with raises(ValueError):
+                    dag.df([[None, 1]], "a:int,b:int").sample(n=1, frac=0.2)
+
         def test_col_ops(self):
             with self.dag() as dag:
                 a = dag.df([[1, 10], [2, 20]], "x:long,y:long")

@@ -18,6 +18,7 @@ from fugue.extensions._builtins.processors import (
     RunSetOperation,
     RunSQLSelect,
     RunTransformer,
+    Sample,
     SaveAndUse,
     SelectColumns,
     Zip,

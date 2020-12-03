@@ -265,6 +265,24 @@ class NativeExecutionEngine(ExecutionEngine):
         d = df.as_pandas().fillna(mapping, inplace=False)
         return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
 
+    def sample(
+        self,
+        df: DataFrame,
+        n: Optional[int] = None,
+        frac: Optional[float] = None,
+        replace: bool = False,
+        seed: Optional[int] = None,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            (n is None and frac is not None) or (n is not None and frac is None),
+            ValueError("one and only one of n and frac should be set"),
+        )
+        d = df.as_pandas().sample(n=n, frac=frac, replace=replace, random_state=seed)
+        return PandasDataFrame(
+            d.reset_index(drop=True), df.schema, metadata, pandas_df_wrapper=True
+        )
+
     def load_df(
         self,
         path: Union[str, List[str]],
