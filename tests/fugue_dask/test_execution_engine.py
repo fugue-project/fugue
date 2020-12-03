@@ -43,6 +43,10 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
         b = e.repartition(a, PartitionSpec(by=["a"], num=3))
         assert a.num_partitions == b.num_partitions
 
+    def test_sample_n(self):
+        # TODO: dask does not support sample by number of rows
+        pass
+
 
 class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
     def make_engine(self):

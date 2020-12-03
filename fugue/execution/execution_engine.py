@@ -373,6 +373,8 @@ class ExecutionEngine(ABC):
         self, df: DataFrame, value: Any, subset: List[str] = None, metadata: Any = None
     ) -> DataFrame:  # pragma: no cover
         """
+        Fill ``NULL``, ``NAN``, ``NAT`` values in a dataframe
+
         :param df: DataFrame
         :param value: if scalar, fills all columns with same value.
             if dictionary, fills NA using the keys as column names and the
@@ -384,6 +386,36 @@ class ExecutionEngine(ABC):
         :type metadata: Any, optional
 
         :return: DataFrame with NA records filled
+        :rtype: DataFrame
+        """
+        pass
+
+    @abstractmethod
+    def sample(
+        self,
+        df: DataFrame,
+        n: Optional[int] = None,
+        frac: Optional[float] = None,
+        replace: bool = False,
+        seed: Optional[int] = None,
+        metadata: Any = None,
+    ) -> DataFrame:  # pragma: no cover
+        """
+        Sample dataframe by number of rows or by fraction
+
+        :param df: DataFrame
+        :param n: number of rows to sample, one and only one of ``n`` and ``fact``
+          must be set
+        :param frac: fraction [0,1] to sample, one and only one of ``n`` and ``fact``
+          must be set
+        :param replace: whether replacement is allowed. With replacement,
+          there may be duplicated rows in the result, defaults to False
+        :param seed: seed for randomness, defaults to None
+        :param metadata: dict-like object to add to the result dataframe,
+            defaults to None
+        :type metadata: Any, optional
+
+        :return: sampled dataframe
         :rtype: DataFrame
         """
         pass

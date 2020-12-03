@@ -57,6 +57,18 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         e.persist(a, level="xyz")
         raises(ValueError, lambda: e.persist(o, level="xyz"))
 
+    def test_sample_n(self):
+        engine = self.engine
+        a = engine.to_df([[x] for x in range(100)], "a:int")
+
+        with raises(NotImplementedError):
+            # replace is not allowed
+            engine.sample(a, n=90, replace=True, metadata=(dict(a=1)))
+
+        b = engine.sample(a, n=90, metadata=(dict(a=1)))
+        assert abs(len(b.as_array()) - 90) < 2
+        assert b.metadata == dict(a=1)
+
 
 class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
     @pytest.fixture(autouse=True)
@@ -73,6 +85,14 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
 
     def test__join_outer_pandas_incompatible(self):
         return
+
+    def test_sample_n(self):
+        engine = self.engine
+        a = engine.to_df([[x] for x in range(100)], "a:int")
+
+        b = engine.sample(a, n=90, metadata=(dict(a=1)))
+        assert abs(len(b.as_array()) - 90) < 2
+        assert b.metadata == dict(a=1)
 
 
 class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):

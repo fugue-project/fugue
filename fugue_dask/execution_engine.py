@@ -336,6 +336,25 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.to_df(df).native.fillna(mapping)
         return DaskDataFrame(d, df.schema, metadata)
 
+    def sample(
+        self,
+        df: DataFrame,
+        n: Optional[int] = None,
+        frac: Optional[float] = None,
+        replace: bool = False,
+        seed: Optional[int] = None,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            (n is None and frac is not None) or (n is not None and frac is None),
+            ValueError("one and only one of n and frac should be set"),
+        )
+        # TODO: dask does not support sample by number of rows
+        d = self.to_df(df).native.sample(
+            n=n, frac=frac, replace=replace, random_state=seed
+        )
+        return DaskDataFrame(d, df.schema, metadata)
+
     def load_df(
         self,
         path: Union[str, List[str]],

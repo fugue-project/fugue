@@ -513,6 +513,41 @@ class ExecutionEngineTests(object):
             raises(ValueError, lambda: e.fillna(a, None))
             raises(ValueError, lambda: e.fillna(a, ["b"]))
 
+        def test_sample(self):
+            engine = self.engine
+            a = engine.to_df([[x] for x in range(100)], "a:int")
+
+            with raises(ValueError):
+                engine.sample(a)  # must set one
+            with raises(ValueError):
+                engine.sample(a, n=90, frac=0.9)  # can't set both
+
+            f = engine.sample(a, frac=0.8, replace=False, metadata=(dict(a=1)))
+            g = engine.sample(a, frac=0.8, replace=True, metadata=(dict(a=1)))
+            h = engine.sample(a, frac=0.8, seed=1, metadata=(dict(a=1)))
+            h2 = engine.sample(a, frac=0.8, seed=1, metadata=(dict(a=1)))
+            i = engine.sample(a, frac=0.8, seed=2, metadata=(dict(a=1)))
+            assert not df_eq(f, g, throw=False)
+            df_eq(h, h2, throw=True)
+            assert not df_eq(h, i, throw=False)
+            assert abs(len(i.as_array()) - 80) < 10
+            assert i.metadata == dict(a=1)
+
+        def test_sample_n(self):
+            engine = self.engine
+            a = engine.to_df([[x] for x in range(100)], "a:int")
+
+            b = engine.sample(a, n=90, replace=False, metadata=(dict(a=1)))
+            c = engine.sample(a, n=90, replace=True, metadata=(dict(a=1)))
+            d = engine.sample(a, n=90, seed=1, metadata=(dict(a=1)))
+            d2 = engine.sample(a, n=90, seed=1, metadata=(dict(a=1)))
+            e = engine.sample(a, n=90, seed=2, metadata=(dict(a=1)))
+            assert not df_eq(b, c, throw=False)
+            df_eq(d, d2, throw=True)
+            assert not df_eq(d, e, throw=False)
+            assert abs(len(e.as_array()) - 90) < 2
+            assert e.metadata == dict(a=1)
+
         def test__serialize_by_partition(self):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
