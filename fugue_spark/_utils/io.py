@@ -11,6 +11,7 @@ from triad.collections import Schema
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
+from triad.collections.dict import ParamDict
 
 
 class SparkIO(object):
@@ -87,7 +88,12 @@ class SparkIO(object):
         return SparkDataFrame(sdf[schema.names], schema)
 
     def _load_csv(self, p: List[str], columns: Any = None, **kwargs: Any) -> DataFrame:
-        kw = dict(kwargs)
+        kw = ParamDict(kwargs)
+        infer_schema = kw.get("infer_schema", False)
+        if infer_schema:
+            kw["inferSchema"] = True
+        if "infer_schema" in kw:
+            del kw["infer_schema"]
         header = kw.get("header", False)
         header = str(header).lower()
         if "header" in kw:
