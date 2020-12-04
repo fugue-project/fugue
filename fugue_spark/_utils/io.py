@@ -94,8 +94,7 @@ class SparkIO(object):
             kw["inferSchema"] = True
         if "infer_schema" in kw:
             del kw["infer_schema"]
-        header = kw.get("header", False)
-        header = str(header).lower()
+        header = str(kw.get_or_none("header", object)).lower()
         if "header" in kw:
             del kw["header"]
         reader = self._session.read.format("csv")

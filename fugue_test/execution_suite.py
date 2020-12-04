@@ -789,6 +789,31 @@ class ExecutionEngineTests(object):
             c = e.load_df(path, header=True, columns="c:int,a:long")
             df_eq(c, b, throw=True)
 
+            # reading multiple csv with/without infer schema
+            fpath = os.path.join(self.tmpdir, "f.csv")
+            e.fs.makedir(fpath)
+            e.fs.touch(os.path.join(fpath, "_SUCCESS"))
+            e.save_df(b, os.path.join(fpath, "1.csv"), header=True)
+            e.save_df(b, os.path.join(fpath, "2.csv"), header=True)
+
+            r = e.load_df(fpath, header=True, infer_schema=False)
+            df_eq(
+                r,
+                [["6", "1"], ["2", "7"], ["6", "1"], ["2", "7"]],
+                "c:str,a:str",
+                throw=True,
+            )
+
+            r = e.load_df(fpath, header=True, infer_schema=True)
+            df_eq(r, [[6, 1], [2, 7], [6, 1], [2, 7]], "c:long,a:long", throw=True)
+
+            # write single file to overwirte folder
+            assert e.fs.isdir(fpath)
+            e.save_df(r, fpath, force_single=True, header=True)
+            assert e.fs.isfile(fpath)
+            r = e.load_df(fpath, header=True, infer_schema=True)
+            df_eq(r, [[6, 1], [2, 7], [6, 1], [2, 7]], "c:long,a:long", throw=True)
+
 
 def select_top(cursor, data):
     return ArrayDataFrame([cursor.row], cursor.row_schema)
