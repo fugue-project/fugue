@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.4.9
+
+* [sample](https://github.com/fugue-project/fugue/issues/120) function
+* Make csv [infer schema](https://github.com/fugue-project/fugue/issues/121) consistent cross engine
+* Make [loading](https://github.com/fugue-project/fugue/issues/122) file more consistent cross engine
+
 ## 0.4.8
 
 * Support **kwargs in interfaceless extensions, see [this](https://github.com/fugue-project/fugue/issues/107)

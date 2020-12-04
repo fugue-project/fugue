@@ -1,5 +1,6 @@
+import os
 import pathlib
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Iterable
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -8,11 +9,28 @@ from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
+from triad.collections.dict import ParamDict
 
 
 class FileParser(object):
-    def __init__(self, uri: str, format_hint: Optional[str] = None):
-        self._uri = urlparse(uri)
+    def __init__(self, path: str, format_hint: Optional[str] = None):
+        last = len(path)
+        has_glob = False
+        for i in range(len(path)):
+            if path[i] in ["/", "\\"]:
+                last = i
+            if path[i] in ["*", "?"]:
+                has_glob = True
+                break
+        if not has_glob:
+            self._uri = urlparse(path)
+            self._glob_pattern = ""
+            self._path = self._uri.path
+        else:
+            self._uri = urlparse(path[:last])
+            self._glob_pattern = path[last + 1 :]
+            self._path = os.path.join(self._uri.path, self._glob_pattern)
+
         if format_hint is None or format_hint == "":
             for k, v in _FORMAT_MAP.items():
                 if self.suffix.endswith(k):
@@ -26,6 +44,14 @@ class FileParser(object):
             )
             self._format = format_hint
 
+    def assert_no_glob(self) -> "FileParser":
+        assert_or_throw(self.glob_pattern == "", f"{self.path} has glob pattern")
+        return self
+
+    @property
+    def glob_pattern(self) -> str:
+        return self._glob_pattern
+
     @property
     def uri(self) -> str:
         return self._uri.geturl()
@@ -36,7 +62,7 @@ class FileParser(object):
 
     @property
     def path(self) -> str:
-        return self._uri.path
+        return self._path
 
     @property
     def suffix(self) -> str:
@@ -60,8 +86,8 @@ def load_df(
         fp = [FileParser(u, format_hint) for u in uri]
     dfs: List[pd.DataFrame] = []
     schema: Any = None
-    for f in fp:
-        df, schema = _FORMAT_LOAD[f.file_format](f, columns, **kwargs)
+    for f in _get_single_files(fp, fs):
+        df, schema = _FORMAT_LOAD[f.file_format](f.assert_no_glob(), columns, **kwargs)
         dfs.append(df)
     return PandasDataFrame(pd.concat(dfs), schema)
 
@@ -77,12 +103,38 @@ def save_df(
     assert_or_throw(
         mode in ["overwrite", "error"], NotImplementedError(f"{mode} is not supported")
     )
-    p = FileParser(uri, format_hint)
+    p = FileParser(uri, format_hint).assert_no_glob()
     if fs is None:
         fs = FileSystem()
     if fs.exists(uri):
         assert_or_throw(mode == "overwrite", FileExistsError(uri))
+        try:
+            fs.remove(uri)
+        except Exception:
+            try:
+                fs.removetree(uri)
+            except Exception:  # pragma: no cover
+                pass
     _FORMAT_SAVE[p.file_format](df, p, **kwargs)
+
+
+def _get_single_files(
+    fp: Iterable[FileParser], fs: Optional[FileSystem]
+) -> Iterable[FileParser]:
+    if fs is None:
+        fs = FileSystem()
+    for f in fp:
+        if f.glob_pattern != "":
+            files = [
+                FileParser(os.path.join(f.uri, os.path.basename(x.path)))
+                for x in fs.opendir(f.uri).glob(f.glob_pattern)
+            ]
+            yield from _get_single_files(files, fs)
+        elif fs.isdir(f.uri):
+            for x in fs.filterdir(f.uri, files=["*." + f.file_format]):
+                yield FileParser(os.path.join(f.uri, x.name))
+        else:
+            yield f
 
 
 def _save_parquet(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
@@ -114,9 +166,15 @@ def _save_csv(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
 def _load_csv(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[pd.DataFrame, Any]:
-    kw = dict(kwargs)
-    header = kw.get("header", False)
+    kw = ParamDict(kwargs)
+    infer_schema = kw.get("infer_schema", False)
+    if not infer_schema:
+        kw["dtype"] = object
+    if "infer_schema" in kw:
+        del kw["infer_schema"]
+    header: Any = False
     if "header" in kw:
+        header = kw["header"]
         del kw["header"]
     if str(header) in ["True", "0"]:
         pdf = pd.read_csv(p.uri, **{"index_col": False, "header": 0, **kw})
