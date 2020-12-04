@@ -789,12 +789,22 @@ class ExecutionEngineTests(object):
             c = e.load_df(path, header=True, columns="c:int,a:long")
             df_eq(c, b, throw=True)
 
-            # reading multiple csv with/without infer schema
+            # reading multiple csv using wildcard from folder
             fpath = os.path.join(self.tmpdir, "f.csv")
             e.fs.makedir(fpath)
+            e.save_df(b, os.path.join(fpath, "1.csv"), header=True, force_single=True)
+            e.save_df(b, os.path.join(fpath, "2.csv"), header=True, force_single=True)
+
+            r = e.load_df(os.path.join(fpath, "*.csv"), header=True, infer_schema=False)
+            df_eq(
+                r,
+                [["6", "1"], ["2", "7"], ["6", "1"], ["2", "7"]],
+                "c:str,a:str",
+                throw=True,
+            )
+
+            # reading multiple csv with/without infer schema
             e.fs.touch(os.path.join(fpath, "_SUCCESS"))
-            e.save_df(b, os.path.join(fpath, "1.csv"), header=True)
-            e.save_df(b, os.path.join(fpath, "2.csv"), header=True)
 
             r = e.load_df(fpath, header=True, infer_schema=False)
             df_eq(
@@ -805,14 +815,14 @@ class ExecutionEngineTests(object):
             )
 
             r = e.load_df(fpath, header=True, infer_schema=True)
-            df_eq(r, [[6, 1], [2, 7], [6, 1], [2, 7]], "c:long,a:long", throw=True)
+            assert sorted(r.as_array()) == sorted([[6, 1], [2, 7], [6, 1], [2, 7]])
 
             # write single file to overwirte folder
             assert e.fs.isdir(fpath)
             e.save_df(r, fpath, force_single=True, header=True)
             assert e.fs.isfile(fpath)
             r = e.load_df(fpath, header=True, infer_schema=True)
-            df_eq(r, [[6, 1], [2, 7], [6, 1], [2, 7]], "c:long,a:long", throw=True)
+            assert sorted(r.as_array()) == sorted([[6, 1], [2, 7], [6, 1], [2, 7]])
 
 
 def select_top(cursor, data):
