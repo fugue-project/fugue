@@ -97,7 +97,7 @@ class FunctionWrapper(object):
         params_re: str = ".*",
         return_re: str = ".*",
     ):
-        self._class_method, self._params, self._rt = _parse_function(
+        self._class_method, self._params, self._rt = self._parse_function(
             func, params_re, return_re
         )
         self._func = func
@@ -162,74 +162,75 @@ class FunctionWrapper(object):
             return self._rt.to_output_df(rt, output_schema)
         return rt
 
+    def _parse_function(
+        self, func: Callable, params_re: str = ".*", return_re: str = ".*"
+    ) -> Tuple[bool, IndexedOrderedDict[str, "_FuncParam"], "_FuncParam"]:
+        sig = inspect.signature(func)
+        annotations = get_type_hints(func)
+        res: IndexedOrderedDict[str, "_FuncParam"] = IndexedOrderedDict()
+        class_method = False
+        for k, w in sig.parameters.items():
+            if k == "self":
+                res[k] = _SelfParam(w)
+                class_method = True
+            else:
+                anno = annotations.get(k, w.annotation)
+                res[k] = self._parse_param(anno, w)
+        anno = annotations.get("return", sig.return_annotation)
+        rt = self._parse_param(anno, None, none_as_other=False)
+        params_str = "".join(x.code for x in res.values())
+        assert_or_throw(
+            re.match(params_re, params_str), TypeError(f"Input types not valid {res}")
+        )
+        assert_or_throw(
+            re.match(return_re, rt.code), TypeError(f"Return type not valid {rt}")
+        )
+        return class_method, res, rt
 
-def _parse_function(
-    func: Callable, params_re: str = ".*", return_re: str = ".*"
-) -> Tuple[bool, IndexedOrderedDict[str, "_FuncParam"], "_FuncParam"]:
-    sig = inspect.signature(func)
-    annotations = get_type_hints(func)
-    res: IndexedOrderedDict[str, "_FuncParam"] = IndexedOrderedDict()
-    class_method = False
-    for k, w in sig.parameters.items():
-        if k == "self":
-            res[k] = _SelfParam(w)
-            class_method = True
-        else:
-            anno = annotations.get(k, w.annotation)
-            res[k] = _parse_param(anno, w)
-    anno = annotations.get("return", sig.return_annotation)
-    rt = _parse_param(anno, None, none_as_other=False)
-    params_str = "".join(x.code for x in res.values())
-    assert_or_throw(
-        re.match(params_re, params_str), TypeError(f"Input types not valid {res}")
-    )
-    assert_or_throw(
-        re.match(return_re, rt.code), TypeError(f"Return type not valid {rt}")
-    )
-    return class_method, res, rt
-
-
-def _parse_param(  # noqa: C901
-    annotation: Any, param: Optional[inspect.Parameter], none_as_other: bool = True
-) -> "_FuncParam":
-    if annotation is type(None):  # noqa: E721
-        return _NoneParam(param)
-    if annotation == inspect.Parameter.empty:
+    def _parse_param(  # noqa: C901
+        self,
+        annotation: Any,
+        param: Optional[inspect.Parameter],
+        none_as_other: bool = True,
+    ) -> "_FuncParam":
+        if annotation is type(None):  # noqa: E721
+            return _NoneParam(param)
+        if annotation == inspect.Parameter.empty:
+            if param is not None and param.kind == param.VAR_POSITIONAL:
+                return _PositionalParam(param)
+            if param is not None and param.kind == param.VAR_KEYWORD:
+                return _KeywordParam(param)
+            return _OtherParam(param) if none_as_other else _NoneParam(param)
+        if annotation is to_type("fugue.execution.ExecutionEngine"):
+            # to prevent cyclic import
+            return _ExecutionEngineParam(param)
+        if annotation is DataFrames:
+            return _DataFramesParam(param)
+        if annotation is LocalDataFrame:
+            return _LocalDataFrameParam(param)
+        if annotation is DataFrame:
+            return _DataFrameParam(param)
+        if annotation is pd.DataFrame:
+            return _PandasParam(param)
+        if annotation is List[List[Any]]:
+            return _ListListParam(param)
+        if annotation is Iterable[List[Any]]:
+            return _IterableListParam(param)
+        if annotation is EmptyAwareIterable[List[Any]]:
+            return _EmptyAwareIterableListParam(param)
+        if annotation is List[Dict[str, Any]]:
+            return _ListDictParam(param)
+        if annotation is Iterable[Dict[str, Any]]:
+            return _IterableDictParam(param)
+        if annotation is EmptyAwareIterable[Dict[str, Any]]:
+            return _EmptyAwareIterableDictParam(param)
+        if annotation is Iterable[pd.DataFrame]:
+            return _IterablePandasParam(param)
         if param is not None and param.kind == param.VAR_POSITIONAL:
             return _PositionalParam(param)
         if param is not None and param.kind == param.VAR_KEYWORD:
             return _KeywordParam(param)
-        return _OtherParam(param) if none_as_other else _NoneParam(param)
-    if annotation is to_type("fugue.execution.ExecutionEngine"):
-        # to prevent cyclic import
-        return _ExecutionEngineParam(param)
-    if annotation is DataFrames:
-        return _DataFramesParam(param)
-    if annotation is LocalDataFrame:
-        return _LocalDataFrameParam(param)
-    if annotation is DataFrame:
-        return _DataFrameParam(param)
-    if annotation is pd.DataFrame:
-        return _PandasParam(param)
-    if annotation is List[List[Any]]:
-        return _ListListParam(param)
-    if annotation is Iterable[List[Any]]:
-        return _IterableListParam(param)
-    if annotation is EmptyAwareIterable[List[Any]]:
-        return _EmptyAwareIterableListParam(param)
-    if annotation is List[Dict[str, Any]]:
-        return _ListDictParam(param)
-    if annotation is Iterable[Dict[str, Any]]:
-        return _IterableDictParam(param)
-    if annotation is EmptyAwareIterable[Dict[str, Any]]:
-        return _EmptyAwareIterableDictParam(param)
-    if annotation is Iterable[pd.DataFrame]:
-        return _IterablePandasParam(param)
-    if param is not None and param.kind == param.VAR_POSITIONAL:
-        return _PositionalParam(param)
-    if param is not None and param.kind == param.VAR_KEYWORD:
-        return _KeywordParam(param)
-    return _OtherParam(param)
+        return _OtherParam(param)
 
 
 class _FuncParam(object):
