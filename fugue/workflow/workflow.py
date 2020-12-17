@@ -1020,6 +1020,34 @@ class WorkflowDataFrame(DataFrame):
 
 
 class WorkflowDataFrames(DataFrames):
+    """Ordered dictionary of WorkflowDataFrames. There are two modes: with keys
+    and without keys. If without key ``_<n>`` will be used as the key
+    for each dataframe, and it will be treated as an array in Fugue framework.
+
+    It's immutable, once initialized, you can't add or remove element from it.
+
+    It's a subclass of
+    :class:`~fugue.dataframe.dataframes.DataFrames`, but different from
+    DataFrames, in the initialization you should always use
+    :class:`~fugue.workflow.workflow.WorkflowDataFrame`, and they should all
+    come from the same :class:`~fugue.workflow.workflow.FugueWorkflow`.
+
+    :Examples:
+
+        .. code-block:: python
+
+            dag = FugueWorkflow()
+            df1 = dag.df([[0]],"a:int").transform(a_transformer)
+            df2 = dag.df([[0]],"b:int")
+            dfs1 = WorkflowDataFrames(df1, df2)  # as array
+            dfs2 = WorkflowDataFrames([df1, df2])  # as array
+            dfs3 = WorkflowDataFrames(a=df1, b=df2)  # as dict
+            dfs4 = WorkflowDataFrames(dict(a=df1, b=df2))  # as dict
+            dfs5 = WorkflowDataFrames(dfs4, c=df2)  # copy and update
+            dfs5["b"].show()  # how you get element when it's a dict
+            dfs1[0].show()  # how you get element when it's an array
+    """
+
     def __init__(self, *args: Any, **kwargs: Any):
         self._parent: Optional["FugueWorkflow"] = None
         super().__init__(*args, **kwargs)
