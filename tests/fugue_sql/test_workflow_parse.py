@@ -1,7 +1,7 @@
 import json
 from typing import Any, Iterable, List
 
-from fugue import FugueWorkflow, SqliteEngine, WorkflowDataFrame, WorkflowDataFrames
+from fugue import FugueWorkflow, SqliteEngine, WorkflowDataFrame, WorkflowDataFrames, module
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.extensions import OutputTransformer
@@ -629,6 +629,8 @@ def test_sample():
 
 
 def test_module():
+    # pylint: disable=no-value-for-parameter
+    
     def create(wf: FugueWorkflow, n: int = 1) -> WorkflowDataFrame:
         return wf.df([[n]], "a:int")
 
@@ -645,6 +647,7 @@ def test_module():
     def merge3(df1: WorkflowDataFrame, df2: WorkflowDataFrame) -> WorkflowDataFrames:
         return WorkflowDataFrames(df1, df2)
 
+    @module()
     def out1(wf: FugueWorkflow, df: WorkflowDataFrame) -> None:
         df.show()
 
@@ -655,7 +658,7 @@ def test_module():
     dfs["a1"].show()
     dfs["bb"].show()
     df = merge2(dag, WorkflowDataFrames(a, b), k=1)
-    out1(dag, df)
+    out1(df)
     dfs = merge3(b, a)
     dfs[0].show()
     dfs[1].show()

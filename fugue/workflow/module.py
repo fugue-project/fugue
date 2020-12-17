@@ -1,11 +1,12 @@
+import copy
 import inspect
 from typing import Any, Callable, Dict, Iterable, Optional
 
 from fugue._utils.interfaceless import FunctionWrapper, _FuncParam
+from fugue.exceptions import FugueInterfacelessError
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function
-from fugue.exceptions import FugueInterfacelessError
 
 
 def module() -> Callable[[Any], "_ModuleFunctionWrapper"]:
@@ -30,6 +31,10 @@ def _to_module(
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
     try:
         f = to_function(obj, global_vars=global_vars, local_vars=local_vars)
+        # this is for string expression of function with decorator
+        if isinstance(f, _ModuleFunctionWrapper):
+            return copy.copy(f)
+        # this is for functions without decorator
         return _ModuleFunctionWrapper(f)
     except Exception as e:
         exp = e

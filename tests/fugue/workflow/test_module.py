@@ -159,6 +159,7 @@ def test_interfaceless():
     assert isinstance(_to_module(i1), _ModuleFunctionWrapper)
     assert isinstance(_to_module("i2"), _ModuleFunctionWrapper)
     assert isinstance(_to_module(i3), _ModuleFunctionWrapper)
+    assert isinstance(_to_module("i3"), _ModuleFunctionWrapper)
 
     def i4():
         pass
