@@ -1,13 +1,23 @@
 from setuptools import setup, find_packages
 from fugue_version import __version__
-
+import os
 
 with open("README.md") as f:
     LONG_DESCRIPTION = f.read()
 
+
+def get_version() -> str:
+    tag = os.environ.get("RELEASE_TAG", "")
+    if "dev" in tag.split(".")[-1]:
+        return tag
+    if tag != "":
+        assert tag == __version__, "release tag and version mismatch"
+    return __version__
+
+
 setup(
     name="fugue",
-    version=__version__,
+    version=get_version(),
     packages=find_packages(),
     description="An abstraction layer for distributed computation",
     long_description=LONG_DESCRIPTION,
