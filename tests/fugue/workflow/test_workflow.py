@@ -10,12 +10,39 @@ from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution import NativeExecutionEngine
 from fugue.extensions.transformer.convert import transformer
-from fugue.workflow.workflow import _FugueInteractiveWorkflow, FugueWorkflow
-from fugue.workflow._workflow_context import (_FugueInteractiveWorkflowContext,
-                                             FugueWorkflowContext)
+from fugue.workflow._workflow_context import (
+    FugueWorkflowContext,
+    _FugueInteractiveWorkflowContext,
+)
+from fugue.workflow.workflow import (
+    FugueWorkflow,
+    WorkflowDataFrames,
+    _FugueInteractiveWorkflow,
+)
 from pytest import raises
-from triad.exceptions import InvalidOperationError
 from triad.collections.schema import Schema
+from triad.exceptions import InvalidOperationError
+
+
+def test_worflow_dataframes():
+    dag1 = FugueWorkflow()
+    df1 = dag1.df([[0]], "a:int")
+    df2 = dag1.df([[0]], "b:int")
+    dag2 = FugueWorkflow()
+    df3 = dag2.df([[0]], "a:int")
+
+    dfs1 = WorkflowDataFrames(a=df1, b=df2)
+    assert dfs1["a"] is df1
+    assert dfs1["b"] is df2
+
+    dfs2 = WorkflowDataFrames(dfs1, aa=df1, bb=df2)
+    assert 4 == len(dfs2)
+
+    with raises(ValueError):
+        WorkflowDataFrames(a=df1, b=df3)
+
+    with raises(ValueError):
+        WorkflowDataFrames(a=df1, b=ArrayDataFrame([[0]], "a:int"))
 
 
 def test_workflow():
@@ -96,10 +123,6 @@ def test_interactive_workflow():
     a = dag.create_data([[0]], "a:int")
     b = dag.create_data([[50]], "a:int")
     a.assert_eq(b)  # dummy value from cache makes them equal
-
-
-
-
 
 
 class MockCache(WorkflowResultCache):

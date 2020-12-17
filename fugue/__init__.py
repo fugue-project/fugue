@@ -27,5 +27,6 @@ from fugue.extensions.transformer import (
     output_transformer,
     output_cotransformer,
 )
-from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
+from fugue.workflow.module import module
+from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 from fugue.workflow._workflow_context import FugueWorkflowContext

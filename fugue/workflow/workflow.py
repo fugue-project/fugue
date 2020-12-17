@@ -1,6 +1,6 @@
 from collections import defaultdict
 from threading import RLock
-from typing import Any, Dict, Iterable, List, Optional, Set, Type, TypeVar
+from typing import Any, Dict, Iterable, List, Optional, Set, Type, TypeVar, Union
 from uuid import uuid4
 
 from adagio.specs import WorkflowSpec
@@ -1017,6 +1017,31 @@ class WorkflowDataFrame(DataFrame):
 
     def _select_cols(self, keys: List[Any]) -> DataFrame:  # pragma: no cover
         raise NotImplementedError("WorkflowDataFrame does not support this method")
+
+
+class WorkflowDataFrames(DataFrames):
+    def __init__(self, *args: Any, **kwargs: Any):
+        self._parent: Optional["FugueWorkflow"] = None
+        super().__init__(*args, **kwargs)
+
+    def __setitem__(  # type: ignore
+        self, key: str, value: WorkflowDataFrame, *args: Any, **kwds: Any
+    ) -> None:
+        assert_or_throw(
+            isinstance(value, WorkflowDataFrame),
+            ValueError(f"{key}:{value} is not WorkflowDataFrame)"),
+        )
+        if self._parent is None:
+            self._parent = value.workflow
+        else:
+            assert_or_throw(
+                self._parent is value.workflow,
+                ValueError("different parent workflow detected in dataframes"),
+            )
+        super().__setitem__(key, value, *args, **kwds)
+
+    def __getitem__(self, key: Union[str, int]) -> WorkflowDataFrame:  # type: ignore
+        return super().__getitem__(key)  # type: ignore
 
 
 class FugueWorkflow(object):
