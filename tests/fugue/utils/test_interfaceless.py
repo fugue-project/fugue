@@ -4,7 +4,6 @@ from typing import Any, Dict, Iterable, List
 import pandas as pd
 from fugue._utils.interfaceless import (
     FunctionWrapper,
-    _parse_function,
     is_class_method,
     parse_comment_annotation,
     parse_output_schema_from_comment,
@@ -85,6 +84,9 @@ def test_is_class_method():
 
 
 def test_parse_function():
+    def _parse_function(f, params_re, return_re):
+        FunctionWrapper(f, params_re, return_re)
+
     _parse_function(f1, "^edlp$", "n")
     _parse_function(f2, "^xxxx$", "n")
     _parse_function(f3, "^ss$", "l")
@@ -327,11 +329,14 @@ def f32(
     arr = [[x["a"]] for x in e]
     return ArrayDataFrame(arr, "a:int").as_dict_iterable()
 
+
 def f33() -> Iterable[pd.DataFrame]:
     pass
 
+
 def f34(e: Iterable[pd.DataFrame]):
     pass
+
 
 def f35(e: pd.DataFrame, a: LocalDataFrame) -> Iterable[pd.DataFrame]:
     e = PandasDataFrame(e, "a:int").as_pandas()

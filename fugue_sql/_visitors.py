@@ -14,22 +14,22 @@ import pyarrow as pa
 from antlr4.Token import CommonToken
 from antlr4.tree.Tree import TerminalNode, Token, Tree
 from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import DataFrames
 from fugue.execution import SQLEngine
-from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
+from fugue.extensions.creator.convert import _to_creator
+from fugue.extensions.outputter.convert import _to_outputter
+from fugue.extensions.processor.convert import _to_processor
+from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
+from fugue.workflow.module import _to_module
+from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
+from triad.collections.schema import Schema
+from triad.utils.assertion import assert_or_throw
+from triad.utils.convert import get_caller_global_local_vars, to_bool, to_type
+from triad.utils.pyarrow import to_pa_datatype
+
 from fugue_sql._antlr import FugueSQLParser as fp
 from fugue_sql._antlr import FugueSQLVisitor
 from fugue_sql._parse import FugueSQL, _to_tokens
 from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
-from triad.collections.schema import Schema
-from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import get_caller_global_local_vars, to_bool
-from triad.utils.pyarrow import to_pa_datatype
-from triad.utils.convert import to_type
-from fugue.extensions.creator.convert import _to_creator
-from fugue.extensions.processor.convert import _to_processor
-from fugue.extensions.outputter.convert import _to_outputter
-from fugue.extensions.transformer.convert import _to_transformer, _to_output_transformer
 
 
 class FugueSQLHooks(object):
@@ -297,14 +297,16 @@ class _Extensions(_VisitorBase):
         sql: FugueSQL,
         hooks: FugueSQLHooks,
         workflow: FugueWorkflow,
-        variables: Optional[Dict[str, WorkflowDataFrame]] = None,
+        variables: Optional[
+            Dict[str, Tuple[WorkflowDataFrame, WorkflowDataFrames]]
+        ] = None,
         last: Optional[WorkflowDataFrame] = None,
         global_vars: Optional[Dict[str, Any]] = None,
         local_vars: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(sql)
         self._workflow = workflow
-        self._variables: Dict[str, WorkflowDataFrame] = {}
+        self._variables: Dict[str, Tuple[WorkflowDataFrame, WorkflowDataFrames]] = {}
         if variables is not None:
             self._variables.update(variables)
         self._last: Optional[WorkflowDataFrame] = last
@@ -322,7 +324,7 @@ class _Extensions(_VisitorBase):
         return self._hooks
 
     @property
-    def variables(self) -> Dict[str, WorkflowDataFrame]:
+    def variables(self) -> Dict[str, Tuple[WorkflowDataFrame, WorkflowDataFrames]]:
         return self._variables
 
     @property
@@ -339,12 +341,33 @@ class _Extensions(_VisitorBase):
     def local_vars(self) -> Dict[str, Any]:
         return self._local_vars
 
+    def get_df(
+        self, key: str, ctx: fp.FugueDataFrameMemberContext
+    ) -> WorkflowDataFrame:
+        assert_or_throw(
+            key in self.variables,
+            FugueSQLSyntaxError(f"{key} is not defined"),
+        )
+        if isinstance(self.variables[key], WorkflowDataFrame):
+            assert_or_throw(
+                ctx is None,
+                FugueSQLSyntaxError("can't specify index or key for dataframe"),
+            )
+            return self.variables[key]  # type: ignore
+        assert_or_throw(
+            ctx is not None,
+            FugueSQLSyntaxError("must specify index or key for dataframes"),
+        )
+        if ctx.index is not None:
+            return self.variables[key][int(self.ctxToStr(ctx.index))]
+        else:
+            return self.variables[key][self.ctxToStr(ctx.key)]  # type: ignore
+
     def visitFugueDataFrameSource(
         self, ctx: fp.FugueDataFrameSourceContext
     ) -> WorkflowDataFrame:
-        name = self.ctxToStr(ctx, delimit="")
-        assert_or_throw(name in self.variables, FugueSQLError(f"{name} is not defined"))
-        return self.variables[name]
+        name = self.ctxToStr(ctx.fugueIdentifier(), delimit="")
+        return self.get_df(name, ctx.fugueDataFrameMember())
 
     def visitFugueDataFrameNested(
         self, ctx: fp.FugueDataFrameNestedContext
@@ -366,15 +389,15 @@ class _Extensions(_VisitorBase):
 
     def visitFugueDataFramesList(
         self, ctx: fp.FugueDataFramesListContext
-    ) -> DataFrames:
+    ) -> WorkflowDataFrames:
         dfs = self.collectChildren(ctx, fp.FugueDataFrameContext)
-        return DataFrames(dfs)
+        return WorkflowDataFrames(dfs)
 
     def visitFugueDataFramesDict(
         self, ctx: fp.FugueDataFramesDictContext
-    ) -> DataFrames:
+    ) -> WorkflowDataFrames:
         dfs = self.collectChildren(ctx, fp.FugueDataFramePairContext)
-        return DataFrames(dfs)
+        return WorkflowDataFrames(dfs)
 
     def visitFugueEngineSpecificQueryTask(
         self, ctx: fp.FugueEngineSpecificQueryTaskContext
@@ -390,7 +413,7 @@ class _Extensions(_VisitorBase):
     ) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "partition", "dfs", "params")
         if "dfs" not in data:
-            data["dfs"] = DataFrames(self.last)
+            data["dfs"] = WorkflowDataFrames(self.last)
         p = data["params"]
         using = _to_transformer(
             p["using"],
@@ -411,7 +434,7 @@ class _Extensions(_VisitorBase):
     ) -> None:
         data = self.get_dict(ctx, "partition", "dfs", "using", "params")
         if "dfs" not in data:
-            data["dfs"] = DataFrames(self.last)
+            data["dfs"] = WorkflowDataFrames(self.last)
         using = _to_output_transformer(
             data["using"],
             global_vars=self.global_vars,
@@ -430,7 +453,7 @@ class _Extensions(_VisitorBase):
     ) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "partition", "dfs", "params")
         if "dfs" not in data:
-            data["dfs"] = DataFrames(self.last)
+            data["dfs"] = WorkflowDataFrames(self.last)
         p = data["params"]
         using = _to_processor(
             p["using"],
@@ -473,7 +496,7 @@ class _Extensions(_VisitorBase):
     def visitFugueOutputTask(self, ctx: fp.FugueOutputTaskContext):
         data = self.get_dict(ctx, "dfs", "using", "params", "partition")
         if "dfs" not in data:
-            data["dfs"] = DataFrames(self.last)
+            data["dfs"] = WorkflowDataFrames(self.last)
         using = _to_outputter(
             data["using"],
             global_vars=self.global_vars,
@@ -489,7 +512,7 @@ class _Extensions(_VisitorBase):
     def visitFuguePrintTask(self, ctx: fp.FuguePrintTaskContext) -> None:
         data = self.get_dict(ctx, "dfs")
         if "dfs" not in data:
-            data["dfs"] = DataFrames(self.last)
+            data["dfs"] = WorkflowDataFrames(self.last)
         params: Dict[str, Any] = {}
         if ctx.rows is not None:
             params["rows"] = int(self.ctxToStr(ctx.rows))
@@ -615,6 +638,37 @@ class _Extensions(_VisitorBase):
             df = self.workflow.select(*statements)
         self._process_assignable(df, ctx)
 
+    def visitFugueModuleTask(self, ctx: fp.FugueModuleTaskContext) -> None:
+        data = self.get_dict(ctx, "assign", "dfs", "using", "params")
+        sub = _to_module(
+            data["using"],
+            global_vars=self.global_vars,
+            local_vars=self.local_vars,
+        )
+        varname = data["assign"][0] if "assign" in data else None
+        if varname is not None:
+            assert_or_throw(
+                sub.has_single_output or sub.has_multiple_output,
+                FugueSQLSyntaxError("invalid assignment for module without output"),
+            )
+        if sub.has_input:
+            dfs = data["dfs"] if "dfs" in data else WorkflowDataFrames(self.last)
+        else:
+            dfs = WorkflowDataFrames()
+        p = data["params"] if "params" in data else {}
+        if sub.has_dfs_input:
+            result = sub(dfs, **p)
+        elif len(dfs) == 0:
+            result = sub(self.workflow, **p)
+        elif len(dfs) == 1 or not dfs.has_key:
+            result = sub(*list(dfs.values()), **p)
+        else:
+            result = sub(**dfs, **p)
+        if sub.has_single_output or sub.has_multiple_output:
+            self.variables[varname] = result
+        if sub.has_single_output:
+            self._last = result
+
     def visitFugueSqlEngine(
         self, ctx: fp.FugueSqlEngineContext
     ) -> Tuple[Type[SQLEngine], Dict[str, Any]]:
@@ -655,11 +709,15 @@ class _Extensions(_VisitorBase):
     def visitTableName(self, ctx: fp.TableNameContext) -> Iterable[Any]:
         table_name = self.ctxToStr(ctx.multipartIdentifier(), delimit="")
         if table_name not in self.variables:
+            assert_or_throw(
+                ctx.fugueDataFrameMember() is None,
+                FugueSQLSyntaxError("can't specify index or key for dataframe"),
+            )
             table: Any = self.hooks.on_select_source_not_found(
                 self.workflow, table_name
             )
         else:
-            table = self.variables[table_name]
+            table = self.get_df(table_name, ctx.fugueDataFrameMember())
         if isinstance(table, str):
             yield table
             yield from self._get_query_elements(ctx.sample())
@@ -779,5 +837,5 @@ class _Extensions(_VisitorBase):
         if "broadcast" in data:
             df = df.broadcast()
         if varname is not None:
-            self.variables[varname] = df
+            self.variables[varname] = df  # type: ignore
         self._last = df

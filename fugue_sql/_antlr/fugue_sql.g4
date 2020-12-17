@@ -99,6 +99,7 @@ fugueSingleTask
     | fugueOutputTask
     | fuguePrintTask
     | fugueSaveTask
+    | fugueModuleTask
     ;
 
 fugueNestableTask
@@ -194,6 +195,10 @@ fugueOutputTransformTask:
     OUTTRANSFORM (dfs=fugueDataFrames)? (partition=fuguePrepartition)? USING using=fugueExtension (params=fugueParams)?
     ;
 
+fugueModuleTask:
+    (assign=fugueAssignment)? SUB (dfs=fugueDataFrames)? USING using=fugueExtension (params=fugueParams)?
+    ;
+
 fugueSqlEngine:
     CONNECT using=fugueExtension (params=fugueParams)?
     ;
@@ -252,8 +257,12 @@ fugueDataFramePair
     ;
 
 fugueDataFrame
-    : fugueIdentifier               #fugueDataFrameSource
-    | '(' task=fugueNestableTask ')'     #fugueDataFrameNested
+    : fugueIdentifier fugueDataFrameMember?         #fugueDataFrameSource
+    | '(' task=fugueNestableTask ')'                #fugueDataFrameNested
+    ;
+
+fugueDataFrameMember
+    : '[' (index=INTEGER_VALUE|key=fugueIdentifier) ']'
     ;
 
 fugueAssignment:
@@ -1043,11 +1052,11 @@ identifierComment
     ;
 
 relationPrimary
-    : multipartIdentifier sample? tableAlias  #tableName
-    | '(' query ')' sample? tableAlias        #aliasedQuery
-    | '(' relation ')' sample? tableAlias     #aliasedRelation
-    | inlineTable                             #inlineTableDefault2
-    | functionTable                           #tableValuedFunction
+    : multipartIdentifier fugueDataFrameMember? sample? tableAlias  #tableName
+    | '(' query ')' sample? tableAlias                              #aliasedQuery
+    | '(' relation ')' sample? tableAlias                           #aliasedRelation
+    | inlineTable                                                   #inlineTableDefault2
+    | functionTable                                                 #tableValuedFunction
     ;
 
 inlineTable
@@ -1876,6 +1885,8 @@ CONNECT: 'CONNECT';
 
 SAMPLE: 'SAMPLE';
 SEED: 'SEED';
+
+SUB: 'SUB';
 
 //================================
 // End of the Fugue keywords list

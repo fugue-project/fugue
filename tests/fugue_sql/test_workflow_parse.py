@@ -1,19 +1,18 @@
 import json
 from typing import Any, Iterable, List
 
+from fugue import FugueWorkflow, SqliteEngine, WorkflowDataFrame, WorkflowDataFrames, module
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.extensions import OutputTransformer
 from fugue.extensions.transformer.convert import _to_output_transformer
-from fugue.workflow.workflow import FugueWorkflow
-from fugue import SqliteEngine
 from pytest import raises
 from triad.collections.schema import Schema
+from triad.utils.convert import get_caller_global_local_vars
 
 from fugue_sql._parse import FugueSQL
 from fugue_sql._visitors import FugueSQLHooks, _Extensions, _VisitorBase
 from fugue_sql.exceptions import FugueSQLError
-from triad.utils.convert import get_caller_global_local_vars
 
 
 def test_create_data():
@@ -625,6 +624,58 @@ def test_sample():
         """
     create [[NULL, 1],[1, NULL]] schema a:int, b:int
     fill nulls (a:99, b:-99)""",
+        dag,
+    )
+
+
+def test_module():
+    # pylint: disable=no-value-for-parameter
+    
+    def create(wf: FugueWorkflow, n: int = 1) -> WorkflowDataFrame:
+        return wf.df([[n]], "a:int")
+
+    def merge(
+        df1: WorkflowDataFrame, df2: WorkflowDataFrame, k: str = "aa"
+    ) -> WorkflowDataFrames:
+        return WorkflowDataFrames({k: df1, "bb": df2})
+
+    def merge2(
+        wf: FugueWorkflow, dfs: WorkflowDataFrames, k: int = 0
+    ) -> WorkflowDataFrame:
+        return dfs[k]
+
+    def merge3(df1: WorkflowDataFrame, df2: WorkflowDataFrame) -> WorkflowDataFrames:
+        return WorkflowDataFrames(df1, df2)
+
+    @module()
+    def out1(wf: FugueWorkflow, df: WorkflowDataFrame) -> None:
+        df.show()
+
+    dag = FugueWorkflow()
+    a = create(dag)
+    b = create(dag, n=2)
+    dfs = merge(a, b, k="a1")
+    dfs["a1"].show()
+    dfs["bb"].show()
+    df = merge2(dag, WorkflowDataFrames(a, b), k=1)
+    out1(df)
+    dfs = merge3(b, a)
+    dfs[0].show()
+    dfs[1].show()
+
+    assert_eq(
+        """
+    a=sub using create
+    b=sub using create(n=2)
+    dfs=sub a,b using merge(k="a1")
+    print dfs[a1]
+    print dfs[bb]
+    sub a,b using merge2(k=1)
+    sub using out1
+    dfs=sub df2:a,df1:b using merge3
+    print dfs[0]
+    print dfs[1]
+    """,
         dag,
     )
 
