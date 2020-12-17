@@ -20,6 +20,12 @@ def test_input_module():
     def input3(wf: FugueWorkflow, a: int, b: int) -> WorkflowDataFrames:
         return WorkflowDataFrames(a=wf.df([[a]], "a:int"), b=wf.df([[b]], "b:int"))
 
+    assert not input1.has_input
+    assert input1.has_single_output
+    assert not input1.has_no_output
+
+    assert input3.has_multiple_output
+
     with FugueWorkflow() as dag:
         input1(dag).assert_eq(dag.df([[0]], "a:int"))
 
@@ -51,6 +57,10 @@ def test_process_module():
     @module()
     def p3(df: WorkflowDataFrame) -> WorkflowDataFrame:
         return df.process(process)
+
+    assert p1.has_input
+    assert not p1.has_dfs_input
+    assert p2.has_dfs_input
 
     with FugueSQLWorkflow() as dag:
         df = dag.df([[0]], "a:int")
@@ -97,6 +107,11 @@ def test_output_module():
     @module()
     def o3(df: WorkflowDataFrame):
         pass
+
+    assert o1.has_input
+    assert o1.has_no_output
+    assert o2.has_no_output
+    assert o3.has_no_output
 
     with FugueWorkflow() as dag:
         df = dag.df([[0]], "a:int")

@@ -2,7 +2,7 @@ import inspect
 from builtins import isinstance
 from typing import Any, Dict, Tuple
 
-from fugue import DataFrame, FugueWorkflow, WorkflowDataFrame
+from fugue import DataFrame, FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 from fugue.collections.yielded import Yielded
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
@@ -58,7 +58,7 @@ class FugueSQLWorkflow(FugueWorkflow):
 
     def _sql(
         self, code: str, *args: Any, **kwargs: Any
-    ) -> Dict[str, WorkflowDataFrame]:
+    ) -> Dict[str, Tuple[WorkflowDataFrame, WorkflowDataFrames]]:
         # TODO: move dict construction to triad
         params: Dict[str, Any] = {}
         for a in args:
@@ -79,12 +79,12 @@ class FugueSQLWorkflow(FugueWorkflow):
 
     def _split_params(
         self, params: Dict[str, Any]
-    ) -> Tuple[Dict[str, Any], Dict[str, WorkflowDataFrame]]:
+    ) -> Tuple[Dict[str, Any], Dict[str, Tuple[WorkflowDataFrame, WorkflowDataFrames]]]:
         p: Dict[str, Any] = {}
-        dfs: Dict[str, WorkflowDataFrame] = {}
+        dfs: Dict[str, Tuple[WorkflowDataFrame, WorkflowDataFrames]] = {}
         for k, v in params.items():
             if isinstance(v, (DataFrame, Yielded)):
-                dfs[k] = self.df(v)
+                dfs[k] = self.df(v)  # type: ignore
             else:
                 p[k] = v
         return p, dfs

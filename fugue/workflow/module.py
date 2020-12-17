@@ -68,6 +68,33 @@ class _ModuleFunctionWrapper(FunctionWrapper):
         return super().__call__(*args, **kwargs)
 
     @property
+    def has_input(self) -> bool:
+        return any(
+            isinstance(x, (_WorkflowDataFrameParam, _WorkflowDataFramesParam))
+            for x in self._params.values()
+        )
+
+    @property
+    def has_dfs_input(self) -> bool:
+        return any(
+            isinstance(x, _WorkflowDataFramesParam) for x in self._params.values()
+        )
+
+    @property
+    def has_no_output(self) -> bool:
+        return not isinstance(
+            self._rt, (_WorkflowDataFrameParam, _WorkflowDataFramesParam)
+        )
+
+    @property
+    def has_single_output(self) -> bool:
+        return isinstance(self._rt, _WorkflowDataFrameParam)
+
+    @property
+    def has_multiple_output(self) -> bool:
+        return isinstance(self._rt, _WorkflowDataFramesParam)
+
+    @property
     def _first_annotation_is_workflow(self) -> bool:
         return isinstance(self._params.get_value_by_index(0), _FugueWorkflowParam)
 
