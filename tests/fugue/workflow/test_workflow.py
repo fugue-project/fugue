@@ -44,6 +44,13 @@ def test_worflow_dataframes():
     with raises(ValueError):
         WorkflowDataFrames(a=df1, b=ArrayDataFrame([[0]], "a:int"))
 
+    dag = FugueWorkflow()
+    df = dag.df([[0],[1]], "a:int")
+    assert df.partition_spec.empty
+    df2 = df.partition(by=["a"])
+    assert df.partition_spec.empty
+    assert df2.partition_spec == PartitionSpec(by=["a"])
+
 
 def test_workflow():
     builder = FugueWorkflow()

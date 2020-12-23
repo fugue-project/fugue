@@ -125,6 +125,13 @@ class PartitionSpec(object):
             + f"by={self._partition_by}, presort='{self.presort_expr}')"
         )
 
+    def __eq__(self, other: Any) -> bool:
+        if other is self:
+            return True
+        if not isinstance(other, PartitionSpec):
+            other = PartitionSpec(other)
+        return self.jsondict == other.jsondict
+
     @property
     def empty(self) -> bool:
         """Whether this spec didn't specify anything"""

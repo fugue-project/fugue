@@ -102,6 +102,23 @@ class WorkflowDataFrame(DataFrame):
         """
         return self.workflow.get_result(self)
 
+    @property
+    def partition_spec(self) -> PartitionSpec:
+        """The partition spec set on the dataframe for next steps to use
+
+        :Examples:
+
+        .. code-block:: python
+
+            dag = FugueWorkflow()
+            df = dag.df([[0],[1]], "a:int")
+            assert df.partition_spec.empty
+            df2 = df.partition(by=["a"])
+            assert df.partition_spec.empty
+            assert df2.partition_spec == PartitionSpec(by=["a"])
+        """
+        return self._metadata.get("pre_partition", PartitionSpec())
+
     def compute(self, *args, **kwargs) -> DataFrame:
         """Trigger the parent workflow to
         :meth:`~fugue.workflow.workflow.FugueWorkflow.run` and to generate and cache
@@ -163,7 +180,7 @@ class WorkflowDataFrame(DataFrame):
             not isinstance(using, str), f"processor {using} can't be string expression"
         )
         if pre_partition is None:
-            pre_partition = self._metadata.get("pre_partition", PartitionSpec())
+            pre_partition = self.partition_spec
         df = self.workflow.process(
             self, using=using, schema=schema, params=params, pre_partition=pre_partition
         )
@@ -187,7 +204,7 @@ class WorkflowDataFrame(DataFrame):
             not isinstance(using, str), f"outputter {using} can't be string expression"
         )
         if pre_partition is None:
-            pre_partition = self._metadata.get("pre_partition", PartitionSpec())
+            pre_partition = self.partition_spec
         self.workflow.output(
             self, using=using, params=params, pre_partition=pre_partition
         )
@@ -296,7 +313,7 @@ class WorkflowDataFrame(DataFrame):
             f"transformer {using} can't be string expression",
         )
         if pre_partition is None:
-            pre_partition = self._metadata.get("pre_partition", PartitionSpec())
+            pre_partition = self.partition_spec
         df = self.workflow.transform(
             self,
             using=using,
@@ -341,7 +358,7 @@ class WorkflowDataFrame(DataFrame):
             f"output transformer {using} can't be string expression",
         )
         if pre_partition is None:
-            pre_partition = self._metadata.get("pre_partition", PartitionSpec())
+            pre_partition = self.partition_spec
         self.workflow.out_transform(
             self,
             using=using,
@@ -858,7 +875,7 @@ class WorkflowDataFrame(DataFrame):
         for details
         """
         if partition is None:
-            partition = self._metadata.get("pre_partition", PartitionSpec())
+            partition = self.partition_spec
         df = self.workflow.zip(
             self,
             *dfs,
@@ -900,7 +917,7 @@ class WorkflowDataFrame(DataFrame):
         :ref:`Save & Load <tutorial:/tutorials/dag.ipynb#save-&-load>`.
         """
         if partition is None:
-            partition = self._metadata.get("pre_partition", PartitionSpec())
+            partition = self.partition_spec
         self.workflow.output(
             self,
             using=Save,
@@ -934,7 +951,7 @@ class WorkflowDataFrame(DataFrame):
         :ref:`Save & Load <tutorial:/tutorials/dag.ipynb#save-&-load>`.
         """
         if partition is None:
-            partition = self._metadata.get("pre_partition", PartitionSpec())
+            partition = self.partition_spec
         df = self.workflow.process(
             self,
             using=SaveAndUse,
