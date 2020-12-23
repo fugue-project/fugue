@@ -41,8 +41,14 @@ def test_partition_spec():
     assert "even" == p.algo
     assert not p.empty
 
-    p = PartitionSpec(partition_by=["a", "b", "c"], presort="d,e desc", algo="EvEN",
-                      num_partitions="ROWCOUNT*3", row_limit=4, size_limit="5k")
+    p = PartitionSpec(
+        partition_by=["a", "b", "c"],
+        presort="d,e desc",
+        algo="EvEN",
+        num_partitions="ROWCOUNT*3",
+        row_limit=4,
+        size_limit="5k",
+    )
     p2 = PartitionSpec(p)
     assert p2.jsondict == p.jsondict
     assert "d ASC,e DESC" == p2.presort_expr
@@ -52,8 +58,12 @@ def test_partition_spec():
     print(f"{p}")
 
     # partition by overlaps with presort
-    raises(SyntaxError, lambda: PartitionSpec(partition_by=[
-           "a", "b", "c"], presort="a asc,e desc", algo="EvEN"))
+    raises(
+        SyntaxError,
+        lambda: PartitionSpec(
+            partition_by=["a", "b", "c"], presort="a asc,e desc", algo="EvEN"
+        ),
+    )
 
     # partition by has dups
     raises(SyntaxError, lambda: PartitionSpec(partition_by=["a", "b", "b"]))
@@ -70,12 +80,13 @@ def test_partition_spec():
     raises(SyntaxError, lambda: PartitionSpec(presort="a b asc,a desc"))
     raises(SyntaxError, lambda: PartitionSpec(presort=["a asc", ("b", True)]))
     raises(SyntaxError, lambda: PartitionSpec(presort=[("a", "asc"), "b"]))
-    raises(SyntaxError, lambda: PartitionSpec(presort=[("a", ), ("b")]))
+    raises(SyntaxError, lambda: PartitionSpec(presort=[("a",), ("b")]))
     raises(SyntaxError, lambda: PartitionSpec(presort=["a", ["b", True]]))
 
     p = PartitionSpec(dict(partition_by=["a"], presort="d asc,e desc"))
     assert dict(a=True, d=True, e=False) == p.get_sorts(
-        Schema("a:int,b:int,d:int,e:int"))
+        Schema("a:int,b:int,d:int,e:int")
+    )
     p = PartitionSpec(dict(partition_by=["e", "a"], presort="d asc"))
     assert p.get_key_schema(Schema("a:int,b:int,d:int,e:int")) == "e:int,a:int"
 
@@ -83,9 +94,9 @@ def test_partition_spec():
     a = PartitionSpec(by=["a", "b"])
     b = PartitionSpec(a, by=["a"], num=2)
     assert ["a", "b"] == a.partition_by
-    assert '0' == a.num_partitions
+    assert "0" == a.num_partitions
     assert ["a"] == b.partition_by
-    assert '2' == b.num_partitions
+    assert "2" == b.num_partitions
 
     a = PartitionSpec(by=["a"], presort="b DESC, c")
     b = PartitionSpec(by=["a"], presort="c,b DESC")
@@ -103,13 +114,23 @@ def test_partition_spec():
     assert b.presort == c.presort
     assert a.presort == d.presort
 
-    a = PartitionSpec(by=["a"], presort=["b","c"])
+    a = PartitionSpec(by=["a"], presort=["b", "c"])
     b = PartitionSpec(by=["a"], presort=[("b"), ("c")])
     c = PartitionSpec(by=["a"], presort=[("b", True), ("c", True)])
     d = PartitionSpec(by=["a"], presort="b asc, c")
     assert a.presort == b.presort
     assert a.presort == c.presort
     assert a.presort == d.presort
+
+    # test eq
+    a = PartitionSpec(by=["a"], presort=["b", "c"])
+    b = PartitionSpec(presort="b, c asc", by=["a"])
+    c = PartitionSpec(num=10, by=["a"], presort=["b", "c"])
+    d = PartitionSpec(num=10, by=["a"], presort=["c", "b"])
+    assert a == a
+    assert a == b
+    assert a != c
+    assert c != d
 
 
 def test_partition_cursor():
@@ -143,7 +164,8 @@ def test_get_num_partitions():
 
     p = PartitionSpec(dict(partition_by=["b", "a"], num="min(ROWCOUNT,CORECOUNT)"))
     assert 90 == p.get_num_partitions(
-        **{KEYWORD_ROWCOUNT: lambda: 100, KEYWORD_CORECOUNT: lambda: 90})
+        **{KEYWORD_ROWCOUNT: lambda: 100, KEYWORD_CORECOUNT: lambda: 90}
+    )
 
 
 def test_determinism():
