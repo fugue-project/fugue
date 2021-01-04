@@ -287,6 +287,7 @@ class NativeExecutionEngine(ExecutionEngine):
         df: DataFrame,
         n: int,
         presort: str,
+        na_position: str = "last",
         partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
         metadata: Any = None,
     ) -> DataFrame:
@@ -302,7 +303,11 @@ class NativeExecutionEngine(ExecutionEngine):
         _presort: IndexedOrderedDict = presort or partition_spec.presort
 
         if len(_presort.keys()) > 0:
-            d = d.sort_values(list(_presort.keys()), ascending=list(_presort.values()))
+            d = d.sort_values(
+                list(_presort.keys()),
+                ascending=list(_presort.values()),
+                na_position=na_position,
+            )
 
         if len(partition_spec.partition_by) == 0:
             d = d.head(n)

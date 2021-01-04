@@ -437,6 +437,7 @@ class SparkExecutionEngine(ExecutionEngine):
         df: DataFrame,
         n: int,
         presort: str,
+        na_position: str = "last",
         partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
         metadata: Any = None,
     ) -> DataFrame:
@@ -445,25 +446,37 @@ class SparkExecutionEngine(ExecutionEngine):
             ValueError("n needs to be an integer"),
         )
         d = self.to_df(df).native
+        nulls_last = bool(na_position == "last")
 
         if presort:
             presort = _parse_presort_exp(presort)
         # Use presort over partition_spec.presort if possible
         _presort: IndexedOrderedDict = presort or partition_spec.presort
 
+        def _presort_to_col(_col: str, _asc: bool) -> Any:
+            if nulls_last:
+                if _asc:
+                    return col(_col).asc_nulls_last()
+                else:
+                    return col(_col).desc_nulls_last()
+            else:
+                if _asc:
+                    return col(_col).asc_nulls_first()
+                else:
+                    return col(_col).desc_nulls_first()
+
         # If no partition
         if len(partition_spec.partition_by) == 0:
             if len(_presort.keys()) > 0:
-                d = d.sort(list(_presort.keys()), ascending=list(_presort.values()))
+                d = d.orderBy(
+                    [_presort_to_col(_col, _presort[_col]) for _col, in _presort.keys()]
+                )
             d = d.limit(n)
 
         # If partition exists
         else:
             w = Window.partitionBy([col(x) for x in partition_spec.partition_by])
             if len(_presort.keys()) > 0:
-                _presort_to_col = (
-                    lambda _col, _asc: col(_col).asc() if _asc else col(_col).desc()
-                )
                 w = w.orderBy(
                     [_presort_to_col(_col, _presort[_col]) for _col, in _presort.keys()]
                 )

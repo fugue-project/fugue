@@ -610,7 +610,7 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(self, using=Sample, params=params)
         return self._to_self_type(df)
 
-    def limit(self: TDF, n: int, presort: str = None) -> TDF:
+    def limit(self: TDF, n: int, presort: str = None, na_position: str = "last") -> TDF:
         """
         Take the first n rows of a DataFrame. presort overrides
         PartitionSpec presort if both are passed.
@@ -626,8 +626,14 @@ class WorkflowDataFrame(DataFrame):
             isinstance(n, int),
             ValueError("n needs to be an integer"),
         )
+        assert_or_throw(
+            na_position in ("first", "last"),
+            ValueError("na_position must be either 'first' or 'last'"),
+        )
+        params["na_position"] = na_position
         if presort is not None:
             params["presort"] = presort
+
         df = self.workflow.process(
             self, using=Limit, pre_partition=self.partition_spec, params=params
         )

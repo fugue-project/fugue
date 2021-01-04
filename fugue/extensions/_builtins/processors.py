@@ -239,8 +239,15 @@ class Limit(Processor):
         # All _get_or operations convert float to int
         n = self.params.get_or_none("n", int)
         presort = self.params.get_or_none("presort", str)
+        na_position = self.params.get("na_position", "last")
         partition_spec = self.partition_spec
-        return self.execution_engine.limit(dfs[0], n, presort, partition_spec)
+        return self.execution_engine.limit(
+            dfs[0],
+            n,
+            presort=presort,
+            na_position=na_position,
+            partition_spec=partition_spec,
+        )
 
 
 class SaveAndUse(Processor):
