@@ -27,6 +27,7 @@ from fugue.extensions._builtins import (
     DropColumns,
     Dropna,
     Fillna,
+    Limit,
     Load,
     Rename,
     RunJoin,
@@ -607,6 +608,29 @@ class WorkflowDataFrame(DataFrame):
         if frac is not None:
             params["frac"] = frac
         df = self.workflow.process(self, using=Sample, params=params)
+        return self._to_self_type(df)
+
+    def limit(self: TDF, n: int, presort: str = None) -> TDF:
+        """
+        Take the first n rows of a DataFrame. presort overrides
+        PartitionSpec presort if both are passed.
+
+        :param n: number of rows to return
+
+        :return: sampled dataframe
+        """
+        params: Dict[str, Any] = dict()
+        params["n"] = n
+        # Note float is converted to int with triad _get_or
+        assert_or_throw(
+            isinstance(n, int),
+            ValueError("n needs to be an integer"),
+        )
+        if presort is not None:
+            params["presort"] = presort
+        df = self.workflow.process(
+            self, using=Limit, pre_partition=self.partition_spec, params=params
+        )
         return self._to_self_type(df)
 
     def weak_checkpoint(self: TDF, lazy: bool = False, **kwargs: Any) -> TDF:

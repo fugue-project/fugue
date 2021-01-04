@@ -419,6 +419,32 @@ class ExecutionEngine(ABC):
         """
         pass
 
+    @abstractmethod
+    def limit(
+        self,
+        df: DataFrame,
+        n: int,
+        presort: str,
+        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        metadata: Any = None,
+    ) -> DataFrame:  # pragma: no cover
+        """
+        Get the first n rows of a DataFrame. If a presort is defined,
+        use the presort before applying limit. presort overrides
+        partition_spec.presort
+
+        :param df: DataFrame
+        :param n: number of rows to return
+        :param presort: presort expression similar to partition presort
+        :param partition_spec: PartitionSpec to apply the limit operation
+        :param metadata: dict-like object to add to the result dataframe,
+            defaults to None
+
+        :return: n rows of DataFrame
+        :rtype: DataFrame
+        """
+        pass
+
     def zip(
         self,
         df1: DataFrame,

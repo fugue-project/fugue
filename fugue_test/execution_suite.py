@@ -533,6 +533,22 @@ class ExecutionEngineTests(object):
             assert abs(len(i.as_array()) - 80) < 10
             assert i.metadata == dict(a=1)
 
+        # def test_limit(self):
+        #     e = self.engine
+        #     a = e.to_df(
+        #         [[1, 2, 3], [1, 3, 4], [2, 1, 2]], "a:double,b:double,c:double"
+        #     )
+        #     b = engine.limit(a, n=1, metadata=(dict(a=1)))
+        #     g = engine.sample(a, frac=0.8, replace=True, metadata=(dict(a=1)))
+        #     h = engine.sample(a, frac=0.8, seed=1, metadata=(dict(a=1)))
+        #     h2 = engine.sample(a, frac=0.8, seed=1, metadata=(dict(a=1)))
+        #     i = engine.sample(a, frac=0.8, seed=2, metadata=(dict(a=1)))
+        #     assert not df_eq(f, g, throw=False)
+        #     df_eq(h, h2, throw=True)
+        #     assert not df_eq(h, i, throw=False)
+        #     assert abs(len(i.as_array()) - 80) < 10
+        #     assert i.metadata == dict(a=1)
+
         def test_sample_n(self):
             engine = self.engine
             a = engine.to_df([[x] for x in range(100)], "a:int")

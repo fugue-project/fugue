@@ -233,6 +233,16 @@ class Sample(Processor):
         )
 
 
+class Limit(Processor):
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        # All _get_or operations convert float to int
+        n = self.params.get_or_none("n", int)
+        presort = self.params.get_or_none("presort", str)
+        partition_spec = self.partition_spec
+        return self.execution_engine.limit(dfs[0], n, presort, partition_spec)
+
+
 class SaveAndUse(Processor):
     def process(self, dfs: DataFrames) -> DataFrame:
         assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
