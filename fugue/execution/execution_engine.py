@@ -430,9 +430,8 @@ class ExecutionEngine(ABC):
         metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
         """
-        Get the first n rows of a DataFrame. If a presort is defined,
-        use the presort before applying limit. presort overrides
-        partition_spec.presort
+        Get the first n rows of a DataFrame per partition. If a presort is defined,
+        use the presort before applying limit. presort overrides partition_spec.presort
 
         :param df: DataFrame
         :param n: number of rows to return
@@ -443,7 +442,7 @@ class ExecutionEngine(ABC):
         :param metadata: dict-like object to add to the result dataframe,
             defaults to None
 
-        :return: n rows of DataFrame
+        :return: n rows of DataFrame per partition
         :rtype: DataFrame
         """
         pass

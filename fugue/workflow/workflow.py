@@ -612,12 +612,15 @@ class WorkflowDataFrame(DataFrame):
 
     def limit(self: TDF, n: int, presort: str = None, na_position: str = "last") -> TDF:
         """
-        Take the first n rows of a DataFrame. presort overrides
-        PartitionSpec presort if both are passed.
+        Get the first n rows of a DataFrame per partition. If a presort is defined,
+        use the presort before applying limit. presort overrides partition_spec.presort
 
         :param n: number of rows to return
+        :param presort: presort expression similar to partition presort
+        :param na_position: position of null values during the presort.
+        can accept ``first`` or ``last``
 
-        :return: sampled dataframe
+        :return: n rows of DataFrame per partition
         """
         params: Dict[str, Any] = dict()
         params["n"] = n
