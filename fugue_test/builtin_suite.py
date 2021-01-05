@@ -967,7 +967,7 @@ class BuiltInTests(object):
                 with raises(ValueError):
                     a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")
                     a.limit(0.5).show()
-            # n must be int
+            # na_position not valid
             with self.dag() as dag:
                 with raises(ValueError):
                     a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")

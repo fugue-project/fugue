@@ -533,27 +533,51 @@ class ExecutionEngineTests(object):
             assert abs(len(i.as_array()) - 80) < 10
             assert i.metadata == dict(a=1)
 
-        # def test_limit(self):
-        #     e = self.engine
-        #     a = e.to_df(
-        #         [[1, 2, 3], [1, 3, 4], [2, 1, 2], [2, 2, 2],
-        #         [None, 1, 2], [None, 2, 1]], "a:double,b:double,c:double"
-        #     )
-        #     b = engine.limit(a, n=1, presort="b desc", metadata=(dict(a=1)))
-        #     c = engine.limit(a, n=1, presort="c asc")
-        #     df_eq(
-        #         c,
-        #         [[1,3,4]],
-        #         "a:double,b:double,c:double",
-        #         metadata=dict(a=1),
-        #         throw=True,
-        #     )
-
-        #     assert not df_eq(f, g, throw=False)
-        #     df_eq(h, h2, throw=True)
-        #     assert not df_eq(h, i, throw=False)
-        #     assert abs(len(i.as_array()) - 80) < 10
-        #     assert i.metadata == dict(a=1)
+        def test_limit(self):
+            e = self.engine
+            ps = PartitionSpec(by=["a"], presort="b DESC,c DESC")
+            ps2 = PartitionSpec(by=["c"], presort="b ASC")
+            a = e.to_df(
+                [
+                    [1, 2, 3],
+                    [1, 3, 4],
+                    [2, 1, 2],
+                    [2, 2, 2],
+                    [None, 4, 2],
+                    [None, 2, 1],
+                ],
+                "a:double,b:double,c:double",
+            )
+            b = e.limit(a, n=1, presort="b desc", metadata=(dict(a=1)))
+            c = e.limit(a, n=2, presort="a desc", na_position="first")
+            d = e.limit(a, n=1, presort="a asc, b desc", partition_spec=ps)
+            f = e.limit(a, n=1, presort=None, partition_spec=ps2)
+            df_eq(
+                b,
+                [[None, 4, 2]],
+                "a:double,b:double,c:double",
+                metadata=dict(a=1),
+                throw=True,
+            )
+            df_eq(
+                c,
+                [[None, 4, 2], [None, 2, 1]],
+                "a:double,b:double,c:double",
+                throw=True,
+            )
+            df_eq(
+                d,
+                [[1, 3, 4], [2, 2, 2], [None, 4, 2]],
+                "a:double,b:double,c:double",
+                throw=True,
+            )
+            df_eq(
+                f,
+                [[1, 2, 3], [1, 3, 4], [2, 1, 2], [None, 2, 1]],
+                "a:double,b:double,c:double",
+                throw=True,
+            )
+            raises(ValueError, lambda: e.limit(a, n=0.5, presort=None))
 
         def test_sample_n(self):
             engine = self.engine
