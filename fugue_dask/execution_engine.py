@@ -1,12 +1,13 @@
 import logging
 from typing import Any, Callable, List, Optional, Union
 
-import dask.dataframe as pd
+import dask.dataframe as dd
 from fugue._utils.io import load_df, save_df
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
+    _parse_presort_exp,
 )
 from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
@@ -18,7 +19,7 @@ from fugue.execution.execution_engine import (
 )
 from qpd_dask import run_sql_on_dask
 from triad.collections import Schema
-from triad.collections.dict import ParamDict
+from triad.collections.dict import ParamDict, IndexedOrderedDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
@@ -183,7 +184,7 @@ class DaskExecutionEngine(ExecutionEngine):
             )
         )
 
-        def _map(pdf: Any) -> pd.DataFrame:
+        def _map(pdf: Any) -> dd.DataFrame:
             if pdf.shape[0] == 0:
                 return PandasDataFrame([], output_schema).as_pandas()
             if len(presort_keys) > 0:
@@ -353,6 +354,77 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.to_df(df).native.sample(
             n=n, frac=frac, replace=replace, random_state=seed
         )
+        return DaskDataFrame(d, df.schema, metadata)
+
+    def limit(
+        self,
+        df: DataFrame,
+        n: int,
+        presort: str,
+        na_position: str = "last",
+        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            isinstance(n, int),
+            ValueError("n needs to be an integer"),
+        )
+        d = self.to_df(df).native
+
+        if presort:
+            presort = _parse_presort_exp(presort)
+        # Use presort over partition_spec.presort if possible
+        _presort: IndexedOrderedDict = presort or partition_spec.presort
+
+        if len(partition_spec.partition_by) == 0:
+            if len(_presort.keys()) == 0:
+                d = d.head(n)
+            if len(_presort.keys()) >= 1:
+                _primary_sort, _asc = _presort.get_item_by_index(0)
+                df1 = (
+                    d.nsmallest(n, _primary_sort)
+                    if _asc
+                    else d.nlargest(n, _primary_sort)
+                )
+
+                _val = df1[_primary_sort].max() if _asc else df1[_primary_sort].min()
+                df2 = d[d[_primary_sort] == _val]
+
+                _keep = n - df1[df1[_primary_sort] == _val].shape[0].compute()
+                df1 = (
+                    df1.nsmallest(_keep, _primary_sort)
+                    if _asc
+                    else df1.nlargest(_keep, _primary_sort)
+                )
+
+                df3 = d[d[_primary_sort].isna()]
+
+                d = dd.concat([df1, df2, df3], interleave_partitions=True)
+                d = (
+                    d.compute()
+                    .sort_values(
+                        list(_presort.keys()),
+                        ascending=list(_presort.values()),
+                        na_position=na_position,
+                    )
+                    .head(n)
+                )
+        else:
+
+            def _partition_limit(partition, n, presort):
+                if len(presort.keys()) > 0:
+                    partition = partition.sort_values(
+                        list(presort.keys()),
+                        ascending=list(presort.values()),
+                        na_position=na_position,
+                    )
+                return partition.head(n)
+
+            meta = [(d[x].name, d[x].dtype) for x in d.columns]
+            d = d.groupby(partition_spec.partition_by, dropna=False).apply(
+                _partition_limit, n=n, presort=_presort, meta=meta
+            )
+
         return DaskDataFrame(d, df.schema, metadata)
 
     def load_df(
