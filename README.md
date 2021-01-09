@@ -45,10 +45,9 @@ data = [
 schema = "id:str,date:date,value:double"
 
 # schema: *, filled:double
-def fillna(df:Iterable[Dict[str,Any]],value:int=0) -> Iterable[Dict[str,Any]]:
+def fillna(df:Iterable[Dict[str,Any]], value:float=0) -> Iterable[Dict[str,Any]]:
     for row in df:
-        for col in cols:
-            row["filled"] = (row["value"] or value)
+        row["filled"] = (row["value"] or value)
         yield row
 
 with FugueWorkflow() as dag:
