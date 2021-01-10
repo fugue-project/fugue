@@ -11,10 +11,10 @@
 
 Fugue is a pure abstraction layer that makes code portable across differing computing frameworks such as Pandas, Spark and Dask.
 
-* :rocket: **Framework-agnostic code**: Write code once in native Python. Fugue makes it runnable on Pandas, Dask or Spark with minimal changes. Logic and code is decoupled from frameworks, even from Fugue itself. Fugue adapts user's code, as well as the underlying computing frameworks.
-* :moneybag: **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and saves cluster expense.  This lessens the frequency spinning up clusters to test code, and reduces expensive mistakes.
-* :wrench: **Friendlier interface for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic. A lot of Fugue users see performance gains in their Spark jobs. Fugue SQL extends Spark SQL to be a programming language.
-* :heavy_check_mark: **Highly testable code**: Fugue naturally makes logic more testable because the code is in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
+* **Framework-agnostic code**: Write code once in native Python. Fugue makes it runnable on Pandas, Dask or Spark with minimal changes. Logic and code is decoupled from frameworks, even from Fugue itself. Fugue adapts user's code, as well as the underlying computing frameworks.
+* **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and saves cluster expense.  This lessens the frequency spinning up clusters to test code, and reduces expensive mistakes.
+* **Friendlier interface for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic. A lot of Fugue users see performance gains in their Spark jobs. Fugue SQL extends Spark SQL to be a programming language.
+* **Highly testable code**: Fugue naturally makes logic more testable because the code is in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
 
 ## Who is it for?
 
@@ -30,6 +30,7 @@ Fugue is a pure abstraction layer that makes code portable across differing comp
 Here is an example Fugue code snippet that illustrates some of the key features of the framework. A fillna function creates a new column named `filled`, which is the same as the column `value` except that the `None` values are filled.
 
 ```python
+from fugue import FugueWorkflow
 from typing import Iterable, Dict, Any, List
 
 # Creating sample data
@@ -41,13 +42,12 @@ data = [
     ["B", "2020-01-02", None],
     ["B", "2020-01-03", 40]
 ]
-schema = "id:str,date:date,value:int"
+schema = "id:str,date:date,value:double"
 
-# schema: *, filled:int
-def fillna(df:Iterable[Dict[str,Any]],value:int=0) -> Iterable[Dict[str,Any]]:
+# schema: *, filled:double
+def fillna(df:Iterable[Dict[str,Any]], value:float=0) -> Iterable[Dict[str,Any]]:
     for row in df:
-        for col in cols:
-            row["filled"] = (row["value"] or value)
+        row["filled"] = (row["value"] or value)
         yield row
 
 with FugueWorkflow() as dag:
