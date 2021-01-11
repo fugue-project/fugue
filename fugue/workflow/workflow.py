@@ -610,7 +610,7 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(self, using=Sample, params=params)
         return self._to_self_type(df)
 
-    def head_a(
+    def head_temp(
         self: TDF, n: int, presort: str = None, na_position: str = "last"
     ) -> TDF:
         """
