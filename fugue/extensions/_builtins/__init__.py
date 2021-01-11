@@ -13,7 +13,7 @@ from fugue.extensions._builtins.processors import (
     DropColumns,
     Dropna,
     Fillna,
-    Limit,
+    Head,
     Rename,
     RunJoin,
     RunSetOperation,

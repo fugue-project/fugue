@@ -420,7 +420,7 @@ class ExecutionEngine(ABC):
         pass
 
     @abstractmethod
-    def limit(
+    def head(
         self,
         df: DataFrame,
         n: int,
@@ -431,7 +431,7 @@ class ExecutionEngine(ABC):
     ) -> DataFrame:  # pragma: no cover
         """
         Get the first n rows of a DataFrame per partition. If a presort is defined,
-        use the presort before applying limit. presort overrides partition_spec.presort.
+        use the presort before applying head. presort overrides partition_spec.presort.
         The Fugue implementation of the presort follows Pandas convention of specifying
         NULLs first or NULLs last. This is different from the Spark and SQL convention
         of NULLs as the smallest value.
@@ -441,7 +441,7 @@ class ExecutionEngine(ABC):
         :param presort: presort expression similar to partition presort
         :param na_position: position of null values during the presort.
         can accept ``first`` or ``last``
-        :param partition_spec: PartitionSpec to apply the limit operation
+        :param partition_spec: PartitionSpec to apply the head operation
         :param metadata: dict-like object to add to the result dataframe,
             defaults to None
 

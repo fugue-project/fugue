@@ -356,7 +356,7 @@ class DaskExecutionEngine(ExecutionEngine):
         )
         return DaskDataFrame(d, df.schema, metadata)
 
-    def limit(
+    def head(
         self,
         df: DataFrame,
         n: int,
@@ -377,7 +377,7 @@ class DaskExecutionEngine(ExecutionEngine):
         # Use presort over partition_spec.presort if possible
         _presort: IndexedOrderedDict = presort or partition_spec.presort
 
-        def _partition_limit(partition, n, presort):
+        def _partition_head(partition, n, presort):
             if len(presort.keys()) > 0:
                 partition = partition.sort_values(
                     list(presort.keys()),
@@ -391,7 +391,7 @@ class DaskExecutionEngine(ExecutionEngine):
                 d = d.head(n)
             else:
                 # Use the default partition
-                d = d.map_partitions(_partition_limit, n, _presort, meta=meta).compute()
+                d = d.map_partitions(_partition_head, n, _presort, meta=meta).compute()
                 # compute() brings this to Pandas so we can use pandas
                 d = d.sort_values(
                     list(_presort.keys()),
@@ -401,7 +401,7 @@ class DaskExecutionEngine(ExecutionEngine):
 
         else:
             d = d.groupby(partition_spec.partition_by, dropna=False).apply(
-                _partition_limit, n=n, presort=_presort, meta=meta
+                _partition_head, n=n, presort=_presort, meta=meta
             )
 
         return DaskDataFrame(d, df.schema, metadata)

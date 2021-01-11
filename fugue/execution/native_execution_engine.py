@@ -282,7 +282,7 @@ class NativeExecutionEngine(ExecutionEngine):
         d = df.as_pandas().sample(n=n, frac=frac, replace=replace, random_state=seed)
         return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
 
-    def limit(
+    def head(
         self,
         df: DataFrame,
         n: int,
