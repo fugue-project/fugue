@@ -370,57 +370,36 @@ class DaskExecutionEngine(ExecutionEngine):
             ValueError("n needs to be an integer"),
         )
         d = self.to_df(df).native
+        meta = [(d[x].name, d[x].dtype) for x in d.columns]
 
         if presort:
             presort = _parse_presort_exp(presort)
         # Use presort over partition_spec.presort if possible
         _presort: IndexedOrderedDict = presort or partition_spec.presort
 
+        def _partition_limit(partition, n, presort):
+            if len(presort.keys()) > 0:
+                partition = partition.sort_values(
+                    list(presort.keys()),
+                    ascending=list(presort.values()),
+                    na_position=na_position,
+                )
+            return partition.head(n)
+
         if len(partition_spec.partition_by) == 0:
             if len(_presort.keys()) == 0:
                 d = d.head(n)
-            if len(_presort.keys()) >= 1:
-                _primary_sort, _asc = _presort.get_item_by_index(0)
-                df1 = (
-                    d.nsmallest(n, _primary_sort)
-                    if _asc
-                    else d.nlargest(n, _primary_sort)
-                )
+            else:
+                # Use the default partition
+                d = d.map_partitions(_partition_limit, n, _presort).compute()
+                # compute() brings this to Pandas so we can use pandas
+                d = d.sort_values(
+                    list(_presort.keys()),
+                    ascending=list(_presort.values()),
+                    na_position=na_position,
+                ).head(n)
 
-                _val = df1[_primary_sort].max() if _asc else df1[_primary_sort].min()
-                df2 = d[d[_primary_sort] == _val]
-
-                _keep = n - df1[df1[_primary_sort] == _val].shape[0].compute()
-                df1 = (
-                    df1.nsmallest(_keep, _primary_sort)
-                    if _asc
-                    else df1.nlargest(_keep, _primary_sort)
-                )
-
-                df3 = d[d[_primary_sort].isna()]
-
-                d = dd.concat([df1, df2, df3], interleave_partitions=True)
-                d = (
-                    d.compute()
-                    .sort_values(
-                        list(_presort.keys()),
-                        ascending=list(_presort.values()),
-                        na_position=na_position,
-                    )
-                    .head(n)
-                )
         else:
-
-            def _partition_limit(partition, n, presort):
-                if len(presort.keys()) > 0:
-                    partition = partition.sort_values(
-                        list(presort.keys()),
-                        ascending=list(presort.values()),
-                        na_position=na_position,
-                    )
-                return partition.head(n)
-
-            meta = [(d[x].name, d[x].dtype) for x in d.columns]
             d = d.groupby(partition_spec.partition_by, dropna=False).apply(
                 _partition_limit, n=n, presort=_presort, meta=meta
             )

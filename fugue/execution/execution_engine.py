@@ -431,7 +431,10 @@ class ExecutionEngine(ABC):
     ) -> DataFrame:  # pragma: no cover
         """
         Get the first n rows of a DataFrame per partition. If a presort is defined,
-        use the presort before applying limit. presort overrides partition_spec.presort
+        use the presort before applying limit. presort overrides partition_spec.presort.
+        The Fugue implementation of the presort follows Pandas convention of specifying
+        NULLs first or NULLs last. This is different from the Spark and SQL convention
+        of NULLs as the smallest value.
 
         :param df: DataFrame
         :param n: number of rows to return

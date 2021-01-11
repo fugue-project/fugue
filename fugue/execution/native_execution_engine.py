@@ -297,9 +297,9 @@ class NativeExecutionEngine(ExecutionEngine):
         )
         d = df.as_pandas()
 
+        # Use presort over partition_spec.presort if possible
         if presort:
             presort = _parse_presort_exp(presort)
-        # Use presort over partition_spec.presort if possible
         _presort: IndexedOrderedDict = presort or partition_spec.presort
 
         if len(_presort.keys()) > 0:

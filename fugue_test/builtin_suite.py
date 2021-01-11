@@ -952,7 +952,7 @@ class BuiltInTests(object):
                 ).assert_eq(
                     ArrayDataFrame([[0, 1], [1, 3], [None, 2]], "a:double,b:double")
                 )
-            # order by NULL first
+            # order by with NULL first
             with self.dag() as dag:
                 a = dag.df([[0, 1], [0, 2], [None, 3]], "a:double,b:double")
                 a.limit(1, presort="a desc", na_position="first").assert_eq(
@@ -971,7 +971,7 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 with raises(ValueError):
                     a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")
-                    a.limit(1, na_position="LAST").show()
+                    a.limit(1, na_position=["True", "False"]).show()
 
         def test_col_ops(self):
             with self.dag() as dag:
