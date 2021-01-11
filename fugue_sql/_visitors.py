@@ -633,11 +633,11 @@ class _Extensions(_VisitorBase):
             _partition_spec = PartitionSpec(data.get("partition"))
             return df.partition(
                 by=_partition_spec.partition_by, presort=_partition_spec.presort
-            ).head(**params)
+            ).head_temp(**params)
         else:
             if data.get("presort"):
                 params["presort"] = data.get("presort")
-            return df.head(**params)
+            return df.head_temp(**params)
 
     def visitFugueLoadTask(self, ctx: fp.FugueLoadTaskContext) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "fmt", "path", "params", "columns")
