@@ -15,6 +15,7 @@ pytest-spark
 sphinx>=2.4.0
 sphinx-rtd-theme
 sphinx-autodoc-typehints
+flask
 
 # publish to pypi
 wheel

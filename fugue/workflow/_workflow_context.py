@@ -58,9 +58,11 @@ class FugueWorkflowContext(WorkflowContext):
             self._execution_id = str(uuid4())
             self._checkpoint_path = CheckpointPath(self.execution_engine)
             self._checkpoint_path.init_temp_path(self._execution_id)
+            self.execution_engine.rpc_server.start()
             super().run(spec, conf)
         finally:
             self._checkpoint_path.remove_temp_path()
+            self.execution_engine.rpc_server.stop()
             self._execution_id = ""
 
     @property

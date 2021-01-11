@@ -13,6 +13,7 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
 from fugue.exceptions import FugueBug
+from fugue.rpc import RPCServer, make_rpc_server
 from triad.collections import ParamDict, Schema
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
@@ -79,6 +80,7 @@ class ExecutionEngine(ABC):
     def __init__(self, conf: Any):
         _conf = ParamDict(conf)
         self._conf = ParamDict({**FUGUE_DEFAULT_CONF, **_conf})
+        self._rpc_server = make_rpc_server(self.conf)
 
     @property
     def conf(self) -> ParamDict:
@@ -92,6 +94,10 @@ class ExecutionEngine(ABC):
         using this property.
         """
         return self._conf
+
+    @property
+    def rpc_server(self) -> RPCServer:
+        return self._rpc_server
 
     @property
     @abstractmethod
