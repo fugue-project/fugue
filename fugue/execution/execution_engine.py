@@ -82,9 +82,6 @@ class ExecutionEngine(ABC):
         self._conf = ParamDict({**FUGUE_DEFAULT_CONF, **_conf})
         self._rpc_server = make_rpc_server(self.conf)
 
-    # def __del__(self):
-    #    self._rpc_server.stop()
-
     @property
     def conf(self) -> ParamDict:
         """All configurations of this engine instance.
