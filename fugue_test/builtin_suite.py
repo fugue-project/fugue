@@ -958,6 +958,12 @@ class BuiltInTests(object):
                 a.limit(1, presort="a desc", na_position="first").assert_eq(
                     ArrayDataFrame([[None, 3]], "a:double,b:double")
                 )
+            # order by with NULL last
+            with self.dag() as dag:
+                a = dag.df([[0, 1], [1, 2], [None, 3]], "a:double,b:double")
+                a.limit(1, presort="a desc", na_position="last").assert_eq(
+                    ArrayDataFrame([[1, 2]], "a:double,b:double")
+                )
             # Return any row because no presort
             with self.dag() as dag:
                 a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")

@@ -391,7 +391,7 @@ class DaskExecutionEngine(ExecutionEngine):
                 d = d.head(n)
             else:
                 # Use the default partition
-                d = d.map_partitions(_partition_limit, n, _presort).compute()
+                d = d.map_partitions(_partition_limit, n, _presort, meta=meta).compute()
                 # compute() brings this to Pandas so we can use pandas
                 d = d.sort_values(
                     list(_presort.keys()),
