@@ -87,7 +87,7 @@ class ExtensionContext(object):
         """
         if "_rpc_client" in self.__dict__:
             return self._rpc_client  # type: ignore
-        return RPCClient()
+        return RPCClient()  # pragma: no cover
 
     @property
     def validation_rules(self) -> Dict[str, Any]:
