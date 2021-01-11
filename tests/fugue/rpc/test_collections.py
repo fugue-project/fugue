@@ -14,6 +14,7 @@ def test_rpc_func_dict():
     def f3(a: str) -> str:
         return "3"
 
+    assert to_uuid(RPCFuncDict({})) == to_uuid(to_rpc_func_dict({}))
     d1 = RPCFuncDict({"f1": f1, "f2": f2, "f3": f3})
     d2 = to_rpc_func_dict({"f1": f1, "f3": f3, "f2": f2})
     assert to_uuid(d1) != to_uuid(d2)

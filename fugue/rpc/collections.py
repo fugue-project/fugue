@@ -11,7 +11,7 @@ class RPCFuncDict(IndexedOrderedDict[str, Callable[[str], str]]):
             self._uuid = data.__uuid__()
         else:
             super().__init__(self.get_tuples(data))
-            self._uuid = str(uuid4())
+            self._uuid = "" if len(self) == 0 else str(uuid4())
         self.set_readonly()
 
     def __uuid__(self) -> str:
