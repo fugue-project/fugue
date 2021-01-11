@@ -128,6 +128,7 @@ def test_partition_spec():
     c = PartitionSpec(num=10, by=["a"], presort=["b", "c"])
     d = PartitionSpec(num=10, by=["a"], presort=["c", "b"])
     assert a == a
+    assert a == dict(presort=["b", "c"], by=["a"])
     assert a == b
     assert a != c
     assert c != d

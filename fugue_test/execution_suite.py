@@ -553,6 +553,7 @@ class ExecutionEngineTests(object):
             d = e.limit(a, n=1, presort="a asc, b desc", partition_spec=ps)
             f = e.limit(a, n=1, presort=None, partition_spec=ps2)
             g = e.limit(a, n=2, presort="a desc", na_position="last")
+            h = e.limit(a, n=2, presort="a", na_position="first")
             df_eq(
                 b,
                 [[None, 4, 2]],
@@ -581,6 +582,15 @@ class ExecutionEngineTests(object):
             df_eq(
                 g,
                 [[2, 1, 2], [2, 2, 2]],
+                "a:double,b:double,c:double",
+                throw=True,
+            )
+            df_eq(
+                h,
+                [
+                    [None, 4, 2],
+                    [None, 2, 1],
+                ],
                 "a:double,b:double,c:double",
                 throw=True,
             )
