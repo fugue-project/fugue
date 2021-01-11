@@ -7,6 +7,7 @@ from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
+    _parse_presort_exp,
 )
 from fugue.dataframe import (
     DataFrame,
@@ -25,7 +26,7 @@ from fugue.execution.execution_engine import (
 from qpd_pandas.engine import PandasUtils
 from sqlalchemy import create_engine
 from triad.collections import Schema
-from triad.collections.dict import ParamDict
+from triad.collections.dict import ParamDict, IndexedOrderedDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 
@@ -279,6 +280,40 @@ class NativeExecutionEngine(ExecutionEngine):
             ValueError("one and only one of n and frac should be set"),
         )
         d = df.as_pandas().sample(n=n, frac=frac, replace=replace, random_state=seed)
+        return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
+
+    def limit(
+        self,
+        df: DataFrame,
+        n: int,
+        presort: str,
+        na_position: str = "last",
+        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            isinstance(n, int),
+            ValueError("n needs to be an integer"),
+        )
+        d = df.as_pandas()
+
+        # Use presort over partition_spec.presort if possible
+        if presort:
+            presort = _parse_presort_exp(presort)
+        _presort: IndexedOrderedDict = presort or partition_spec.presort
+
+        if len(_presort.keys()) > 0:
+            d = d.sort_values(
+                list(_presort.keys()),
+                ascending=list(_presort.values()),
+                na_position=na_position,
+            )
+
+        if len(partition_spec.partition_by) == 0:
+            d = d.head(n)
+        else:
+            d = d.groupby(by=partition_spec.partition_by, dropna=False).head(n)
+
         return PandasDataFrame(
             d.reset_index(drop=True), df.schema, metadata, pandas_df_wrapper=True
         )

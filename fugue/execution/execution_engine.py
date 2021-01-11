@@ -404,9 +404,9 @@ class ExecutionEngine(ABC):
         Sample dataframe by number of rows or by fraction
 
         :param df: DataFrame
-        :param n: number of rows to sample, one and only one of ``n`` and ``fact``
+        :param n: number of rows to sample, one and only one of ``n`` and ``frac``
           must be set
-        :param frac: fraction [0,1] to sample, one and only one of ``n`` and ``fact``
+        :param frac: fraction [0,1] to sample, one and only one of ``n`` and ``frac``
           must be set
         :param replace: whether replacement is allowed. With replacement,
           there may be duplicated rows in the result, defaults to False
@@ -415,6 +415,37 @@ class ExecutionEngine(ABC):
             defaults to None
 
         :return: sampled dataframe
+        :rtype: DataFrame
+        """
+        pass
+
+    @abstractmethod
+    def limit(
+        self,
+        df: DataFrame,
+        n: int,
+        presort: str,
+        na_position: str = "last",
+        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        metadata: Any = None,
+    ) -> DataFrame:  # pragma: no cover
+        """
+        Get the first n rows of a DataFrame per partition. If a presort is defined,
+        use the presort before applying limit. presort overrides partition_spec.presort.
+        The Fugue implementation of the presort follows Pandas convention of specifying
+        NULLs first or NULLs last. This is different from the Spark and SQL convention
+        of NULLs as the smallest value.
+
+        :param df: DataFrame
+        :param n: number of rows to return
+        :param presort: presort expression similar to partition presort
+        :param na_position: position of null values during the presort.
+        can accept ``first`` or ``last``
+        :param partition_spec: PartitionSpec to apply the limit operation
+        :param metadata: dict-like object to add to the result dataframe,
+            defaults to None
+
+        :return: n rows of DataFrame per partition
         :rtype: DataFrame
         """
         pass

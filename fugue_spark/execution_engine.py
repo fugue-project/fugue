@@ -9,6 +9,7 @@ from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
+    _parse_presort_exp,
 )
 from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe import DataFrame, DataFrames, IterableDataFrame, LocalDataFrame
@@ -23,8 +24,9 @@ from fugue.execution.execution_engine import (
 from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import PandasUDFType, broadcast, col, pandas_udf
-from triad.collections import ParamDict, Schema
+from pyspark.sql.window import Window
+from pyspark.sql.functions import PandasUDFType, broadcast, col, pandas_udf, row_number
+from triad.collections import ParamDict, Schema, IndexedOrderedDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.hash import to_uuid
@@ -429,6 +431,63 @@ class SparkExecutionEngine(ExecutionEngine):
                 f"SELECT * FROM {temp_name} TABLESAMPLE({n} ROWS)"
             )
             return self.to_df(d, df.schema, metadata)
+
+    def limit(
+        self,
+        df: DataFrame,
+        n: int,
+        presort: str,
+        na_position: str = "last",
+        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        metadata: Any = None,
+    ) -> DataFrame:
+        assert_or_throw(
+            isinstance(n, int),
+            ValueError("n needs to be an integer"),
+        )
+        d = self.to_df(df).native
+        nulls_last = bool(na_position == "last")
+
+        if presort:
+            presort = _parse_presort_exp(presort)
+        # Use presort over partition_spec.presort if possible
+        _presort: IndexedOrderedDict = presort or partition_spec.presort
+
+        def _presort_to_col(_col: str, _asc: bool) -> Any:
+            if nulls_last:
+                if _asc:
+                    return col(_col).asc_nulls_last()
+                else:
+                    return col(_col).desc_nulls_last()
+            else:
+                if _asc:
+                    return col(_col).asc_nulls_first()
+                else:
+                    return col(_col).desc_nulls_first()
+
+        # If no partition
+        if len(partition_spec.partition_by) == 0:
+            if len(_presort.keys()) > 0:
+                d = d.orderBy(
+                    [_presort_to_col(_col, _presort[_col]) for _col, in _presort.keys()]
+                )
+            d = d.limit(n)
+
+        # If partition exists
+        else:
+            w = Window.partitionBy([col(x) for x in partition_spec.partition_by])
+            if len(_presort.keys()) > 0:
+                w = w.orderBy(
+                    [_presort_to_col(_col, _presort[_col]) for _col, in _presort.keys()]
+                )
+
+            d = (
+                d.select(col("*"), row_number().over(w).alias("__row_number__"))
+                .filter(col("__row_number__") <= n)
+                .drop("__row_number__")
+            )
+
+        return self.to_df(d, df.schema, metadata)
 
     def load_df(
         self,

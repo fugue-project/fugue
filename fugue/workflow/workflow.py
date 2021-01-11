@@ -27,6 +27,7 @@ from fugue.extensions._builtins import (
     DropColumns,
     Dropna,
     Fillna,
+    Limit,
     Load,
     Rename,
     RunJoin,
@@ -607,6 +608,38 @@ class WorkflowDataFrame(DataFrame):
         if frac is not None:
             params["frac"] = frac
         df = self.workflow.process(self, using=Sample, params=params)
+        return self._to_self_type(df)
+
+    def limit(self: TDF, n: int, presort: str = None, na_position: str = "last") -> TDF:
+        """
+        Get the first n rows of a DataFrame per partition. If a presort is defined,
+        use the presort before applying limit. presort overrides partition_spec.presort
+
+        :param n: number of rows to return
+        :param presort: presort expression similar to partition presort
+        :param na_position: position of null values during the presort.
+        can accept ``first`` or ``last``
+
+        :return: n rows of DataFrame per partition
+        """
+        params: Dict[str, Any] = dict()
+        params["n"] = n
+        # Note float is converted to int with triad _get_or
+        assert_or_throw(
+            isinstance(n, int),
+            ValueError("n needs to be an integer"),
+        )
+        assert_or_throw(
+            na_position in ("first", "last"),
+            ValueError("na_position must be either 'first' or 'last'"),
+        )
+        params["na_position"] = na_position
+        if presort is not None:
+            params["presort"] = presort
+
+        df = self.workflow.process(
+            self, using=Limit, pre_partition=self.partition_spec, params=params
+        )
         return self._to_self_type(df)
 
     def weak_checkpoint(self: TDF, lazy: bool = False, **kwargs: Any) -> TDF:
