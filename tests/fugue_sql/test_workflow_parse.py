@@ -631,7 +631,7 @@ def test_fill():
 def test_head():
     dag = FugueWorkflow()
     a = dag.df([[None, 1], [None, 2], [1, None], [1, 2]], "a:double, b:double")
-    b = a.partition(by=['a'], presort="b desc").head(1, na_position="first")
+    b = a.partition(by=['a'], presort="b desc").head_temp(1, na_position="first")
     assert_eq(
         """
     a=create [[NULL, 1], [NULL, 2], [1, NULL], [1, 2]] schema a:double, b:double
