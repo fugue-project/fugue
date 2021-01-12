@@ -914,7 +914,7 @@ class BuiltInTests(object):
                 with raises(ValueError):
                     dag.df([[None, 1]], "a:int,b:int").sample(n=1, frac=0.2)
 
-        def test_limit(self):
+        def test_take(self):
             # Partition by and presort with NULLs
             # Column c needs to be kept even if not in presort or partition
             with self.dag() as dag:
@@ -929,7 +929,7 @@ class BuiltInTests(object):
                     ],
                     "a:double,b:double,c:double",
                 )
-                a.partition(by=["a"], presort="b desc").limit(n=1).assert_eq(
+                a.partition(by=["a"], presort="b desc").take(n=1).assert_eq(
                     ArrayDataFrame(
                         [[0, 2, 1], [1, 4, 1], [None, 3, 1]],
                         "a:double,b:double,c:double",
@@ -938,16 +938,16 @@ class BuiltInTests(object):
             # No partition
             with self.dag() as dag:
                 a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")
-                a.limit(1, presort="a,b desc").assert_eq(
+                a.take(1, presort="a,b desc").assert_eq(
                     ArrayDataFrame([[0, 2]], "a:int,b:int")
                 )
-            # Limit presort overrides partition presort
+            # take presort overrides partition presort
             with self.dag() as dag:
                 a = dag.df(
                     [[0, 1], [0, 2], [1, 3], [1, 4], [None, 2], [None, 3]],
                     "a:double,b:double",
                 )
-                a.partition(by=["a"], presort="b desc").limit(
+                a.partition(by=["a"], presort="b desc").take(
                     n=1, presort="b asc"
                 ).assert_eq(
                     ArrayDataFrame([[0, 1], [1, 3], [None, 2]], "a:double,b:double")
@@ -955,29 +955,29 @@ class BuiltInTests(object):
             # order by with NULL first
             with self.dag() as dag:
                 a = dag.df([[0, 1], [0, 2], [None, 3]], "a:double,b:double")
-                a.limit(1, presort="a desc", na_position="first").assert_eq(
+                a.take(1, presort="a desc", na_position="first").assert_eq(
                     ArrayDataFrame([[None, 3]], "a:double,b:double")
                 )
             # order by with NULL last
             with self.dag() as dag:
                 a = dag.df([[0, 1], [1, 2], [None, 3]], "a:double,b:double")
-                a.limit(1, presort="a desc", na_position="last").assert_eq(
+                a.take(1, presort="a desc", na_position="last").assert_eq(
                     ArrayDataFrame([[1, 2]], "a:double,b:double")
                 )
             # Return any row because no presort
             with self.dag() as dag:
                 a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")
-                a.limit(1).show()
+                a.take(1).show()
             # n must be int
             with self.dag() as dag:
                 with raises(ValueError):
                     a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")
-                    a.limit(0.5).show()
+                    a.take(0.5).show()
             # na_position not valid
             with self.dag() as dag:
                 with raises(ValueError):
                     a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")
-                    a.limit(1, na_position=["True", "False"]).show()
+                    a.take(1, na_position=["True", "False"]).show()
 
         def test_col_ops(self):
             with self.dag() as dag:

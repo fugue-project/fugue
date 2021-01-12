@@ -121,6 +121,7 @@ fugueNestableTaskCollectionNoSelect
     | fugueDropnaTask
     | fugueFillnaTask
     | fugueSampleTask
+    | fugueTakeTask
     ;
 
 fugueEngineSpecificQueryTask:
@@ -161,6 +162,10 @@ fugueFillnaTask:
 
 fugueSampleTask:
     SAMPLE REPLACE? method=fugueSampleMethod (SEED seed=INTEGER_VALUE)? (FROM df=fugueDataFrame)?
+    ;
+
+fugueTakeTask:
+    TAKE (rows=INTEGER_VALUE (ROW|ROWS))? (FROM df=fugueDataFrame)? ((partition=fuguePrepartition)|(PRESORT presort=fugueColsSort))? ((NULL|NULLS) na_position=(FIRST|LAST))?
     ;
 
 fugueZipTask:
@@ -1850,6 +1855,7 @@ nonReserved
 //==================================
 
 FILL: 'FILL';
+TAKE: 'TAKE';
 HASH: 'HASH';
 RAND: 'RAND';
 EVEN: 'EVEN';

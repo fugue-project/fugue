@@ -594,7 +594,7 @@ def test_drop():
     )
 
 
-def test_fill():
+def test_sample():
     dag = FugueWorkflow()
     a = dag.create(mock_create1)
     a.sample(frac=0.1, replace=False, seed=None)
@@ -610,7 +610,7 @@ def test_fill():
     )
 
 
-def test_sample():
+def test_fill():
     dag = FugueWorkflow()
     a = dag.df([[None, 1], [1, None]], "a:int, b:int")
     b = a.fillna({"a": 99, "b": -99})
@@ -624,6 +624,28 @@ def test_sample():
         """
     create [[NULL, 1],[1, NULL]] schema a:int, b:int
     fill nulls (a:99, b:-99)""",
+        dag,
+    )
+
+
+def test_head():
+    dag = FugueWorkflow()
+    a = dag.df([[None, 1], [None, 2], [1, None], [1, 2]], "a:double, b:double")
+    b = a.partition(by=['a'], presort="b desc").take(1, na_position="first")
+    c = b.take(1, presort="b desc", na_position="first")
+    assert_eq(
+        """
+    a=create [[NULL, 1], [NULL, 2], [1, NULL], [1, 2]] schema a:double, b:double
+    b=take 1 row from a prepartition by a presort b desc nulls first
+    c=take 1 row from b presort b desc nulls first""",
+        dag,
+    )
+    # anonymous
+    assert_eq(
+        """
+    create [[NULL, 1], [NULL, 2], [1, NULL], [1, 2]] schema a:double, b:double
+    take 1 row prepartition by a presort b desc nulls first
+    take 1 row presort b desc nulls first""",
         dag,
     )
 

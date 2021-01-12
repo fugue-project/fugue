@@ -620,6 +620,25 @@ class _Extensions(_VisitorBase):
             params["frac"] = frac
         return df.sample(**params)
 
+    def visitFugueTakeTask(self, ctx: fp.FugueTakeTaskContext):
+        data = self.get_dict(ctx, "partition", "presort", "df")
+        if "df" in data:
+            df = data["df"]
+        else:
+            df = self.last
+        params: Dict[str, Any] = {}
+        params["n"] = int(self.ctxToStr(ctx.rows)) or 20  # default is 20
+        params["na_position"] = "first" if ctx.FIRST() is not None else "last"
+        if data.get("partition"):
+            _partition_spec = PartitionSpec(data.get("partition"))
+            return df.partition(
+                by=_partition_spec.partition_by, presort=_partition_spec.presort
+            ).take(**params)
+        else:
+            if data.get("presort"):
+                params["presort"] = data.get("presort")
+            return df.take(**params)
+
     def visitFugueLoadTask(self, ctx: fp.FugueLoadTaskContext) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "fmt", "path", "params", "columns")
         return self.workflow.load(
