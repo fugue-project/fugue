@@ -631,18 +631,21 @@ def test_fill():
 def test_head():
     dag = FugueWorkflow()
     a = dag.df([[None, 1], [None, 2], [1, None], [1, 2]], "a:double, b:double")
-    b = a.partition(by=['a'], presort="b desc").head_temp(1, na_position="first")
+    b = a.partition(by=['a'], presort="b desc").take(1, na_position="first")
+    c = b.take(1, presort="b desc", na_position="first")
     assert_eq(
         """
     a=create [[NULL, 1], [NULL, 2], [1, NULL], [1, 2]] schema a:double, b:double
-    head prepartition by a presort b desc nulls first rows 1 from a""",
+    b=take 1 row from a prepartition by a presort b desc nulls first
+    c=take 1 row from b presort b desc nulls first""",
         dag,
     )
     # anonymous
     assert_eq(
         """
     create [[NULL, 1], [NULL, 2], [1, NULL], [1, 2]] schema a:double, b:double
-    head prepartition by a presort b desc nulls first rows 1""",
+    take 1 row prepartition by a presort b desc nulls first
+    take 1 row presort b desc nulls first""",
         dag,
     )
 

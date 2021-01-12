@@ -27,7 +27,6 @@ from fugue.extensions._builtins import (
     DropColumns,
     Dropna,
     Fillna,
-    Head,
     Load,
     Rename,
     RunJoin,
@@ -40,6 +39,7 @@ from fugue.extensions._builtins import (
     SaveAndUse,
     SelectColumns,
     Show,
+    Take,
     Zip,
 )
 from fugue.extensions._builtins.creators import LoadYielded
@@ -610,12 +610,10 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(self, using=Sample, params=params)
         return self._to_self_type(df)
 
-    def head_temp(
-        self: TDF, n: int, presort: str = None, na_position: str = "last"
-    ) -> TDF:
+    def take(self: TDF, n: int, presort: str = None, na_position: str = "last") -> TDF:
         """
         Get the first n rows of a DataFrame per partition. If a presort is defined,
-        use the presort before applying head. presort overrides partition_spec.presort
+        use the presort before applying take. presort overrides partition_spec.presort
 
         :param n: number of rows to return
         :param presort: presort expression similar to partition presort
@@ -640,7 +638,7 @@ class WorkflowDataFrame(DataFrame):
             params["presort"] = presort
 
         df = self.workflow.process(
-            self, using=Head, pre_partition=self.partition_spec, params=params
+            self, using=Take, pre_partition=self.partition_spec, params=params
         )
         return self._to_self_type(df)
 

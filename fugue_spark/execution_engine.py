@@ -432,7 +432,7 @@ class SparkExecutionEngine(ExecutionEngine):
             )
             return self.to_df(d, df.schema, metadata)
 
-    def head(
+    def take(
         self,
         df: DataFrame,
         n: int,

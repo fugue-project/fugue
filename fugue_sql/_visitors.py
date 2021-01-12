@@ -620,7 +620,7 @@ class _Extensions(_VisitorBase):
             params["frac"] = frac
         return df.sample(**params)
 
-    def visitFugueHeadTask(self, ctx: fp.FugueHeadTaskContext):
+    def visitFugueTakeTask(self, ctx: fp.FugueTakeTaskContext):
         data = self.get_dict(ctx, "partition", "presort", "df")
         if "df" in data:
             df = data["df"]
@@ -633,11 +633,11 @@ class _Extensions(_VisitorBase):
             _partition_spec = PartitionSpec(data.get("partition"))
             return df.partition(
                 by=_partition_spec.partition_by, presort=_partition_spec.presort
-            ).head_temp(**params)
+            ).take(**params)
         else:
             if data.get("presort"):
                 params["presort"] = data.get("presort")
-            return df.head_temp(**params)
+            return df.take(**params)
 
     def visitFugueLoadTask(self, ctx: fp.FugueLoadTaskContext) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "fmt", "path", "params", "columns")

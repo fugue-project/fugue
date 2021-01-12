@@ -660,8 +660,8 @@ def serializedATN():
         buf.write("\7\61\2\2\u02d7 \3\2\2\2\u02d8\u02d9\7/\2\2\u02d9\u02da")
         buf.write("\7@\2\2\u02da\"\3\2\2\2\u02db\u02dc\7H\2\2\u02dc\u02dd")
         buf.write("\7K\2\2\u02dd\u02de\7N\2\2\u02de\u02df\7N\2\2\u02df$\3")
-        buf.write("\2\2\2\u02e0\u02e1\7J\2\2\u02e1\u02e2\7G\2\2\u02e2\u02e3")
-        buf.write("\7C\2\2\u02e3\u02e4\7F\2\2\u02e4&\3\2\2\2\u02e5\u02e6")
+        buf.write("\2\2\2\u02e0\u02e1\7V\2\2\u02e1\u02e2\7C\2\2\u02e2\u02e3")
+        buf.write("\7M\2\2\u02e3\u02e4\7G\2\2\u02e4&\3\2\2\2\u02e5\u02e6")
         buf.write("\7J\2\2\u02e6\u02e7\7C\2\2\u02e7\u02e8\7U\2\2\u02e8\u02e9")
         buf.write("\7J\2\2\u02e9(\3\2\2\2\u02ea\u02eb\7T\2\2\u02eb\u02ec")
         buf.write("\7C\2\2\u02ec\u02ed\7P\2\2\u02ed\u02ee\7F\2\2\u02ee*\3")
@@ -1507,7 +1507,7 @@ class fugue_sqlLexer(Lexer):
     T__14 = 15
     T__15 = 16
     FILL = 17
-    HEAD = 18
+    TAKE = 18
     HASH = 19
     RAND = 20
     EVEN = 21
@@ -1835,7 +1835,7 @@ class fugue_sqlLexer(Lexer):
     literalNames = [ "<INVALID>",
             "','", "':'", "'('", "')'", "'['", "']'", "'.'", "'{'", "'}'", 
             "'true'", "'false'", "'null'", "';'", "'/*+'", "'*/'", "'->'", 
-            "'FILL'", "'HEAD'", "'HASH'", "'RAND'", "'EVEN'", "'PRESORT'", 
+            "'FILL'", "'TAKE'", "'HASH'", "'RAND'", "'EVEN'", "'PRESORT'", 
             "'PERSIST'", "'BROADCAST'", "'PARAMS'", "'PROCESS'", "'OUTPUT'", 
             "'OUTTRANSFORM'", "'ROWCOUNT'", "'CONCURRENCY'", "'PREPARTITION'", 
             "'ZIP'", "'PRINT'", "'TITLE'", "'SAVE'", "'APPEND'", "'PARQUET'", 
@@ -1892,7 +1892,7 @@ class fugue_sqlLexer(Lexer):
             "'||'", "'^'" ]
 
     symbolicNames = [ "<INVALID>",
-            "FILL", "HEAD", "HASH", "RAND", "EVEN", "PRESORT", "PERSIST", 
+            "FILL", "TAKE", "HASH", "RAND", "EVEN", "PRESORT", "PERSIST", 
             "BROADCAST", "PARAMS", "PROCESS", "OUTPUT", "OUTTRANSFORM", 
             "ROWCOUNT", "CONCURRENCY", "PREPARTITION", "ZIP", "PRINT", "TITLE", 
             "SAVE", "APPEND", "PARQUET", "CSV", "JSON", "SINGLE", "COLONEQUAL", 
@@ -1947,7 +1947,7 @@ class fugue_sqlLexer(Lexer):
 
     ruleNames = [ "T__0", "T__1", "T__2", "T__3", "T__4", "T__5", "T__6", 
                   "T__7", "T__8", "T__9", "T__10", "T__11", "T__12", "T__13", 
-                  "T__14", "T__15", "FILL", "HEAD", "HASH", "RAND", "EVEN", 
+                  "T__14", "T__15", "FILL", "TAKE", "HASH", "RAND", "EVEN", 
                   "PRESORT", "PERSIST", "BROADCAST", "PARAMS", "PROCESS", 
                   "OUTPUT", "OUTTRANSFORM", "ROWCOUNT", "CONCURRENCY", "PREPARTITION", 
                   "ZIP", "PRINT", "TITLE", "SAVE", "APPEND", "PARQUET", 
