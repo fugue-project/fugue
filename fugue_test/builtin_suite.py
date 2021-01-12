@@ -1176,6 +1176,37 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 dag.df([[0, 1]], "a:int,b:int").partition(by=["b"]).output(o4)
 
+        def test_rpc(self):
+            class Callbacks(object):
+                def __init__(self):
+                    self.n = 0
+
+                def call(self, value: str) -> str:
+                    self.n += int(value)
+                    print(id(self))
+                    return str(self.n)
+
+            cb = Callbacks()
+            funcs = {"c": cb.call}
+
+            class CallbackTransformer(Transformer):
+                def get_output_schema(self, df):
+                    return df.schema
+
+                def transform(self, df):
+                    v = self.cursor.key_value_array[0]
+                    print(self.rpc_client("c", str(v)))
+                    return df
+
+            with self.dag() as dag:
+                df = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
+                res = df.partition(by=["a"]).transform(
+                    CallbackTransformer, rpc_funcs=funcs
+                )
+                df.assert_eq(res)
+
+            assert 8 == cb.n
+
 
 def mock_creator(p: int) -> DataFrame:
     return ArrayDataFrame([[p]], "a:int")

@@ -102,7 +102,17 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
 
     def make_engine(self):
         session = SparkSession.builder.getOrCreate()
-        e = SparkExecutionEngine(session, dict(test=True))
+        e = SparkExecutionEngine(
+            session,
+            {
+                "test": True,
+                "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
+                "fugue.rpc.flask_server.host": "127.0.0.1",
+                "fugue.rpc.flask_server.port": "1234",
+                "fugue.rpc.flask_server.timeout": "2 sec",
+                "spark.sql.shuffle.partitions": "10",
+            },
+        )
         return e
 
     def test_default_session(self):

@@ -17,6 +17,7 @@ from triad.collections import ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_instance, to_type
+from fugue.rpc import RPCFuncDict
 
 
 class RunTransformer(Processor):
@@ -29,7 +30,10 @@ class RunTransformer(Processor):
         )
         tf._workflow_conf = self.execution_engine.conf
         tf._params = self.params.get("params", ParamDict())  # type: ignore
-        tf._partition_spec = self.partition_spec  # type: ignore
+        tf._partition_spec = self.partition_spec
+        rpc_funcs = self.params.get_or_throw("rpc_funcs", RPCFuncDict)
+        if len(rpc_funcs) > 0:
+            tf._rpc_client = self.execution_engine.rpc_server.make_client(rpc_funcs)
         ie = self.params.get("ignore_errors", [])
         self._ignore_errors = [to_type(x, Exception) for x in ie]
         tf.validate_on_runtime(df)
