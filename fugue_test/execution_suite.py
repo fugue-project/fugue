@@ -533,7 +533,7 @@ class ExecutionEngineTests(object):
             assert abs(len(i.as_array()) - 80) < 10
             assert i.metadata == dict(a=1)
 
-        def test_limit(self):
+        def test_take(self):
             e = self.engine
             ps = PartitionSpec(by=["a"], presort="b DESC,c DESC")
             ps2 = PartitionSpec(by=["c"], presort="b ASC")
@@ -548,12 +548,12 @@ class ExecutionEngineTests(object):
                 ],
                 "a:double,b:double,c:double",
             )
-            b = e.limit(a, n=1, presort="b desc", metadata=(dict(a=1)))
-            c = e.limit(a, n=2, presort="a desc", na_position="first")
-            d = e.limit(a, n=1, presort="a asc, b desc", partition_spec=ps)
-            f = e.limit(a, n=1, presort=None, partition_spec=ps2)
-            g = e.limit(a, n=2, presort="a desc", na_position="last")
-            h = e.limit(a, n=2, presort="a", na_position="first")
+            b = e.take(a, n=1, presort="b desc", metadata=(dict(a=1)))
+            c = e.take(a, n=2, presort="a desc", na_position="first")
+            d = e.take(a, n=1, presort="a asc, b desc", partition_spec=ps)
+            f = e.take(a, n=1, presort=None, partition_spec=ps2)
+            g = e.take(a, n=2, presort="a desc", na_position="last")
+            h = e.take(a, n=2, presort="a", na_position="first")
             df_eq(
                 b,
                 [[None, 4, 2]],
@@ -594,7 +594,7 @@ class ExecutionEngineTests(object):
                 "a:double,b:double,c:double",
                 throw=True,
             )
-            raises(ValueError, lambda: e.limit(a, n=0.5, presort=None))
+            raises(ValueError, lambda: e.take(a, n=0.5, presort=None))
 
         def test_sample_n(self):
             engine = self.engine

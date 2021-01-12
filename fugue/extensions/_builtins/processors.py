@@ -237,7 +237,7 @@ class Sample(Processor):
         )
 
 
-class Limit(Processor):
+class Take(Processor):
     def process(self, dfs: DataFrames) -> DataFrame:
         assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
         # All _get_or operations convert float to int
@@ -245,7 +245,7 @@ class Limit(Processor):
         presort = self.params.get_or_none("presort", str)
         na_position = self.params.get("na_position", "last")
         partition_spec = self.partition_spec
-        return self.execution_engine.limit(
+        return self.execution_engine.take(
             dfs[0],
             n,
             presort=presort,
