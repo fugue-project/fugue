@@ -1,5 +1,6 @@
+import logging
 from threading import Thread
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Optional
 
 import requests
 from fugue.rpc.base import RPCClient, RPCServer
@@ -7,6 +8,9 @@ from triad.utils.convert import to_timedelta
 from werkzeug.serving import make_server
 
 from flask import Flask, request
+
+log = logging.getLogger("werkzeug")
+log.setLevel(logging.ERROR)
 
 
 class FlaskRPCServer(RPCServer):
@@ -39,8 +43,8 @@ class FlaskRPCServer(RPCServer):
         value = request.form.get("value")
         return self.invoke(key, method, value)  # type: ignore
 
-    def make_client(self, methods: Dict[str, Callable[[str], str]]) -> RPCClient:
-        key = self.add_methods(methods)
+    def make_client(self, handler: Any) -> RPCClient:
+        key = self.register(handler)
         return FlaskRPCClient(
             key,
             self._host,

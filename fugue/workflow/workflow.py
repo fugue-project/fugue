@@ -2,7 +2,6 @@ from collections import defaultdict
 from threading import RLock
 from typing import (
     Any,
-    Callable,
     Dict,
     Iterable,
     List,
@@ -55,7 +54,7 @@ from fugue.extensions._builtins import (
 )
 from fugue.extensions._builtins.creators import LoadYielded
 from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
-from fugue.rpc import to_rpc_func_dict
+from fugue.rpc import to_rpc_handler
 from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, FugueTask, Output, Process
 from fugue.workflow._workflow_context import (
@@ -65,7 +64,6 @@ from fugue.workflow._workflow_context import (
 from triad import ParamDict, Schema, assert_or_throw
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
-_DEFAULT_RPC_FUNCS: Dict[str, Callable[[str], str]] = {}
 
 TDF = TypeVar("TDF", bound="WorkflowDataFrame")
 
@@ -294,7 +292,7 @@ class WorkflowDataFrame(DataFrame):
         params: Any = None,
         pre_partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
-        rpc_funcs: Dict[str, Callable[[str], str]] = _DEFAULT_RPC_FUNCS,
+        rpc_handler: Any = None,
     ) -> TDF:
         """Transform this dataframe using transformer. It's a wrapper of
         :meth:`fugue.workflow.workflow.FugueWorkflow.transform`
@@ -314,7 +312,7 @@ class WorkflowDataFrame(DataFrame):
           :meth:`~.partition` and then call :meth:`~.transform` without this parameter
         :param ignore_errors: list of exception types the transformer can ignore,
           defaults to empty list
-        :param rpc_funcs: a dictionary of rpc callbacks, defaults to empty dict
+        :param rpc_handler: |RPCHandlerLikeObject|, defaults to None
         :return: the transformed dataframe
         :rtype: :class:`~.WorkflowDataFrame`
 
@@ -337,7 +335,7 @@ class WorkflowDataFrame(DataFrame):
             params=params,
             pre_partition=pre_partition,
             ignore_errors=ignore_errors,
-            rpc_funcs=rpc_funcs,
+            rpc_handler=rpc_handler,
         )
         return self._to_self_type(df)
 
@@ -347,7 +345,7 @@ class WorkflowDataFrame(DataFrame):
         params: Any = None,
         pre_partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
-        rpc_funcs: Dict[str, Callable[[str], str]] = _DEFAULT_RPC_FUNCS,
+        rpc_handler: Any = None,
     ) -> None:
         """Transform this dataframe using transformer. It's a wrapper of
         :meth:`fugue.workflow.workflow.FugueWorkflow.out_transform`
@@ -364,7 +362,7 @@ class WorkflowDataFrame(DataFrame):
           :meth:`~.partition` and then call :meth:`~.transform` without this parameter
         :param ignore_errors: list of exception types the transformer can ignore,
           defaults to empty list
-        :param rpc_funcs: a dictionary of rpc callbacks, defaults to empty dict
+        :param rpc_handler: |RPCHandlerLikeObject|, defaults to None
 
         :Notice:
 
@@ -384,7 +382,7 @@ class WorkflowDataFrame(DataFrame):
             params=params,
             pre_partition=pre_partition,
             ignore_errors=ignore_errors,
-            rpc_funcs=rpc_funcs,
+            rpc_handler=rpc_handler,
         )
 
     def join(self: TDF, *dfs: Any, how: str, on: Optional[Iterable[str]] = None) -> TDF:
@@ -1551,7 +1549,7 @@ class FugueWorkflow(object):
         params: Any = None,
         pre_partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
-        rpc_funcs: Dict[str, Callable[[str], str]] = _DEFAULT_RPC_FUNCS,
+        rpc_handler: Any = None,
     ) -> WorkflowDataFrame:
         """Transform dataframes using transformer.
 
@@ -1571,7 +1569,7 @@ class FugueWorkflow(object):
           :meth:`~.partition` and then call :meth:`~.transform` without this parameter
         :param ignore_errors: list of exception types the transformer can ignore,
           defaults to empty list
-        :param rpc_funcs: a dictionary of rpc callbacks, defaults to empty dict
+        :param rpc_handler: |RPCHandlerLikeObject|, defaults to None
         :return: the transformed dataframe
 
         :Notice:
@@ -1599,7 +1597,7 @@ class FugueWorkflow(object):
                 transformer=tf,
                 ignore_errors=ignore_errors,
                 params=params,
-                rpc_funcs=to_rpc_func_dict(rpc_funcs),
+                rpc_handler=to_rpc_handler(rpc_handler),
             ),
             pre_partition=pre_partition,
         )
@@ -1611,7 +1609,7 @@ class FugueWorkflow(object):
         params: Any = None,
         pre_partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
-        rpc_funcs: Dict[str, Callable[[str], str]] = _DEFAULT_RPC_FUNCS,
+        rpc_handler: Any = None,
     ) -> None:
         """Transform dataframes using transformer, it materializes the execution
         immediately and returns nothing
@@ -1633,7 +1631,7 @@ class FugueWorkflow(object):
           parameter
         :param ignore_errors: list of exception types the transformer can ignore,
           defaults to empty list
-        :param rpc_funcs: a dictionary of rpc callbacks, defaults to empty dict
+        :param rpc_handler: |RPCHandlerLikeObject|, defaults to None
 
         :Notice:
 
@@ -1659,7 +1657,7 @@ class FugueWorkflow(object):
                 transformer=tf,
                 ignore_errors=ignore_errors,
                 params=params,
-                rpc_funcs=to_rpc_func_dict(rpc_funcs),
+                rpc_handler=to_rpc_handler(rpc_handler),
             ),
             pre_partition=pre_partition,
         )

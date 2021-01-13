@@ -1201,7 +1201,7 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 df = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
                 res = df.partition(by=["a"]).transform(
-                    CallbackTransformer, rpc_funcs=funcs
+                    CallbackTransformer, rpc_handler=funcs
                 )
                 df.assert_eq(res)
 
