@@ -1,5 +1,5 @@
-fugue.collections 
-==================
+fugue.rpc 
+==========
 
 .. |SchemaLikeObject| replace:: :ref:`Schema like object <tutorial:/tutorials/x-like.ipynb#schema>`
 .. |ParamsLikeObject| replace:: :ref:`Parameters like object <tutorial:/tutorials/x-like.ipynb#parameters>`
@@ -20,18 +20,26 @@ fugue.collections
 
 
 
-fugue.collections.partition
----------------------------
+fugue.rpc.base
+--------------
 
-.. automodule:: fugue.collections.partition
+.. automodule:: fugue.rpc.base
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.collections.yielded
--------------------------
+fugue.rpc.collections
+---------------------
 
-.. automodule:: fugue.collections.yielded
+.. automodule:: fugue.rpc.collections
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+fugue.rpc.flask
+---------------
+
+.. automodule:: fugue.rpc.flask
    :members:
    :undoc-members:
    :show-inheritance:

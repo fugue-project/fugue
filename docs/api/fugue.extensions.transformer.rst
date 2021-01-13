@@ -20,6 +20,14 @@ fugue.extensions.transformer
 
 
 
+fugue.extensions.transformer.constants
+--------------------------------------
+
+.. automodule:: fugue.extensions.transformer.constants
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.extensions.transformer.convert
 ------------------------------------
 
