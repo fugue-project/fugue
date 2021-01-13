@@ -8,6 +8,7 @@ fugue
    fugue.dataframe
    fugue.execution
    fugue.extensions
+   fugue.rpc
    fugue.workflow
 
 .. |SchemaLikeObject| replace:: :ref:`Schema like object <tutorial:/tutorials/x-like.ipynb#schema>`
