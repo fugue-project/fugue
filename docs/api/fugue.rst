@@ -8,6 +8,7 @@ fugue
    fugue.dataframe
    fugue.execution
    fugue.extensions
+   fugue.rpc
    fugue.workflow
 
 .. |SchemaLikeObject| replace:: :ref:`Schema like object <tutorial:/tutorials/x-like.ipynb#schema>`
@@ -15,6 +16,7 @@ fugue
 .. |DataFrameLikeObject| replace:: :ref:`DataFrame like object <tutorial:/tutorials/x-like.ipynb#dataframe>`
 .. |DataFramesLikeObject| replace:: :ref:`DataFrames like object <tutorial:/tutorials/x-like.ipynb#dataframes>`
 .. |PartitionLikeObject| replace:: :ref:`Partition like object <tutorial:/tutorials/x-like.ipynb#partition>`
+.. |RPCHandlerLikeObject| replace:: :ref:`RPChandler like object <tutorial:/tutorials/x-like.ipynb#rpc>`
 
 .. |ExecutionEngine| replace:: :class:`~fugue.execution.execution_engine.ExecutionEngine`
 .. |NativeExecutionEngine| replace:: :class:`~fugue.execution.native_execution_engine.NativeExecutionEngine`

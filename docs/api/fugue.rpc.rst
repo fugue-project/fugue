@@ -1,5 +1,5 @@
-fugue.execution 
-================
+fugue.rpc 
+==========
 
 .. |SchemaLikeObject| replace:: :ref:`Schema like object <tutorial:/tutorials/x-like.ipynb#schema>`
 .. |ParamsLikeObject| replace:: :ref:`Parameters like object <tutorial:/tutorials/x-like.ipynb#parameters>`
@@ -21,18 +21,18 @@ fugue.execution
 
 
 
-fugue.execution.execution\_engine
----------------------------------
+fugue.rpc.base
+--------------
 
-.. automodule:: fugue.execution.execution_engine
+.. automodule:: fugue.rpc.base
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.execution.native\_execution\_engine
------------------------------------------
+fugue.rpc.flask
+---------------
 
-.. automodule:: fugue.execution.native_execution_engine
+.. automodule:: fugue.rpc.flask
    :members:
    :undoc-members:
    :show-inheritance:
