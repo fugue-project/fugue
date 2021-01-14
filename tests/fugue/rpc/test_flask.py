@@ -18,15 +18,15 @@ def test_flask_service():
     def k(value: str) -> str:
         return value + "x"
 
-    def kk(value: str) -> str:
-        return value + "xx"
+    def kk(a: int, b: int) -> int:
+        return a + b
 
     with make_rpc_server(conf).start() as server:
         assert "1234" == server.conf["fugue.rpc.flask_server.port"]
         with server.start():  # recursive start will take no effect
-            client1 = pickle.loads(pickle.dumps(server.make_client({"k": k})))
-        assert "dddx" == client1("k", "ddd")
-        client2 = pickle.loads(pickle.dumps(server.make_client({"k": kk})))
-        assert "dddxx" == client2("k", "ddd")
-        assert "dddx" == client1("k", "ddd")
+            client1 = pickle.loads(pickle.dumps(server.make_client(k)))
+        assert "dddx" == client1("ddd")
+        client2 = pickle.loads(pickle.dumps(server.make_client(kk)))
+        assert 3 == client2(1, 2)
+        assert "dddx" == client1("ddd")
         server.stop()  # extra stop in the end will take no effect
