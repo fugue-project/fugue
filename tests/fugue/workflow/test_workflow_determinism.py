@@ -2,12 +2,34 @@ from typing import Any, Dict, Iterable, List
 
 from fugue import FileSystem, FugueWorkflow, Schema
 from fugue.execution.native_execution_engine import NativeExecutionEngine
+from triad import to_uuid
 
 
 def test_create():
+    # by default, input data does not affect determinism
     id0 = FugueWorkflow().df([[0]], "a:int32").workflow.spec_uuid()
     id1 = FugueWorkflow().df([[1]], "a:int32").workflow.spec_uuid()
     id2 = FugueWorkflow().df([[1]], "a:int32").workflow.spec_uuid()
+
+    assert id1 == id0
+    assert id1 == id2
+
+    # unless we use data_determiner
+    id0 = (
+        FugueWorkflow()
+        .df([[0]], "a:int32", data_determiner=to_uuid)
+        .workflow.spec_uuid()
+    )
+    id1 = (
+        FugueWorkflow()
+        .df([[1]], "a:int32", data_determiner=to_uuid)
+        .workflow.spec_uuid()
+    )
+    id2 = (
+        FugueWorkflow()
+        .df([[1]], "a:int32", data_determiner=to_uuid)
+        .workflow.spec_uuid()
+    )
 
     assert id1 != id0
     assert id1 == id2
@@ -135,12 +157,14 @@ def test_workflow_determinism_2():
 
 def test_workflow_determinism_3():
     dag1 = FugueWorkflow()
-    a1 = dag1.create_data([[0], [0], [1]], "a:int32")
+    data = [[0], [0], [1]]
+    a1 = dag1.create_data(data, "a:int32", data_determiner=to_uuid)
     b1 = a1.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
     a1.show()
 
     dag2 = FugueWorkflow()
-    a2 = dag2.create_data([[1], [10], [20]], "a:int32")  # <---
+    data = [[1], [10], [20]]
+    a2 = dag2.create_data(data, "a:int32", data_determiner=to_uuid)  # <---
     b2 = a2.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
     a2.show()
 

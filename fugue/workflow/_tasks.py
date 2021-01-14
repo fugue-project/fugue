@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, no_type_check
+from typing import Any, List, Optional, no_type_check, Callable
 
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
@@ -14,7 +14,7 @@ from fugue.extensions.outputter.convert import _to_outputter
 from fugue.extensions.processor.convert import _to_processor
 from fugue.workflow._checkpoint import Checkpoint
 from fugue.workflow._workflow_context import FugueWorkflowContext
-from triad.collections.dict import ParamDict
+from triad import ParamDict, Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
@@ -150,6 +150,52 @@ class FugueTask(TaskSpec, ABC):
         return self._dependency_uuid
 
 
+class CreateData(FugueTask):
+    """CreateData task.
+
+    :Notice:
+
+    This task's determinism is not dependent on the input dataframe, but if
+    you want the input dataframe to affect the determinism, then you should
+    provide a function ``data_determiner``, which can compute a unique id from ``df``
+    """
+
+    @no_type_check
+    def __init__(
+        self,
+        data: Any,
+        schema: Any = None,
+        metadata: Any = None,
+        deterministic: bool = True,
+        data_determiner: Optional[Callable[[Any], str]] = None,
+        lazy: bool = True,
+    ):
+        self._data = data
+        self._schema = None if schema is None else Schema(schema)
+        self._metadata = None if metadata is None else ParamDict(metadata)
+        did = "" if data_determiner is None else data_determiner(data)
+        super().__init__(
+            params=dict(
+                schema=self._schema,
+                metadata=self._metadata,
+                determinism_id=did,
+            ),
+            input_n=0,
+            output_n=1,
+            deterministic=deterministic,
+            lazy=lazy,
+        )
+
+    @no_type_check
+    def execute(self, ctx: TaskContext) -> None:
+        e = self._get_execution_engine(ctx)
+        df = e.to_df(self._data, self._schema, self._metadata)
+        df = self.handle_checkpoint(df, ctx)
+        df = self.handle_broadcast(df, ctx)
+        self._set_result(ctx, df)
+        ctx.outputs["_0"] = df
+
+
 class Create(FugueTask):
     @no_type_check
     def __init__(
@@ -161,7 +207,7 @@ class Create(FugueTask):
         lazy: bool = True,
     ):
         self._creator = _to_creator(creator, schema)
-        self._creator._params = ParamDict(params)
+        self._creator._params = ParamDict(params, deep=False)
         super().__init__(
             params=params, input_n=0, output_n=1, deterministic=deterministic, lazy=lazy
         )
