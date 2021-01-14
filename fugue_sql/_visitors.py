@@ -21,6 +21,7 @@ from fugue.extensions.processor.convert import _to_processor
 from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
 from fugue.workflow.module import _to_module
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
+from triad import to_uuid
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_bool, to_type
@@ -483,7 +484,9 @@ class _Extensions(_VisitorBase):
         self, ctx: fp.FugueCreateDataTaskContext
     ) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "data", "schema")
-        return self.workflow.df(data["data"], schema=data["schema"])
+        return self.workflow.df(
+            data["data"], schema=data["schema"], data_determiner=to_uuid
+        )
 
     def visitFugueZipTask(self, ctx: fp.FugueZipTaskContext) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "dfs", "how")

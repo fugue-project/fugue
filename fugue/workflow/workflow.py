@@ -2,6 +2,7 @@ from collections import defaultdict
 from threading import RLock
 from typing import (
     Any,
+    Callable,
     Dict,
     Iterable,
     List,
@@ -32,12 +33,12 @@ from fugue.extensions._builtins import (
     AlterColumns,
     AssertEqual,
     AssertNotEqual,
-    CreateData,
     Distinct,
     DropColumns,
     Dropna,
     Fillna,
     Load,
+    LoadYielded,
     Rename,
     RunJoin,
     RunOutputTransformer,
@@ -52,11 +53,10 @@ from fugue.extensions._builtins import (
     Take,
     Zip,
 )
-from fugue.extensions._builtins.creators import LoadYielded
 from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
 from fugue.rpc import to_rpc_handler
 from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
-from fugue.workflow._tasks import Create, FugueTask, Output, Process
+from fugue.workflow._tasks import Create, CreateData, FugueTask, Output, Process
 from fugue.workflow._workflow_context import (
     FugueWorkflowContext,
     _FugueInteractiveWorkflowContext,
@@ -1329,14 +1329,27 @@ class FugueWorkflow(object):
             self.add(task, *dfs.values())
 
     def create_data(
-        self, data: Any, schema: Any = None, metadata: Any = None
+        self,
+        data: Any,
+        schema: Any = None,
+        metadata: Any = None,
+        data_determiner: Optional[Callable[[Any], str]] = None,
     ) -> WorkflowDataFrame:
         """Create dataframe.
 
         :param data: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
         :param schema: |SchemaLikeObject|, defaults to None
         :param metadata: |ParamsLikeObject|, defaults to None
+        :param data_determiner: a function to compute unique id from ``data``
         :return: a dataframe of the current workflow
+
+        :Notice:
+
+        By default, the input ``data`` does not affect the determinism of the workflow
+        (but ``schema`` and ``etadata`` do), because the amount of compute can be
+        unpredictable. But if you want ``data`` to affect the
+        determinism of the workflow, you can provide the function to compute the unique
+        id of ``data`` using ``data_determiner``
         """
         if isinstance(data, WorkflowDataFrame):
             assert_or_throw(
@@ -1358,22 +1371,37 @@ class FugueWorkflow(object):
                 ),
             )
             return self.create(using=LoadYielded, params=dict(yielded=data))
-        schema = None if schema is None else Schema(schema)
-        return self.create(
-            using=CreateData, params=dict(data=data, schema=schema, metadata=metadata)
+        task = CreateData(
+            data=data, schema=schema, metadata=metadata, data_determiner=data_determiner
         )
+        return self.add(task)
 
     def df(
-        self, data: Any, schema: Any = None, metadata: Any = None
+        self,
+        data: Any,
+        schema: Any = None,
+        metadata: Any = None,
+        data_determiner: Optional[Callable[[Any], str]] = None,
     ) -> WorkflowDataFrame:
         """Create dataframe. Alias of :meth:`~.create_data`
 
         :param data: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
         :param schema: |SchemaLikeObject|, defaults to None
         :param metadata: |ParamsLikeObject|, defaults to None
+        :param data_determiner: a function to compute unique id from ``data``
         :return: a dataframe of the current workflow
+
+        :Notice:
+
+        By default, the input ``data`` does not affect the determinism of the workflow
+        (but ``schema`` and ``etadata`` do), because the amount of compute can be
+        unpredictable. But if you want ``data`` to affect the
+        determinism of the workflow, you can provide the function to compute the unique
+        id of ``data`` using ``data_determiner``
         """
-        return self.create_data(data, schema, metadata)
+        return self.create_data(
+            data=data, schema=schema, metadata=metadata, data_determiner=data_determiner
+        )
 
     def load(
         self, path: str, fmt: str = "", columns: Any = None, **kwargs: Any

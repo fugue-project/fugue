@@ -3,15 +3,6 @@ from fugue.dataframe import DataFrame
 from fugue.collections.yielded import Yielded
 
 
-class CreateData(Creator):
-    def create(self) -> DataFrame:
-        return self.execution_engine.to_df(
-            self.params.get_or_throw("data", object),
-            self.params.get_or_none("schema", object),
-            self.params.get_or_none("metadata", object),
-        )
-
-
 class Load(Creator):
     def create(self) -> DataFrame:
         kwargs = self.params.get("params", dict())

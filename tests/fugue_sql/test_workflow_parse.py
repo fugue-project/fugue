@@ -1,12 +1,19 @@
 import json
 from typing import Any, Iterable, List
 
-from fugue import FugueWorkflow, SqliteEngine, WorkflowDataFrame, WorkflowDataFrames, module
+from fugue import (
+    FugueWorkflow,
+    SqliteEngine,
+    WorkflowDataFrame,
+    WorkflowDataFrames,
+    module,
+)
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.extensions import OutputTransformer
 from fugue.extensions.transformer.convert import _to_output_transformer
 from pytest import raises
+from triad import to_uuid
 from triad.collections.schema import Schema
 from triad.utils.convert import get_caller_global_local_vars
 
@@ -16,7 +23,7 @@ from fugue_sql.exceptions import FugueSQLError
 
 
 def test_create_data():
-    w = FugueWorkflow().df([[0], [1]], "a:int")
+    w = FugueWorkflow().df([[0], [1]], "a:int", data_determiner=to_uuid)
     assert_eq(
         """
     a=create [[0],[1]] schema a:int
@@ -155,7 +162,7 @@ def test_cotransform():
 def test_transform():
     w = (
         FugueWorkflow()
-        .df([[0], [1]], "a:int")
+        .df([[0], [1]], "a:int", data_determiner=to_uuid)
         .transform(mock_transformer, schema=Schema("a:int"), params=dict(n=2))
     )
     assert_eq(
@@ -168,7 +175,7 @@ def test_transform():
 
     w = (
         FugueWorkflow()
-        .df([[0], [1]], "a:int")
+        .df([[0], [1]], "a:int", data_determiner=to_uuid)
         .partition(by=["a"], presort="b DESC", num="ROWCOUNT/2")
         .transform(mock_transformer, schema="*", params=dict(n=2))
     )
@@ -191,7 +198,9 @@ def test_out_transform():
 
     o = _to_output_transformer(OT)
     w = FugueWorkflow()
-    w.df([[0], [1]], "a:int").out_transform(o, params=dict(n=2))
+    w.df([[0], [1]], "a:int", data_determiner=to_uuid).out_transform(
+        o, params=dict(n=2)
+    )
     assert_eq(
         """
     create [[0],[1]] schema a:int
@@ -201,7 +210,7 @@ def test_out_transform():
     )
 
     w = FugueWorkflow()
-    w.df([[0], [1]], "a:int").partition(
+    w.df([[0], [1]], "a:int", data_determiner=to_uuid).partition(
         by=["a"], presort="b DESC", num="ROWCOUNT/2"
     ).out_transform(mock_transformer, params=dict(n=2))
     assert_eq(
@@ -612,7 +621,7 @@ def test_sample():
 
 def test_fill():
     dag = FugueWorkflow()
-    a = dag.df([[None, 1], [1, None]], "a:int, b:int")
+    a = dag.df([[None, 1], [1, None]], "a:int, b:int", data_determiner=to_uuid)
     b = a.fillna({"a": 99, "b": -99})
     assert_eq(
         """
@@ -630,8 +639,12 @@ def test_fill():
 
 def test_head():
     dag = FugueWorkflow()
-    a = dag.df([[None, 1], [None, 2], [1, None], [1, 2]], "a:double, b:double")
-    b = a.partition(by=['a'], presort="b desc").take(1, na_position="first")
+    a = dag.df(
+        [[None, 1], [None, 2], [1, None], [1, 2]],
+        "a:double, b:double",
+        data_determiner=to_uuid,
+    )
+    b = a.partition(by=["a"], presort="b desc").take(1, na_position="first")
     c = b.take(1, presort="b desc", na_position="first")
     assert_eq(
         """
@@ -652,7 +665,7 @@ def test_head():
 
 def test_module():
     # pylint: disable=no-value-for-parameter
-    
+
     def create(wf: FugueWorkflow, n: int = 1) -> WorkflowDataFrame:
         return wf.df([[n]], "a:int")
 
