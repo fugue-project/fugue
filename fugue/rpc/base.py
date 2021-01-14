@@ -274,7 +274,7 @@ def to_rpc_handler(obj: Any) -> RPCHandler:
 
 def make_rpc_server(conf: Any) -> RPCServer:
     """Make :class:`~.RPCServer` based on configuration.
-    If `fugue.rpc.server` is set, then the value will be used as
+    If '`fugue.rpc.server`` is set, then the value will be used as
     the server type for the initialization. Otherwise, a
     :class:`~.NativeRPCServer` instance will be returned
 
