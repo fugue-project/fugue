@@ -2,7 +2,7 @@
 from fugue.rpc.base import (
     RPCClient,
     RPCEmptyHandler,
-    RPCFuncDict,
+    RPCFunc,
     RPCHandler,
     RPCServer,
     make_rpc_server,

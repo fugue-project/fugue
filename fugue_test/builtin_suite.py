@@ -1181,13 +1181,11 @@ class BuiltInTests(object):
                 def __init__(self):
                     self.n = 0
 
-                def call(self, value: str) -> str:
-                    self.n += int(value)
-                    print(id(self))
-                    return str(self.n)
+                def call(self, value: int) -> int:
+                    self.n += value
+                    return self.n
 
             cb = Callbacks()
-            funcs = {"c": cb.call}
 
             class CallbackTransformer(Transformer):
                 def get_output_schema(self, df):
@@ -1195,13 +1193,13 @@ class BuiltInTests(object):
 
                 def transform(self, df):
                     v = self.cursor.key_value_array[0]
-                    print(self.rpc_client("c", str(v)))
+                    print(self.rpc_client(v))
                     return df
 
             with self.dag() as dag:
                 df = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
                 res = df.partition(by=["a"]).transform(
-                    CallbackTransformer, rpc_handler=funcs
+                    CallbackTransformer, rpc_handler=cb.call
                 )
                 df.assert_eq(res)
 

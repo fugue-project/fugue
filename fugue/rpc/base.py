@@ -3,13 +3,14 @@ from threading import RLock
 from typing import Any, Callable, Dict
 from uuid import uuid4
 
-from triad import ParamDict, assert_or_throw
-from triad.utils.convert import to_type
+from triad import ParamDict, assert_or_throw, to_uuid
+from triad.utils.convert import to_type, get_full_type_path
 import pickle
+from types import LambdaType
 
 
 class RPCClient(object):
-    def __call__(self, method: str, value: str) -> str:  # pragma: no cover
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:  # pragma: no cover
         raise NotImplementedError
 
 
@@ -23,7 +24,7 @@ class RPCHandler(RPCClient):
         return self._running > 0
 
     def __uuid__(self) -> str:
-        return ""
+        return ""  # pragma: no cover
 
     def start_handler(self) -> None:
         return
@@ -103,10 +104,10 @@ class RPCServer(RPCHandler, ABC):
                     v.stop()
             self._handlers.clear()
 
-    def invoke(self, key: str, method: str, value: str) -> str:
+    def invoke(self, key: str, *args: Any, **kwargs: Any) -> Any:
         with self._lock:
             handler = self._handlers[key]
-        return handler(method, value)
+        return handler(*args, **kwargs)
 
     def register(self, handler: Any) -> str:
         with self._lock:
@@ -121,8 +122,8 @@ class NativeRPCClient(RPCClient):
         self._key = key
         self._server = server
 
-    def __call__(self, method: str, value: str) -> str:
-        return self._server.invoke(self._key, method, value)
+    def __call__(self, *args: Any, **kwargs: Any) -> str:
+        return self._server.invoke(self._key, *args, **kwargs)
 
     def __getstate__(self):
         raise pickle.PicklingError(f"{self} is not serializable")
@@ -143,22 +144,21 @@ class NativeRPCServer(RPCServer):
         return
 
 
-class RPCFuncDict(RPCHandler):
-    def __init__(self, methods: Dict[str, Callable[[str], str]]):
+class RPCFunc(RPCHandler):
+    def __init__(self, func: Callable):
         super().__init__()
-        for m in methods.values():
-            assert_or_throw(callable(m), ValueError(m))
-        self._methods = methods
-        self._uuid = "" if len(methods) == 0 else str(uuid4())
+        assert_or_throw(callable(func), ValueError(func))
+        self._func = func
+        if isinstance(func, LambdaType):
+            self._uuid = to_uuid("lambda")
+        else:
+            self._uuid = to_uuid(get_full_type_path(func))
 
     def __uuid__(self) -> str:
         return self._uuid
 
-    def __call__(self, method: str, value: str) -> str:
-        return self._methods[method](value)
-
-    def __len__(self) -> int:
-        return len(self._methods)
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return self._func(*args, **kwargs)
 
 
 def to_rpc_handler(obj: Any) -> RPCHandler:
@@ -166,10 +166,8 @@ def to_rpc_handler(obj: Any) -> RPCHandler:
         return RPCEmptyHandler()
     if isinstance(obj, RPCHandler):
         return obj
-    if isinstance(obj, dict):
-        if len(obj) > 0:
-            return RPCFuncDict(obj)
-        return RPCEmptyHandler()
+    if callable(obj):
+        return RPCFunc(obj)
     raise ValueError(obj)
 
 

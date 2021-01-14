@@ -1,6 +1,8 @@
+import base64
 import logging
+import pickle
 from threading import Thread
-from typing import Any, Optional
+from typing import Any, Optional, Tuple, Dict, List
 
 import requests
 from fugue.rpc.base import RPCClient, RPCServer
@@ -38,10 +40,9 @@ class FlaskRPCServer(RPCServer):
         self._server: Optional[FlaskRPCServer._Thread] = None
 
     def _invoke(self) -> str:
-        key = request.form.get("key")
-        method = request.form.get("method")
-        value = request.form.get("value")
-        return self.invoke(key, method, value)  # type: ignore
+        key = str(request.form.get("key"))
+        args, kwargs = _decode(str(request.form.get("value")))
+        return _encode(self.invoke(key, *args, **kwargs))  # type: ignore
 
     def make_client(self, handler: Any) -> RPCClient:
         key = self.register(handler)
@@ -70,12 +71,22 @@ class FlaskRPCClient(RPCClient):
         self._timeout_sec = timeout_sec
         self._key = key
 
-    def __call__(self, method: str, value: str) -> str:
+    def __call__(self, *args, **kwargs) -> str:
         timeout: Any = None if self._timeout_sec <= 0 else self._timeout_sec
         res = requests.post(
             self._url,
-            data=dict(key=self._key, method=method, value=value),
+            data=dict(key=self._key, value=_encode(*args, **kwargs)),
             timeout=timeout,
         )
         res.raise_for_status()
-        return res.text
+        return _decode(res.text)[0][0]
+
+
+def _encode(*args: Any, **kwargs: Any) -> str:
+    data = base64.b64encode(pickle.dumps(dict(args=args, kwargs=kwargs)))
+    return data.decode("ascii")
+
+
+def _decode(data: str) -> Tuple[List[Any], Dict[str, Any]]:
+    data = pickle.loads(base64.b64decode(data.encode("ascii")))
+    return data["args"], data["kwargs"]  # type: ignore
