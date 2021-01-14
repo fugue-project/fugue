@@ -1,4 +1,4 @@
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Callable
 
 import pandas as pd
 from fugue.dataframe import ArrayDataFrame, DataFrames
@@ -49,6 +49,8 @@ def test__to_output_transformer():
     assert isinstance(f, CoTransformer)
     g = _to_output_transformer("t6")
     assert isinstance(g, CoTransformer)
+    i = _to_output_transformer("t7")
+    assert isinstance(i, CoTransformer)
 
 
 def test__to_output_transformer_determinism():
@@ -70,6 +72,11 @@ def test__to_output_transformer_determinism():
     assert a is not b
     assert to_uuid(a) == to_uuid(b)
 
+    a = _to_output_transformer(t7)
+    b = _to_output_transformer("t7")
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
+
 
 @output_cotransformer()
 def t1(df1: Iterable[Dict[str, Any]], df2: pd.DataFrame) -> None:
@@ -85,6 +92,9 @@ def t5(df1: Iterable[List[Any]], df2: pd.DataFrame, **kwargs) -> None:
 
 
 def t6(df1: Iterable[List[Any]], df2: pd.DataFrame) -> Iterable[pd.DataFrame]:
+    pass
+
+def t7(df1: Iterable[List[Any]], df2: pd.DataFrame, c:Callable) -> Iterable[pd.DataFrame]:
     pass
 
 

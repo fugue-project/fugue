@@ -201,6 +201,12 @@ class FunctionWrapper(object):
             if param is not None and param.kind == param.VAR_KEYWORD:
                 return _KeywordParam(param)
             return _OtherParam(param) if none_as_other else _NoneParam(param)
+        if (
+            annotation is Callable
+            or annotation is callable
+            or str(annotation).startswith("typing.Callable")
+        ):
+            return _CallableParam(param)
         if annotation is to_type("fugue.execution.ExecutionEngine"):
             # to prevent cyclic import
             return _ExecutionEngineParam(param)
@@ -245,6 +251,11 @@ class _FuncParam(object):
 
     def __repr__(self) -> str:
         return str(self.annotation)
+
+
+class _CallableParam(_FuncParam):
+    def __init__(self, param: Optional[inspect.Parameter]):
+        super().__init__(param, "Callable", "f")
 
 
 class _ExecutionEngineParam(_FuncParam):

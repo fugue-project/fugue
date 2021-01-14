@@ -3,8 +3,7 @@ from typing import Any, Dict, Iterable, List
 import pandas as pd
 from fugue.dataframe import ArrayDataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
-from fugue.extensions.transformer import (CoTransformer, cotransformer,
-                                          _to_transformer)
+from fugue.extensions.transformer import CoTransformer, cotransformer, _to_transformer
 from pytest import raises
 from triad.collections.schema import Schema
 from triad.utils.hash import to_uuid
@@ -51,6 +50,8 @@ def test__to_transformer():
     assert isinstance(f, CoTransformer)
     g = _to_transformer("t6", "a:int,b:int")
     assert isinstance(g, CoTransformer)
+    i = _to_transformer("t7", "a:int,b:int")
+    assert isinstance(i, CoTransformer)
 
 
 def test__to_transformer_determinism():
@@ -69,6 +70,11 @@ def test__to_transformer_determinism():
 
     a = _to_transformer(MockTransformer)
     b = _to_transformer("MockTransformer")
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
+
+    a = _to_transformer(t7, "a:int,b:int")
+    b = _to_transformer("t7", "a:int,b:int")
     assert a is not b
     assert to_uuid(a) == to_uuid(b)
 
@@ -106,6 +112,13 @@ def t5(df1: pd.DataFrame, df2: pd.DataFrame) -> Iterable[pd.DataFrame]:
 
 
 def t6(df1: pd.DataFrame, df2: pd.DataFrame, **kwargs) -> Iterable[pd.DataFrame]:
+    for df in [df1, df2]:
+        yield df
+
+
+def t7(
+    df1: pd.DataFrame, df2: pd.DataFrame, c: callable, **kwargs
+) -> Iterable[pd.DataFrame]:
     for df in [df1, df2]:
         yield df
 
