@@ -591,7 +591,8 @@ class WorkflowDataFrame(DataFrame):
             if dictionary, fills NA using the keys as column names and the
             values as the replacement values.
         :param subset: list of columns to operate on. ignored if value is
-        a dictionary
+            a dictionary
+
         :return: dataframe with NA records filled
         """
         params = dict(value=value, subset=subset)
@@ -635,7 +636,7 @@ class WorkflowDataFrame(DataFrame):
         :param n: number of rows to return
         :param presort: presort expression similar to partition presort
         :param na_position: position of null values during the presort.
-        can accept ``first`` or ``last``
+            can accept ``first`` or ``last``
 
         :return: n rows of DataFrame per partition
         """

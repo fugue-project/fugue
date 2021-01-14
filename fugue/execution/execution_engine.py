@@ -216,8 +216,8 @@ class ExecutionEngine(ABC):
         :param lazy: ``True``: first usage of the output will trigger persisting
           to happen; ``False`` (eager): persist is forced to happend immediately.
           Default to ``False``
-        :param *args: parameter to pass to the underlying persist implementation
-        :param *kwargs: parameter to pass to the underlying persist implementation
+        :param args: parameter to pass to the underlying persist implementation
+        :param kwargs: parameter to pass to the underlying persist implementation
         :return: the persisted dataframe
 
         :Notice:
@@ -386,7 +386,7 @@ class ExecutionEngine(ABC):
             if dictionary, fills NA using the keys as column names and the
             values as the replacement values.
         :param subset: list of columns to operate on. ignored if value is
-        a dictionary
+            a dictionary
         :param metadata: dict-like object to add to the result dataframe,
             defaults to None
         :type metadata: Any, optional
@@ -446,7 +446,7 @@ class ExecutionEngine(ABC):
         :param n: number of rows to return
         :param presort: presort expression similar to partition presort
         :param na_position: position of null values during the presort.
-        can accept ``first`` or ``last``
+            can accept ``first`` or ``last``
         :param partition_spec: PartitionSpec to apply the take operation
         :param metadata: dict-like object to add to the result dataframe,
             defaults to None
