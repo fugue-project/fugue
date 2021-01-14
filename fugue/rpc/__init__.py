@@ -1,7 +1,7 @@
 # flake8: noqa
 from fugue.rpc.base import (
     RPCClient,
-    RPCEmptyHandler,
+    EmptyRPCHandler,
     RPCFunc,
     RPCHandler,
     RPCServer,

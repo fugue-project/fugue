@@ -10,6 +10,7 @@ from fugue.execution.execution_engine import _generate_comap_empty_dfs
 from fugue.extensions.outputter import Outputter
 from fugue.extensions.transformer.convert import _to_output_transformer
 from fugue.extensions.transformer.transformer import CoTransformer, Transformer
+from fugue.rpc import EmptyRPCHandler, to_rpc_handler
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
@@ -105,6 +106,9 @@ class RunOutputTransformer(Outputter):
         tf._workflow_conf = self.execution_engine.conf
         tf._params = self.params.get("params", ParamDict())  # type: ignore
         tf._partition_spec = self.partition_spec  # type: ignore
+        rpc_handler = to_rpc_handler(self.params.get_or_throw("rpc_handler", object))
+        if not isinstance(rpc_handler, EmptyRPCHandler):
+            tf._rpc_client = self.execution_engine.rpc_server.make_client(rpc_handler)
         ie = self.params.get("ignore_errors", [])
         self._ignore_errors = [to_type(x, Exception) for x in ie]
         tf.validate_on_runtime(df)

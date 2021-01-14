@@ -1176,7 +1176,7 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 dag.df([[0, 1]], "a:int,b:int").partition(by=["b"]).output(o4)
 
-        def test_rpc(self):
+        def test_callback(self):
             class Callbacks(object):
                 def __init__(self):
                     self.n = 0
@@ -1199,7 +1199,7 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 df = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
                 res = df.partition(by=["a"]).transform(
-                    CallbackTransformer, rpc_handler=cb.call
+                    CallbackTransformer, callback=cb.call
                 )
                 df.assert_eq(res)
 

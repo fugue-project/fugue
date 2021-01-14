@@ -1,6 +1,6 @@
 import pickle
 
-from fugue.rpc import make_rpc_server, to_rpc_handler, RPCFunc, RPCEmptyHandler
+from fugue.rpc import make_rpc_server, to_rpc_handler, RPCFunc, EmptyRPCHandler
 from pytest import raises
 from triad import ParamDict
 
@@ -73,7 +73,7 @@ def test_server_handlers():
 
 
 def test_to_rpc_handler():
-    assert isinstance(to_rpc_handler(None), RPCEmptyHandler)
+    assert isinstance(to_rpc_handler(None), EmptyRPCHandler)
     assert isinstance(to_rpc_handler(lambda x: x), RPCFunc)
     handler = to_rpc_handler(lambda x: x)
     assert handler is to_rpc_handler(handler)
