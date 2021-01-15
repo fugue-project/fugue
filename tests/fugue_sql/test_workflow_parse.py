@@ -190,6 +190,27 @@ def test_transform():
         w.workflow,
     )
 
+    def _func(a: int, b: int) -> int:
+        return a + b
+
+    w = (
+        FugueWorkflow()
+        .df([[0], [1]], "a:int", data_determiner=to_uuid)
+        .partition(by=["a"], presort="b DESC", num="ROWCOUNT/2")
+        .transform(mock_transformer, schema="*", params=dict(n=2), callback=_func)
+    )
+    assert_eq(
+        """
+    create [[0],[1]] schema a:int
+    
+    transform 
+        prepartition ROWCOUNT / 2 by a presort b desc
+        using mock_transformer(n=2) schema *
+        callback _func
+    """,
+        w.workflow,
+    )
+
 
 def test_out_transform():
     class OT(OutputTransformer):
