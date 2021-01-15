@@ -1,7 +1,7 @@
 import datetime
 import os
 import pickle
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Callable
 from unittest import TestCase
 
 import numpy as np
@@ -1176,7 +1176,7 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 dag.df([[0, 1]], "a:int,b:int").partition(by=["b"]).output(o4)
 
-        def test_rpc(self):
+        def test_callback(self):
             class Callbacks(object):
                 def __init__(self):
                     self.n = 0
@@ -1199,11 +1199,50 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 df = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
                 res = df.partition(by=["a"]).transform(
-                    CallbackTransformer, rpc_handler=cb.call
+                    CallbackTransformer, callback=cb.call
                 )
                 df.assert_eq(res)
 
             assert 8 == cb.n
+
+            # interfaceless tests
+            cb2 = Callbacks()
+
+            # schema: *
+            def t1(df: pd.DataFrame, c: Callable[[int], int]) -> pd.DataFrame:
+                c(1)
+                return df
+
+            def t2(df: pd.DataFrame, c: Callable[[int], int]) -> None:
+                c(1)
+
+            with self.dag() as dag:
+                df = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
+                res = df.partition(by=["a"]).transform(t1, callback=cb2.call)
+                df.partition(by=["a"]).out_transform(t2, callback=cb2.call)
+                df.assert_eq(res)
+
+            assert 6 == cb2.n
+
+            # schema: a:int,b:int
+            def t3(
+                df1: pd.DataFrame, df2: pd.DataFrame, c: Callable[[int], int]
+            ) -> pd.DataFrame:
+                c(1)
+                return df1
+
+            def t4(
+                df1: pd.DataFrame, df2: pd.DataFrame, c: Callable[[int], int]
+            ) -> None:
+                c(1)
+
+            with self.dag() as dag:
+                df1 = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
+                df2 = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,c:int")
+                res = df1.zip(df2).transform(t3, callback=cb2.call).persist()
+                df1.zip(df2).out_transform(t4, callback=cb2.call)
+
+            assert 12 == cb2.n
 
 
 def mock_creator(p: int) -> DataFrame:

@@ -99,7 +99,7 @@ class RPCHandler(RPCClient):
         return self
 
 
-class RPCEmptyHandler(RPCHandler):
+class EmptyRPCHandler(RPCHandler):
     """The class representing empty :class:`~.RPCHandler`"""
 
     def __init__(self):
@@ -257,14 +257,14 @@ class RPCFunc(RPCHandler):
 def to_rpc_handler(obj: Any) -> RPCHandler:
     """Convert object to :class:`~.RPCHandler`. If the object is already
     ``RPCHandler``, then the original instance will be returned.
-    If the object is ``None`` then :class:`~.RPCEmptyHandler` will be returned.
+    If the object is ``None`` then :class:`~.EmptyRPCHandler` will be returned.
     If the object is a python function then :class:`~.RPCFunc` will be returned.
 
     :param obj: |RPCHandlerLikeObject|
     :return: the RPC handler
     """
     if obj is None:
-        return RPCEmptyHandler()
+        return EmptyRPCHandler()
     if isinstance(obj, RPCHandler):
         return obj
     if callable(obj):

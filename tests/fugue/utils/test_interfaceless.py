@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Callable
 
 import pandas as pd
 from fugue._utils.interfaceless import (
@@ -108,6 +108,7 @@ def test_parse_function():
     _parse_function(f16, "^0e?(c|[dl]+)x*$", "n")
     _parse_function(f33, "^$", "q")
     raises(TypeError, lambda: _parse_function(f34, "^[sq]$", "q"))
+    _parse_function(f36, "^f+$", "f")
 
 
 def test_function_wrapper():
@@ -342,3 +343,7 @@ def f35(e: pd.DataFrame, a: LocalDataFrame) -> Iterable[pd.DataFrame]:
     e = PandasDataFrame(e, "a:int").as_pandas()
     a = ArrayDataFrame(a, "a:int").as_pandas()
     return iter([e, a])
+
+
+def f36(f1: Callable, f2: Callable[[str], str]) -> callable:
+    pass

@@ -222,6 +222,34 @@ def test_local_instance_as_extension():
         )
 
 
+def test_call_back():
+    class CB(object):
+        def __init__(self):
+            self.n = 0
+
+        def incr(self, n):
+            self.n += n
+            return self.n
+
+    cb = CB()
+
+    # schema: *
+    def t(df: pd.DataFrame, incr: callable) -> pd.DataFrame:
+        incr(1)
+        return df
+
+    with FugueSQLWorkflow() as dag:
+        dag(
+            """
+        a = CREATE [[0],[1],[1]] SCHEMA a:int
+        TRANSFORM PREPARTITION BY a USING t CALLBACK cb.incr PERSIST
+        OUTTRANSFORM a PREPARTITION BY a USING t CALLBACK cb.incr
+        """
+        )
+
+    assert 4 == cb.n
+
+
 def _eq(dag, a):
     dag(
         """

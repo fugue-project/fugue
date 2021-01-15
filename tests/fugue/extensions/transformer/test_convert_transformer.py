@@ -55,6 +55,8 @@ def test__to_transformer():
     raises(FugueInterfacelessError, lambda: _to_transformer("t8"))
     i = _to_transformer("t9")
     assert isinstance(i, Transformer)
+    i = _to_transformer("t10")
+    assert isinstance(i, Transformer)
 
 
 def test__to_transformer_determinism():
@@ -78,6 +80,11 @@ def test__to_transformer_determinism():
 
     a = _to_transformer(MockTransformer)
     b = _to_transformer("MockTransformer")
+    assert a is not b
+    assert to_uuid(a) == to_uuid(b)
+
+    a = _to_transformer(t10)
+    b = _to_transformer("t10")
     assert a is not b
     assert to_uuid(a) == to_uuid(b)
 
@@ -181,6 +188,11 @@ def t8(df: Iterable[pd.DataFrame]) -> pd.DataFrame:
 
 # schema: *
 def t9(df: pd.DataFrame) -> Iterable[pd.DataFrame]:
+    yield df
+
+
+# schema: *
+def t10(df: pd.DataFrame, c: callable) -> pd.DataFrame:
     yield df
 
 

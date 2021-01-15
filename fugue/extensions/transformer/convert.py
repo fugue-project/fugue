@@ -114,9 +114,13 @@ class _FuncAsTransformer(Transformer):
     def validation_rules(self) -> Dict[str, Any]:
         return self._validation_rules  # type: ignore
 
+    @no_type_check
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:
-        return self._wrapper.run(  # type: ignore
-            [df], self.params, ignore_unknown=False, output_schema=self.output_schema
+        args = [df]
+        if self._has_callback:
+            args.append(self.rpc_client)
+        return self._wrapper.run(
+            args, self.params, ignore_unknown=False, output_schema=self.output_schema
         )
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
@@ -146,9 +150,10 @@ class _FuncAsTransformer(Transformer):
         validation_rules.update(parse_validation_rules_from_comment(func))
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsTransformer()
-        tr._wrapper = FunctionWrapper(func, "^[lsp]x*z?$", "^[lspq]$")  # type: ignore
+        tr._wrapper = FunctionWrapper(func, "^[lsp]f?x*z?$", "^[lspq]$")  # type: ignore
         tr._output_schema_arg = schema  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
+        tr._has_callback = "f" in tr._wrapper.input_code  # type: ignore
         return tr
 
 
@@ -156,10 +161,12 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
     def get_output_schema(self, df: DataFrame) -> Any:
         return OUTPUT_TRANSFORMER_DUMMY_SCHEMA
 
+    @no_type_check
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:
-        self._wrapper.run(  # type: ignore
-            [df], self.params, ignore_unknown=False, output=False
-        )
+        args = [df]
+        if self._has_callback:
+            args.append(self.rpc_client)
+        self._wrapper.run(args, self.params, ignore_unknown=False, output=False)
         return ArrayDataFrame([], OUTPUT_TRANSFORMER_DUMMY_SCHEMA)
 
     @staticmethod
@@ -169,9 +176,12 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
         assert_or_throw(schema is None, "schema must be None for output transformers")
         validation_rules.update(parse_validation_rules_from_comment(func))
         tr = _FuncAsOutputTransformer()
-        tr._wrapper = FunctionWrapper(func, "^[lsp]x*z?$", "^[lspnq]$")  # type: ignore
+        tr._wrapper = FunctionWrapper(  # type: ignore
+            func, "^[lsp]f?x*z?$", "^[lspnq]$"
+        )
         tr._output_schema_arg = None  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
+        tr._has_callback = "f" in tr._wrapper.input_code  # type: ignore
         return tr
 
 
@@ -185,16 +195,17 @@ class _FuncAsCoTransformer(CoTransformer):
 
     @no_type_check
     def transform(self, dfs: DataFrames) -> LocalDataFrame:
+        cb: List[Any] = [self.rpc_client] if self._has_callback else []
         if self._dfs_input:  # function has DataFrames input
             return self._wrapper.run(  # type: ignore
-                [dfs],
+                [dfs] + cb,
                 self.params,
                 ignore_unknown=False,
                 output_schema=self.output_schema,
             )
         if not dfs.has_key:  # input does not have key
             return self._wrapper.run(  # type: ignore
-                list(dfs.values()),
+                list(dfs.values()) + cb,
                 self.params,
                 ignore_unknown=False,
                 output_schema=self.output_schema,
@@ -203,7 +214,7 @@ class _FuncAsCoTransformer(CoTransformer):
             p = dict(dfs)
             p.update(self.params)
             return self._wrapper.run(  # type: ignore
-                [], p, ignore_unknown=False, output_schema=self.output_schema
+                [] + cb, p, ignore_unknown=False, output_schema=self.output_schema
             )
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
@@ -250,11 +261,12 @@ class _FuncAsCoTransformer(CoTransformer):
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsCoTransformer()
         tr._wrapper = FunctionWrapper(  # type: ignore
-            func, "^(c|[lsp]+)x*z?$", "^[lspq]$"
+            func, "^(c|[lsp]+)f?x*z?$", "^[lspq]$"
         )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
         tr._output_schema_arg = schema  # type: ignore
         tr._validation_rules = {}  # type: ignore
+        tr._has_callback = "f" in tr._wrapper.input_code  # type: ignore
         return tr
 
 
@@ -264,16 +276,17 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
 
     @no_type_check
     def transform(self, dfs: DataFrames) -> LocalDataFrame:
+        cb: List[Any] = [self.rpc_client] if self._has_callback else []
         if self._dfs_input:  # function has DataFrames input
             self._wrapper.run(  # type: ignore
-                [dfs],
+                [dfs] + cb,
                 self.params,
                 ignore_unknown=False,
                 output=False,
             )
         elif not dfs.has_key:  # input does not have key
             self._wrapper.run(  # type: ignore
-                list(dfs.values()),
+                list(dfs.values()) + cb,
                 self.params,
                 ignore_unknown=False,
                 output=False,
@@ -281,7 +294,9 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
         else:  # input DataFrames has key
             p = dict(dfs)
             p.update(self.params)
-            self._wrapper.run([], p, ignore_unknown=False, output=False)  # type: ignore
+            self._wrapper.run(
+                [] + cb, p, ignore_unknown=False, output=False  # type: ignore
+            )
         return ArrayDataFrame([], OUTPUT_TRANSFORMER_DUMMY_SCHEMA)
 
     @staticmethod
@@ -296,11 +311,12 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
 
         tr = _FuncAsOutputCoTransformer()
         tr._wrapper = FunctionWrapper(  # type: ignore
-            func, "^(c|[lsp]+)x*z?$", "^[lspnq]$"
+            func, "^(c|[lsp]+)f?x*z?$", "^[lspnq]$"
         )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
         tr._output_schema_arg = None  # type: ignore
         tr._validation_rules = {}  # type: ignore
+        tr._has_callback = "f" in tr._wrapper.input_code  # type: ignore
         return tr
 
 

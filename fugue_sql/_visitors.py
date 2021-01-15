@@ -24,7 +24,12 @@ from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDa
 from triad import to_uuid
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import get_caller_global_local_vars, to_bool, to_type
+from triad.utils.convert import (
+    get_caller_global_local_vars,
+    to_bool,
+    to_type,
+    to_function,
+)
 from triad.utils.pyarrow import to_pa_datatype
 
 from fugue_sql._antlr import FugueSQLParser as fp
@@ -412,7 +417,7 @@ class _Extensions(_VisitorBase):
     def visitFugueTransformTask(
         self, ctx: fp.FugueTransformTaskContext
     ) -> WorkflowDataFrame:
-        data = self.get_dict(ctx, "partition", "dfs", "params")
+        data = self.get_dict(ctx, "partition", "dfs", "params", "callback")
         if "dfs" not in data:
             data["dfs"] = WorkflowDataFrames(self.last)
         p = data["params"]
@@ -428,12 +433,15 @@ class _Extensions(_VisitorBase):
             using=using,
             params=p.get("params"),
             pre_partition=data.get("partition"),
+            callback=to_function(data["callback"], self.global_vars, self.local_vars)
+            if "callback" in data
+            else None,
         )
 
     def visitFugueOutputTransformTask(
         self, ctx: fp.FugueOutputTransformTaskContext
     ) -> None:
-        data = self.get_dict(ctx, "partition", "dfs", "using", "params")
+        data = self.get_dict(ctx, "partition", "dfs", "using", "params", "callback")
         if "dfs" not in data:
             data["dfs"] = WorkflowDataFrames(self.last)
         using = _to_output_transformer(
@@ -447,6 +455,9 @@ class _Extensions(_VisitorBase):
             using=using,
             params=data.get("params"),
             pre_partition=data.get("partition"),
+            callback=to_function(data["callback"], self.global_vars, self.local_vars)
+            if "callback" in data
+            else None,
         )
 
     def visitFugueProcessTask(

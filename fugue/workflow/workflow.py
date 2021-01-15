@@ -292,7 +292,7 @@ class WorkflowDataFrame(DataFrame):
         params: Any = None,
         pre_partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
-        rpc_handler: Any = None,
+        callback: Any = None,
     ) -> TDF:
         """Transform this dataframe using transformer. It's a wrapper of
         :meth:`fugue.workflow.workflow.FugueWorkflow.transform`
@@ -312,7 +312,7 @@ class WorkflowDataFrame(DataFrame):
           :meth:`~.partition` and then call :meth:`~.transform` without this parameter
         :param ignore_errors: list of exception types the transformer can ignore,
           defaults to empty list
-        :param rpc_handler: |RPCHandlerLikeObject|, defaults to None
+        :param callback: |RPCHandlerLikeObject|, defaults to None
         :return: the transformed dataframe
         :rtype: :class:`~.WorkflowDataFrame`
 
@@ -335,7 +335,7 @@ class WorkflowDataFrame(DataFrame):
             params=params,
             pre_partition=pre_partition,
             ignore_errors=ignore_errors,
-            rpc_handler=rpc_handler,
+            callback=callback,
         )
         return self._to_self_type(df)
 
@@ -345,7 +345,7 @@ class WorkflowDataFrame(DataFrame):
         params: Any = None,
         pre_partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
-        rpc_handler: Any = None,
+        callback: Any = None,
     ) -> None:
         """Transform this dataframe using transformer. It's a wrapper of
         :meth:`fugue.workflow.workflow.FugueWorkflow.out_transform`
@@ -362,7 +362,7 @@ class WorkflowDataFrame(DataFrame):
           :meth:`~.partition` and then call :meth:`~.transform` without this parameter
         :param ignore_errors: list of exception types the transformer can ignore,
           defaults to empty list
-        :param rpc_handler: |RPCHandlerLikeObject|, defaults to None
+        :param callback: |RPCHandlerLikeObject|, defaults to None
 
         :Notice:
 
@@ -382,7 +382,7 @@ class WorkflowDataFrame(DataFrame):
             params=params,
             pre_partition=pre_partition,
             ignore_errors=ignore_errors,
-            rpc_handler=rpc_handler,
+            callback=callback,
         )
 
     def join(self: TDF, *dfs: Any, how: str, on: Optional[Iterable[str]] = None) -> TDF:
@@ -1578,7 +1578,7 @@ class FugueWorkflow(object):
         params: Any = None,
         pre_partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
-        rpc_handler: Any = None,
+        callback: Any = None,
     ) -> WorkflowDataFrame:
         """Transform dataframes using transformer.
 
@@ -1598,7 +1598,7 @@ class FugueWorkflow(object):
           :meth:`~.partition` and then call :meth:`~.transform` without this parameter
         :param ignore_errors: list of exception types the transformer can ignore,
           defaults to empty list
-        :param rpc_handler: |RPCHandlerLikeObject|, defaults to None
+        :param callback: |RPCHandlerLikeObject|, defaults to None
         :return: the transformed dataframe
 
         :Notice:
@@ -1626,7 +1626,7 @@ class FugueWorkflow(object):
                 transformer=tf,
                 ignore_errors=ignore_errors,
                 params=params,
-                rpc_handler=to_rpc_handler(rpc_handler),
+                rpc_handler=to_rpc_handler(callback),
             ),
             pre_partition=pre_partition,
         )
@@ -1638,7 +1638,7 @@ class FugueWorkflow(object):
         params: Any = None,
         pre_partition: Any = None,
         ignore_errors: List[Any] = _DEFAULT_IGNORE_ERRORS,
-        rpc_handler: Any = None,
+        callback: Any = None,
     ) -> None:
         """Transform dataframes using transformer, it materializes the execution
         immediately and returns nothing
@@ -1660,7 +1660,7 @@ class FugueWorkflow(object):
           parameter
         :param ignore_errors: list of exception types the transformer can ignore,
           defaults to empty list
-        :param rpc_handler: |RPCHandlerLikeObject|, defaults to None
+        :param callback: |RPCHandlerLikeObject|, defaults to None
 
         :Notice:
 
@@ -1686,7 +1686,7 @@ class FugueWorkflow(object):
                 transformer=tf,
                 ignore_errors=ignore_errors,
                 params=params,
-                rpc_handler=to_rpc_handler(rpc_handler),
+                rpc_handler=to_rpc_handler(callback),
             ),
             pre_partition=pre_partition,
         )

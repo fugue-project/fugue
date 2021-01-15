@@ -129,7 +129,7 @@ fugueEngineSpecificQueryTask:
     ;
 
 fugueTransformTask:
-    TRANSFORM (dfs=fugueDataFrames)? (partition=fuguePrepartition)? params=fugueSingleOutputExtensionCommonWild
+    TRANSFORM (dfs=fugueDataFrames)? (partition=fuguePrepartition)? params=fugueSingleOutputExtensionCommonWild (CALLBACK callback=fugueExtension)?
     ;
 
 fugueProcessTask:
@@ -197,7 +197,7 @@ fugueSaveTask:
     ;
 
 fugueOutputTransformTask:
-    OUTTRANSFORM (dfs=fugueDataFrames)? (partition=fuguePrepartition)? USING using=fugueExtension (params=fugueParams)?
+    OUTTRANSFORM (dfs=fugueDataFrames)? (partition=fuguePrepartition)? USING using=fugueExtension (params=fugueParams)? (CALLBACK callback=fugueExtension)?
     ;
 
 fugueModuleTask:
@@ -1893,6 +1893,7 @@ SAMPLE: 'SAMPLE';
 SEED: 'SEED';
 
 SUB: 'SUB';
+CALLBACK: 'CALLBACK';
 
 //================================
 // End of the Fugue keywords list
