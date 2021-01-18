@@ -3,10 +3,15 @@ import re
 from jinja2 import Template
 from typing import Dict, Any
 
-MATCH_QUOTED_STRING = r"([\"'])(.*?[^\\])\1"
+MATCH_QUOTED_STRING = r"([\"'])(.*?[%].*?)\1"
 
 
 def fill_sql_template(sql: str, params: Dict[str, Any]):
+    """Prepare string to be executed, inserts params into sql template
+    ---
+    :param sql: jinja compatible template
+    :param params: params to be inserted into template
+    """
     if "self" in params:
         params = {k: v for k, v in params.items() if k != "self"}
     single_quote_pattern = "'{{% raw %}}{}{{% endraw %}}'"
