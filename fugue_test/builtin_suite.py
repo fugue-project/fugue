@@ -1,7 +1,7 @@
 import datetime
 import os
 import pickle
-from typing import Any, Dict, Iterable, List, Callable
+from typing import Any, Dict, Iterable, List, Callable, Optional
 from unittest import TestCase
 
 import numpy as np
@@ -13,6 +13,7 @@ from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFra
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import (
+    FugueInterfacelessError,
     FugueWorkflowCompileError,
     FugueWorkflowCompileValidationError,
     FugueWorkflowError,
@@ -1176,7 +1177,7 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 dag.df([[0, 1]], "a:int,b:int").partition(by=["b"]).output(o4)
 
-        def test_callback(self):
+        def test_callback(self):  # noqa: C901
             class Callbacks(object):
                 def __init__(self):
                     self.n = 0
@@ -1192,14 +1193,21 @@ class BuiltInTests(object):
                     return df.schema
 
                 def transform(self, df):
+                    has = self.params.get_or_throw("has", bool)
                     v = self.cursor.key_value_array[0]
-                    print(self.rpc_client(v))
+                    assert self.has_callback == has
+                    if self.has_callback:
+                        print(self.callback(v))
                     return df
 
             with self.dag() as dag:
                 df = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
                 res = df.partition(by=["a"]).transform(
-                    CallbackTransformer, callback=cb.call
+                    CallbackTransformer, callback=cb.call, params=dict(has=True)
+                )
+                df.assert_eq(res)
+                res = df.partition(by=["a"]).transform(
+                    CallbackTransformer, params=dict(has=False)
                 )
                 df.assert_eq(res)
 
@@ -1209,8 +1217,20 @@ class BuiltInTests(object):
             cb2 = Callbacks()
 
             # schema: *
+            def t0(df: pd.DataFrame) -> pd.DataFrame:
+                return df
+
+            # schema: *
             def t1(df: pd.DataFrame, c: Callable[[int], int]) -> pd.DataFrame:
                 c(1)
+                return df
+
+            # schema: *
+            def t12(
+                df: pd.DataFrame, c: Optional[Callable[[int], int]] = None
+            ) -> pd.DataFrame:
+                if c is not None:
+                    c(1)
                 return df
 
             def t2(df: pd.DataFrame, c: Callable[[int], int]) -> None:
@@ -1218,11 +1238,22 @@ class BuiltInTests(object):
 
             with self.dag() as dag:
                 df = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
-                res = df.partition(by=["a"]).transform(t1, callback=cb2.call)
-                df.partition(by=["a"]).out_transform(t2, callback=cb2.call)
+                df.partition(by=["a"]).transform(
+                    t0, callback=cb2.call
+                ).persist()  # no effect because t0 ignores callback
+                res = df.partition(by=["a"]).transform(t1, callback=cb2.call)  # +3
+                df.partition(by=["a"]).out_transform(t2, callback=cb2.call)  # +3
+                df.partition(by=["a"]).out_transform(t12, callback=cb2.call)  # +3
+                df.partition(by=["a"]).out_transform(t12)
+                raises(
+                    FugueInterfacelessError,
+                    lambda: (df.partition(by=["a"]).out_transform(t1)),
+                )  # for t1, callback must be provided
                 df.assert_eq(res)
 
-            assert 6 == cb2.n
+            assert 9 == cb2.n
+
+            cb2 = Callbacks()
 
             # schema: a:int,b:int
             def t3(
@@ -1236,13 +1267,25 @@ class BuiltInTests(object):
             ) -> None:
                 c(1)
 
+            def t42(
+                df1: pd.DataFrame, df2: pd.DataFrame, c: Optional[Callable[[int], int]]
+            ) -> None:
+                if c is not None:
+                    c(1)
+
             with self.dag() as dag:
                 df1 = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
                 df2 = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,c:int")
-                res = df1.zip(df2).transform(t3, callback=cb2.call).persist()
-                df1.zip(df2).out_transform(t4, callback=cb2.call)
+                res = df1.zip(df2).transform(t3, callback=cb2.call).persist()  # +3
+                df1.zip(df2).out_transform(t4, callback=cb2.call)  # +3
+                df1.zip(df2).out_transform(t42, callback=cb2.call)  # +3
+                df1.zip(df2).out_transform(t42)
+                raises(
+                    FugueInterfacelessError,
+                    lambda: df1.zip(df2).transform(t3).persist(),
+                )  # for t3, callback must be provided
 
-            assert 12 == cb2.n
+            assert 9 == cb2.n
 
 
 def mock_creator(p: int) -> DataFrame:

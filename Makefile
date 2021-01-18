@@ -55,6 +55,9 @@ package:
 	python3 setup.py sdist
 	python3 setup.py bdist_wheel
 
+jupyter:
+	jupyter notebook --port=8888 --ip=0.0.0.0 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+
 test:
 	python3 -bb -m pytest tests/
 

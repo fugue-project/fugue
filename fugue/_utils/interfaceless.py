@@ -207,6 +207,12 @@ class FunctionWrapper(object):
             or str(annotation).startswith("typing.Callable")
         ):
             return _CallableParam(param)
+        if (
+            annotation is Optional[Callable]
+            or annotation is Optional[callable]
+            or str(annotation).startswith("typing.Union[typing.Callable")
+        ):
+            return _OptionalCallableParam(param)
         if annotation is to_type("fugue.execution.ExecutionEngine"):
             # to prevent cyclic import
             return _ExecutionEngineParam(param)
@@ -254,6 +260,11 @@ class _FuncParam(object):
 
 
 class _CallableParam(_FuncParam):
+    def __init__(self, param: Optional[inspect.Parameter]):
+        super().__init__(param, "Callable", "F")
+
+
+class _OptionalCallableParam(_FuncParam):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "Callable", "f")
 
