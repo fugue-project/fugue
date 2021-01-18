@@ -81,13 +81,16 @@ class ExtensionContext(object):
         return self._cursor  # type: ignore
 
     @property
-    def rpc_client(self) -> RPCClient:
+    def has_callback(self) -> bool:
+        """Whether this transformer has callback"""
+        return "_rpc_client" in self.__dict__
+
+    @property
+    def callback(self) -> RPCClient:
         """RPC client to talk to driver, this is for transformers only,
         and available on both driver and workers
         """
-        if "_rpc_client" in self.__dict__:
-            return self._rpc_client  # type: ignore
-        return RPCClient()  # pragma: no cover
+        return self._rpc_client  # type: ignore
 
     @property
     def validation_rules(self) -> Dict[str, Any]:

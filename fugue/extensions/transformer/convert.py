@@ -12,6 +12,7 @@ from fugue.extensions._utils import (
     parse_validation_rules_from_comment,
     to_validation_rules,
 )
+from fugue.extensions.context import ExtensionContext
 from fugue.extensions.transformer.constants import OUTPUT_TRANSFORMER_DUMMY_SCHEMA
 from fugue.extensions.transformer.transformer import CoTransformer, Transformer
 from triad import ParamDict, Schema
@@ -116,9 +117,7 @@ class _FuncAsTransformer(Transformer):
 
     @no_type_check
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:
-        args = [df]
-        if self._has_callback:
-            args.append(self.rpc_client)
+        args = [df] + _get_callback(self)
         return self._wrapper.run(
             args, self.params, ignore_unknown=False, output_schema=self.output_schema
         )
@@ -150,10 +149,13 @@ class _FuncAsTransformer(Transformer):
         validation_rules.update(parse_validation_rules_from_comment(func))
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsTransformer()
-        tr._wrapper = FunctionWrapper(func, "^[lsp]f?x*z?$", "^[lspq]$")  # type: ignore
+        tr._wrapper = FunctionWrapper(  # type: ignore
+            func, "^[lsp][fF]?x*z?$", "^[lspq]$"
+        )
         tr._output_schema_arg = schema  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
-        tr._has_callback = "f" in tr._wrapper.input_code  # type: ignore
+        tr._uses_callback = "f" in tr._wrapper.input_code.lower()  # type: ignore
+        tr._requires_callback = "F" in tr._wrapper.input_code  # type: ignore
         return tr
 
 
@@ -163,9 +165,7 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
 
     @no_type_check
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:
-        args = [df]
-        if self._has_callback:
-            args.append(self.rpc_client)
+        args = [df] + _get_callback(self)
         self._wrapper.run(args, self.params, ignore_unknown=False, output=False)
         return ArrayDataFrame([], OUTPUT_TRANSFORMER_DUMMY_SCHEMA)
 
@@ -177,11 +177,12 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
         validation_rules.update(parse_validation_rules_from_comment(func))
         tr = _FuncAsOutputTransformer()
         tr._wrapper = FunctionWrapper(  # type: ignore
-            func, "^[lsp]f?x*z?$", "^[lspnq]$"
+            func, "^[lsp][fF]?x*z?$", "^[lspnq]$"
         )
         tr._output_schema_arg = None  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
-        tr._has_callback = "f" in tr._wrapper.input_code  # type: ignore
+        tr._uses_callback = "f" in tr._wrapper.input_code.lower()  # type: ignore
+        tr._requires_callback = "F" in tr._wrapper.input_code  # type: ignore
         return tr
 
 
@@ -195,7 +196,7 @@ class _FuncAsCoTransformer(CoTransformer):
 
     @no_type_check
     def transform(self, dfs: DataFrames) -> LocalDataFrame:
-        cb: List[Any] = [self.rpc_client] if self._has_callback else []
+        cb = _get_callback(self)
         if self._dfs_input:  # function has DataFrames input
             return self._wrapper.run(  # type: ignore
                 [dfs] + cb,
@@ -261,12 +262,13 @@ class _FuncAsCoTransformer(CoTransformer):
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsCoTransformer()
         tr._wrapper = FunctionWrapper(  # type: ignore
-            func, "^(c|[lsp]+)f?x*z?$", "^[lspq]$"
+            func, "^(c|[lsp]+)[fF]?x*z?$", "^[lspq]$"
         )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
         tr._output_schema_arg = schema  # type: ignore
         tr._validation_rules = {}  # type: ignore
-        tr._has_callback = "f" in tr._wrapper.input_code  # type: ignore
+        tr._uses_callback = "f" in tr._wrapper.input_code.lower()  # type: ignore
+        tr._requires_callback = "F" in tr._wrapper.input_code  # type: ignore
         return tr
 
 
@@ -276,7 +278,7 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
 
     @no_type_check
     def transform(self, dfs: DataFrames) -> LocalDataFrame:
-        cb: List[Any] = [self.rpc_client] if self._has_callback else []
+        cb = _get_callback(self)
         if self._dfs_input:  # function has DataFrames input
             self._wrapper.run(  # type: ignore
                 [dfs] + cb,
@@ -311,12 +313,13 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
 
         tr = _FuncAsOutputCoTransformer()
         tr._wrapper = FunctionWrapper(  # type: ignore
-            func, "^(c|[lsp]+)f?x*z?$", "^[lspnq]$"
+            func, "^(c|[lsp]+)[fF]?x*z?$", "^[lspnq]$"
         )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
         tr._output_schema_arg = None  # type: ignore
         tr._validation_rules = {}  # type: ignore
-        tr._has_callback = "f" in tr._wrapper.input_code  # type: ignore
+        tr._uses_callback = "f" in tr._wrapper.input_code.lower()  # type: ignore
+        tr._requires_callback = "F" in tr._wrapper.input_code  # type: ignore
         return tr
 
 
@@ -390,3 +393,16 @@ def _to_output_transformer(
         func_transformer_type=_FuncAsOutputTransformer,
         func_cotransformer_type=_FuncAsOutputCoTransformer,
     )
+
+
+def _get_callback(ctx: Any) -> List[Any]:
+    uses_callback = ctx._uses_callback
+    requires_callback = ctx._requires_callback
+    if not uses_callback:
+        return []
+    if requires_callback:
+        assert_or_throw(
+            ctx.has_callback, f"Callback is required but not provided: {ctx}"
+        )
+        return [ctx.callback]
+    return [ctx.callback if ctx.has_callback else None]

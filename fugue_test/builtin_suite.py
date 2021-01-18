@@ -1193,7 +1193,8 @@ class BuiltInTests(object):
 
                 def transform(self, df):
                     v = self.cursor.key_value_array[0]
-                    print(self.rpc_client(v))
+                    assert self.has_callback
+                    print(self.callback(v))
                     return df
 
             with self.dag() as dag:

@@ -20,7 +20,7 @@ class RPCHandler(RPCClient):
     """RPC handler hosting the real logic on driver side"""
 
     def __init__(self):
-        self._lock = RLock()
+        self._rpchandler_lock = RLock()
         self._running = 0
 
     @property
@@ -45,7 +45,7 @@ class RPCHandler(RPCClient):
 
         :return: the instance itself
         """
-        with self._lock:
+        with self._rpchandler_lock:
             if self._running == 0:
                 self.start_handler()
             self._running += 1
@@ -53,7 +53,7 @@ class RPCHandler(RPCClient):
 
     def stop(self) -> None:
         """Stop the handler, wrapping :meth:`~.stop_handler`"""
-        with self._lock:
+        with self._rpchandler_lock:
             if self._running == 1:
                 self.stop_handler()
             self._running -= 1
@@ -70,7 +70,7 @@ class RPCHandler(RPCClient):
             with handler.start():
                 handler...
         """
-        with self._lock:
+        with self._rpchandler_lock:
             assert_or_throw(self._running, "use `with <instance>.start():` instead")
         return self
 
@@ -144,12 +144,12 @@ class RPCServer(RPCHandler, ABC):
 
     def start_handler(self) -> None:
         """Wrapper to start the server, do not override or call directly"""
-        with self._lock:
+        with self._rpchandler_lock:
             self.start_server()
 
     def stop_handler(self) -> None:
         """Wrapper to stop the server, do not override or call directly"""
-        with self._lock:
+        with self._rpchandler_lock:
             self.stop_server()
             for v in self._handlers.values():
                 if v.running:
@@ -162,7 +162,7 @@ class RPCServer(RPCHandler, ABC):
         :param key: key of the handler
         :return: the return value of the handler
         """
-        with self._lock:
+        with self._rpchandler_lock:
             handler = self._handlers[key]
         return handler(*args, **kwargs)
 
@@ -172,7 +172,7 @@ class RPCServer(RPCHandler, ABC):
         :param handler: |RPCHandlerLikeObject|
         :return: the unique key of the handler
         """
-        with self._lock:
+        with self._rpchandler_lock:
             key = "_" + str(uuid4()).split("-")[-1]
             assert_or_throw(key not in self._handlers, f"{key} already exists")
             self._handlers[key] = to_rpc_handler(handler).start()
