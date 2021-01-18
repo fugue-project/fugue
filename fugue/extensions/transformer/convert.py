@@ -107,6 +107,10 @@ def output_cotransformer(
 
 
 class _FuncAsTransformer(Transformer):
+    def validate_on_compile(self) -> None:
+        super().validate_on_compile()
+        _validate_callback(self)
+
     def get_output_schema(self, df: DataFrame) -> Any:
         return self._parse_schema(self._output_schema_arg, df)  # type: ignore
 
@@ -159,6 +163,10 @@ class _FuncAsTransformer(Transformer):
 
 
 class _FuncAsOutputTransformer(_FuncAsTransformer):
+    def validate_on_compile(self) -> None:
+        super().validate_on_compile()
+        _validate_callback(self)
+
     def get_output_schema(self, df: DataFrame) -> Any:
         return OUTPUT_TRANSFORMER_DUMMY_SCHEMA
 
@@ -186,6 +194,10 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
 
 
 class _FuncAsCoTransformer(CoTransformer):
+    def validate_on_compile(self) -> None:
+        super().validate_on_compile()
+        _validate_callback(self)
+
     def get_output_schema(self, dfs: DataFrames) -> Any:
         return self._parse_schema(self._output_schema_arg, dfs)  # type: ignore
 
@@ -272,6 +284,10 @@ class _FuncAsCoTransformer(CoTransformer):
 
 
 class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
+    def validate_on_compile(self) -> None:
+        super().validate_on_compile()
+        _validate_callback(self)
+
     def get_output_schema(self, dfs: DataFrames) -> Any:
         return OUTPUT_TRANSFORMER_DUMMY_SCHEMA
 
@@ -394,6 +410,14 @@ def _to_output_transformer(
     )
 
 
+def _validate_callback(ctx: Any) -> None:
+    if ctx._requires_callback:
+        assert_or_throw(
+            ctx.has_callback,
+            FugueInterfacelessError(f"Callback is required but not provided: {ctx}"),
+        )
+
+
 def _get_callback(ctx: Any) -> List[Any]:
     uses_callback = ctx._uses_callback
     requires_callback = ctx._requires_callback
@@ -401,7 +425,8 @@ def _get_callback(ctx: Any) -> List[Any]:
         return []
     if requires_callback:
         assert_or_throw(
-            ctx.has_callback, f"Callback is required but not provided: {ctx}"
+            ctx.has_callback,
+            FugueInterfacelessError(f"Callback is required but not provided: {ctx}"),
         )
         return [ctx.callback]
     return [ctx.callback if ctx.has_callback else None]

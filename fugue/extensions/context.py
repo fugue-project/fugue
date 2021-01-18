@@ -83,7 +83,9 @@ class ExtensionContext(object):
     @property
     def has_callback(self) -> bool:
         """Whether this transformer has callback"""
-        return "_rpc_client" in self.__dict__
+        return (
+            "_has_rpc_client" in self.__dict__ and self._has_rpc_client  # type: ignore
+        )
 
     @property
     def callback(self) -> RPCClient:
