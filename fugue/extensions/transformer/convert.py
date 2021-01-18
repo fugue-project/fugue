@@ -12,7 +12,6 @@ from fugue.extensions._utils import (
     parse_validation_rules_from_comment,
     to_validation_rules,
 )
-from fugue.extensions.context import ExtensionContext
 from fugue.extensions.transformer.constants import OUTPUT_TRANSFORMER_DUMMY_SCHEMA
 from fugue.extensions.transformer.transformer import CoTransformer, Transformer
 from triad import ParamDict, Schema
