@@ -4,6 +4,7 @@ from typing import Any, Dict, Tuple
 
 from fugue import DataFrame, FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 from fugue.collections.yielded import Yielded
+from fugue.workflow import is_acceptable_raw_df
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars
@@ -84,6 +85,8 @@ class FugueSQLWorkflow(FugueWorkflow):
         dfs: Dict[str, Tuple[WorkflowDataFrame, WorkflowDataFrames]] = {}
         for k, v in params.items():
             if isinstance(v, (DataFrame, Yielded)):
+                dfs[k] = self.df(v)  # type: ignore
+            elif is_acceptable_raw_df(v):
                 dfs[k] = self.df(v)  # type: ignore
             else:
                 p[k] = v
