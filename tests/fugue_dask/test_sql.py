@@ -1,8 +1,9 @@
-from fugue_dask import DaskExecutionEngine
-from fugue_sql import FugueSQLWorkflow
 import dask.dataframe as dd
 import pandas as pd
 from fugue import register_execution_engine
+from fugue_sql import FugueSQLWorkflow
+
+from fugue_dask import DaskExecutionEngine
 
 
 def test_sql():
