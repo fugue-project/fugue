@@ -1,6 +1,5 @@
 # flake8: noqa
 from fugue_version import __version__
-
 from triad.collections import Schema
 from triad.collections.fs import FileSystem
 
@@ -13,6 +12,11 @@ from fugue.dataframe.iterable_dataframe import IterableDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import to_local_bounded_df, to_local_df
 from fugue.execution.execution_engine import ExecutionEngine, SQLEngine
+from fugue.execution.factory import (
+    make_execution_engine,
+    register_default_execution_engine,
+    register_execution_engine,
+)
 from fugue.execution.native_execution_engine import NativeExecutionEngine, SqliteEngine
 from fugue.extensions.creator import Creator, creator
 from fugue.extensions.outputter import Outputter, outputter
@@ -22,11 +26,11 @@ from fugue.extensions.transformer import (
     OutputCoTransformer,
     OutputTransformer,
     Transformer,
-    transformer,
     cotransformer,
-    output_transformer,
     output_cotransformer,
+    output_transformer,
+    transformer,
 )
+from fugue.workflow._workflow_context import FugueWorkflowContext
 from fugue.workflow.module import module
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
-from fugue.workflow._workflow_context import FugueWorkflowContext

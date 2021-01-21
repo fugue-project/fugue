@@ -19,7 +19,7 @@ from fugue.execution.execution_engine import (
 )
 from qpd_dask import run_sql_on_dask
 from triad.collections import Schema
-from triad.collections.dict import ParamDict, IndexedOrderedDict
+from triad.collections.dict import IndexedOrderedDict, ParamDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid

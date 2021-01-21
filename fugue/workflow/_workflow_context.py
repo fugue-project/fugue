@@ -13,11 +13,10 @@ from adagio.specs import WorkflowSpec
 from fugue.constants import FUGUE_CONF_WORKFLOW_CONCURRENCY, FUGUE_DEFAULT_CONF
 from fugue.dataframe import DataFrame
 from fugue.execution.execution_engine import ExecutionEngine
-from fugue.execution.native_execution_engine import NativeExecutionEngine
+from fugue.execution.factory import make_execution_engine
 from fugue.workflow._checkpoint import CheckpointPath
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import to_instance
 
 
 class FugueWorkflowContext(WorkflowContext):
@@ -28,10 +27,7 @@ class FugueWorkflowContext(WorkflowContext):
         workflow_engine: Any = None,
         hooks: Any = WorkflowHooks,
     ):
-        if execution_engine is None:
-            ee: ExecutionEngine = NativeExecutionEngine()
-        else:
-            ee = to_instance(execution_engine, ExecutionEngine)
+        ee = make_execution_engine(execution_engine)
         self._fugue_engine = ee
         self._lock = RLock()
         self._results: Dict[Any, DataFrame] = {}
