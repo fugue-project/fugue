@@ -33,7 +33,11 @@ from fugue.extensions.transformer import (
     output_transformer,
     transformer,
 )
-from fugue.workflow.workflow import FugueWorkflow, _FugueInteractiveWorkflow
+from fugue.workflow.workflow import (
+    FugueWorkflow,
+    WorkflowDataFrame,
+    _FugueInteractiveWorkflow,
+)
 from pytest import raises
 
 
@@ -223,8 +227,12 @@ class BuiltInTests(object):
             dag = self.dag()
             dag.df([[0]], "a:int").output_as("k")
             result = dag.run()
-            assert "k" in result.dfs
-            assert "k" in result.native_dfs
+            assert "k" in result
+            assert not isinstance(result["k"], WorkflowDataFrame)
+            assert isinstance(result["k"], DataFrame)
+            # TODO: these don't work
+            # assert not isinstance(list(result.values())[0], WorkflowDataFrame)
+            # assert isinstance(list(result.values())[0], DataFrame)
 
         def test_yield(self):
             self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(

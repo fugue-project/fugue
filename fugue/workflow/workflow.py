@@ -795,7 +795,7 @@ class WorkflowDataFrame(DataFrame):
             result = dag.run()
             result.native_dfs["k"]  # a pd.DataFrame of [[0]]
         """
-        self.workflow._output.output_df(name, self)
+        self.workflow._output[name] = self
         return self
 
     def persist(self: TDF) -> TDF:
@@ -1162,51 +1162,21 @@ class WorkflowDataFrames(DataFrames):
         return super().__getitem__(key)  # type: ignore
 
 
-class WorkflowResult(object):
+class WorkflowResult(DataFrames):
     """Workflow execution result"""
 
     def __init__(self):
-        self._lock = RLock()
-        self._wdfs: Dict[str, WorkflowDataFrame] = {}
-        self._dfs: Optional[Dict[str, DataFrame]] = None
-        self._native_dfs: Optional[Dict[str, Any]] = None
+        super().__init__()
+        self._readonly = False
 
-    def output_df(self, name: str, df: WorkflowDataFrame) -> None:
-        """For internal use only. It register the dataframe to be output
-        after the execution.
+    def __setitem__(  # type: ignore
+        self, key: str, value: DataFrame, *args: Any, **kwds: Any
+    ) -> None:
+        assert_or_throw(isinstance(value, WorkflowDataFrame), f"{value}")
+        super().__setitem__(key, value, *args, **kwds)
 
-        :param name: name of the output dataframe
-        :param df: the dataframe to output
-        """
-        with self._lock:
-            self._wdfs[name] = df
-
-    @property
-    def dfs(self) -> Dict[str, DataFrame]:
-        """Computed dataframes dict"""
-        self._compute()
-        return self._dfs  # type:ignore
-
-    @property
-    def native_dfs(self) -> Dict[str, Any]:
-        """Computed dataframes in the native format
-
-        :Notice:
-
-        If the dataframe is local, it will be converted to
-        pandas dataframe
-        """
-        self._compute()
-        return self._native_dfs  # type:ignore
-
-    def _compute(self):
-        with self._lock:
-            if self._dfs is None:
-                self._dfs = {k: v.result for k, v in self._wdfs.items()}
-                self._native_dfs = {
-                    k: v.as_pandas() if v.is_local else v.native
-                    for k, v in self._dfs.items()
-                }
+    def __getitem__(self, key: Union[str, int]) -> DataFrame:  # type: ignore
+        return super().__getitem__(key).result  # type: ignore
 
 
 class FugueWorkflow(object):
