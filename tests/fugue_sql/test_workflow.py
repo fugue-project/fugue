@@ -5,12 +5,12 @@ from fugue.dataframe import DataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq
 from fugue.execution.native_execution_engine import NativeExecutionEngine
-from fugue.workflow.workflow import WorkflowDataFrame
 from fugue.extensions._builtins.outputters import Show
+from fugue.workflow.workflow import WorkflowDataFrame
 from pytest import raises
 
+from fugue_sql import FugueSQLWorkflow, fsql
 from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
-from fugue_sql.workflow import FugueSQLWorkflow
 
 
 def test_workflow_conf():
@@ -248,6 +248,24 @@ def test_call_back():
         )
 
     assert 4 == cb.n
+
+
+def test_fsql():
+    # schema: *,x:long
+    def t(df: pd.DataFrame) -> pd.DataFrame:
+        df["x"] = 1
+        return df
+
+    df = pd.DataFrame([[0], [1]], columns=["a"])
+    result = fsql(
+        """
+    SELECT * FROM df WHERE a>{{p}}
+    result = TRANSFORM USING t
+    """,
+        df=df,
+        p=0,
+    ).run()
+    assert [[1, 1]] == result["result"].as_array()
 
 
 def _eq(dag, a):

@@ -230,6 +230,7 @@ class BuiltInTests(object):
             assert "k" in result
             assert not isinstance(result["k"], WorkflowDataFrame)
             assert isinstance(result["k"], DataFrame)
+            assert isinstance(result["k"].as_pandas(), pd.DataFrame)
             # TODO: these don't work
             # assert not isinstance(list(result.values())[0], WorkflowDataFrame)
             # assert isinstance(list(result.values())[0], DataFrame)

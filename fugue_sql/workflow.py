@@ -76,6 +76,9 @@ class FugueSQLWorkflow(FugueWorkflow):
         )
         v = _Extensions(sql, FugueSQLHooks(), self, dfs, local_vars=params)
         v.visit(sql.tree)
+        for kk, vv in v.variables.items():
+            if isinstance(vv, WorkflowDataFrame) and vv.workflow is self:
+                self._output[kk] = vv
         return v.variables
 
     def _split_params(
@@ -91,3 +94,20 @@ class FugueSQLWorkflow(FugueWorkflow):
             else:
                 p[k] = v
         return p, dfs
+
+
+def fsql(sql: str, *args: Any, **kwargs: Any) -> FugueSQLWorkflow:
+    global_vars, local_vars = get_caller_global_local_vars()
+    global_vars = {
+        k: v
+        for k, v in global_vars.items()
+        if not isinstance(v, (WorkflowDataFrame, WorkflowDataFrames))
+    }
+    local_vars = {
+        k: v
+        for k, v in local_vars.items()
+        if not isinstance(v, (WorkflowDataFrame, WorkflowDataFrames))
+    }
+    dag = FugueSQLWorkflow()
+    dag._sql(sql, global_vars, local_vars, *args, **kwargs)
+    return dag
