@@ -219,6 +219,12 @@ class BuiltInTests(object):
                 d = dag.load(temp_file)
                 d.assert_not_eq(c)
 
+        def test_output(self):
+            dag = self.dag()
+            dag.df([[0]], "a:int").output_as("k")
+            result = dag.run()
+            assert "k" in result.native_dfs
+
         def test_yield(self):
             self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(
                 self.tmpdir, "ck"

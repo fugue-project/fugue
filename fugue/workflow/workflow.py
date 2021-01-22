@@ -55,6 +55,7 @@ from fugue.extensions._builtins import (
 )
 from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
 from fugue.rpc import to_rpc_handler
+from fugue.rpc.base import EmptyRPCHandler
 from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, CreateData, FugueTask, Output, Process
 from fugue.workflow._workflow_context import (
@@ -62,7 +63,6 @@ from fugue.workflow._workflow_context import (
     _FugueInteractiveWorkflowContext,
 )
 from triad import ParamDict, Schema, assert_or_throw
-from fugue.rpc.base import EmptyRPCHandler
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -756,8 +756,7 @@ class WorkflowDataFrame(DataFrame):
     def yield_as(self: TDF, name: str) -> None:
         """Cache the dataframe in memory
 
-        :param name: the name of the yielded dataframe that you will be able to
-          use in ``.yields[name]``
+        :param name: the name of the yielded dataframe
 
         :Notice:
 
@@ -767,6 +766,7 @@ class WorkflowDataFrame(DataFrame):
           ``df.yield_as("a")``
         * you have used :meth:`~.deterministic_checkpoint`, for example
           ``df.deterministic_checkpoint().yield_as("a")``
+        * yield is workflow, compile level logic
 
         For the first case, the yield will also be a strong checkpoint so
         whenever you yield a dataframe, the dataframe has been saved as a file
@@ -776,6 +776,27 @@ class WorkflowDataFrame(DataFrame):
             # the following == a non determinitic, but permanent checkpoint
             self.deterministic_checkpoint(namespace=str(uuid4()))
         self.workflow._yields[name] = self._task.yielded
+
+    def output_as(self: TDF, name: str) -> TDF:
+        """Register the dataframe as an output
+
+        :param name: the name of the dataframe
+
+        :Notice:
+
+        output_as is runtime level operation, it is different from :meth:`~.yield_as`
+
+        :Examples:
+
+        .. code-block:: python
+
+            dag = FugueWorkflow()
+            dag.df([[0]],"a:int").transform(a_transformer).output_as("k")
+            result = dag.run()
+            result.native_dfs["k"]  # a pd.DataFrame of [[0]]
+        """
+        self.workflow._output.output_df(name, self)
+        return self
 
     def persist(self: TDF) -> TDF:
         """Persist the current dataframe
@@ -1141,6 +1162,53 @@ class WorkflowDataFrames(DataFrames):
         return super().__getitem__(key)  # type: ignore
 
 
+class WorkflowResult(object):
+    """Workflow execution result"""
+
+    def __init__(self):
+        self._lock = RLock()
+        self._wdfs: Dict[str, WorkflowDataFrame] = {}
+        self._dfs: Optional[Dict[str, DataFrame]] = None
+        self._native_dfs: Optional[Dict[str, Any]] = None
+
+    def output_df(self, name: str, df: WorkflowDataFrame) -> None:
+        """For internal use only. It register the dataframe to be output
+        after the execution.
+
+        :param name: name of the output dataframe
+        :param df: the dataframe to output
+        """
+        with self._lock:
+            self._wdfs[name] = df
+
+    @property
+    def dfs(self) -> Dict[str, DataFrame]:
+        """Computed dataframes dict"""
+        self._compute()
+        return self._dfs  # type:ignore
+
+    @property
+    def native_dfs(self) -> Dict[str, Any]:
+        """Computed dataframes in the native format
+
+        :Notice:
+
+        If the dataframe is local, it will be converted to
+        pandas dataframe
+        """
+        self._compute()
+        return self._native_dfs  # type:ignore
+
+    def _compute(self):
+        with self._lock:
+            if self._dfs is None:
+                self._dfs = {k: v.result for k, v in self._wdfs.items()}
+                self._native_dfs = {
+                    k: v.as_pandas() if v.is_local else v.native
+                    for k, v in self._dfs.items()
+                }
+
+
 class FugueWorkflow(object):
     """Fugue Workflow, also known as the Fugue Programming Interface.
 
@@ -1157,6 +1225,7 @@ class FugueWorkflow(object):
         self._lock = RLock()
         self._spec = WorkflowSpec()
         self._workflow_ctx = self._to_ctx(*args, **kwargs)
+        self._output = WorkflowResult()
         self._computed = False
         self._graph = _Graph()
         self._yields: Dict[str, Yielded] = {}
@@ -1172,7 +1241,7 @@ class FugueWorkflow(object):
         """UUID of the workflow spec (`description`)"""
         return self._spec.__uuid__()
 
-    def run(self, *args: Any, **kwargs: Any) -> None:
+    def run(self, *args: Any, **kwargs: Any) -> WorkflowResult:
         """Execute the workflow and compute all dataframes.
         If not arguments, it will use
         :class:`~fugue.execution.native_execution_engine.NativeExecutionEngine`
@@ -1199,6 +1268,7 @@ class FugueWorkflow(object):
                 self._workflow_ctx = self._to_ctx(*args, **kwargs)
             self._workflow_ctx.run(self._spec, {})
             self._computed = True
+        return self._output
 
     @property
     def yields(self) -> Dict[str, Yielded]:
@@ -1826,7 +1896,7 @@ class _FugueInteractiveWorkflow(FugueWorkflow):
         super().__init__()
         self._workflow_ctx = self._to_ctx(*args, **kwargs)
 
-    def run(self, *args: Any, **kwargs: Any) -> None:
+    def run(self, *args: Any, **kwargs: Any) -> WorkflowResult:
         assert_or_throw(
             len(args) == 0 and len(kwargs) == 0,
             FugueWorkflowRuntimeError(
@@ -1837,6 +1907,7 @@ class _FugueInteractiveWorkflow(FugueWorkflow):
             self._computed = False
             self._workflow_ctx.run(self._spec, {})
             self._computed = True
+        return self._output
 
     def get_result(self, df: WorkflowDataFrame) -> DataFrame:
         return self._workflow_ctx.get_result(id(df._task))
