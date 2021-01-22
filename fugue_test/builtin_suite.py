@@ -223,6 +223,7 @@ class BuiltInTests(object):
             dag = self.dag()
             dag.df([[0]], "a:int").output_as("k")
             result = dag.run()
+            assert "k" in result.dfs
             assert "k" in result.native_dfs
 
         def test_yield(self):

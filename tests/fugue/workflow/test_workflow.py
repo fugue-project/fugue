@@ -7,7 +7,7 @@ from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueWorkflowError
+from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
 from fugue.execution import NativeExecutionEngine
 from fugue.extensions.transformer.convert import transformer
 from fugue.workflow._workflow_context import (
@@ -45,7 +45,7 @@ def test_worflow_dataframes():
         WorkflowDataFrames(a=df1, b=ArrayDataFrame([[0]], "a:int"))
 
     dag = FugueWorkflow()
-    df = dag.df([[0],[1]], "a:int")
+    df = dag.df([[0], [1]], "a:int")
     assert df.partition_spec.empty
     df2 = df.partition(by=["a"])
     assert df.partition_spec.empty
@@ -61,6 +61,9 @@ def test_workflow():
     raises(InvalidOperationError, lambda: copy.deepcopy(a._task))
     a.show()
     a.show()
+
+    raises(FugueWorkflowCompileError, lambda: builder.df(123))
+
     b = a.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"]))
     b.show()
     builder.create_data([[0], [1]], "b:int").show()
