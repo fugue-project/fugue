@@ -262,7 +262,6 @@ def test_fsql():
     SELECT * FROM df WHERE a>{{p}}
     result = TRANSFORM USING t
     """,
-        df=df,
         p=0,
     ).run()
     assert [[1, 1]] == result["result"].as_array()

@@ -82,6 +82,14 @@ class ExecutionEngine(ABC):
         self._conf = ParamDict({**FUGUE_DEFAULT_CONF, **_conf})
         self._rpc_server = make_rpc_server(self.conf)
 
+    def start(self) -> None:  # pragma: no cover
+        """Start this execution engine (defaults to no operation)"""
+        return
+
+    def stop(self) -> None:  # pragma: no cover
+        """Stop this execution engine (defaults to no operation)"""
+        return
+
     @property
     def conf(self) -> ParamDict:
         """All configurations of this engine instance.
@@ -115,11 +123,6 @@ class ExecutionEngine(ABC):
     @abstractmethod
     def default_sql_engine(self) -> SQLEngine:  # pragma: no cover
         """Default SQLEngine if user doesn't specify"""
-        raise NotImplementedError
-
-    @abstractmethod
-    def stop(self) -> None:  # pragma: no cover
-        """Stop this execution engine"""
         raise NotImplementedError
 
     @abstractmethod

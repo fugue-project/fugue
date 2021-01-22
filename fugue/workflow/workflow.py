@@ -63,6 +63,7 @@ from fugue.workflow._workflow_context import (
     _FugueInteractiveWorkflowContext,
 )
 from triad import ParamDict, Schema, assert_or_throw
+from fugue.execution.factory import make_execution_engine
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -1858,7 +1859,7 @@ class FugueWorkflow(object):
     def _to_ctx(self, *args: Any, **kwargs) -> FugueWorkflowContext:
         if len(args) == 1 and isinstance(args[0], FugueWorkflowContext):
             return args[0]
-        return FugueWorkflowContext(*args, **kwargs)
+        return FugueWorkflowContext(make_execution_engine(*args, **kwargs))
 
 
 class _FugueInteractiveWorkflow(FugueWorkflow):

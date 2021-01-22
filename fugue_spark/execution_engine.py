@@ -112,6 +112,12 @@ class SparkExecutionEngine(ExecutionEngine):
         )
         self._io = SparkIO(self.spark_session, self.fs)
 
+    def stop(self) -> None:
+        """For now, it does NOT stop the underlying spark session"""
+        # TODO: we need a conf to control whether to stop session
+        # self.spark_session.stop()
+        pass
+
     def __repr__(self) -> str:
         return "SparkExecutionEngine"
 
@@ -121,6 +127,9 @@ class SparkExecutionEngine(ExecutionEngine):
         :return: The wrapped spark session
         :rtype: :class:`spark:pyspark.sql.SparkSession`
         """
+        assert_or_throw(
+            self._spark_session is not None, "SparkExecutionEngine is not started"
+        )
         return self._spark_session
 
     @property
@@ -134,12 +143,6 @@ class SparkExecutionEngine(ExecutionEngine):
     @property
     def default_sql_engine(self) -> SQLEngine:
         return self._default_sql_engine
-
-    def stop(self) -> None:
-        """For now, it does NOT stop the underlying spark session"""
-        # TODO: we need a conf to control whether to stop session
-        # self.spark_session.stop()
-        pass
 
     def to_df(
         self, df: Any, schema: Any = None, metadata: Any = None

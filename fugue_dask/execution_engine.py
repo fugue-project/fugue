@@ -93,10 +93,6 @@ class DaskExecutionEngine(ExecutionEngine):
         """Pandas-like dataframe utils"""
         return DaskUtils()
 
-    def stop(self) -> None:  # pragma: no cover
-        """It does nothing"""
-        return
-
     def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DaskDataFrame:
         """Convert a data structure to :class:`~fugue_dask.dataframe.DaskDataFrame`
 
