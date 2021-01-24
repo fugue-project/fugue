@@ -7,7 +7,7 @@ from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
-    _parse_presort_exp,
+    parse_presort_exp,
 )
 from fugue.dataframe import (
     DataFrame,
@@ -299,7 +299,7 @@ class NativeExecutionEngine(ExecutionEngine):
 
         # Use presort over partition_spec.presort if possible
         if presort:
-            presort = _parse_presort_exp(presort)
+            presort = parse_presort_exp(presort)
         _presort: IndexedOrderedDict = presort or partition_spec.presort
 
         if len(_presort.keys()) > 0:

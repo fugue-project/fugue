@@ -7,7 +7,7 @@ from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
-    _parse_presort_exp,
+    parse_presort_exp,
 )
 from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
@@ -373,7 +373,7 @@ class DaskExecutionEngine(ExecutionEngine):
         meta = [(d[x].name, d[x].dtype) for x in d.columns]
 
         if presort:
-            presort = _parse_presort_exp(presort)
+            presort = parse_presort_exp(presort)
         # Use presort over partition_spec.presort if possible
         _presort: IndexedOrderedDict = presort or partition_spec.presort
 

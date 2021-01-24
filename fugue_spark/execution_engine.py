@@ -9,7 +9,7 @@ from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
-    _parse_presort_exp,
+    parse_presort_exp,
 )
 from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe import DataFrame, DataFrames, IterableDataFrame, LocalDataFrame
@@ -449,7 +449,7 @@ class SparkExecutionEngine(ExecutionEngine):
         nulls_last = bool(na_position == "last")
 
         if presort:
-            presort = _parse_presort_exp(presort)
+            presort = parse_presort_exp(presort)
         # Use presort over partition_spec.presort if possible
         _presort: IndexedOrderedDict = presort or partition_spec.presort
 
