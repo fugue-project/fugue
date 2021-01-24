@@ -80,6 +80,15 @@ def test_jinja_keyword_in_sql():
         PRINT
         """
         )
+    
+        df = dag.df([["b"]], "a:str")
+        x = "b"
+        dag("""
+        df2 = SELECT *
+        FROM df
+        WHERE a = "{{x}}"
+        OUTPUT df, df2 USING assert_eq
+        """)
 
 
 def test_use_df(tmpdir):
