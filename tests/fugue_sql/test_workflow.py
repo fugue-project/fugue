@@ -73,13 +73,20 @@ def test_show():
 
 def test_jinja_keyword_in_sql():
     with FugueSQLWorkflow() as dag:
-        dag(
-            """
-        CREATE [["{%'{%'"]] SCHEMA a:str
-        SELECT * WHERE a LIKE '{%'
-        PRINT
-        """
-        )
+        dag("""{% raw -%}
+            CREATE [["{%'{%'"]] SCHEMA a:str
+            SELECT * WHERE a LIKE '{%'
+            PRINT
+            {%- endraw %}""")
+    
+        df = dag.df([["b"]], "a:str")
+        x = "b"
+        dag("""
+        df2 = SELECT *
+        FROM df
+        WHERE a = "{{x}}"
+        OUTPUT df, df2 USING assert_eq
+        """)
 
 
 def test_use_df(tmpdir):
