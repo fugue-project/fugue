@@ -112,12 +112,6 @@ class SparkExecutionEngine(ExecutionEngine):
         )
         self._io = SparkIO(self.spark_session, self.fs)
 
-    def stop(self) -> None:
-        """For now, it does NOT stop the underlying spark session"""
-        # TODO: we need a conf to control whether to stop session
-        # self.spark_session.stop()
-        pass
-
     def __repr__(self) -> str:
         return "SparkExecutionEngine"
 
