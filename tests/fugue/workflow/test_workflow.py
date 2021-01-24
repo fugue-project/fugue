@@ -10,15 +10,8 @@ from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
 from fugue.execution import NativeExecutionEngine
 from fugue.extensions.transformer.convert import transformer
-from fugue.workflow._workflow_context import (
-    FugueWorkflowContext,
-    _FugueInteractiveWorkflowContext,
-)
-from fugue.workflow.workflow import (
-    FugueWorkflow,
-    WorkflowDataFrames,
-    _FugueInteractiveWorkflow,
-)
+from fugue.workflow._workflow_context import FugueWorkflowContext
+from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrames
 from pytest import raises
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
@@ -81,58 +74,6 @@ def test_workflow():
     df_eq(b.result, [[0, 2], [0, 2], [1, 1]], "a:int,b:int")
     df_eq(b.compute(), [[0, 2], [0, 2], [1, 1]], "a:int,b:int")
     df_eq(b.compute(NativeExecutionEngine), [[0, 2], [0, 2], [1, 1]], "a:int,b:int")
-
-
-def test_interactive_workflow():
-    # TODO: interactive workflow is not working correctly
-
-    # with statement is not valid
-    with raises(FugueWorkflowError):
-        with _FugueInteractiveWorkflow():
-            pass
-
-    # test basic operations, .result can be directly used
-    dag = _FugueInteractiveWorkflow()
-    a = dag.create_data([[0]], "a:int")
-    df_eq(a.result, [[0]], "a:int")
-    df_eq(a.result, [[0]], "a:int")
-    a.compute()
-    df_eq(a.result, [[0]], "a:int")
-
-    # make sure create_rand is called once
-    seed(0)
-    dag = _FugueInteractiveWorkflow()
-    b = dag.create(using=create_rand)
-    b.compute()
-    res1 = list(b.result.as_array())
-    b.show()
-    b.process(my_show)
-    dag.run()
-    dag.run()
-    res2 = list(b.result.as_array())
-    assert res1 == res2
-
-    # assertion on underlying cache methods
-    cache = MockCache(dummy=False)
-    dag = _FugueInteractiveWorkflow(cache=cache)
-    a = dag.create_data([[0]], "a:int")
-    assert 1 == cache.get_called
-    assert 1 == cache.set_called
-    dag.run()  # for second run, this cache is not used at all
-    assert 1 == cache.get_called
-    assert 1 == cache.set_called
-    a.show()  # new task will trigger
-    assert 2 == cache.get_called
-    assert 2 == cache.set_called
-    dag.run()
-    assert 2 == cache.get_called
-    assert 2 == cache.set_called
-
-    # cache returns dummy data
-    dag = _FugueInteractiveWorkflow(_FugueInteractiveWorkflowContext(cache=MockCache))
-    a = dag.create_data([[0]], "a:int")
-    b = dag.create_data([[50]], "a:int")
-    a.assert_eq(b)  # dummy value from cache makes them equal
 
 
 class MockCache(WorkflowResultCache):

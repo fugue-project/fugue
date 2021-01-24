@@ -1,7 +1,7 @@
 import datetime
 import os
 import pickle
-from typing import Any, Dict, Iterable, List, Callable, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 from unittest import TestCase
 
 import numpy as np
@@ -33,11 +33,7 @@ from fugue.extensions.transformer import (
     output_transformer,
     transformer,
 )
-from fugue.workflow.workflow import (
-    FugueWorkflow,
-    WorkflowDataFrame,
-    _FugueInteractiveWorkflow,
-)
+from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
 from pytest import raises
 
 
@@ -73,9 +69,6 @@ class BuiltInTests(object):
         def test_workflows(self):
             a = FugueWorkflow().df([[0]], "a:int")
             df_eq(a.compute(self.engine), [[0]], "a:int")
-
-            a = _FugueInteractiveWorkflow(self.engine).df([[0]], "a:int").persist()
-            df_eq(a.result, [[0]], "a:int")
 
         def test_create_show(self):
             with self.dag() as dag:

@@ -1,5 +1,5 @@
 from threading import RLock
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 from uuid import uuid4
 
 from adagio.instances import (
@@ -7,7 +7,6 @@ from adagio.instances import (
     ParallelExecutionEngine,
     WorkflowContext,
     WorkflowHooks,
-    WorkflowResultCache,
 )
 from adagio.specs import WorkflowSpec
 from fugue.constants import FUGUE_CONF_WORKFLOW_CONCURRENCY, FUGUE_DEFAULT_CONF
@@ -15,8 +14,6 @@ from fugue.dataframe import DataFrame
 from fugue.execution.execution_engine import ExecutionEngine
 from fugue.execution.factory import make_execution_engine
 from fugue.workflow._checkpoint import CheckpointPath
-from triad.exceptions import InvalidOperationError
-from triad.utils.assertion import assert_or_throw
 
 
 class FugueWorkflowContext(WorkflowContext):
@@ -78,65 +75,3 @@ class FugueWorkflowContext(WorkflowContext):
     def get_result(self, key: Any) -> DataFrame:
         with self._lock:
             return self._results[key]
-
-
-class _FugueInteractiveWorkflowContext(FugueWorkflowContext):
-    def __init__(
-        self,
-        execution_engine: Any = None,
-        cache: Any = NoOpCache,
-        workflow_engine: Any = None,
-        hooks: Any = WorkflowHooks,
-    ):
-        super().__init__(
-            cache=cache,
-            workflow_engine=workflow_engine,
-            hooks=hooks,
-            execution_engine=execution_engine,
-        )
-        self._cache = _FugueInteractiveCache(self, self._cache)  # type: ignore
-
-
-class _FugueInteractiveCache(WorkflowResultCache):
-    """Fugue cache for interactive operations."""
-
-    def __init__(self, wf_ctx: "WorkflowContext", cache: FugueWorkflowContext):
-        super().__init__(wf_ctx)
-        self._lock = RLock()
-        self._data: Dict[str, Any] = {}
-        self._cache = cache
-
-    def set(self, key: str, value: Any) -> None:
-        """Set `key` with `value`
-
-        :param key: uuid string
-        :param value: any value
-        """
-        with self._lock:
-            self._data[key] = value
-        self._cache.set(key, value)
-
-    def skip(self, key: str) -> None:  # pragma: no cover
-        """Skip `key`
-
-        :param key: uuid string
-        """
-        raise InvalidOperationError("skip is not valid in FugueInteractiveCache")
-
-    def get(self, key: str) -> Tuple[bool, bool, Any]:
-        """Try to get value for `key`
-
-        :param key: uuid string
-        :return: <hasvalue>, <skipped>, <value>
-        """
-        with self._lock:
-            if key in self._data:
-                return True, False, self._data[key]
-            has_value, skipped, value = self._cache.get(key)
-            assert_or_throw(
-                not skipped,
-                InvalidOperationError("skip is not valid in FugueInteractiveCache"),
-            )
-            if has_value:
-                self._data[key] = value
-            return has_value, skipped, value

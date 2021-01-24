@@ -23,11 +23,7 @@ from fugue.constants import (
 )
 from fugue.dataframe import DataFrame
 from fugue.dataframe.dataframes import DataFrames
-from fugue.exceptions import (
-    FugueWorkflowCompileError,
-    FugueWorkflowError,
-    FugueWorkflowRuntimeError,
-)
+from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
 from fugue.execution import SQLEngine
 from fugue.extensions._builtins import (
     AlterColumns,
@@ -58,10 +54,7 @@ from fugue.rpc import to_rpc_handler
 from fugue.rpc.base import EmptyRPCHandler
 from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, CreateData, FugueTask, Output, Process
-from fugue.workflow._workflow_context import (
-    FugueWorkflowContext,
-    _FugueInteractiveWorkflowContext,
-)
+from fugue.workflow._workflow_context import FugueWorkflowContext
 from triad import ParamDict, Schema, assert_or_throw
 from fugue.execution.factory import make_execution_engine
 
@@ -1860,48 +1853,6 @@ class FugueWorkflow(object):
         if len(args) == 1 and isinstance(args[0], FugueWorkflowContext):
             return args[0]
         return FugueWorkflowContext(make_execution_engine(*args, **kwargs))
-
-
-class _FugueInteractiveWorkflow(FugueWorkflow):
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__()
-        self._workflow_ctx = self._to_ctx(*args, **kwargs)
-
-    def run(self, *args: Any, **kwargs: Any) -> WorkflowResult:
-        assert_or_throw(
-            len(args) == 0 and len(kwargs) == 0,
-            FugueWorkflowRuntimeError(
-                "can't reset workflow context in _FugueInteractiveWorkflow"
-            ),
-        )
-        with self._lock:
-            self._computed = False
-            self._workflow_ctx.run(self._spec, {})
-            self._computed = True
-        return self._output
-
-    def get_result(self, df: WorkflowDataFrame) -> DataFrame:
-        return self._workflow_ctx.get_result(id(df._task))
-
-    def __enter__(self):
-        raise FugueWorkflowError(
-            "with statement is invalid for _FugueInteractiveWorkflow"
-        )
-
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        raise FugueWorkflowError(  # pragma: no cover
-            "with statement is invalid for _FugueInteractiveWorkflow"
-        )
-
-    def add(self, task: FugueTask, *args: Any, **kwargs: Any) -> WorkflowDataFrame:
-        df = super().add(task, *args, **kwargs)
-        self.run()
-        return df
-
-    def _to_ctx(self, *args: Any, **kwargs) -> _FugueInteractiveWorkflowContext:
-        if len(args) == 1 and isinstance(args[0], _FugueInteractiveWorkflowContext):
-            return args[0]
-        return _FugueInteractiveWorkflowContext(*args, **kwargs)
 
 
 class _Dependencies(object):
