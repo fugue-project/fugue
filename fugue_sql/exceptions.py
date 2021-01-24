@@ -1,8 +1,8 @@
 from typing import Any
-from fugue.exceptions import FugueError
+from fugue.exceptions import FugueWorkflowCompileError
 
 
-class FugueSQLError(FugueError):
+class FugueSQLError(FugueWorkflowCompileError):
     """Fugue SQL error"""
 
     def __init__(self, *args: Any):
