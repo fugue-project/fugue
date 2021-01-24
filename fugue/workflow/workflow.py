@@ -62,6 +62,7 @@ from fugue.workflow._workflow_context import (
     _FugueInteractiveWorkflowContext,
 )
 from triad import ParamDict, Schema, assert_or_throw
+from fugue.rpc.base import EmptyRPCHandler
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -1617,6 +1618,8 @@ class FugueWorkflow(object):
         )
         tf = _to_transformer(using, schema)
         tf._partition_spec = PartitionSpec(pre_partition)  # type: ignore
+        callback = to_rpc_handler(callback)
+        tf._has_rpc_client = not isinstance(callback, EmptyRPCHandler)  # type: ignore
         tf.validate_on_compile()
         return self.process(
             *dfs,
@@ -1626,7 +1629,7 @@ class FugueWorkflow(object):
                 transformer=tf,
                 ignore_errors=ignore_errors,
                 params=params,
-                rpc_handler=to_rpc_handler(callback),
+                rpc_handler=callback,
             ),
             pre_partition=pre_partition,
         )
@@ -1678,6 +1681,8 @@ class FugueWorkflow(object):
         )
         tf = _to_output_transformer(using)
         tf._partition_spec = PartitionSpec(pre_partition)  # type: ignore
+        callback = to_rpc_handler(callback)
+        tf._has_rpc_client = not isinstance(callback, EmptyRPCHandler)  # type: ignore
         tf.validate_on_compile()
         self.output(
             *dfs,
@@ -1686,7 +1691,7 @@ class FugueWorkflow(object):
                 transformer=tf,
                 ignore_errors=ignore_errors,
                 params=params,
-                rpc_handler=to_rpc_handler(callback),
+                rpc_handler=callback,
             ),
             pre_partition=pre_partition,
         )

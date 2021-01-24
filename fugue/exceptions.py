@@ -64,6 +64,13 @@ class FugueWorkflowCompileValidationError(FugueWorkflowCompileError):
         super().__init__(*args)
 
 
+class FugueInterfacelessError(FugueWorkflowCompileError):
+    """Fugue interfaceless exceptions"""
+
+    def __init__(self, *args: Any):
+        super().__init__(*args)
+
+
 class FugueWorkflowRuntimeError(FugueWorkflowError):
     """Fugue workflow compile time error"""
 
@@ -73,13 +80,6 @@ class FugueWorkflowRuntimeError(FugueWorkflowError):
 
 class FugueWorkflowRuntimeValidationError(FugueWorkflowRuntimeError):
     """Fugue workflow runtime validation error"""
-
-    def __init__(self, *args: Any):
-        super().__init__(*args)
-
-
-class FugueInterfacelessError(FugueError):
-    """Fugue interfaceless exceptions"""
 
     def __init__(self, *args: Any):
         super().__init__(*args)
