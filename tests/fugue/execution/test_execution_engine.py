@@ -39,7 +39,10 @@ def test_start_stop():
     engine.start()
     engine.stop()
     engine.stop()
-    assert 1 == engine._start
-    assert 1 == engine._stop
-    assert 1 == _MockRPC._start
-    assert 1 == _MockRPC._stop
+    # second round
+    engine.start()
+    engine.stop()
+    assert 2 == engine._start
+    assert 2 == engine._stop
+    assert 2 == _MockRPC._start
+    assert 2 == _MockRPC._stop
