@@ -83,9 +83,6 @@ class NativeExecutionEngine(ExecutionEngine):
         """Pandas-like dataframe utils"""
         return PandasUtils()
 
-    def stop(self) -> None:  # pragma: no cover
-        return
-
     def to_df(
         self, df: Any, schema: Any = None, metadata: Any = None
     ) -> LocalBoundedDataFrame:

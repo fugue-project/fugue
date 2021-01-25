@@ -1,7 +1,7 @@
 import datetime
 import os
 import pickle
-from typing import Any, Dict, Iterable, List, Callable, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 from unittest import TestCase
 
 import numpy as np
@@ -33,7 +33,7 @@ from fugue.extensions.transformer import (
     output_transformer,
     transformer,
 )
-from fugue.workflow.workflow import FugueWorkflow, _FugueInteractiveWorkflow
+from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
 from pytest import raises
 
 
@@ -69,9 +69,6 @@ class BuiltInTests(object):
         def test_workflows(self):
             a = FugueWorkflow().df([[0]], "a:int")
             df_eq(a.compute(self.engine), [[0]], "a:int")
-
-            a = _FugueInteractiveWorkflow(self.engine).df([[0]], "a:int").persist()
-            df_eq(a.result, [[0]], "a:int")
 
         def test_create_show(self):
             with self.dag() as dag:
@@ -218,6 +215,18 @@ class BuiltInTests(object):
                 c = a.union(b).deterministic_checkpoint(partition=PartitionSpec(num=2))
                 d = dag.load(temp_file)
                 d.assert_not_eq(c)
+
+        def test_output(self):
+            dag = self.dag()
+            dag.df([[0]], "a:int").output_as("k")
+            result = dag.run()
+            assert "k" in result
+            assert not isinstance(result["k"], WorkflowDataFrame)
+            assert isinstance(result["k"], DataFrame)
+            assert isinstance(result["k"].as_pandas(), pd.DataFrame)
+            # TODO: these don't work
+            # assert not isinstance(list(result.values())[0], WorkflowDataFrame)
+            # assert isinstance(list(result.values())[0], DataFrame)
 
         def test_yield(self):
             self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(

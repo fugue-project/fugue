@@ -29,6 +29,14 @@ fugue.workflow.module
    :undoc-members:
    :show-inheritance:
 
+fugue.workflow.utils
+--------------------
+
+.. automodule:: fugue.workflow.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.workflow.workflow
 -----------------------
 

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, no_type_check, Callable
+from typing import Any, Callable, List, Optional, no_type_check, Iterable
 
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
@@ -7,13 +7,14 @@ from fugue.collections.partition import PartitionSpec
 from fugue.collections.yielded import Yielded
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.exceptions import FugueWorkflowError
+from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
 from fugue.execution import ExecutionEngine
 from fugue.extensions.creator.convert import _to_creator
 from fugue.extensions.outputter.convert import _to_outputter
 from fugue.extensions.processor.convert import _to_processor
 from fugue.workflow._checkpoint import Checkpoint
 from fugue.workflow._workflow_context import FugueWorkflowContext
+from fugue.workflow.utils import is_acceptable_raw_df
 from triad import ParamDict, Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
@@ -170,6 +171,7 @@ class CreateData(FugueTask):
         data_determiner: Optional[Callable[[Any], str]] = None,
         lazy: bool = True,
     ):
+        self._validate_data(data, schema, metadata)
         self._data = data
         self._schema = None if schema is None else Schema(schema)
         self._metadata = None if metadata is None else ParamDict(metadata)
@@ -194,6 +196,19 @@ class CreateData(FugueTask):
         df = self.handle_broadcast(df, ctx)
         self._set_result(ctx, df)
         ctx.outputs["_0"] = df
+
+    def _validate_data(
+        self, data: Any, schema: Any = None, metadata: Any = None
+    ) -> None:
+        if not is_acceptable_raw_df(data):
+            if isinstance(data, (List, Iterable)):
+                assert_or_throw(
+                    schema is not None, FugueWorkflowCompileError("schema is required")
+                )
+            else:
+                raise FugueWorkflowCompileError(
+                    f"{data} can't be converted to WorkflowDataFrame"
+                )
 
 
 class Create(FugueTask):

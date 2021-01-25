@@ -5,12 +5,12 @@ from fugue.dataframe import DataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq
 from fugue.execution.native_execution_engine import NativeExecutionEngine
-from fugue.workflow.workflow import WorkflowDataFrame
 from fugue.extensions._builtins.outputters import Show
+from fugue.workflow.workflow import WorkflowDataFrame
 from pytest import raises
 
+from fugue_sql import FugueSQLWorkflow, fsql
 from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
-from fugue_sql.workflow import FugueSQLWorkflow
 
 
 def test_workflow_conf():
@@ -99,7 +99,7 @@ def test_use_df(tmpdir):
         OUTPUT a, b USING assert_eq
         """
         )
-        dag["b"].assert_eq(a)
+        dag.sql_vars["b"].assert_eq(a)
 
     # external non-workflowdataframe
     arr = ArrayDataFrame([[0], [1]], "a:int")
@@ -111,7 +111,7 @@ def test_use_df(tmpdir):
         """,
             a=arr,
         )
-        dag["b"].assert_eq(dag.df([[0], [1]], "a:int"))
+        dag.sql_vars["b"].assert_eq(dag.df([[0], [1]], "a:int"))
 
     # from yield
     engine = NativeExecutionEngine(
@@ -129,6 +129,21 @@ def test_use_df(tmpdir):
         """,
             a=res,
         )
+
+
+def test_lazy_use_df():
+    df1 = pd.DataFrame([[0]], columns=["a"])
+    df2 = pd.DataFrame([[1]], columns=["a"])
+    # although df2 is defined as a local variable
+    # since it is not used in dag1, so it was never converted
+
+    dag1 = FugueSQLWorkflow()
+    dag1("""PRINT df1""")
+
+    dag2 = FugueSQLWorkflow()
+    dag2.df(df1).show()
+
+    assert dag1.spec_uuid() == dag2.spec_uuid()
 
 
 def test_use_param():
@@ -149,8 +164,6 @@ def test_multiple_sql():
         a = dag.df([[0], [1]], "a:int")
         dag("b = CREATE [[0],[1]] SCHEMA a:int")
         dag("OUTPUT a,b USING assert_eq")
-        assert dag["a"] is a
-        assert isinstance(dag["b"], WorkflowDataFrame)
 
 
 def test_multiple_sql_with_reset():
@@ -255,6 +268,26 @@ def test_call_back():
         )
 
     assert 4 == cb.n
+
+
+def test_fsql():
+    # schema: *,x:long
+    def t(df: pd.DataFrame) -> pd.DataFrame:
+        df["x"] = 1
+        return df
+
+    df = pd.DataFrame([[0], [1]], columns=["a"])
+    result = fsql(
+        """
+    SELECT * FROM df WHERE a>{{p}}
+    UNION ALL
+    SELECT * FROM df2 WHERE a>{{p}}
+    result = TRANSFORM USING t
+    """,
+        df2=pd.DataFrame([[0], [1]], columns=["a"]),
+        p=0,
+    ).run()
+    assert [[1, 1], [1, 1]] == result["result"].as_array()
 
 
 def _eq(dag, a):

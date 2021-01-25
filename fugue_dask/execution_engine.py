@@ -19,7 +19,7 @@ from fugue.execution.execution_engine import (
 )
 from qpd_dask import run_sql_on_dask
 from triad.collections import Schema
-from triad.collections.dict import ParamDict, IndexedOrderedDict
+from triad.collections.dict import IndexedOrderedDict, ParamDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
@@ -92,10 +92,6 @@ class DaskExecutionEngine(ExecutionEngine):
     def pl_utils(self) -> DaskUtils:
         """Pandas-like dataframe utils"""
         return DaskUtils()
-
-    def stop(self) -> None:  # pragma: no cover
-        """It does nothing"""
-        return
 
     def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DaskDataFrame:
         """Convert a data structure to :class:`~fugue_dask.dataframe.DaskDataFrame`
