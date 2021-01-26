@@ -78,7 +78,7 @@ testsql:
 
 testnotebook:
 	pip install .
-	jupyter nbextension install --py fugue_notebook
+	jupyter nbextension install --user --py fugue_notebook
 	jupyter nbextension enable fugue_notebook --py
 	jupyter nbconvert --execute --clear-output tests/fugue_notebook/test_notebook.ipynb
 
