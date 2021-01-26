@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List
 import fugue_sql
 import pandas as pd
 from fugue import (
+    ExecutionEngine,
     NativeExecutionEngine,
     make_execution_engine,
     register_execution_engine,
@@ -26,9 +27,15 @@ class FugueSQLMagics(Magics):
         self._pre_conf = pre_conf
         self._post_conf = post_conf
 
-    @cell_magic
+    @cell_magic("fsql")
     def fsql(self, line: str, cell: str) -> None:
-        _, lc = get_caller_global_local_vars(start=-2, end=-2)
+        gc, lc = get_caller_global_local_vars(start=-2, end=-6)
+        gc.update(lc)
+        if "__name__" in gc:
+            del gc["__name__"]
+        fugue_sql.fsql(cell, gc).run(self.get_engine(line, gc))
+
+    def get_engine(self, line: str, lc: Dict[str, Any]) -> ExecutionEngine:
         line = line.strip()
         p = line.find("{")
         if p >= 0:
@@ -46,7 +53,7 @@ class FugueSQLMagics(Magics):
                     f"{k} must be {v}, but you set to {cf[k]}, you may unset it"
                 )
             cf[k] = v
-        fugue_sql.fsql(cell).run(make_execution_engine(engine, cf))
+        return make_execution_engine(engine, cf)
 
 
 def default_pretty_print(

@@ -44,7 +44,7 @@ define([
 
         Jupyter.notebook.config.loaded.then(function() {
             require(['notebook/js/codecell'], function(codecell) {
-                codecell.CodeCell.options_default.highlight_modes['magic_text/x-fsql'] = {'reg':[/%%fsql/]} ;
+                codecell.CodeCell.options_default.highlight_modes['magic_text/x-fsql'] = {'reg':[/%%fuguesql/]} ;
                 Jupyter.notebook.events.on('kernel_ready.Kernel', function(){
                 Jupyter.notebook.get_cells().map(function(cell){
                     if (cell.cell_type == 'code'){ cell.auto_highlight(); } }) ;
