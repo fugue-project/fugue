@@ -188,8 +188,9 @@ fugueOutputTask:
     OUTPUT (dfs=fugueDataFrames)? (partition=fuguePrepartition)? USING using=fugueExtension (params=fugueParams)?
     ;
 
-fuguePrintTask:
-    PRINT (dfs=fugueDataFrames)? (ROWS rows=INTEGER_VALUE)? (count=ROWCOUNT)? (TITLE title=STRING)?
+fuguePrintTask
+    : PRINT rows=INTEGER_VALUE (ROW|ROWS) (FROM dfs=fugueDataFrames)? (count=ROWCOUNT)? (TITLE title=STRING)?
+    | PRINT (dfs=fugueDataFrames)? (count=ROWCOUNT)? (TITLE title=STRING)?
     ;
 
 fugueSaveTask:
@@ -293,7 +294,7 @@ fugueExtension:
 
 fugueSampleMethod:
     percentage=(INTEGER_VALUE | DECIMAL_VALUE) PERCENTLIT
-    | rows=INTEGER_VALUE ROWS 
+    | rows=INTEGER_VALUE ROWS
     ;
 
 fugueZipType
@@ -404,7 +405,7 @@ fugueJsonPair
     ;
 
 fugueJsonKey
-    : fugueIdentifier 
+    : fugueIdentifier
     | fugueJsonString
     ;
 
@@ -441,7 +442,7 @@ fugueJsonNull
     : 'null'
     | NULL
     ;
-    
+
 fugueIdentifier:
     identifier
     ;
