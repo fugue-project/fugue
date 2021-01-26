@@ -1,0 +1,7 @@
+Type: Jupyter Notebook Extension
+Compatibility: 3.x, 4.x, 5.x, 6.x
+Name: Fugue
+Main: main.js
+Link: README.md
+Description: |
+  Fugue Jupyter extension

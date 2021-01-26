@@ -56,6 +56,9 @@ package:
 	python3 setup.py bdist_wheel
 
 jupyter:
+	pip install .
+	jupyter nbextension install --py fugue_notebook
+	jupyter nbextension enable fugue_notebook --py
 	jupyter notebook --port=8888 --ip=0.0.0.0 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
 
 test:
