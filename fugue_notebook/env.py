@@ -7,6 +7,7 @@ import pandas as pd
 from fugue import (
     ExecutionEngine,
     NativeExecutionEngine,
+    Yielded,
     make_execution_engine,
     register_execution_engine,
 )
@@ -26,14 +27,18 @@ class FugueSQLMagics(Magics):
         super().__init__(shell)
         self._pre_conf = pre_conf
         self._post_conf = post_conf
+        self._yields: Dict[str, Yielded] = {}
 
     @cell_magic("fsql")
     def fsql(self, line: str, cell: str) -> None:
         gc, lc = get_caller_global_local_vars(start=-2, end=-6)
         gc.update(lc)
+        gc.update(self._yields)
         if "__name__" in gc:
             del gc["__name__"]
-        fugue_sql.fsql(cell, gc).run(self.get_engine(line, gc))
+        dag = fugue_sql.fsql(cell, gc)
+        dag.run(self.get_engine(line, gc))
+        self._yields.update(dag.yields)
 
     def get_engine(self, line: str, lc: Dict[str, Any]) -> ExecutionEngine:
         line = line.strip()

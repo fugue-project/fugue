@@ -76,6 +76,12 @@ testdask:
 testsql:
 	python3 -bb -m pytest tests/fugue_sql
 
+testnotebook:
+	pip install .
+	jupyter nbextension install --py fugue_notebook
+	jupyter nbextension enable fugue_notebook --py
+	jupyter nbconvert --execute --clear-output tests/fugue_notebook/test_notebook.ipynb
+
 sql:
 	java -Xmx500M -jar bin/antlr-4.9-complete.jar -Dlanguage=Python3 -visitor -no-listener fugue_sql/_antlr/fugue_sql.g4
 	rm fugue_sql/_antlr/*.interp
