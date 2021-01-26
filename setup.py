@@ -39,11 +39,19 @@ setup(
         "sql": ["antlr4-python3-runtime", "jinja2"],
         "spark": ["pyspark"],
         "dask": ["qpd[dask]"],
-        "all": ["antlr4-python3-runtime", "jinja2", "pyspark", "qpd[dask]"],
+        "notebook": ["notebook", "jupyterlab"],
+        "all": [
+            "antlr4-python3-runtime",
+            "jinja2",
+            "pyspark",
+            "qpd[dask]",
+            "notebook",
+            "jupyterlab",
+        ],
     },
     classifiers=[
         # "3 - Alpha", "4 - Beta" or "5 - Production/Stable"
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "License :: OSI Approved :: Apache Software License",
@@ -54,4 +62,5 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     python_requires=">=3.6",
+    package_data={"fugue_notebook": ["nbextension/*"]},
 )
