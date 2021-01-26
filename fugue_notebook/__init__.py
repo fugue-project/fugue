@@ -1,6 +1,9 @@
+# flake8: noqa
 from typing import Any
 
-from fugue_notebook.env import setup_fugue_notebook
+from fugue_version import __version__
+
+from fugue_notebook.env import NotebookSetup, setup_fugue_notebook
 
 
 def load_ipython_extension(ip: Any) -> None:
