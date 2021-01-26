@@ -19,7 +19,7 @@ from triad.utils.convert import get_caller_global_local_vars, to_instance
 
 @magics_class
 class FugueSQLMagics(Magics):
-    "Magics that hold additional state"
+    """Fugue SQL Magics"""
 
     def __init__(self, shell, pre_conf, post_conf):
         # You must call the parent constructor
