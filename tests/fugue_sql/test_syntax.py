@@ -18,7 +18,7 @@ def test_assign_syntax():
     # multiple expression test
     good_syntax(
         """
-        a = select a where a==10 
+        a = select a where a==10
         b=select x""",
         ignore_case=True,
         simple_assign=True,
@@ -89,7 +89,7 @@ def test_select_syntax():
     good_single_syntax("SELECT a FROM (TRANSFORM USING x)", ["AS t"], ignore_case=False)
     good_single_syntax(
         """
-    SELECT a FROM 
+    SELECT a FROM
         (TRANSFORM USING x) AS x INNER JOIN (TRANSFORM USING x) AS y
         ON x.a = b.a
     """,
@@ -189,8 +189,7 @@ def test_output_syntax():
     )
     good_single_syntax(
         "print",
-        ["", "a,b", "(create using x)"],
-        ["rows 100"],
+        ["100 rows", "from", "a,b", "(create using x)"],
         ["rowcount"],
         ["title 'abc'"],
         ignore_case=True,

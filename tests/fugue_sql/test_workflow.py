@@ -52,7 +52,7 @@ def test_show():
             """
         a = CREATE[[0], [1]] SCHEMA a: int
         b = CREATE[[0], [1]] SCHEMA a: int
-        PRINT a, b ROWS 10 ROWCOUNT TITLE "abc"
+        PRINT 10 ROWS FROM a, b ROWCOUNT TITLE "abc"
         PRINT a, b
         """
         )
@@ -63,7 +63,7 @@ def test_show():
             """
         a = CREATE[[0], [1]] SCHEMA a: int
         b = CREATE[[0], [1]] SCHEMA a: int
-        PRINT a, b ROWS 10 ROWCOUNT TITLE "abc"
+        PRINT 10 ROWS FROM a, b ROWCOUNT TITLE "abc"
         PRINT a, b
         """
         )
@@ -78,7 +78,7 @@ def test_jinja_keyword_in_sql():
             SELECT * WHERE a LIKE '{%'
             PRINT
             {%- endraw %}""")
-    
+
         df = dag.df([["b"]], "a:str")
         x = "b"
         dag("""
