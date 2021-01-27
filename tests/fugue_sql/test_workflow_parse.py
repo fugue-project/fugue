@@ -150,7 +150,7 @@ def test_cotransform():
     t = z.partition(num=3).transform(mock_cotransformer1, params=dict(n=3))
     assert_eq(
         """
-    zip 
+    zip
         (create using mock_create1 params n:1),
         (create using mock_create1 params n:2)
     transform prepartition 3 using mock_cotransformer1(n=3)
@@ -182,8 +182,8 @@ def test_transform():
     assert_eq(
         """
     create [[0],[1]] schema a:int
-    
-    transform 
+
+    transform
         prepartition ROWCOUNT / 2 by a presort b desc
         using mock_transformer(n=2) schema *
     """,
@@ -202,8 +202,8 @@ def test_transform():
     assert_eq(
         """
     create [[0],[1]] schema a:int
-    
-    transform 
+
+    transform
         prepartition ROWCOUNT / 2 by a presort b desc
         using mock_transformer(n=2) schema *
         callback _func
@@ -237,8 +237,8 @@ def test_out_transform():
     assert_eq(
         """
     create [[0],[1]] schema a:int
-    
-    outtransform 
+
+    outtransform
         prepartition ROWCOUNT / 2 by a presort b desc
         using mock_transformer(n=2)
     """,
@@ -334,7 +334,7 @@ def test_select_nested():
         """
     a=create using mock_create1(n=1)
     b=create using mock_create1(n=2)
-    
+
     # nested query
     select * from (select * from a.b)
     select * from (create using mock_create1) AS bb
@@ -367,14 +367,14 @@ def test_select():
         """
     a=create using mock_create1(n=1)
     b=create using mock_create1(n=2)
-    
+
     # assignment and table not found
     x=select * from a.b
-    
+
     # sample and alias when table not found
     select * from a.b TABLESAMPLE (5 PERCENT) AS x
     select * from a.b AS x
-    
+
     # when table is found
     select * from a
     select * from a TABLESAMPLE(5 PERCENT)
@@ -407,7 +407,7 @@ def test_select_with():
         x as (select * from a),
         y as (select * from b)
     select *   from x union select * from y
-    
+
     """,
         dag,
     )
@@ -432,7 +432,7 @@ def test_select_plus_engine():
         """
     connect MockEngine select * from xyz
     connect MockEngine(p=2) select * from xyz
-    
+
     transform (connect MockEngine select a,b from a) using mock_transformer2
 
     select aa+bb as t from (connect MockEngine select aa,bb from a)
@@ -472,7 +472,7 @@ def test_general_set_op():
         """
     a=create using mock_create1(n=1)
     b=create using mock_create1(n=2)
-    
+
     select * from a union all select * from b
     create using mock_create1 union select * from b
     create using mock_create1 intersect distinct process a using mock_processor1
@@ -496,7 +496,7 @@ def test_print():
         """
     a=create using mock_create1(n=1)
     print
-    print a, (create using mock_create1(n=2)) rows 5 rowcount title "\\"b   B"
+    print 5 rows from a, (create using mock_create1(n=2)) rowcount title "\\"b   B"
     """,
         dag,
     )
@@ -614,7 +614,7 @@ def test_drop():
     a=create using mock_create1
     drop columns a,b
     drop columns a,b if exists from a
-    
+
     d=create using mock_create1
     drop rows if any null
     drop rows if all null from d
