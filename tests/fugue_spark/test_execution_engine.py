@@ -1,17 +1,24 @@
 from typing import Any, Iterable, List
 
+import numpy as np
+import pandas as pd
 import pytest
 from fugue.collections.partition import PartitionSpec
-from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue.dataframe import (
+    ArrayDataFrame,
+    PandasDataFrame,
+    LocalDataFrameIterableDataFrame,
+)
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.extensions.transformer import Transformer, transformer
 from fugue.workflow.workflow import FugueWorkflow
-from fugue_spark.execution_engine import SparkExecutionEngine
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 from pyspark import StorageLevel
 from pyspark.sql import SparkSession
 from pytest import raises
+
+from fugue_spark.execution_engine import SparkExecutionEngine
 
 
 class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -93,6 +100,27 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
         b = engine.sample(a, n=90, metadata=(dict(a=1)))
         assert abs(len(b.as_array()) - 90) < 2
         assert b.metadata == dict(a=1)
+
+    def test_large_map(self):
+        def add(cursor, data):
+            assert isinstance(data, LocalDataFrameIterableDataFrame)
+
+            def get_dfs():
+                for df in data.native:
+                    pdf = df.as_pandas()
+                    pdf["zz"] = pdf["xx"] + pdf["yy"]
+                    yield PandasDataFrame(pdf)
+
+            return LocalDataFrameIterableDataFrame(get_dfs())
+
+        e = self.engine
+        np.random.seed(0)
+        df = pd.DataFrame(np.random.randint(0, 5, (1000, 2)), columns=["xx", "yy"])
+        expected = PandasDataFrame(df.assign(zz=df.xx + df.yy), "xx:int,yy:int,zz:int")
+        a = e.to_df(df)
+        # no partition
+        c = e.map(a, add, "xx:int,yy:int,zz:int", PartitionSpec(num=16))
+        df_eq(c, expected, throw=True)
 
 
 class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
