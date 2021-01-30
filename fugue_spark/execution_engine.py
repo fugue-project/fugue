@@ -32,9 +32,10 @@ from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import broadcast, col, lit, row_number
 from pyspark.sql.window import Window
-from triad import EmptyAwareIterable, FileSystem, IndexedOrderedDict, ParamDict, Schema
+from triad import FileSystem, IndexedOrderedDict, ParamDict, Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.hash import to_uuid
+from triad.utils.iter import EmptyAwareIterable
 from triad.utils.threading import RunOnce
 
 from fugue_spark._constants import (
