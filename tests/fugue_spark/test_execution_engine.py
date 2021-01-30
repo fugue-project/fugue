@@ -16,6 +16,7 @@ from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 from pyspark import StorageLevel
 from pyspark.sql import SparkSession
+import pyspark.sql as ps
 from pytest import raises
 
 from fugue_spark.execution_engine import SparkExecutionEngine
@@ -101,7 +102,10 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
         assert abs(len(b.as_array()) - 90) < 2
         assert b.metadata == dict(a=1)
 
-    def test_large_map(self):
+    def test_map_in_pandas(self):
+        if not hasattr(ps.DataFrame, "mapInPandas"):
+            return
+
         def add(cursor, data):
             assert isinstance(data, LocalDataFrameIterableDataFrame)
 
@@ -115,7 +119,7 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
 
         e = self.engine
         np.random.seed(0)
-        df = pd.DataFrame(np.random.randint(0, 5, (1000, 2)), columns=["xx", "yy"])
+        df = pd.DataFrame(np.random.randint(0, 5, (100000, 2)), columns=["xx", "yy"])
         expected = PandasDataFrame(df.assign(zz=df.xx + df.yy), "xx:int,yy:int,zz:int")
         a = e.to_df(df)
         # no partition
