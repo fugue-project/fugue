@@ -25,7 +25,14 @@ from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
 from pyspark.sql.window import Window
-from pyspark.sql.functions import PandasUDFType, broadcast, col, pandas_udf, row_number
+from pyspark.sql.functions import (
+    PandasUDFType,
+    broadcast,
+    col,
+    pandas_udf,
+    row_number,
+    lit,
+)
 from triad.collections import ParamDict, Schema, IndexedOrderedDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
@@ -466,17 +473,21 @@ class SparkExecutionEngine(ExecutionEngine):
         if len(partition_spec.partition_by) == 0:
             if len(_presort.keys()) > 0:
                 d = d.orderBy(
-                    [_presort_to_col(_col, _presort[_col]) for _col, in _presort.keys()]
+                    [_presort_to_col(_col, _presort[_col]) for _col in _presort.keys()]
                 )
             d = d.limit(n)
 
         # If partition exists
         else:
             w = Window.partitionBy([col(x) for x in partition_spec.partition_by])
+
             if len(_presort.keys()) > 0:
                 w = w.orderBy(
-                    [_presort_to_col(_col, _presort[_col]) for _col, in _presort.keys()]
+                    [_presort_to_col(_col, _presort[_col]) for _col in _presort.keys()]
                 )
+            else:
+                # row_number() still needs an orderBy
+                w = w.orderBy(lit(1))
 
             d = (
                 d.select(col("*"), row_number().over(w).alias("__row_number__"))

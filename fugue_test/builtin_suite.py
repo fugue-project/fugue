@@ -925,6 +925,20 @@ class BuiltInTests(object):
                     dag.df([[None, 1]], "a:int,b:int").sample(n=1, frac=0.2)
 
         def test_take(self):
+            # Test for presort parsing
+            with self.dag() as dag:
+                df = dag.df(
+                    pd.DataFrame({"aaa": [1, 1, 2, 2], "bbb": ["a", "b", "c", "d"]})
+                )
+                df = df.partition(by=["aaa"], presort="bbb").take(1)
+                df.show()
+            # Partition but no presort. Output not deterministic
+            with self.dag() as dag:
+                df = dag.df(
+                    pd.DataFrame({"aaa": [1, 1, 2, 2], "bbb": ["a", "b", "c", "d"]})
+                )
+                df = df.partition(by=["aaa"]).take(1)
+                df.show()
             # Partition by and presort with NULLs
             # Column c needs to be kept even if not in presort or partition
             with self.dag() as dag:
