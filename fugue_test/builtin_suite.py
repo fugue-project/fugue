@@ -932,15 +932,13 @@ class BuiltInTests(object):
                 )
                 df = df.partition(by=["aaa"], presort="bbb").take(1)
                 df.show()
-            # Partition but no presort
+            # Partition but no presort. Output not deterministic
             with self.dag() as dag:
                 df = dag.df(
                     pd.DataFrame({"aaa": [1, 1, 2, 2], "bbb": ["a", "b", "c", "d"]})
                 )
                 df = df.partition(by=["aaa"]).take(1)
-                assert (
-                    df.compute().native.count() == 2
-                ), "Row count does not match expected"
+                df.show()
             # Partition by and presort with NULLs
             # Column c needs to be kept even if not in presort or partition
             with self.dag() as dag:
