@@ -35,6 +35,7 @@ from fugue.extensions.transformer import (
 )
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
 from pytest import raises
+from uuid import uuid4
 
 
 class BuiltInTests(object):
@@ -488,12 +489,8 @@ class BuiltInTests(object):
 
             def incr():
                 fs = FileSystem().makedirs(tmpdir, recreate=True)
-                if fs.exists("a.txt"):
-                    n = int(fs.readtext("a.txt"))
-                else:
-                    n = 0
-                fs.writetext("a.txt", str(n + 1))
-                return n
+                fs.writetext(str(uuid4()) + ".txt", "")
+                return fs.glob("*.txt").count().files
 
             def t1(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
                 for row in df:
@@ -565,17 +562,13 @@ class BuiltInTests(object):
 
             assert 12 <= incr()
 
-        def test_output_cotransform(self):  # noqa: C901
+        def test_out_cotransform(self):  # noqa: C901
             tmpdir = str(self.tmpdir)
 
             def incr():
                 fs = FileSystem().makedirs(tmpdir, recreate=True)
-                if fs.exists("a.txt"):
-                    n = int(fs.readtext("a.txt"))
-                else:
-                    n = 0
-                fs.writetext("a.txt", str(n + 1))
-                return n
+                fs.writetext(str(uuid4()) + ".txt", "")
+                return fs.glob("*.txt").count().files
 
             def t1(
                 df: Iterable[Dict[str, Any]], df2: pd.DataFrame
