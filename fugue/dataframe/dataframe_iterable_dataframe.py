@@ -41,7 +41,9 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
                 if not self._native.empty:
                     orig_schema = self._native.peek().schema
             else:
-                raise ValueError(f"{df} is incompatible with IterableDataFrame")
+                raise ValueError(
+                    f"{df} is incompatible with LocalDataFrameIterableDataFrame"
+                )
             if orig_schema is None and schema is None:
                 raise FugueDataFrameInitError(
                     "schema is not provided and the input is empty"
@@ -62,7 +64,7 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
         except Exception as e:
             raise FugueDataFrameInitError(e)
 
-    def _dfs_wrapper(self, dfs: Iterable[LocalDataFrame]) -> Iterable[LocalDataFrame]:
+    def _dfs_wrapper(self, dfs: Iterable[DataFrame]) -> Iterable[LocalDataFrame]:
         last_empty: Any = None
         last_schema: Any = None
         yielded = False
@@ -79,7 +81,7 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
                 )
                 if last_schema is None:
                     last_schema = df.schema
-                yield df
+                yield df.as_local()
                 yielded = True
         if not yielded and last_empty is not None:
             yield last_empty
