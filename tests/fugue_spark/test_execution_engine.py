@@ -6,8 +6,8 @@ import pytest
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import (
     ArrayDataFrame,
-    PandasDataFrame,
     LocalDataFrameIterableDataFrame,
+    PandasDataFrame,
 )
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.extensions.transformer import Transformer, transformer
