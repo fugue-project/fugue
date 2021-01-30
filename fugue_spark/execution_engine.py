@@ -242,7 +242,7 @@ class SparkExecutionEngine(ExecutionEngine):
             and len(partition_spec.partition_by) > 0
             and not any(pa.types.is_nested(t) for t in Schema(output_schema).types)
         ):
-            return self._map_by_pandas_udf(
+            return self._group_map_by_pandas_udf(
                 df,
                 map_func=map_func,
                 output_schema=output_schema,
@@ -538,7 +538,7 @@ class SparkExecutionEngine(ExecutionEngine):
         df.native.createOrReplaceTempView(name)
         return df
 
-    def _map_by_pandas_udf(
+    def _group_map_by_pandas_udf(
         self,
         df: DataFrame,
         map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
