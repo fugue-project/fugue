@@ -12,16 +12,11 @@ from fugue._utils.interfaceless import (
 from fugue.dataframe import (
     DataFrame,
     DataFrames,
+    IterableDataFrame,
     LocalDataFrame,
     LocalDataFrameIterableDataFrame,
 )
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe import (
-    DataFrame,
-    DataFrames,
-    LocalDataFrame,
-    LocalDataFrameIterableDataFrame,
-)
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution import ExecutionEngine
