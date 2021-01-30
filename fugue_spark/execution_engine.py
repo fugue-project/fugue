@@ -242,9 +242,15 @@ class SparkExecutionEngine(ExecutionEngine):
         metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
+        old_pyspark = not hasattr(ps.DataFrame, "mapInPandas")
         if self.conf.get_or_throw(FUGUE_SPARK_CONF_USE_PANDAS_UDF, bool) and not any(
             pa.types.is_nested(t) for t in Schema(output_schema).types
         ):
+            if old_pyspark and any(
+                pa.types.is_time(t) or pa.types.is_timestamp(t) or pa.types.is_date(t)
+                for t in Schema(output_schema).types
+            ):
+                pass
             if len(partition_spec.partition_by) > 0 and partition_spec.algo != "even":
                 return self._group_map_by_pandas_udf(
                     df,
@@ -254,9 +260,7 @@ class SparkExecutionEngine(ExecutionEngine):
                     metadata=metadata,
                     on_init=on_init,
                 )
-            elif len(partition_spec.partition_by) == 0 and hasattr(
-                ps.DataFrame, "mapInPandas"
-            ):
+            elif len(partition_spec.partition_by) == 0 and not old_pyspark:
                 return self._map_by_pandas_udf(
                     df,
                     map_func=map_func,
