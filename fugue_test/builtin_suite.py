@@ -344,6 +344,19 @@ class BuiltInTests(object):
                 b = a.transform(m.t1).transform(m.t2, schema="*")
                 b.assert_eq(a)
 
+        def test_transform_iterable_pd(self):
+            # this test is important for using mapInPandas in spark
+
+            # schema: *,c:int
+            def mt(dfs: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+                for df in dfs:
+                    yield df.assign(c=2)
+
+            with self.dag() as dag:
+                a = dag.df([[1, 2], [3, 4]], "a:int,b:int", dict(x=1))
+                b = a.transform(mt)
+                dag.df([[1, 2, 2], [3, 4, 2]], "a:int,b:int,c:int").assert_eq(b)
+
         def test_transform_binary(self):
             with self.dag() as dag:
                 a = dag.df([[1, pickle.dumps([0, "a"])]], "a:int,b:bytes")
