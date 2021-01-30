@@ -25,7 +25,7 @@ from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
 from pyspark.sql.window import Window
-from pyspark.sql.functions import PandasUDFType, broadcast, col, pandas_udf, row_number
+from pyspark.sql.functions import broadcast, col, row_number
 from triad.collections import ParamDict, Schema, IndexedOrderedDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
@@ -576,10 +576,18 @@ class SparkExecutionEngine(ExecutionEngine):
             return output_df.as_pandas()
 
         df = self.to_df(df)
-        udf = pandas_udf(
-            _udf, to_spark_schema(output_schema), PandasUDFType.GROUPED_MAP
-        )
-        sdf = df.native.groupBy(*partition_spec.partition_by).apply(udf)
+
+        gdf = df.native.groupBy(*partition_spec.partition_by)
+        if hasattr(gdf, "applyInPandas"):
+            sdf = gdf.applyInPandas(_udf, schema=to_spark_schema(output_schema))
+        else:  # pragma: no cover
+            # for pyspark < 3
+            from pyspark.sql.functions import PandasUDFType, pandas_udf
+
+            udf = pandas_udf(
+                _udf, to_spark_schema(output_schema), PandasUDFType.GROUPED_MAP
+            )
+            sdf = gdf.apply(udf)
         return SparkDataFrame(sdf, metadata=metadata)
 
 
