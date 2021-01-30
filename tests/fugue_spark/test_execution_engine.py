@@ -200,6 +200,29 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             dag.output(c, using=assert_match, params=dict(values=[100]))
 
 
+class SparkExecutionEnginePandasUDFBuiltInTests(SparkExecutionEngineBuiltInTests):
+    @pytest.fixture(autouse=True)
+    def init_session(self, spark_session):
+        self.spark_session = spark_session
+
+    def make_engine(self):
+        session = SparkSession.builder.getOrCreate()
+        e = SparkExecutionEngine(
+            session,
+            {
+                "test": True,
+                "fugue.spark.use_pandas_udf": True,
+                "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
+                "fugue.rpc.flask_server.host": "127.0.0.1",
+                "fugue.rpc.flask_server.port": "1234",
+                "fugue.rpc.flask_server.timeout": "2 sec",
+                "spark.sql.shuffle.partitions": "10",
+            },
+        )
+        assert e.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
+        return e
+
+
 @transformer("ct:long")
 def count_partition(df: List[List[Any]]) -> List[List[Any]]:
     return [[len(df)]]

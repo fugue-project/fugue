@@ -246,7 +246,7 @@ class SparkExecutionEngine(ExecutionEngine):
         if self.conf.get_or_throw(FUGUE_SPARK_CONF_USE_PANDAS_UDF, bool) and not any(
             pa.types.is_nested(t) for t in Schema(output_schema).types
         ):
-            if len(partition_spec.partition_by) > 0:
+            if len(partition_spec.partition_by) > 0 and partition_spec.algo != "even":
                 return self._group_map_by_pandas_udf(
                     df,
                     map_func=map_func,
