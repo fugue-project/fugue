@@ -10,25 +10,43 @@ from triad.utils.iter import EmptyAwareIterable, make_empty_aware
 
 
 class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
-    """DataFrame that wraps native python iterable of arrays. Please read
-    |DataFrameTutorial| to understand the concept
+    """DataFrame that wraps an iterable of local dataframes
 
-    :param df: 2-dimensional array, iterable of arrays, or
-      :class:`~fugue.dataframe.dataframe.DataFrame`
-    :param schema: |SchemaLikeObject|
+    :param df: an iterable of
+      :class:`~fugue.dataframe.dataframe.DataFrame`. If any is not local,
+      they will be converted to :class:`~fugue.dataframe.dataframe.LocalDataFrame`
+      by :meth:`~fugue.dataframe.dataframe.DataFrame.as_local`
+    :param schema: |SchemaLikeObject|, if it is provided, it must match the schema
+      of the dataframes
     :param metadata: dict-like object with string keys, default ``None``
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
     :Examples:
 
-    >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
-    >>> b = IterableDataFrame(a)
+        .. code-block:: python
+
+            def get_dfs(seq):
+                yield IterableDataFrame([], "a:int,b:int")
+                yield IterableDataFrame([[1, 10]], "a:int,b:int")
+                yield ArrayDataFrame([], "a:int,b:str")
+
+            df = LocalDataFrameIterableDataFrame(get_dfs())
+            for subdf in df.native:
+                subdf.show()
 
     :Notice:
 
     It's ok to peek the dataframe, it will not affect the iteration, but it's
-    invalid operation to count
+    invalid to count.
+
+    ``schema`` can be used when the iterable contains no dataframe. But if there
+    is any dataframe, ``schema`` must match the schema of the dataframes.
+
+    For the iterable of dataframes, if there is any empty dataframe, they will
+    be skipped and their schema will not matter. However, if all dataframes
+    in the interable are empty, then the last empty dataframe will be used to
+    set the schema.
     """
 
     def __init__(  # noqa: C901

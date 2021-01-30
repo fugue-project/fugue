@@ -53,6 +53,10 @@ def test_init():
     with raises(FugueDataFrameInitError):  # schema mismatch
         LocalDataFrameIterableDataFrame(get_dfs("v"), "a:int,b:str")
 
+    df = LocalDataFrameIterableDataFrame(get_dfs(""), "a:str")
+    assert df.empty
+    assert df.schema == "a:str"
+
     df = LocalDataFrameIterableDataFrame(get_dfs("e"))
     assert df.empty
     assert df.schema == "a:int,b:int"
