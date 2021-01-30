@@ -45,6 +45,14 @@ fugue.dataframe.dataframe
    :undoc-members:
    :show-inheritance:
 
+fugue.dataframe.dataframe\_iterable\_dataframe
+----------------------------------------------
+
+.. automodule:: fugue.dataframe.dataframe_iterable_dataframe
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.dataframe.dataframes
 --------------------------
 
