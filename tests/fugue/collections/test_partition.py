@@ -10,6 +10,7 @@ from triad.collections.dict import IndexedOrderedDict
 def test_parse_presort_exp():
 
     assert parse_presort_exp(None) == IndexedOrderedDict()
+    assert parse_presort_exp(IndexedOrderedDict([('c', True)])) == IndexedOrderedDict([('c', True)])
     assert parse_presort_exp("c") == IndexedOrderedDict([('c', True)])
     assert parse_presort_exp("         c") == IndexedOrderedDict([('c', True)])
     assert parse_presort_exp("c           desc")  == IndexedOrderedDict([('c', False)])
