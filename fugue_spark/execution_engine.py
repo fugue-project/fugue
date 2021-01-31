@@ -242,16 +242,13 @@ class SparkExecutionEngine(ExecutionEngine):
         metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
-        old_pyspark = not hasattr(ps.DataFrame, "mapInPandas")
-        if self.conf.get_or_throw(FUGUE_SPARK_CONF_USE_PANDAS_UDF, bool) and not any(
-            pa.types.is_nested(t) for t in Schema(output_schema).types
+        if (
+            self.conf.get_or_throw(FUGUE_SPARK_CONF_USE_PANDAS_UDF, bool)
+            and hasattr(ps.DataFrame, "mapInPandas")  # new pyspark
+            and not any(pa.types.is_nested(t) for t in Schema(output_schema).types)
         ):
-            if old_pyspark and any(
-                pa.types.is_time(t) or pa.types.is_timestamp(t) or pa.types.is_date(t)
-                for t in Schema(output_schema).types
-            ):
-                pass
-            elif len(partition_spec.partition_by) > 0 and partition_spec.algo != "even":
+            # pandas udf can only be used for pyspark > 3
+            if len(partition_spec.partition_by) > 0 and partition_spec.algo != "even":
                 return self._group_map_by_pandas_udf(
                     df,
                     map_func=map_func,
@@ -260,7 +257,7 @@ class SparkExecutionEngine(ExecutionEngine):
                     metadata=metadata,
                     on_init=on_init,
                 )
-            elif len(partition_spec.partition_by) == 0 and not old_pyspark:
+            elif len(partition_spec.partition_by) == 0:
                 return self._map_by_pandas_udf(
                     df,
                     map_func=map_func,
@@ -601,16 +598,7 @@ class SparkExecutionEngine(ExecutionEngine):
         df = self.to_df(df)
 
         gdf = df.native.groupBy(*partition_spec.partition_by)
-        if hasattr(gdf, "applyInPandas"):
-            sdf = gdf.applyInPandas(_udf, schema=to_spark_schema(output_schema))
-        else:  # pragma: no cover
-            # for pyspark < 3
-            from pyspark.sql.functions import PandasUDFType, pandas_udf
-
-            udf = pandas_udf(
-                _udf, to_spark_schema(output_schema), PandasUDFType.GROUPED_MAP
-            )
-            sdf = gdf.apply(udf)
+        sdf = gdf.applyInPandas(_udf, schema=to_spark_schema(output_schema))
         return SparkDataFrame(sdf, metadata=metadata)
 
     def _map_by_pandas_udf(
