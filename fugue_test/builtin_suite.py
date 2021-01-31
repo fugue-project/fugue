@@ -33,7 +33,7 @@ from fugue.extensions.transformer import (
     output_transformer,
     transformer,
 )
-from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
+from fugue.workflow.workflow import FugueWorkflow
 from pytest import raises
 from uuid import uuid4
 
@@ -217,35 +217,23 @@ class BuiltInTests(object):
                 d = dag.load(temp_file)
                 d.assert_not_eq(c)
 
-        def test_output(self):
-            dag = self.dag()
-            dag.df([[0]], "a:int").output_as("k")
-            result = dag.run()
-            assert "k" in result
-            assert not isinstance(result["k"], WorkflowDataFrame)
-            assert isinstance(result["k"], DataFrame)
-            assert isinstance(result["k"].as_pandas(), pd.DataFrame)
-            # TODO: these don't work
-            # assert not isinstance(list(result.values())[0], WorkflowDataFrame)
-            # assert isinstance(list(result.values())[0], DataFrame)
-
-        def test_yield(self):
+        def test_yield_file(self):
             self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(
                 self.tmpdir, "ck"
             )
 
             with raises(FugueWorkflowCompileError):
-                self.dag().df([[0]], "a:int").checkpoint().yield_as("x")
+                self.dag().df([[0]], "a:int").checkpoint().yield_file_as("x")
 
             with raises(FugueWorkflowCompileError):
-                self.dag().df([[0]], "a:int").persist().yield_as("x")
+                self.dag().df([[0]], "a:int").persist().yield_file_as("x")
 
             def run_test(deterministic):
                 dag1 = self.dag()
                 df = dag1.df([[0]], "a:int")
                 if deterministic:
                     df = df.deterministic_checkpoint()
-                df.yield_as("x")
+                df.yield_file_as("x")
                 id1 = dag1.spec_uuid()
                 dag2 = self.dag()
                 dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))
@@ -263,6 +251,14 @@ class BuiltInTests(object):
             id3, id4 = run_test(True)
             assert id1 == id3
             assert id2 == id4  # deterministic yield (yield deterministic checkpoint)
+
+        def test_yield_dataframe(self):
+            dag = self.dag()
+            df1 = dag.df([[1]], "a:int")
+            df2 = dag.df([[1]], "a:int")
+            df1.union(df2, distinct=False).yield_dataframe_as("x")
+            result = dag.run()["x"]
+            assert [[1], [1]] == result.as_array()
 
         def test_create_process_output(self):
             with self.dag() as dag:

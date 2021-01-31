@@ -47,16 +47,21 @@ def test_yield():
     dag.df([[0]], "a:int32").show()
     id0 = dag.spec_uuid()
     x = FugueWorkflow().df([[0]], "a:int32")
-    x.yield_as("x")
+    x.yield_file_as("x")
     x.show()
     id1 = x.workflow.spec_uuid()
     x = FugueWorkflow().df([[0]], "a:int32")
-    x.deterministic_checkpoint().yield_as("y")
+    x.deterministic_checkpoint().yield_file_as("y")
     x.show()
     id2 = x.workflow.spec_uuid()
+    x = FugueWorkflow().df([[0]], "a:int32")
+    x.deterministic_checkpoint().yield_dataframe_as("z")
+    x.show()
+    id3 = x.workflow.spec_uuid()
     # yield doesn't change determinism
     assert id0 == id1
     assert id0 == id2
+    assert id0 == id3
 
 
 def test_auto_persist():

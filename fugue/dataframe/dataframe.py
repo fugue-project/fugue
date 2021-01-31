@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import pandas as pd
 import pyarrow as pa
+from fugue.collections.yielded import Yielded
 from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
@@ -459,6 +460,24 @@ class LocalUnboundedDataFrame(LocalDataFrame):
         :raises InvalidOperationError: You can't count an unbounded dataframe
         """
         raise InvalidOperationError("Impossible to count an LocalUnboundedDataFrame")
+
+
+class YieldedDataFrame(Yielded):
+    def __init__(self, yid: str):
+        super().__init__(yid)
+        self._df: Any = None
+
+    @property
+    def is_set(self) -> bool:
+        return self._df is not None
+
+    def set_value(self, df: DataFrame) -> None:
+        self._df = df
+
+    @property
+    def result(self) -> DataFrame:
+        assert_or_throw(self.is_set, "value is not set")
+        return self._df
 
 
 class _PrettyTable(object):

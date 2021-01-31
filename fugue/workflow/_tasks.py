@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, List, Optional, no_type_check, Iterable
+from typing import Any, Callable, Iterable, List, Optional, no_type_check
 
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
 from fugue.collections.partition import PartitionSpec
-from fugue.collections.yielded import Yielded
+from fugue.collections.yielded import YieldedFile
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
@@ -62,6 +62,7 @@ class FugueTask(TaskSpec, ABC):
         self._checkpoint = Checkpoint()
         self._broadcast = False
         self._dependency_uuid: Any = None
+        self._yield_dataframe_handler: Any = None
 
     def __uuid__(self) -> str:
         # _checkpoint is not part of determinism
@@ -108,21 +109,24 @@ class FugueTask(TaskSpec, ABC):
         return not self._checkpoint.is_null
 
     @property
-    def yielded(self) -> Yielded:
-        return self._checkpoint.yielded
-
-    def handle_checkpoint(self, df: DataFrame, ctx: TaskContext) -> DataFrame:
-        wfctx = self._get_workflow_context(ctx)
-        return self._checkpoint.run(df, wfctx.checkpoint_path)
+    def yielded_file(self) -> YieldedFile:
+        return self._checkpoint.yielded_file
 
     def broadcast(self) -> "FugueTask":
         self._broadcast = True
         return self
 
-    def handle_broadcast(self, df: DataFrame, ctx: TaskContext) -> DataFrame:
-        if not self._broadcast:
-            return df
-        return self._get_execution_engine(ctx).broadcast(df)
+    def set_yield_dataframe_handler(self, handler: Callable) -> None:
+        self._yield_dataframe_handler = handler
+
+    def set_result(self, ctx: TaskContext, df: DataFrame) -> DataFrame:
+        df = self._handle_checkpoint(df, ctx)
+        df = self._handle_broadcast(df, ctx)
+        if self._yield_dataframe_handler is not None:
+            out_df = self._get_execution_engine(ctx).convert_yield_dataframe(df)
+            self._yield_dataframe_handler(out_df)
+        self._get_workflow_context(ctx).set_result(id(self), df)
+        return df
 
     def _get_workflow_context(self, ctx: TaskContext) -> FugueWorkflowContext:
         wfctx = ctx.workflow_context
@@ -132,8 +136,14 @@ class FugueTask(TaskSpec, ABC):
     def _get_execution_engine(self, ctx: TaskContext) -> ExecutionEngine:
         return self._get_workflow_context(ctx).execution_engine
 
-    def _set_result(self, ctx: TaskContext, df: DataFrame) -> None:
-        self._get_workflow_context(ctx).set_result(id(self), df)
+    def _handle_checkpoint(self, df: DataFrame, ctx: TaskContext) -> DataFrame:
+        wfctx = self._get_workflow_context(ctx)
+        return self._checkpoint.run(df, wfctx.checkpoint_path)
+
+    def _handle_broadcast(self, df: DataFrame, ctx: TaskContext) -> DataFrame:
+        if not self._broadcast:
+            return df
+        return self._get_execution_engine(ctx).broadcast(df)
 
     def _get_dependency_uuid(self) -> Any:
         # TODO: this should be a part of adagio!!
@@ -192,9 +202,7 @@ class CreateData(FugueTask):
     def execute(self, ctx: TaskContext) -> None:
         e = self._get_execution_engine(ctx)
         df = e.to_df(self._data, self._schema, self._metadata)
-        df = self.handle_checkpoint(df, ctx)
-        df = self.handle_broadcast(df, ctx)
-        self._set_result(ctx, df)
+        df = self.set_result(ctx, df)
         ctx.outputs["_0"] = df
 
     def _validate_data(
@@ -236,9 +244,7 @@ class Create(FugueTask):
         e = self._get_execution_engine(ctx)
         self._creator._execution_engine = e
         df = self._creator.create()
-        df = self.handle_checkpoint(df, ctx)
-        df = self.handle_broadcast(df, ctx)
-        self._set_result(ctx, df)
+        df = self.set_result(ctx, df)
         ctx.outputs["_0"] = df
 
 
@@ -287,9 +293,7 @@ class Process(FugueTask):
             inputs = DataFrames(ctx.inputs.values())
         self._processor.validate_on_runtime(inputs)
         df = self._processor.process(inputs)
-        df = self.handle_checkpoint(df, ctx)
-        df = self.handle_broadcast(df, ctx)
-        self._set_result(ctx, df)
+        df = self.set_result(ctx, df)
         ctx.outputs["_0"] = df
 
 

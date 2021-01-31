@@ -487,6 +487,25 @@ class ExecutionEngine(ABC):
         """
         pass
 
+    def convert_yield_dataframe(self, df: DataFrame) -> DataFrame:
+        """Convert a yield dataframe to a dataframe that can be used after this
+        execution engine stops.
+
+        :param df: DataFrame
+        :return: another DataFrame that can be used after this execution engine stops
+
+        :Notice:
+
+        By default, the output dataframe is the input dataframe. But it should be
+        overridden if when an engine stops and the input dataframe will become invalid.
+
+        For example, if you custom a spark engine where you start and stop the spark
+        session in this engine's :meth:`~.start_engine` and :meth:`~.stop_engine`, then
+        the spark dataframe will be invalid. So you may consider converting it to a
+        local dataframe so it can still exist after the engine stops.
+        """
+        return df
+
     def zip(
         self,
         df1: DataFrame,
