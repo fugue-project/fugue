@@ -11,10 +11,10 @@ from triad.utils.hash import to_uuid
 
 def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa: C901
     """Returns ordered column sorting direction where ascending order
-    is true, descending is false.
+    would return as true, and descending as false.
 
     Args:
-        presort (Any): string or tuple of column order direction
+        presort (Any): string that contains columns and sorting direction
 
     Returns:
         IndexedOrderedDict[str, bool]: column and sorting direction
