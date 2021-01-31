@@ -108,7 +108,7 @@ class _FuncAsProcessor(Processor):
         validation_rules.update(parse_validation_rules_from_comment(func))
         tr = _FuncAsProcessor()
         tr._wrapper = FunctionWrapper(
-            func, "^e?(c|[dlsp]+)x*z?$", "^[dlspq]$"
+            func, "^e?(c|[dlspq]+)x*z?$", "^[dlspq]$"
         )  # type: ignore
         tr._need_engine = tr._wrapper.input_code.startswith("e")
         tr._use_dfs = "c" in tr._wrapper.input_code

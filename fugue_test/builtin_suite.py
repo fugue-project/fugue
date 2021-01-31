@@ -35,6 +35,7 @@ from fugue.extensions.transformer import (
 )
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
 from pytest import raises
+from uuid import uuid4
 
 
 class BuiltInTests(object):
@@ -344,6 +345,19 @@ class BuiltInTests(object):
                 b = a.transform(m.t1).transform(m.t2, schema="*")
                 b.assert_eq(a)
 
+        def test_transform_iterable_pd(self):
+            # this test is important for using mapInPandas in spark
+
+            # schema: *,c:int
+            def mt(dfs: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+                for df in dfs:
+                    yield df.assign(c=2)
+
+            with self.dag() as dag:
+                a = dag.df([[1, 2], [3, 4]], "a:int,b:int", dict(x=1))
+                b = a.transform(mt)
+                dag.df([[1, 2, 2], [3, 4, 2]], "a:int,b:int,c:int").assert_eq(b)
+
         def test_transform_binary(self):
             with self.dag() as dag:
                 a = dag.df([[1, pickle.dumps([0, "a"])]], "a:int,b:bytes")
@@ -475,12 +489,8 @@ class BuiltInTests(object):
 
             def incr():
                 fs = FileSystem().makedirs(tmpdir, recreate=True)
-                if fs.exists("a.txt"):
-                    n = int(fs.readtext("a.txt"))
-                else:
-                    n = 0
-                fs.writetext("a.txt", str(n + 1))
-                return n
+                fs.writetext(str(uuid4()) + ".txt", "")
+                return fs.glob("*.txt").count().files
 
             def t1(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
                 for row in df:
@@ -552,17 +562,13 @@ class BuiltInTests(object):
 
             assert 12 <= incr()
 
-        def test_output_cotransform(self):  # noqa: C901
+        def test_out_cotransform(self):  # noqa: C901
             tmpdir = str(self.tmpdir)
 
             def incr():
                 fs = FileSystem().makedirs(tmpdir, recreate=True)
-                if fs.exists("a.txt"):
-                    n = int(fs.readtext("a.txt"))
-                else:
-                    n = 0
-                fs.writetext("a.txt", str(n + 1))
-                return n
+                fs.writetext(str(uuid4()) + ".txt", "")
+                return fs.glob("*.txt").count().files
 
             def t1(
                 df: Iterable[Dict[str, Any]], df2: pd.DataFrame
