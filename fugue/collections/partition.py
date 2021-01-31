@@ -14,10 +14,11 @@ def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa: C
     would return as true, and descending as false.
 
     Args:
-        presort (Any): string that contains columns and sorting direction
+        presort (Any): string that contains column and sorting direction or
+        list of tuple that contains column and boolean sorting direction
 
     Returns:
-        IndexedOrderedDict[str, bool]: column and sorting direction
+        IndexedOrderedDict[str, bool]: column and boolean sorting direction
         of column, order matters.
     """
 
