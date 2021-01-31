@@ -52,11 +52,12 @@ def test__to_transformer():
     assert isinstance(g, Transformer)
     h = _to_transformer("t7")
     assert isinstance(h, Transformer)
-    raises(FugueInterfacelessError, lambda: _to_transformer("t8"))
-    i = _to_transformer("t9")
+    i = _to_transformer("t8")
     assert isinstance(i, Transformer)
-    i = _to_transformer("t10")
-    assert isinstance(i, Transformer)
+    j = _to_transformer("t9")
+    assert isinstance(j, Transformer)
+    k = _to_transformer("t10")
+    assert isinstance(k, Transformer)
 
 
 def test__to_transformer_determinism():
@@ -180,7 +181,6 @@ def t7(df: pd.DataFrame) -> Iterable[pd.DataFrame]:
     yield df
 
 
-# Iterable[pd.DataFrame] is not a valid input
 # schema: *
 def t8(df: Iterable[pd.DataFrame]) -> pd.DataFrame:
     return pd.concat(list(df))

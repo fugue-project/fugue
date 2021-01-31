@@ -4,13 +4,19 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 import pandas as pd
 from fugue._utils.interfaceless import (
     FunctionWrapper,
+    _IterablePandasParam,
     is_class_method,
     parse_comment_annotation,
     parse_output_schema_from_comment,
 )
-from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
+from fugue.dataframe import (
+    DataFrame,
+    DataFrames,
+    IterableDataFrame,
+    LocalDataFrame,
+    LocalDataFrameIterableDataFrame,
+)
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.iterable_dataframe import IterableDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution import ExecutionEngine
@@ -179,6 +185,40 @@ def test_function_wrapper_copy():
     w2.run([], {}, output=False)
     w3.run([], {}, output=False)
     assert 3 == test.n
+
+
+def test_iterable_pandas_dataframe():
+    p = _IterablePandasParam(None)
+    pdf = pd.DataFrame([[0]], columns=["a"])
+    df = PandasDataFrame(pdf)
+    data = list(p.to_input_data(df))
+    assert 1 == len(data)
+    assert data[0] is pdf  # this is to guarantee no copy in any wrapping logic
+    assert data[0].values.tolist() == [[0]]
+
+    dfs = LocalDataFrameIterableDataFrame([df, df])
+    data = list(p.to_input_data(dfs))
+    assert 2 == len(data)
+    assert data[0] is pdf
+    assert data[1] is pdf
+
+    def get_pdfs():
+        yield pdf
+        yield pdf
+
+    # without schema change, there is no copy
+    odf = p.to_output_df(get_pdfs(), df.schema)
+    data = list(odf.native)
+    assert 2 == len(data)
+    assert data[0].native is pdf
+    assert data[1].native is pdf
+
+    # with schema change, there is copy
+    odf = p.to_output_df(get_pdfs(), "a:double")
+    data = list(odf.native)
+    assert 2 == len(data)
+    assert data[0].native is not pdf
+    assert data[1].native is not pdf
 
 
 def f1(e: ExecutionEngine, a: DataFrame, b: LocalDataFrame, c: pd.DataFrame) -> None:

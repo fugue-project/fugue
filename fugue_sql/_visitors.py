@@ -27,14 +27,15 @@ from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import (
     get_caller_global_local_vars,
     to_bool,
-    to_type,
     to_function,
+    to_type,
 )
 from triad.utils.pyarrow import to_pa_datatype
 
 from fugue_sql._antlr import FugueSQLParser as fp
 from fugue_sql._antlr import FugueSQLVisitor
 from fugue_sql._parse import FugueSQL, _to_tokens
+from fugue_sql._utils import LazyWorkflowDataFrame
 from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
 
 
@@ -304,7 +305,9 @@ class _Extensions(_VisitorBase):
         hooks: FugueSQLHooks,
         workflow: FugueWorkflow,
         variables: Optional[
-            Dict[str, Tuple[WorkflowDataFrame, WorkflowDataFrames]]
+            Dict[
+                str, Tuple[WorkflowDataFrame, WorkflowDataFrames, LazyWorkflowDataFrame]
+            ]
         ] = None,
         last: Optional[WorkflowDataFrame] = None,
         global_vars: Optional[Dict[str, Any]] = None,
@@ -312,7 +315,9 @@ class _Extensions(_VisitorBase):
     ):
         super().__init__(sql)
         self._workflow = workflow
-        self._variables: Dict[str, Tuple[WorkflowDataFrame, WorkflowDataFrames]] = {}
+        self._variables: Dict[
+            str, Tuple[WorkflowDataFrame, WorkflowDataFrames, LazyWorkflowDataFrame]
+        ] = {}
         if variables is not None:
             self._variables.update(variables)
         self._last: Optional[WorkflowDataFrame] = last
@@ -330,7 +335,9 @@ class _Extensions(_VisitorBase):
         return self._hooks
 
     @property
-    def variables(self) -> Dict[str, Tuple[WorkflowDataFrame, WorkflowDataFrames]]:
+    def variables(
+        self,
+    ) -> Dict[str, Tuple[WorkflowDataFrame, WorkflowDataFrames, LazyWorkflowDataFrame]]:
         return self._variables
 
     @property
@@ -354,6 +361,12 @@ class _Extensions(_VisitorBase):
             key in self.variables,
             FugueSQLSyntaxError(f"{key} is not defined"),
         )
+        if isinstance(self.variables[key], LazyWorkflowDataFrame):
+            assert_or_throw(
+                ctx is None,
+                FugueSQLSyntaxError("can't specify index or key for dataframe"),
+            )
+            return self.variables[key].get_df()  # type: ignore
         if isinstance(self.variables[key], WorkflowDataFrame):
             assert_or_throw(
                 ctx is None,

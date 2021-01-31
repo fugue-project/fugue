@@ -14,8 +14,9 @@ from triad.exceptions import InvalidOperationError
 
 
 class IterableDataFrameTests(DataFrameTests.Tests):
-    def df(self, data: Any = None, schema: Any = None,
-           metadata: Any = None) -> IterableDataFrame:
+    def df(
+        self, data: Any = None, schema: Any = None, metadata: Any = None
+    ) -> IterableDataFrame:
         return IterableDataFrame(data, schema, metadata)
 
 

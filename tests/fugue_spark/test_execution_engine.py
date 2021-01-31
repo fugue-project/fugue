@@ -1,17 +1,25 @@
 from typing import Any, Iterable, List
 
+import numpy as np
+import pandas as pd
 import pytest
 from fugue.collections.partition import PartitionSpec
-from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue.dataframe import (
+    ArrayDataFrame,
+    LocalDataFrameIterableDataFrame,
+    PandasDataFrame,
+)
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.extensions.transformer import Transformer, transformer
 from fugue.workflow.workflow import FugueWorkflow
-from fugue_spark.execution_engine import SparkExecutionEngine
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 from pyspark import StorageLevel
 from pyspark.sql import SparkSession
+import pyspark.sql as ps
 from pytest import raises
+
+from fugue_spark.execution_engine import SparkExecutionEngine
 
 
 class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -94,6 +102,30 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
         assert abs(len(b.as_array()) - 90) < 2
         assert b.metadata == dict(a=1)
 
+    def test_map_in_pandas(self):
+        if not hasattr(ps.DataFrame, "mapInPandas"):
+            return
+
+        def add(cursor, data):
+            assert isinstance(data, LocalDataFrameIterableDataFrame)
+
+            def get_dfs():
+                for df in data.native:
+                    pdf = df.as_pandas()
+                    pdf["zz"] = pdf["xx"] + pdf["yy"]
+                    yield PandasDataFrame(pdf)
+
+            return LocalDataFrameIterableDataFrame(get_dfs())
+
+        e = self.engine
+        np.random.seed(0)
+        df = pd.DataFrame(np.random.randint(0, 5, (100000, 2)), columns=["xx", "yy"])
+        expected = PandasDataFrame(df.assign(zz=df.xx + df.yy), "xx:int,yy:int,zz:int")
+        a = e.to_df(df)
+        # no partition
+        c = e.map(a, add, "xx:int,yy:int,zz:int", PartitionSpec(num=16))
+        df_eq(c, expected, throw=True)
+
 
 class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
     @pytest.fixture(autouse=True)
@@ -166,6 +198,29 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             dag.output(c, using=assert_all_n, params=dict(n=2, l=50))
             c = a.partition(num=1).transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[100]))
+
+
+class SparkExecutionEnginePandasUDFBuiltInTests(SparkExecutionEngineBuiltInTests):
+    @pytest.fixture(autouse=True)
+    def init_session(self, spark_session):
+        self.spark_session = spark_session
+
+    def make_engine(self):
+        session = SparkSession.builder.getOrCreate()
+        e = SparkExecutionEngine(
+            session,
+            {
+                "test": True,
+                "fugue.spark.use_pandas_udf": True,
+                "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
+                "fugue.rpc.flask_server.host": "127.0.0.1",
+                "fugue.rpc.flask_server.port": "1234",
+                "fugue.rpc.flask_server.timeout": "2 sec",
+                "spark.sql.shuffle.partitions": "10",
+            },
+        )
+        assert e.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
+        return e
 
 
 @transformer("ct:long")

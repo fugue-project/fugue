@@ -1,7 +1,7 @@
 import datetime
 import os
 import pickle
-from typing import Any, Dict, Iterable, List, Callable, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 from unittest import TestCase
 
 import numpy as np
@@ -33,8 +33,9 @@ from fugue.extensions.transformer import (
     output_transformer,
     transformer,
 )
-from fugue.workflow.workflow import FugueWorkflow, _FugueInteractiveWorkflow
+from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame
 from pytest import raises
+from uuid import uuid4
 
 
 class BuiltInTests(object):
@@ -69,9 +70,6 @@ class BuiltInTests(object):
         def test_workflows(self):
             a = FugueWorkflow().df([[0]], "a:int")
             df_eq(a.compute(self.engine), [[0]], "a:int")
-
-            a = _FugueInteractiveWorkflow(self.engine).df([[0]], "a:int").persist()
-            df_eq(a.result, [[0]], "a:int")
 
         def test_create_show(self):
             with self.dag() as dag:
@@ -219,6 +217,18 @@ class BuiltInTests(object):
                 d = dag.load(temp_file)
                 d.assert_not_eq(c)
 
+        def test_output(self):
+            dag = self.dag()
+            dag.df([[0]], "a:int").output_as("k")
+            result = dag.run()
+            assert "k" in result
+            assert not isinstance(result["k"], WorkflowDataFrame)
+            assert isinstance(result["k"], DataFrame)
+            assert isinstance(result["k"].as_pandas(), pd.DataFrame)
+            # TODO: these don't work
+            # assert not isinstance(list(result.values())[0], WorkflowDataFrame)
+            # assert isinstance(list(result.values())[0], DataFrame)
+
         def test_yield(self):
             self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(
                 self.tmpdir, "ck"
@@ -334,6 +344,19 @@ class BuiltInTests(object):
                 a = dag.df([[0], [1]], "a:int")
                 b = a.transform(m.t1).transform(m.t2, schema="*")
                 b.assert_eq(a)
+
+        def test_transform_iterable_pd(self):
+            # this test is important for using mapInPandas in spark
+
+            # schema: *,c:int
+            def mt(dfs: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+                for df in dfs:
+                    yield df.assign(c=2)
+
+            with self.dag() as dag:
+                a = dag.df([[1, 2], [3, 4]], "a:int,b:int", dict(x=1))
+                b = a.transform(mt)
+                dag.df([[1, 2, 2], [3, 4, 2]], "a:int,b:int,c:int").assert_eq(b)
 
         def test_transform_binary(self):
             with self.dag() as dag:
@@ -466,12 +489,8 @@ class BuiltInTests(object):
 
             def incr():
                 fs = FileSystem().makedirs(tmpdir, recreate=True)
-                if fs.exists("a.txt"):
-                    n = int(fs.readtext("a.txt"))
-                else:
-                    n = 0
-                fs.writetext("a.txt", str(n + 1))
-                return n
+                fs.writetext(str(uuid4()) + ".txt", "")
+                return fs.glob("*.txt").count().files
 
             def t1(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
                 for row in df:
@@ -543,17 +562,13 @@ class BuiltInTests(object):
 
             assert 12 <= incr()
 
-        def test_output_cotransform(self):  # noqa: C901
+        def test_out_cotransform(self):  # noqa: C901
             tmpdir = str(self.tmpdir)
 
             def incr():
                 fs = FileSystem().makedirs(tmpdir, recreate=True)
-                if fs.exists("a.txt"):
-                    n = int(fs.readtext("a.txt"))
-                else:
-                    n = 0
-                fs.writetext("a.txt", str(n + 1))
-                return n
+                fs.writetext(str(uuid4()) + ".txt", "")
+                return fs.glob("*.txt").count().files
 
             def t1(
                 df: Iterable[Dict[str, Any]], df2: pd.DataFrame
@@ -916,6 +931,20 @@ class BuiltInTests(object):
                     dag.df([[None, 1]], "a:int,b:int").sample(n=1, frac=0.2)
 
         def test_take(self):
+            # Test for presort parsing
+            with self.dag() as dag:
+                df = dag.df(
+                    pd.DataFrame({"aaa": [1, 1, 2, 2], "bbb": ["a", "b", "c", "d"]})
+                )
+                df = df.partition(by=["aaa"], presort="bbb").take(1)
+                df.show()
+            # Partition but no presort. Output not deterministic
+            with self.dag() as dag:
+                df = dag.df(
+                    pd.DataFrame({"aaa": [1, 1, 2, 2], "bbb": ["a", "b", "c", "d"]})
+                )
+                df = df.partition(by=["aaa"]).take(1)
+                df.show()
             # Partition by and presort with NULLs
             # Column c needs to be kept even if not in presort or partition
             with self.dag() as dag:

@@ -20,6 +20,7 @@ from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_size
 from triad.utils.string import validate_triad_var_name
+from threading import RLock
 
 _DEFAULT_JOIN_KEYS: List[str] = []
 
@@ -81,6 +82,41 @@ class ExecutionEngine(ABC):
         _conf = ParamDict(conf)
         self._conf = ParamDict({**FUGUE_DEFAULT_CONF, **_conf})
         self._rpc_server = make_rpc_server(self.conf)
+        self._engine_start_lock = RLock()
+        self._engine_start = 0
+
+    def start(self) -> None:
+        """Start this execution engine, do not override.
+        You should customize :meth:`~.start_engine` if necessary.
+        """
+        with self._engine_start_lock:
+            if self._engine_start == 0:
+                self.rpc_server.start()
+                self.start_engine()
+            self._engine_start += 1
+
+    def stop(self) -> None:
+        """Stop this execution engine, do not override
+        You should customize :meth:`~.stop_engine` if necessary.
+        """
+        with self._engine_start_lock:
+            if self._engine_start == 1:
+                try:
+                    self.stop_engine()
+                finally:
+                    self._engine_start -= 1
+                    self.rpc_server.stop()
+            else:
+                self._engine_start -= 1
+            self._engine_start = max(0, self._engine_start)
+
+    def start_engine(self) -> None:  # pragma: no cover
+        """Custom logic to start the execution engine, defaults to no operation"""
+        return
+
+    def stop_engine(self) -> None:  # pragma: no cover
+        """Custom logic to stop the execution engine, defaults to no operation"""
+        return
 
     @property
     def conf(self) -> ParamDict:
@@ -115,11 +151,6 @@ class ExecutionEngine(ABC):
     @abstractmethod
     def default_sql_engine(self) -> SQLEngine:  # pragma: no cover
         """Default SQLEngine if user doesn't specify"""
-        raise NotImplementedError
-
-    @abstractmethod
-    def stop(self) -> None:  # pragma: no cover
-        """Stop this execution engine"""
         raise NotImplementedError
 
     @abstractmethod

@@ -451,7 +451,7 @@ class LocalUnboundedDataFrame(LocalDataFrame):
 
     @property
     def is_bounded(self):
-        """Always True because it's an unbounded dataframe"""
+        """Always False because it's an unbounded dataframe"""
         return False
 
     def count(self) -> int:

@@ -56,6 +56,9 @@ package:
 	python3 setup.py bdist_wheel
 
 jupyter:
+	pip install .
+	jupyter nbextension install --py fugue_notebook
+	jupyter nbextension enable fugue_notebook --py
 	jupyter notebook --port=8888 --ip=0.0.0.0 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
 
 test:
@@ -72,6 +75,12 @@ testdask:
 
 testsql:
 	python3 -bb -m pytest tests/fugue_sql
+
+testnotebook:
+	pip install .
+	jupyter nbextension install --user --py fugue_notebook
+	jupyter nbextension enable fugue_notebook --py
+	jupyter nbconvert --execute --clear-output tests/fugue_notebook/test_notebook.ipynb
 
 sql:
 	java -Xmx500M -jar bin/antlr-4.9-complete.jar -Dlanguage=Python3 -visitor -no-listener fugue_sql/_antlr/fugue_sql.g4

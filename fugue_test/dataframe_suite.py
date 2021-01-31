@@ -104,10 +104,11 @@ class DataFrameTests(object):
             df_eq(df[["c", "a"]], [[2, "a"]], "a:str,c:int")
 
         def test_rename(self):
-            df = self.df([["a", 1]], "a:str,b:int")
-            df2 = df.rename(columns=dict(a="aa"))
-            assert df.schema == "a:str,b:int"
-            df_eq(df2, [["a", 1]], "aa:str,b:int", throw=True)
+            for data in [[["a", 1]], []]:
+                df = self.df(data, "a:str,b:int")
+                df2 = df.rename(columns=dict(a="aa"))
+                assert df.schema == "a:str,b:int"
+                df_eq(df2, data, "aa:str,b:int", throw=True)
 
         def test_rename_invalid(self):
             df = self.df([["a", 1]], "a:str,b:int")
@@ -186,6 +187,9 @@ class DataFrameTests(object):
             assert data == a
 
         def test_as_arrow(self):
+            # empty
+            df = self.df([], "a:int,b:int")
+            assert [] == list(ArrowDataFrame(df.as_arrow()).as_dict_iterable())
             # pd.Nat
             df = self.df([[pd.NaT, 1]], "a:datetime,b:int")
             assert [dict(a=None, b=1)] == list(
@@ -236,6 +240,12 @@ class DataFrameTests(object):
                 df._get_altered_schema("b:{x:str}")
 
         def test_alter_columns(self):
+            # empty
+            df = self.df([], "a:str,b:int")
+            ndf = df.alter_columns("a:str,b:str")
+            assert [] == ndf.as_array(type_safe=True)
+            assert ndf.schema == "a:str,b:str"
+
             # no change
             df = self.df([["a", 1], ["c", None]], "a:str,b:int")
             ndf = df.alter_columns("b:int,a:str")

@@ -29,6 +29,14 @@ fugue.execution.execution\_engine
    :undoc-members:
    :show-inheritance:
 
+fugue.execution.factory
+-----------------------
+
+.. automodule:: fugue.execution.factory
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.execution.native\_execution\_engine
 -----------------------------------------
 

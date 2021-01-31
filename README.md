@@ -108,6 +108,17 @@ with FugueSQLWorkflow() as dag:
     """)
 ```
 
+Alternatively, there is a simpler way:
+
+```python
+df1 = ArrayDataFrame(data, schema)
+fsql("""
+    SELECT id, date, value FROM df1
+    TRANSFORM USING fillna (value=10)
+    PRINT
+""").run()
+```
+
 ## Get started
 
 To read the complete static docs, [click here](https://fugue.readthedocs.org)

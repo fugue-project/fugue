@@ -11,6 +11,7 @@ from fugue.dataframe import (
     IterableDataFrame,
     LocalDataFrame,
     PandasDataFrame,
+    LocalDataFrameIterableDataFrame,
 )
 from fugue.dataframe.dataframes import DataFrames
 from fugue.dataframe.utils import to_local_df
@@ -460,8 +461,19 @@ class _IterablePandasParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "Iterable[pd.DataFrame]", "q")
 
+    def to_input_data(self, df: DataFrame) -> Iterable[pd.DataFrame]:
+        if not isinstance(df, LocalDataFrameIterableDataFrame):
+            yield df.as_pandas()
+        else:
+            for sub in df.native:
+                yield sub.as_pandas()
+
     def to_output_df(self, output: Iterable[pd.DataFrame], schema: Any) -> DataFrame:
-        return PandasDataFrame(pd.concat(list(output)), schema)
+        def dfs():
+            for df in output:
+                yield PandasDataFrame(df, schema)
+
+        return LocalDataFrameIterableDataFrame(dfs())
 
     def count(self, df: Iterable[pd.DataFrame]) -> int:
         return sum(_.shape[0] for _ in df)
