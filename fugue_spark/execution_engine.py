@@ -251,7 +251,7 @@ class SparkExecutionEngine(ExecutionEngine):
                 for t in Schema(output_schema).types
             ):
                 pass
-            if len(partition_spec.partition_by) > 0 and partition_spec.algo != "even":
+            elif len(partition_spec.partition_by) > 0 and partition_spec.algo != "even":
                 return self._group_map_by_pandas_udf(
                     df,
                     map_func=map_func,
