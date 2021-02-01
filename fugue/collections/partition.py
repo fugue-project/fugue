@@ -9,17 +9,22 @@ from triad.utils.pyarrow import SchemaedDataPartitioner
 from triad.utils.hash import to_uuid
 
 
-def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa: C901
+def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C901]
     """Returns ordered column sorting direction where ascending order
     would return as true, and descending as false.
 
-    Args:
-        presort (Any): string that contains column and sorting direction or
+    :param presort: string that contains column and sorting direction or
         list of tuple that contains column and boolean sorting direction
+    :type presort: Any
 
-    Returns:
-        IndexedOrderedDict[str, bool]: column and boolean sorting direction
-        of column, order matters.
+    :return: column and boolean sorting direction of column, order matters.
+    :rtype: IndexedOrderedDict[str, bool]
+
+    :Example:
+
+    >>> parse_presort_exp("b desc, c asc")
+    >>> parse_presort_exp([("b", True), ("c", False))])
+    both return IndexedOrderedDict([("b", True), ("c", False))])
     """
 
     if isinstance(presort, IndexedOrderedDict):
