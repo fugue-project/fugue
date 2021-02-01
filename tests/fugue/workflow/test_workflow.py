@@ -99,6 +99,11 @@ def test_yield(tmpdir):
     result = dag2.run("", {FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)})["y"]
     assert [[0, 2]] == result.as_array()
 
+    dag3 = FugueWorkflow()
+    dag3.df(dag2.yields["y"]).transform(t).yield_dataframe_as("z")
+    result = dag3.run()["z"]
+    assert [[0, 3]] == result.as_array()
+
 
 class MockCache(WorkflowResultCache):
     def __init__(self, ctx=None, dummy=True):
