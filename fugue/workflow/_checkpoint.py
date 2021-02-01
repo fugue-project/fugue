@@ -144,7 +144,7 @@ class CheckpointPath(object):
             try:
                 self._fs.removetree(self._temp_path)
             except Exception as e:  # pragma: no cover
-                self._log.warn("Unable to remove " + self._temp_path, e)
+                self._log.info("Unable to remove " + self._temp_path, e)
 
     def get_temp_file(self, file_id: str, permanent: bool) -> str:
         path = self._path if permanent else self._temp_path

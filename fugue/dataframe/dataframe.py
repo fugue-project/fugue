@@ -463,6 +463,12 @@ class LocalUnboundedDataFrame(LocalDataFrame):
 
 
 class YieldedDataFrame(Yielded):
+    """Yielded dataframe from :class:`~fugue.workflow.workflow.FugueWorkflow`.
+    Users shouldn't create this object directly.
+
+    :param yid: unique id for determinism
+    """
+
     def __init__(self, yid: str):
         super().__init__(yid)
         self._df: Any = None
@@ -472,10 +478,18 @@ class YieldedDataFrame(Yielded):
         return self._df is not None
 
     def set_value(self, df: DataFrame) -> None:
+        """Set the yielded dataframe after compute. Users should not
+        call it.
+
+        :param path: file path
+        """
         self._df = df
 
     @property
     def result(self) -> DataFrame:
+        """The yielded dataframe, it will be set after the parent
+        workflow is computed
+        """
         assert_or_throw(self.is_set, "value is not set")
         return self._df
 
