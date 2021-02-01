@@ -103,7 +103,7 @@ fugueSingleTask
     ;
 
 fugueNestableTask
-    : (assign=fugueAssignment)? q=query (checkpoint=fugueCheckpoint)? (broadcast=fugueBroadcast)?
+    : (assign=fugueAssignment)? q=query (checkpoint=fugueCheckpoint)? (broadcast=fugueBroadcast)? (y=fugueYield)?
     ;
 
 fugueNestableTaskCollectionNoSelect
@@ -235,10 +235,9 @@ fuguePath
     ;
 
 fugueCheckpoint
-    : LAZY? (PERSIST | WEAK CHECKPOINT) (params=fugueParams)?                                                                                                   #fugueCheckpointWeak
-    | LAZY? STRONG? CHECKPOINT (partition=fuguePrepartition)? (single=fugueSingleFile)? (params=fugueParams)?                                                   #fugueCheckpointStrong
-    | LAZY? DETERMINISTIC CHECKPOINT (ns=fugueCheckpointNamespace)? (partition=fuguePrepartition)? (single=fugueSingleFile)? (params=fugueParams)? fugueYield?  #fugueCheckpointDeterministic
-    | fugueYield                                                                                                                                                #fugueCheckpointYield
+    : LAZY? (PERSIST | WEAK CHECKPOINT) (params=fugueParams)?                                                                                       #fugueCheckpointWeak
+    | LAZY? STRONG? CHECKPOINT (partition=fuguePrepartition)? (single=fugueSingleFile)? (params=fugueParams)?                                       #fugueCheckpointStrong
+    | LAZY? DETERMINISTIC CHECKPOINT (ns=fugueCheckpointNamespace)? (partition=fuguePrepartition)? (single=fugueSingleFile)? (params=fugueParams)?  #fugueCheckpointDeterministic
     ;
 
 fugueCheckpointNamespace
@@ -246,7 +245,7 @@ fugueCheckpointNamespace
     ;
 
 fugueYield
-    : YIELD (AS name=fugueIdentifier)?
+    : YIELD (DATAFRAME|FILE) (AS name=fugueIdentifier)?
     ;
 
 fugueBroadcast:
@@ -1895,6 +1894,9 @@ SEED: 'SEED';
 
 SUB: 'SUB';
 CALLBACK: 'CALLBACK';
+
+DATAFRAME: 'DATAFRAME';
+FILE: 'FILE';
 
 //================================
 // End of the Fugue keywords list

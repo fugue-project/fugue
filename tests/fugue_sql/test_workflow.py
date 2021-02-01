@@ -113,12 +113,27 @@ def test_use_df(tmpdir):
         )
         dag.sql_vars["b"].assert_eq(dag.df([[0], [1]], "a:int"))
 
-    # from yield
+    # from yield file
     engine = NativeExecutionEngine(
         conf={"fugue.workflow.checkpoint.path": os.path.join(tmpdir, "ck")}
     )
     with FugueSQLWorkflow(engine) as dag:
-        dag("CREATE[[0], [1]] SCHEMA a: int YIELD AS b")
+        dag("CREATE[[0], [1]] SCHEMA a: int YIELD FILE AS b")
+        res = dag.yields["b"]
+
+    with FugueSQLWorkflow(engine) as dag:
+        dag(
+            """
+        b=CREATE[[0], [1]] SCHEMA a: int
+        OUTPUT a, b USING assert_eq
+        """,
+            a=res,
+        )
+
+    # from yield dataframe
+    engine = NativeExecutionEngine()
+    with FugueSQLWorkflow(engine) as dag:
+        dag("CREATE[[0], [1]] SCHEMA a: int YIELD DATAFRAME AS b")
         res = dag.yields["b"]
 
     with FugueSQLWorkflow(engine) as dag:
@@ -282,7 +297,7 @@ def test_fsql():
     SELECT * FROM df WHERE a>{{p}}
     UNION ALL
     SELECT * FROM df2 WHERE a>{{p}}
-    result = TRANSFORM USING t
+    TRANSFORM USING t YIELD DATAFRAME AS result
     """,
         df2=pd.DataFrame([[0], [1]], columns=["a"]),
         p=0,

@@ -2,7 +2,7 @@ import os
 from typing import Any
 
 from fugue.collections.partition import PartitionSpec
-from fugue.collections.yielded import Yielded
+from fugue.collections.yielded import YieldedFile
 from fugue.constants import FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH
 from fugue.dataframe import DataFrame
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowRuntimeError
@@ -32,8 +32,8 @@ class Checkpoint(object):
         return df
 
     @property
-    def yielded(self) -> Yielded:
-        raise FugueWorkflowCompileError(f"yield is not allowed for {self}")
+    def yielded_file(self) -> YieldedFile:
+        raise FugueWorkflowCompileError(f"yield file is not allowed for {self}")
 
     @property
     def is_null(self) -> bool:
@@ -65,7 +65,7 @@ class FileCheckpoint(Checkpoint):
         )
         self._yield_func: Any = None
         self._file_id = to_uuid(file_id, namespace)
-        self._yielded = Yielded(self._file_id)
+        self._yielded = YieldedFile(self._file_id)
 
     def run(self, df: DataFrame, path: "CheckpointPath") -> DataFrame:
         fpath = path.get_temp_file(self._file_id, self.permanent)
@@ -86,7 +86,7 @@ class FileCheckpoint(Checkpoint):
         return result
 
     @property
-    def yielded(self) -> Yielded:
+    def yielded_file(self) -> YieldedFile:
         assert_or_throw(
             self.permanent,
             FugueWorkflowCompileError(f"yield is not allowed for {self}"),
@@ -144,7 +144,7 @@ class CheckpointPath(object):
             try:
                 self._fs.removetree(self._temp_path)
             except Exception as e:  # pragma: no cover
-                self._log.warn("Unable to remove " + self._temp_path, e)
+                self._log.info("Unable to remove " + self._temp_path, e)
 
     def get_temp_file(self, file_id: str, permanent: bool) -> str:
         path = self._path if permanent else self._temp_path

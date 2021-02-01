@@ -1,6 +1,6 @@
-from fugue.extensions.creator import Creator
+from fugue.collections.yielded import Yielded, YieldedFile
 from fugue.dataframe import DataFrame
-from fugue.collections.yielded import Yielded
+from fugue.extensions.creator import Creator
 
 
 class Load(Creator):
@@ -18,4 +18,7 @@ class Load(Creator):
 class LoadYielded(Creator):
     def create(self) -> DataFrame:
         yielded = self.params.get_or_throw("yielded", Yielded)
-        return self.execution_engine.load_df(path=yielded.path)
+        if isinstance(yielded, YieldedFile):
+            return self.execution_engine.load_df(path=yielded.path)
+        else:
+            return self.execution_engine.to_df(yielded.result)
