@@ -2,6 +2,7 @@ import copy
 from random import randint, seed
 from typing import Any, Dict, Iterable, List
 
+import pandas as pd
 from adagio.instances import WorkflowContext, WorkflowResultCache
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame
@@ -15,6 +16,7 @@ from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrames
 from pytest import raises
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
+from fugue.constants import FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH
 
 
 def test_worflow_dataframes():
@@ -74,6 +76,28 @@ def test_workflow():
     df_eq(b.result, [[0, 2], [0, 2], [1, 1]], "a:int,b:int")
     df_eq(b.compute(), [[0, 2], [0, 2], [1, 1]], "a:int,b:int")
     df_eq(b.compute(NativeExecutionEngine), [[0, 2], [0, 2], [1, 1]], "a:int,b:int")
+
+
+def test_yield(tmpdir):
+    df = pd.DataFrame([[0, 0]], columns=["a", "b"])
+
+    # schema: *
+    def t(df: pd.DataFrame) -> pd.DataFrame:
+        return df.assign(b=df.b + 1)
+
+    dag = FugueWorkflow()
+    dag.df(df).transform(t).yield_dataframe_as("x")
+    result = dag.run()["x"]
+    assert [[0, 1]] == result.as_array()
+
+    dag1 = FugueWorkflow()
+    dag1.df(df).transform(t).yield_file_as("x")
+    dag1.run("", {FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)})
+
+    dag2 = FugueWorkflow()
+    dag2.df(dag1.yields["x"]).transform(t).yield_dataframe_as("y")
+    result = dag2.run("", {FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)})["y"]
+    assert [[0, 2]] == result.as_array()
 
 
 class MockCache(WorkflowResultCache):
