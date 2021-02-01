@@ -304,20 +304,21 @@ def test_persist_checkpoint_broadcast():
 
 def test_yield():
     dag = FugueWorkflow()
-    dag.create(mock_create1).yield_as("a")
-    dag.create(mock_create1).yield_as("aa")
-    dag.create(mock_create1).deterministic_checkpoint().yield_as("c")
-    dag.create(mock_create1).deterministic_checkpoint().yield_as("bb")
-    dag.create(mock_create1).deterministic_checkpoint().yield_as("cc")
+    dag.create(mock_create1).yield_dataframe_as("a")
+    dag.create(mock_create1).yield_file_as("aa")
+    dag.create(mock_create1).deterministic_checkpoint().yield_dataframe_as("c")
+    dag.create(mock_create1).deterministic_checkpoint().yield_file_as("bb")
+    dag.create(mock_create1).deterministic_checkpoint().yield_file_as("cc")
 
     assert_eq(
         """
-    a=create using mock_create1 yield
-    create using mock_create1 yield as aa
-    c=create using mock_create1 deterministic checkpoint yield
-    d=create using mock_create1 deterministic checkpoint yield as bb
-    create using mock_create1 deterministic checkpoint yield as cc
+    a=create using mock_create1 yield dataframe
+    create using mock_create1 yield file as aa
+    c=create using mock_create1 deterministic checkpoint yield dataframe
+    d=create using mock_create1 deterministic checkpoint yield file as bb
+    create using mock_create1 deterministic checkpoint yield file as cc
     """,
+    
         dag,
     )
 

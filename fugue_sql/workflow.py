@@ -47,7 +47,6 @@ class FugueSQLWorkflow(FugueWorkflow):
         for k, v in variables.items():
             if isinstance(v, WorkflowDataFrame) and v.workflow is self:
                 self._sql_vars[k] = v
-                self._output[k] = v
 
     def _sql(
         self, code: str, *args: Any, **kwargs: Any
@@ -88,8 +87,5 @@ class FugueSQLWorkflow(FugueWorkflow):
 def fsql(sql: str, *args: Any, **kwargs: Any) -> FugueSQLWorkflow:
     global_vars, local_vars = get_caller_global_local_vars()
     dag = FugueSQLWorkflow()
-    result = dag._sql(sql, global_vars, local_vars, *args, **kwargs)
-    for k, v in result.items():
-        if isinstance(v, WorkflowDataFrame) and v.workflow is dag:
-            v.output_as(k)
+    dag._sql(sql, global_vars, local_vars, *args, **kwargs)
     return dag

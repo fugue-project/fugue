@@ -256,43 +256,31 @@ class _VisitorBase(FugueSQLVisitor):
     def visitFugueCheckpointDeterministic(
         self, ctx: fp.FugueCheckpointDeterministicContext
     ) -> Any:
-        def _func(
-            name: str, x: WorkflowDataFrame, should_yield: bool, yield_name: Any
-        ) -> WorkflowDataFrame:
+        def _func(name: str, x: WorkflowDataFrame) -> WorkflowDataFrame:
+            data = self.get_dict(ctx, "ns", "partition", "single", "params")
+
             x.deterministic_checkpoint(
-                lazy=lazy,
+                lazy=ctx.LAZY() is not None,
                 partition=data.get("partition"),
                 single="single" in data,
                 namespace=data.get("ns"),
                 **data.get("params", {}),
             )
-            if not should_yield:
-                return x
-            yield_name = self.ctxToStr(yield_name) if yield_name is not None else name
-            assert_or_throw(yield_name is not None, "yield name is not specified")
-            x.yield_as(yield_name)
             return x
 
-        lazy = ctx.LAZY() is not None
-        data = self.get_dict(ctx, "ns", "partition", "single", "params")
-        if ctx.fugueYield() is not None:
-            should_yield = True
-            yield_name: Any = ctx.fugueYield().name
-        else:
-            should_yield = False
-            yield_name = None
-        return lambda name, x: _func(name, x, should_yield, yield_name)
+        return _func
 
-    def visitFugueCheckpointYield(self, ctx: fp.FugueCheckpointYieldContext) -> Any:
-        def _func(
-            name: str, x: WorkflowDataFrame, yield_name: Any
-        ) -> WorkflowDataFrame:
-            yield_name = self.ctxToStr(yield_name) if yield_name is not None else name
+    def visitFugueYield(self, ctx: fp.FugueYieldContext) -> Any:
+        def _func(name: str, x: WorkflowDataFrame) -> WorkflowDataFrame:
+            yield_name = self.ctxToStr(ctx.name) if ctx.name is not None else name
             assert_or_throw(yield_name is not None, "yield name is not specified")
-            x.yield_as(yield_name)
+            if ctx.DATAFRAME() is None:
+                x.yield_file_as(yield_name)
+            else:
+                x.yield_dataframe_as(yield_name)
             return x
 
-        return lambda name, x: _func(name, x, ctx.fugueYield().name)
+        return _func
 
     def visitFugueCheckpointNamespace(self, ctx: fp.FugueCheckpointNamespaceContext):
         return str(eval(self.ctxToStr(ctx)))
@@ -873,7 +861,7 @@ class _Extensions(_VisitorBase):
                 yield from self._get_query_elements(n)
 
     def _process_assignable(self, df: WorkflowDataFrame, ctx: Tree):
-        data = self.get_dict(ctx, "assign", "checkpoint", "broadcast")
+        data = self.get_dict(ctx, "assign", "checkpoint", "broadcast", "y")
         if "assign" in data:
             varname, _ = data["assign"]
         else:
@@ -882,6 +870,8 @@ class _Extensions(_VisitorBase):
             data["checkpoint"](varname, df)
         if "broadcast" in data:
             df = df.broadcast()
+        if "y" in data:
+            data["y"](varname, df)
         if varname is not None:
             self.variables[varname] = df  # type: ignore
         self._last = df

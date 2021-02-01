@@ -179,11 +179,6 @@ class fugue_sqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by fugue_sqlParser#fugueCheckpointYield.
-    def visitFugueCheckpointYield(self, ctx:fugue_sqlParser.FugueCheckpointYieldContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by fugue_sqlParser#fugueCheckpointNamespace.
     def visitFugueCheckpointNamespace(self, ctx:fugue_sqlParser.FugueCheckpointNamespaceContext):
         return self.visitChildren(ctx)
