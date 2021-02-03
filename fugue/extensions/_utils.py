@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict
 
 from fugue._utils.interfaceless import parse_comment_annotation
-from fugue.collections.partition import PartitionSpec, _parse_presort_exp
+from fugue.collections.partition import PartitionSpec, parse_presort_exp
 from fugue.exceptions import (
     FugueWorkflowCompileValidationError,
     FugueWorkflowRuntimeValidationError,
@@ -36,7 +36,7 @@ def to_validation_rules(data: Dict[str, Any]) -> Dict[str, Any]:
                 v = [x.strip() for x in v.split(",")]
             res[k] = PartitionSpec(by=v).partition_by
         elif k in ["presort_has", "presort_is"]:
-            res[k] = list(_parse_presort_exp(v).items())
+            res[k] = list(parse_presort_exp(v).items())
         elif k in ["input_has"]:
             if isinstance(v, str):
                 res[k] = v.replace(" ", "").split(",")
