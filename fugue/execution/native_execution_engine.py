@@ -61,7 +61,6 @@ class NativeExecutionEngine(ExecutionEngine):
         super().__init__(conf)
         self._fs = FileSystem()
         self._log = logging.getLogger()
-        self._default_sql_engine = SqliteEngine(self)
 
     def __repr__(self) -> str:
         return "NativeExecutionEngine"
@@ -76,7 +75,7 @@ class NativeExecutionEngine(ExecutionEngine):
 
     @property
     def default_sql_engine(self) -> SQLEngine:
-        return self._default_sql_engine
+        return SqliteEngine(self)
 
     @property
     def pl_utils(self) -> PandasUtils:

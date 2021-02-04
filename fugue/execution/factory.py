@@ -11,9 +11,7 @@ class _ExecutionEngineFactory(object):
         self._funcs: Dict[str, Callable] = {}
         self._sql_funcs: Dict[str, Callable] = {}
         self.register_default(lambda conf, **kwargs: NativeExecutionEngine(conf=conf))
-        self.register_default_sql_engine(
-            lambda engine, **kwargs: engine.default_sql_engine
-        )
+        self.register_default_sql_engine(lambda engine, **kwargs: engine.sql_engine)
 
     def register(self, name: str, func: Callable, on_dup="overwrite") -> None:
         self._register(self._funcs, name=name, func=func, on_dup=on_dup)
@@ -36,6 +34,11 @@ class _ExecutionEngineFactory(object):
             engine = ""
         if isinstance(engine, str) and engine in self._funcs:
             return self._funcs[engine](conf, **kwargs)
+        if isinstance(engine, tuple):
+            execution_engine = self.make(engine[0], conf=conf, **kwargs)
+            sql_engine = self.make_sql_engine(engine[1], execution_engine)
+            execution_engine.set_sql_engine(sql_engine)
+            return execution_engine
         if isinstance(engine, ExecutionEngine):
             assert_or_throw(
                 conf is None and len(kwargs) == 0,

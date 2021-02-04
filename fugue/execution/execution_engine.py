@@ -84,6 +84,7 @@ class ExecutionEngine(ABC):
         self._rpc_server = make_rpc_server(self.conf)
         self._engine_start_lock = RLock()
         self._engine_start = 0
+        self._sql_engine: Optional[SQLEngine] = None
 
     def start(self) -> None:
         """Start this execution engine, do not override.
@@ -133,7 +134,26 @@ class ExecutionEngine(ABC):
 
     @property
     def rpc_server(self) -> RPCServer:
+        """:class:`~fugue.rpc.base.RPCServer` of this execution engine"""
         return self._rpc_server
+
+    @property
+    def sql_engine(self) -> SQLEngine:
+        """The :class:`~.SQLEngine` currently used by this execution engine.
+        You should use :meth:`~.set_sql_engine` to set a new SQLEngine
+        instance. If not set, the default is :meth:`~.default_sql_engine`
+        """
+        if self._sql_engine is None:
+            self._sql_engine = self.default_sql_engine
+        return self._sql_engine
+
+    def set_sql_engine(self, engine: SQLEngine) -> None:
+        """Set :class:`~.SQLEngine` for this execution engine.
+        If not set, the default is :meth:`~.default_sql_engine`
+
+        :param engine: :class:`~.SQLEngine` instance
+        """
+        self._sql_engine = engine
 
     @property
     @abstractmethod

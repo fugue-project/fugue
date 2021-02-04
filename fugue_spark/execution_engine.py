@@ -107,7 +107,6 @@ class SparkExecutionEngine(ExecutionEngine):
         super().__init__(cf)
         self._fs = FileSystem()
         self._log = logging.getLogger()
-        self._default_sql_engine = SparkSQLEngine(self)
         self._broadcast_func = RunOnce(
             self._broadcast, lambda *args, **kwargs: id(args[0])
         )
@@ -141,7 +140,7 @@ class SparkExecutionEngine(ExecutionEngine):
 
     @property
     def default_sql_engine(self) -> SQLEngine:
-        return self._default_sql_engine
+        return SparkSQLEngine(self)
 
     def to_df(
         self, df: Any, schema: Any = None, metadata: Any = None
