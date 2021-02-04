@@ -40,6 +40,10 @@ class QPDDaskEngine(SQLEngine):
     """
 
     def __init__(self, execution_engine: ExecutionEngine):
+        assert_or_throw(
+            isinstance(execution_engine, DaskExecutionEngine),
+            f"{self} must be used with DaskExecutionEngine",
+        )
         super().__init__(execution_engine)
 
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:
@@ -71,7 +75,6 @@ class DaskExecutionEngine(ExecutionEngine):
         super().__init__(p)
         self._fs = FileSystem()
         self._log = logging.getLogger()
-        self._default_sql_engine = QPDDaskEngine(self)
 
     def __repr__(self) -> str:
         return "DaskExecutionEngine"
@@ -86,7 +89,7 @@ class DaskExecutionEngine(ExecutionEngine):
 
     @property
     def default_sql_engine(self) -> SQLEngine:
-        return self._default_sql_engine
+        return QPDDaskEngine(self)
 
     @property
     def pl_utils(self) -> DaskUtils:

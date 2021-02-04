@@ -1,19 +1,22 @@
 import copy
 import os
+import pickle
 from datetime import datetime
 from unittest import TestCase
 
 import pandas as pd
 import pytest
-from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import ArrayDataFrame
-from fugue.dataframe.pandas_dataframe import PandasDataFrame
+from fugue import (
+    ArrayDataFrame,
+    DataFrames,
+    ExecutionEngine,
+    PandasDataFrame,
+    PartitionSpec,
+    register_default_sql_engine,
+)
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.execution.execution_engine import ExecutionEngine
 from pytest import raises
 from triad.exceptions import InvalidOperationError
-from fugue.dataframe.dataframes import DataFrames
-import pickle
 
 
 class ExecutionEngineTests(object):
@@ -25,6 +28,7 @@ class ExecutionEngineTests(object):
     class Tests(TestCase):
         @classmethod
         def setUpClass(cls):
+            register_default_sql_engine(lambda engine: engine.sql_engine)
             cls._engine = cls.make_engine(cls)
 
         @property

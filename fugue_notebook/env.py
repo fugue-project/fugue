@@ -7,19 +7,70 @@ import pandas as pd
 from fugue import (
     ExecutionEngine,
     NativeExecutionEngine,
-    Yielded,
     make_execution_engine,
     register_execution_engine,
 )
+from fugue.dataframe import YieldedDataFrame
 from fugue.extensions._builtins.outputters import Show
-from IPython.core.magic import Magics, cell_magic, magics_class
+from IPython.core.magic import Magics, cell_magic, magics_class, needs_local_scope
 from IPython.display import HTML, display
 from triad import ParamDict, Schema
-from triad.utils.convert import get_caller_global_local_vars, to_instance
+from triad.utils.convert import to_instance
+
+
+class NotebookSetup(object):
+    """Jupyter notebook environment customization template."""
+
+    def get_pre_conf(self) -> Dict[str, Any]:
+        """The default config for all registered execution engine"""
+        return {}
+
+    def get_post_conf(self) -> Dict[str, Any]:
+        """The enforced config for all registered execution engine.
+        Users should not set these configs manually, if they set, the values
+        must match this dict, otherwise, exceptions will be thrown
+        """
+        return {}
+
+    def get_pretty_print(self) -> Callable:
+        """Fugue dataframe pretty print handler"""
+        return _default_pretty_print
+
+    def register_execution_engines(self):
+        """Register execution engines with names. This will also try to register
+        spark and dask engines if the dependent packages are available and they
+        are not registered"""
+        register_execution_engine(
+            "native",
+            lambda conf, **kwargs: NativeExecutionEngine(conf=conf),
+            on_dup="ignore",
+        )
+        try:
+            import pyspark  # noqa: F401
+            from fugue_spark import SparkExecutionEngine
+
+            register_execution_engine(
+                "spark",
+                lambda conf, **kwargs: SparkExecutionEngine(conf=conf),
+                on_dup="ignore",
+            )
+        except ImportError:
+            pass
+        try:
+            import dask.dataframe  # noqa: F401
+            from fugue_dask import DaskExecutionEngine
+
+            register_execution_engine(
+                "dask",
+                lambda conf, **kwargs: DaskExecutionEngine(conf=conf),
+                on_dup="ignore",
+            )
+        except ImportError:
+            pass
 
 
 @magics_class
-class FugueSQLMagics(Magics):
+class _FugueSQLMagics(Magics):
     """Fugue SQL Magics"""
 
     def __init__(self, shell, pre_conf, post_conf):
@@ -27,18 +78,17 @@ class FugueSQLMagics(Magics):
         super().__init__(shell)
         self._pre_conf = pre_conf
         self._post_conf = post_conf
-        self._yields: Dict[str, Yielded] = {}
 
+    @needs_local_scope
     @cell_magic("fsql")
-    def fsql(self, line: str, cell: str) -> None:
-        gc, lc = get_caller_global_local_vars(start=-2, end=-6)
-        gc.update(lc)
-        gc.update(self._yields)
-        if "__name__" in gc:
-            del gc["__name__"]
-        dag = fugue_sql.fsql(cell, gc)
-        dag.run(self.get_engine(line, gc))
-        self._yields.update(dag.yields)
+    def fsql(self, line: str, cell: str, local_ns: Any = None) -> None:
+        dag = fugue_sql.fsql(cell, local_ns)
+        dag.run(self.get_engine(line, {} if local_ns is None else local_ns))
+        for k, v in dag.yields.items():
+            if isinstance(v, YieldedDataFrame):
+                local_ns[k] = v.result  # type: ignore
+            else:
+                local_ns[k] = v  # type: ignore
 
     def get_engine(self, line: str, lc: Dict[str, Any]) -> ExecutionEngine:
         line = line.strip()
@@ -58,10 +108,12 @@ class FugueSQLMagics(Magics):
                     f"{k} must be {v}, but you set to {cf[k]}, you may unset it"
                 )
             cf[k] = v
+        if "+" in engine:
+            return make_execution_engine(tuple(engine.split("+", 1)), cf)
         return make_execution_engine(engine, cf)
 
 
-def default_pretty_print(
+def _default_pretty_print(
     schema: Schema,
     head_rows: List[List[Any]],
     title: Any,
@@ -79,43 +131,9 @@ def default_pretty_print(
     display(*components)
 
 
-class NotebookSetup(object):
-    def get_pre_conf(self) -> Dict[str, Any]:
-        return {}
-
-    def get_post_conf(self) -> Dict[str, Any]:
-        return {}
-
-    def get_pretty_print(self) -> Callable:
-        return default_pretty_print
-
-    def register_execution_engines(self):
-        register_execution_engine(
-            "native", lambda conf, **kwargs: NativeExecutionEngine(conf=conf)
-        )
-        try:
-            import pyspark  # noqa: F401
-            from fugue_spark import SparkExecutionEngine
-
-            register_execution_engine(
-                "spark", lambda conf, **kwargs: SparkExecutionEngine(conf=conf)
-            )
-        except ImportError:
-            pass
-        try:
-            import dask.dataframe  # noqa: F401
-            from fugue_dask import DaskExecutionEngine
-
-            register_execution_engine(
-                "dask", lambda conf, **kwargs: DaskExecutionEngine(conf=conf)
-            )
-        except ImportError:
-            pass
-
-
-def setup_fugue_notebook(ipython: Any, setup_obj: Any) -> None:
+def _setup_fugue_notebook(ipython: Any, setup_obj: Any) -> None:
     s = NotebookSetup() if setup_obj is None else to_instance(setup_obj, NotebookSetup)
-    magics = FugueSQLMagics(ipython, dict(s.get_pre_conf()), dict(s.get_post_conf()))
+    magics = _FugueSQLMagics(ipython, dict(s.get_pre_conf()), dict(s.get_post_conf()))
     ipython.register_magics(magics)
     s.register_execution_engines()
     Show.set_hook(s.get_pretty_print())

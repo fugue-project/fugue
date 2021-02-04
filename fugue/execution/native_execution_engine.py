@@ -23,10 +23,11 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
+from qpd_pandas import run_sql_on_pandas
 from qpd_pandas.engine import PandasUtils
 from sqlalchemy import create_engine
 from triad.collections import Schema
-from triad.collections.dict import ParamDict, IndexedOrderedDict
+from triad.collections.dict import IndexedOrderedDict, ParamDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 
@@ -48,6 +49,24 @@ class SqliteEngine(SQLEngine):
         return PandasDataFrame(df)
 
 
+class QPDPandasEngine(SQLEngine):
+    """QPD execution implementation.
+
+    :param execution_engine: the execution engine this sql engine will run on
+    """
+
+    def __init__(self, execution_engine: ExecutionEngine):
+        super().__init__(execution_engine)
+
+    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
+        _dfs = {
+            k: self.execution_engine.to_df(v).as_pandas()  # type: ignore
+            for k, v in dfs.items()
+        }
+        df = run_sql_on_pandas(statement, _dfs)
+        return self.execution_engine.to_df(df)
+
+
 class NativeExecutionEngine(ExecutionEngine):
     """The execution engine based on native python and pandas. This execution engine
     is mainly for prototyping and unit tests.
@@ -61,7 +80,6 @@ class NativeExecutionEngine(ExecutionEngine):
         super().__init__(conf)
         self._fs = FileSystem()
         self._log = logging.getLogger()
-        self._default_sql_engine = SqliteEngine(self)
 
     def __repr__(self) -> str:
         return "NativeExecutionEngine"
@@ -76,7 +94,7 @@ class NativeExecutionEngine(ExecutionEngine):
 
     @property
     def default_sql_engine(self) -> SQLEngine:
-        return self._default_sql_engine
+        return QPDPandasEngine(self)
 
     @property
     def pl_utils(self) -> PandasUtils:
