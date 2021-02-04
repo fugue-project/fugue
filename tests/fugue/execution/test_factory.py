@@ -96,6 +96,27 @@ def test_sql_engine():
     assert isinstance(e, _MockExecutionEngine)
     assert isinstance(e.sql_engine, _MockSQlEngine)
 
+    # SQL Engine override
+    e = f.make(NativeExecutionEngine)
+    assert type(e) == NativeExecutionEngine
+    assert isinstance(e.sql_engine, _MockSQlEngine)
+
+    # conditional override
+    def to_sql_engine(engine):
+        if isinstance(engine, _MockExecutionEngine):
+            return _MockSQlEngine(engine)
+        else:
+            return engine.sql_engine
+
+    f.register_default_sql_engine(to_sql_engine)
+    e = f.make(NativeExecutionEngine)
+    assert type(e) == NativeExecutionEngine
+    assert type(e.sql_engine) != _MockSQlEngine
+
+    e = f.make(_MockExecutionEngine)
+    assert type(e) == _MockExecutionEngine
+    assert type(e.sql_engine) == _MockSQlEngine
+
 
 def test_global_funcs():
     assert isinstance(make_execution_engine(), NativeExecutionEngine)
