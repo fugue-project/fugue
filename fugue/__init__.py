@@ -16,8 +16,11 @@ from fugue.dataframe.utils import to_local_bounded_df, to_local_df
 from fugue.execution.execution_engine import ExecutionEngine, SQLEngine
 from fugue.execution.factory import (
     make_execution_engine,
+    make_sql_engine,
     register_default_execution_engine,
+    register_default_sql_engine,
     register_execution_engine,
+    register_sql_engine,
 )
 from fugue.execution.native_execution_engine import NativeExecutionEngine, SqliteEngine
 from fugue.extensions.creator import Creator, creator

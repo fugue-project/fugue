@@ -4,8 +4,11 @@ from fugue import (
     NativeExecutionEngine,
     SqliteEngine,
     make_execution_engine,
+    make_sql_engine,
     register_default_execution_engine,
+    register_default_sql_engine,
     register_execution_engine,
+    register_sql_engine,
 )
 from fugue.execution.factory import _ExecutionEngineFactory
 from pytest import raises
@@ -108,3 +111,13 @@ def test_global_funcs():
         lambda conf, **kwargs: _MockExecutionEngine(conf, **kwargs), on_dup="overwrite"
     )
     assert isinstance(make_execution_engine(), _MockExecutionEngine)
+
+    se = SqliteEngine(make_execution_engine)
+    assert make_sql_engine(se) is se
+    assert isinstance(make_sql_engine(None, make_execution_engine()), SqliteEngine)
+    register_sql_engine("x", lambda engine: _MockSQlEngine(engine))
+    assert isinstance(make_sql_engine("x", make_execution_engine()), _MockSQlEngine)
+    register_default_sql_engine(lambda engine: _MockSQlEngine(engine))
+    e = make_execution_engine()
+    assert isinstance(e, _MockExecutionEngine)
+    assert isinstance(e.sql_engine, _MockSQlEngine)
