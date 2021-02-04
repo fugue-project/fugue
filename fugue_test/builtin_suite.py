@@ -3,14 +3,37 @@ import os
 import pickle
 from typing import Any, Callable, Dict, Iterable, List, Optional
 from unittest import TestCase
+from uuid import uuid4
 
 import numpy as np
 import pandas as pd
 import pytest
-from fugue import FileSystem, Schema
-from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
-from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue import (
+    ArrayDataFrame,
+    CoTransformer,
+    DataFrame,
+    DataFrames,
+    ExecutionEngine,
+    FileSystem,
+    FugueWorkflow,
+    LocalDataFrame,
+    OutputCoTransformer,
+    Outputter,
+    OutputTransformer,
+    PandasDataFrame,
+    PartitionSpec,
+    Processor,
+    Schema,
+    SqliteEngine,
+    Transformer,
+    cotransformer,
+    output_cotransformer,
+    output_transformer,
+    outputter,
+    processor,
+    transformer,
+    register_default_sql_engine,
+)
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import (
     FugueInterfacelessError,
@@ -19,23 +42,7 @@ from fugue.exceptions import (
     FugueWorkflowError,
     FugueWorkflowRuntimeValidationError,
 )
-from fugue.execution import ExecutionEngine
-from fugue.execution.native_execution_engine import SqliteEngine
-from fugue.extensions.outputter import Outputter, outputter
-from fugue.extensions.processor import Processor, processor
-from fugue.extensions.transformer import (
-    CoTransformer,
-    OutputCoTransformer,
-    OutputTransformer,
-    Transformer,
-    cotransformer,
-    output_cotransformer,
-    output_transformer,
-    transformer,
-)
-from fugue.workflow.workflow import FugueWorkflow
 from pytest import raises
-from uuid import uuid4
 
 
 class BuiltInTests(object):
@@ -51,6 +58,7 @@ class BuiltInTests(object):
     class Tests(TestCase):
         @classmethod
         def setUpClass(cls):
+            register_default_sql_engine(lambda engine: engine.default_sql_engine)
             cls._engine = cls.make_engine(cls)
 
         @property

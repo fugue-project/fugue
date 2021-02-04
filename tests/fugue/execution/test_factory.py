@@ -21,8 +21,9 @@ class _MockExecutionEngine(NativeExecutionEngine):
 
 
 class _MockSQlEngine(SqliteEngine):
-    def __init__(self, execution_engine):
+    def __init__(self, execution_engine, other: int = 1):
         super().__init__(execution_engine)
+        self.other = other
 
 
 def test_execution_engine():
@@ -82,10 +83,12 @@ def test_sql_engine():
     assert isinstance(f.make_sql_engine(_MockSQlEngine, f.make()), _MockSQlEngine)
 
     f.register("a", lambda conf: _MockExecutionEngine(conf))
-    f.register_sql_engine("aq", lambda engine: _MockSQlEngine(engine))
+    f.register_sql_engine("aq", lambda engine: _MockSQlEngine(engine, other=11))
     e = f.make(("a", "aq"))
     assert isinstance(e, _MockExecutionEngine)
     assert isinstance(e.sql_engine, _MockSQlEngine)
+    assert 0 == e.other
+    assert 11 == e.sql_engine.other
 
     f.register_default(lambda conf: _MockExecutionEngine(conf))
     e = f.make()
@@ -138,7 +141,8 @@ def test_global_funcs():
     assert isinstance(make_sql_engine(None, make_execution_engine()), SqliteEngine)
     register_sql_engine("x", lambda engine: _MockSQlEngine(engine))
     assert isinstance(make_sql_engine("x", make_execution_engine()), _MockSQlEngine)
-    register_default_sql_engine(lambda engine: _MockSQlEngine(engine))
+    register_default_sql_engine(lambda engine: _MockSQlEngine(engine, other=10))
     e = make_execution_engine()
     assert isinstance(e, _MockExecutionEngine)
     assert isinstance(e.sql_engine, _MockSQlEngine)
+    assert 10 == e.sql_engine.other
