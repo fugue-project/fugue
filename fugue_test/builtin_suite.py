@@ -58,7 +58,7 @@ class BuiltInTests(object):
     class Tests(TestCase):
         @classmethod
         def setUpClass(cls):
-            register_default_sql_engine(lambda engine: engine.default_sql_engine)
+            register_default_sql_engine(lambda engine: engine.sql_engine)
             cls._engine = cls.make_engine(cls)
 
         @property

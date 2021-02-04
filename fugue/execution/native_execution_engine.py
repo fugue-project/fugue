@@ -60,7 +60,7 @@ class QPDPandasEngine(SQLEngine):
 
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:
         _dfs = {
-            k: self.execution_engine.to_df(v).native  # type: ignore
+            k: self.execution_engine.to_df(v).as_pandas()  # type: ignore
             for k, v in dfs.items()
         }
         df = run_sql_on_pandas(statement, _dfs)

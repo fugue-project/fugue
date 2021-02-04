@@ -22,7 +22,11 @@ from fugue.execution.factory import (
     register_execution_engine,
     register_sql_engine,
 )
-from fugue.execution.native_execution_engine import NativeExecutionEngine, SqliteEngine
+from fugue.execution.native_execution_engine import (
+    NativeExecutionEngine,
+    QPDPandasEngine,
+    SqliteEngine,
+)
 from fugue.extensions.creator import Creator, creator
 from fugue.extensions.outputter import Outputter, outputter
 from fugue.extensions.processor import Processor, processor

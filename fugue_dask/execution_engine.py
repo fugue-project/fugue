@@ -40,6 +40,10 @@ class QPDDaskEngine(SQLEngine):
     """
 
     def __init__(self, execution_engine: ExecutionEngine):
+        assert_or_throw(
+            isinstance(execution_engine, DaskExecutionEngine),
+            f"{self} must be used with DaskExecutionEngine",
+        )
         super().__init__(execution_engine)
 
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:
