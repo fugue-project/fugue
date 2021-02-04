@@ -234,6 +234,7 @@ def register_default_sql_engine(func: Callable, on_dup="overwrite") -> None:
     :raises KeyError: if ``on_dup`` is ``throw`` and the ``name`` already exists
 
     :Notice:
+
     You should be careful to use this function, because when you set a custom
     SQL engine as default, all execution engines you create will use this SQL
     engine unless you are explicit. For example if you set the default SQL engine

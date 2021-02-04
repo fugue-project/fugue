@@ -5,7 +5,7 @@ from fugue_version import __version__
 from IPython import get_ipython
 from IPython.display import Javascript
 
-from fugue_notebook.env import NotebookSetup, setup_fugue_notebook
+from fugue_notebook.env import NotebookSetup, _setup_fugue_notebook
 
 _HIGHLIGHT_JS = r"""
 require(["codemirror/lib/codemirror"]);
@@ -43,7 +43,7 @@ require(['notebook/js/codecell'], function(codecell) {
 
 def load_ipython_extension(ip: Any) -> None:
     """Entrypoint for IPython %load_ext"""
-    setup_fugue_notebook(ip, None)
+    _setup_fugue_notebook(ip, None)
 
 
 def _jupyter_nbextension_paths():
@@ -61,7 +61,10 @@ def _jupyter_nbextension_paths():
 def setup(notebook_setup: Any = None) -> Any:
     """Setup the notebook environment inside notebook without
     installing the jupyter extension or loading ipython extension
+
+    :param notebook_setup: ``None`` or an instance of
+      :class:`~.fugue_notebook.env.NotebookSetup`, defaults to None
     """
     ip = get_ipython()
-    setup_fugue_notebook(ip, notebook_setup)
+    _setup_fugue_notebook(ip, notebook_setup)
     return Javascript(_HIGHLIGHT_JS)
