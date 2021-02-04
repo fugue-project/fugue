@@ -30,15 +30,23 @@ class _ExecutionEngineFactory(object):
     def make(
         self, engine: Any = None, conf: Any = None, **kwargs: Any
     ) -> ExecutionEngine:
+        if isinstance(engine, tuple):
+            execution_engine = self.make_execution_engine(
+                engine[0], conf=conf, **kwargs
+            )
+            sql_engine = self.make_sql_engine(engine[1], execution_engine)
+            execution_engine.set_sql_engine(sql_engine)
+            return execution_engine
+        else:
+            return self.make((engine, None), conf=conf, **kwargs)
+
+    def make_execution_engine(
+        self, engine: Any = None, conf: Any = None, **kwargs: Any
+    ) -> ExecutionEngine:
         if engine is None:
             engine = ""
         if isinstance(engine, str) and engine in self._funcs:
             return self._funcs[engine](conf, **kwargs)
-        if isinstance(engine, tuple):
-            execution_engine = self.make(engine[0], conf=conf, **kwargs)
-            sql_engine = self.make_sql_engine(engine[1], execution_engine)
-            execution_engine.set_sql_engine(sql_engine)
-            return execution_engine
         if isinstance(engine, ExecutionEngine):
             assert_or_throw(
                 conf is None and len(kwargs) == 0,
@@ -101,6 +109,14 @@ def register_execution_engine(name: str, func: Callable, on_dup="overwrite") -> 
 
 def register_default_execution_engine(func: Callable, on_dup="overwrite") -> None:
     _EXECUTION_ENGINE_FACTORY.register_default(func, on_dup)
+
+
+def register_sql_engine(name: str, func: Callable, on_dup="overwrite") -> None:
+    _EXECUTION_ENGINE_FACTORY.register_sql_engine(name, func, on_dup)
+
+
+def register_default_sql_engine(func: Callable, on_dup="overwrite") -> None:
+    _EXECUTION_ENGINE_FACTORY.register_default_sql_engine(func, on_dup)
 
 
 def make_execution_engine(

@@ -2,6 +2,7 @@ from typing import Any
 
 from fugue import (
     NativeExecutionEngine,
+    SqliteEngine,
     make_execution_engine,
     register_default_execution_engine,
     register_execution_engine,
@@ -16,7 +17,12 @@ class _MockExecutionEngine(NativeExecutionEngine):
         self.other = other
 
 
-def test_factory():
+class _MockSQlEngine(SqliteEngine):
+    def __init__(self, execution_engine):
+        super().__init__(execution_engine)
+
+
+def test_execution_engine():
     f = _ExecutionEngineFactory()
     assert isinstance(f.make(), NativeExecutionEngine)
 
@@ -65,6 +71,27 @@ def test_factory():
     assert isinstance(c, _MockExecutionEngine)
     assert 3 == c.conf.get_or_throw("a", int)
     assert 4 == c.other
+
+
+def test_sql_engine():
+    f = _ExecutionEngineFactory()
+    assert isinstance(f.make_sql_engine(None, f.make()), SqliteEngine)
+    assert isinstance(f.make_sql_engine(_MockSQlEngine, f.make()), _MockSQlEngine)
+
+    f.register("a", lambda conf: _MockExecutionEngine(conf))
+    f.register_sql_engine("aq", lambda engine: _MockSQlEngine(engine))
+    e = f.make(("a", "aq"))
+    assert isinstance(e, _MockExecutionEngine)
+    assert isinstance(e.sql_engine, _MockSQlEngine)
+
+    f.register_default(lambda conf: _MockExecutionEngine(conf))
+    e = f.make()
+    assert isinstance(e, _MockExecutionEngine)
+    assert isinstance(e.sql_engine, SqliteEngine)
+    f.register_default_sql_engine(lambda engine: _MockSQlEngine(engine))
+    e = f.make()
+    assert isinstance(e, _MockExecutionEngine)
+    assert isinstance(e.sql_engine, _MockSQlEngine)
 
 
 def test_global_funcs():
