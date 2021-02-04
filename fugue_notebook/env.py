@@ -57,6 +57,8 @@ class FugueSQLMagics(Magics):
                     f"{k} must be {v}, but you set to {cf[k]}, you may unset it"
                 )
             cf[k] = v
+        if "+" in engine:
+            return make_execution_engine(tuple(engine.split("+", 1)), cf)
         return make_execution_engine(engine, cf)
 
 

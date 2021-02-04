@@ -94,7 +94,7 @@ class NativeExecutionEngine(ExecutionEngine):
 
     @property
     def default_sql_engine(self) -> SQLEngine:
-        return SqliteEngine(self)
+        return QPDPandasEngine(self)
 
     @property
     def pl_utils(self) -> PandasUtils:

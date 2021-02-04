@@ -13,3 +13,7 @@ from fugue.execution.native_execution_engine import (
     SqliteEngine,
     QPDPandasEngine,
 )
+
+register_sql_engine("sqlite", lambda engine: SqliteEngine(engine))
+register_sql_engine("qpdpandas", lambda engine: QPDPandasEngine(engine))
+register_sql_engine("qpd_pandas", lambda engine: QPDPandasEngine(engine))
