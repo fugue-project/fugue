@@ -1,10 +1,37 @@
 import json
 
-from fugue.collections.partition import PartitionSpec
+from fugue.collections.partition import parse_presort_exp, PartitionSpec
 from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
 from pytest import raises
 from triad.collections.schema import Schema
 from triad.utils.hash import to_uuid
+from triad.collections.dict import IndexedOrderedDict
+
+def test_parse_presort_exp():
+
+    assert parse_presort_exp(None) == IndexedOrderedDict()
+    assert parse_presort_exp(IndexedOrderedDict([('c', True)])) == IndexedOrderedDict([('c', True)])
+    assert parse_presort_exp("c") == IndexedOrderedDict([('c', True)])
+    assert parse_presort_exp("         c") == IndexedOrderedDict([('c', True)])
+    assert parse_presort_exp("c           desc")  == IndexedOrderedDict([('c', False)])
+    assert parse_presort_exp("b desc, c asc")  == IndexedOrderedDict([('b', False), ('c', True)])
+    assert parse_presort_exp("DESC DESC, ASC ASC") == IndexedOrderedDict([('DESC', False), ('ASC', True)])
+    assert parse_presort_exp([("b", False),("c", True)]) == IndexedOrderedDict([('b', False), ('c', True)])
+    assert parse_presort_exp("B DESC, C ASC")  == IndexedOrderedDict([('B', False), ('C', True)])
+    assert parse_presort_exp("b desc, c asc") == IndexedOrderedDict([('b', False), ('c', True)])
+    
+
+    with raises(SyntaxError):
+        parse_presort_exp("b dsc, c asc") # mispelling of desc
+
+    with raises(SyntaxError):
+        parse_presort_exp("c true") # string format needs desc/asc
+
+    with raises(SyntaxError):
+        parse_presort_exp("c true, c true") # cannot contain duplicates
+
+    with raises(SyntaxError):
+        parse_presort_exp([("b", "desc"),("c", "asc")]) # instead of desc and asc, needs to be bool
 
 
 def test_partition_spec():
