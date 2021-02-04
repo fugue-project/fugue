@@ -336,12 +336,14 @@ def make_sql_engine(
       instance
 
     :Notice:
+
     For users, you normally don't need to call this function directly.
     Use ``make_execution_engine`` instead
 
     :Example:
 
     .. code-block:: python
+
         register_default_sql_engine(lambda conf: S1(conf))
         register_sql_engine("s2", lambda conf: S2(conf))
 
