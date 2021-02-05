@@ -1,5 +1,18 @@
 # Release Notes
 
+## 0.5.1
+
+* Fugueless [1](https://github.com/fugue-project/fugue/issues/108) [2](https://github.com/fugue-project/fugue/issues/149) [3](https://github.com/fugue-project/fugue/issues/164) [4](https://github.com/fugue-project/fugue/issues/153) [5](https://github.com/fugue-project/fugue/issues/152)
+* Notebook experience and extension [1](https://github.com/fugue-project/fugue/issues/159) [2](https://github.com/fugue-project/fugue/issues/160)
+* NativeExecutionEngine: [switched](https://github.com/fugue-project/fugue/issues/171) to use QPD for SQL
+* Spark pandas udf: [migrate](https://github.com/fugue-project/fugue/issues/163) to applyInPandas and mapInPandas
+* SparkExecutionEngine [take bug](https://github.com/fugue-project/fugue/issues/166)
+* Fugue SQL: [PRINT](https://github.com/fugue-project/fugue/issues/154) ROWS n -> PRINT n ROWS|ROW
+* Refactor [yield](https://github.com/fugue-project/fugue/issues/168)
+* Fixed Jinja templating [issue](https://github.com/fugue-project/fugue/issues/134)
+* Change [_parse_presort_exp](https://github.com/fugue-project/fugue/issues/135) from a private function to public
+* Failure to delete execution temp directory is annoying was changed to [info](https://github.com/fugue-project/fugue/issues/162)
+
 ## 0.5.0
 
 * [Limit and Limit by Partition](https://github.com/fugue-project/fugue/issues/128)
