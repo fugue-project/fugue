@@ -1,4 +1,4 @@
-# Fugue
+# <img src="./images/logo.svg" width="200">
 
 [![GitHub release](https://img.shields.io/github/release/fugue-project/fugue.svg)](https://GitHub.com/fugue-project/fugue)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/fugue.svg)](https://pypi.python.org/pypi/fugue/)
