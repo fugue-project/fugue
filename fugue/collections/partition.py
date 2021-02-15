@@ -9,7 +9,24 @@ from triad.utils.pyarrow import SchemaedDataPartitioner
 from triad.utils.hash import to_uuid
 
 
-def _parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa: C901
+def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C901]
+    """Returns ordered column sorting direction where ascending order
+    would return as true, and descending as false.
+
+    :param presort: string that contains column and sorting direction or
+        list of tuple that contains column and boolean sorting direction
+    :type presort: Any
+
+    :return: column and boolean sorting direction of column, order matters.
+    :rtype: IndexedOrderedDict[str, bool]
+
+    :Example:
+
+    >>> parse_presort_exp("b desc, c asc")
+    >>> parse_presort_exp([("b", True), ("c", False))])
+    both return IndexedOrderedDict([("b", True), ("c", False))])
+    """
+
     if isinstance(presort, IndexedOrderedDict):
         return presort
 
@@ -109,7 +126,7 @@ class PartitionSpec(object):
             len(self._partition_by) == len(set(self._partition_by)),
             SyntaxError(f"{self._partition_by} has duplicated keys"),
         )
-        self._presort = _parse_presort_exp(p.get_or_none("presort", object))
+        self._presort = parse_presort_exp(p.get_or_none("presort", object))
         if any(x in self._presort for x in self._partition_by):
             raise SyntaxError(
                 "partition by overlap with presort: "

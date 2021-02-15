@@ -155,6 +155,54 @@ For example a common use case is:
 pip install fugue[sql,spark]
 ```
 
+## Jupyter Notebook Extension (since 0.5.1)
+
+```bash
+pip install fugue
+jupyter nbextension install --py fugue_notebook
+jupyter nbextension enable fugue_notebook --py
+```
+
+After installing the Jupyter extension, you can have `%%fsql` magic cells, where
+the Fugue SQL inside the cell will be highlighted.
+
+We are also able to run this fsql magic cell if you load the ipython extension,
+here is an example:
+
+In cell 1
+
+```
+%load_ext fugue_notebook
+```
+
+In cell 2
+
+```
+%%fsql
+CREATE [[0]] SCHEMA a:int
+PRINT
+```
+
+In cell 3 where you want to use dask
+
+```
+%%fsql dask
+CREATE [[0]] SCHEMA a:int
+PRINT
+```
+
+Note that you can automatically load `fugue_notebook` ipthon extension at startup,
+read [this](https://ipython.readthedocs.io/en/stable/config/extensions/#using-extensions) to configure your jupyter environment.
+
+There is an ad-hoc way to setup your notebook environment, you don't need to install anything or change the startup script.
+You only need to do the following at the first cell of each of your notebook, and you will get highlights and `%%fsql` cells become runnable too:
+
+
+```python
+from fugue_notebook import setup
+setup()
+```
+
 ## Contributing
 
 Feel free to message us on [Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ). We also have [contributing instructions](CONTRIBUTING.md).

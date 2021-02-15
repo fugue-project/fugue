@@ -56,6 +56,7 @@ package:
 	python3 setup.py bdist_wheel
 
 jupyter:
+	mkdir -p tmp
 	pip install .
 	jupyter nbextension install --py fugue_notebook
 	jupyter nbextension enable fugue_notebook --py
