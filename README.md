@@ -7,7 +7,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/fugue-project/fugue/badge.svg)](https://coveralls.io/github/fugue-project/fugue)
 [![Doc](https://readthedocs.org/projects/fugue/badge)](https://fugue.readthedocs.org)
 
-[Have questions? Chat with us on Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ)
+[![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ)
 
 Fugue is a pure abstraction layer that makes code portable across differing computing frameworks such as Pandas, Spark and Dask.
 
