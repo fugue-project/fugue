@@ -13,14 +13,14 @@ from typing import (
 import pyarrow as pa
 from antlr4.Token import CommonToken
 from antlr4.tree.Tree import TerminalNode, Token, Tree
-from fugue.collections.partition import PartitionSpec
-from fugue.execution import SQLEngine
+from fugue import PartitionSpec
+from fugue import SQLEngine
 from fugue.extensions.creator.convert import _to_creator
 from fugue.extensions.outputter.convert import _to_outputter
 from fugue.extensions.processor.convert import _to_processor
 from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
 from fugue.workflow.module import _to_module
-from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
+from fugue import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 from triad import to_uuid
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
@@ -696,14 +696,17 @@ class _Extensions(_VisitorBase):
 
     def visitFugueSqlEngine(
         self, ctx: fp.FugueSqlEngineContext
-    ) -> Tuple[Type[SQLEngine], Dict[str, Any]]:
+    ) -> Tuple[Any, Dict[str, Any]]:
         data = self.get_dict(ctx, "using", "params")
-        engine = to_type(
-            data["using"],
-            SQLEngine,
-            global_vars=self.global_vars,
-            local_vars=self.local_vars,
-        )
+        try:
+            engine: Any = to_type(
+                data["using"],
+                SQLEngine,
+                global_vars=self.global_vars,
+                local_vars=self.local_vars,
+            )
+        except TypeError:
+            engine = str(data["using"])
         return engine, data.get("params", {})
 
     def visitQuery(self, ctx: fp.QueryContext) -> Iterable[Any]:
