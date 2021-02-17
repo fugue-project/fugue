@@ -13,14 +13,14 @@ from typing import (
 import pyarrow as pa
 from antlr4.Token import CommonToken
 from antlr4.tree.Tree import TerminalNode, Token, Tree
-from fugue.collections.partition import PartitionSpec
-from fugue.execution import SQLEngine
+from fugue import PartitionSpec
+from fugue import SQLEngine
 from fugue.extensions.creator.convert import _to_creator
 from fugue.extensions.outputter.convert import _to_outputter
 from fugue.extensions.processor.convert import _to_processor
 from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
 from fugue.workflow.module import _to_module
-from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
+from fugue import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 from triad import to_uuid
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
@@ -406,15 +406,6 @@ class _Extensions(_VisitorBase):
         dfs = self.collectChildren(ctx, fp.FugueDataFramePairContext)
         return WorkflowDataFrames(dfs)
 
-    def visitFugueEngineSpecificQueryTask(
-        self, ctx: fp.FugueEngineSpecificQueryTaskContext
-    ) -> WorkflowDataFrame:
-        engine, engine_params = self.visitFugueSqlEngine(ctx.fugueSqlEngine())
-        query = self.ctxToStr(ctx.queryPrimary())
-        return self.workflow.select(
-            query, sql_engine=engine, sql_engine_params=engine_params
-        )
-
     def visitFugueTransformTask(
         self, ctx: fp.FugueTransformTaskContext
     ) -> WorkflowDataFrame:
@@ -705,30 +696,38 @@ class _Extensions(_VisitorBase):
 
     def visitFugueSqlEngine(
         self, ctx: fp.FugueSqlEngineContext
-    ) -> Tuple[Type[SQLEngine], Dict[str, Any]]:
+    ) -> Tuple[Any, Dict[str, Any]]:
         data = self.get_dict(ctx, "using", "params")
-        engine = to_type(
-            data["using"],
-            SQLEngine,
-            global_vars=self.global_vars,
-            local_vars=self.local_vars,
-        )
+        try:
+            engine: Any = to_type(
+                data["using"],
+                SQLEngine,
+                global_vars=self.global_vars,
+                local_vars=self.local_vars,
+            )
+        except TypeError:
+            engine = str(data["using"])
         return engine, data.get("params", {})
 
     def visitQuery(self, ctx: fp.QueryContext) -> Iterable[Any]:
-        if ctx.ctes() is None:
-            yield from self._get_query_elements(ctx)
-        else:
-            sql = " ".join(
+        def get_sql() -> str:
+            return " ".join(
                 [
-                    self.ctxToStr(ctx.ctes()),
+                    "" if ctx.ctes() is None else self.ctxToStr(ctx.ctes()),
                     self.ctxToStr(ctx.queryTerm()),
                     self.ctxToStr(ctx.queryOrganization()),
                 ]
+            ).strip()
+
+        if ctx.fugueSqlEngine() is not None:
+            engine, engine_params = self.visitFugueSqlEngine(ctx.fugueSqlEngine())
+            yield self.workflow.select(
+                get_sql(), sql_engine=engine, sql_engine_params=engine_params
             )
-            yield self.workflow.select(sql)
-        # if ctx.fugueSqlEngine() is not None:
-        #    engine, engine_params = self.visitFugueSqlEngine(ctx.fugueSqlEngine())
+        elif ctx.ctes() is None:
+            yield from self._get_query_elements(ctx)
+        else:
+            yield self.workflow.select(get_sql())
 
     def visitOptionalFromClause(
         self, ctx: fp.OptionalFromClauseContext

@@ -2,15 +2,18 @@ import json
 from typing import Any, Iterable, List
 
 from fugue import (
+    DataFrame,
+    DataFrames,
     FugueWorkflow,
+    LocalDataFrame,
+    OutputTransformer,
+    PartitionSpec,
     SqliteEngine,
     WorkflowDataFrame,
     WorkflowDataFrames,
     module,
+    register_sql_engine,
 )
-from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
-from fugue.extensions import OutputTransformer
 from fugue.extensions.transformer.convert import _to_output_transformer
 from pytest import raises
 from triad import to_uuid
@@ -318,7 +321,6 @@ def test_yield():
     d=create using mock_create1 deterministic checkpoint yield file as bb
     create using mock_create1 deterministic checkpoint yield file as cc
     """,
-    
         dag,
     )
 
@@ -420,23 +422,35 @@ def test_select_plus_engine():
             super().__init__(execution_engine)
             self.p = p
 
+    register_sql_engine("_mock", lambda e, **kwargs: MockEngine(e, **kwargs))
+
     dag = FugueWorkflow()
-    dag.select("select * from xyz", sql_engine=MockEngine)
-    dag.select("select * from xyz", sql_engine=MockEngine, sql_engine_params={"p": 2})
+    dag.select("select * from xyz", sql_engine=MockEngine).persist()
+    dag.select("select * from xyz", sql_engine="_mock", sql_engine_params={"p": 2})
+    dag.select("select * from xyz order by t limit 10", sql_engine=MockEngine)
+    dag.select(
+        "with a as ( select * from b ) select * from a order by t limit 10",
+        sql_engine=MockEngine,
+    )
 
-    temp = dag.select("select a , b from a", sql_engine=MockEngine)
-    temp.transform(mock_transformer2)
+    # temp = dag.select("select a , b from a", sql_engine=MockEngine)
+    # temp.transform(mock_transformer2)
 
-    temp = dag.select("select aa , bb from a", sql_engine=MockEngine)
-    dag.select("select aa + bb as t from", temp)
+    # temp = dag.select("select aa , bb from a", sql_engine=MockEngine)
+    # dag.select("select aa + bb as t from", temp)
     assert_eq(
         """
-    connect MockEngine select * from xyz
-    connect MockEngine(p=2) select * from xyz
+    connect MockEngine select * from xyz persist
+    connect _mock(p=2) select * from xyz
+    connect MockEngine select * from xyz order by t limit 10
 
-    transform (connect MockEngine select a,b from a) using mock_transformer2
+    connect MockEngine with a as (select * from b) select * from a order by t limit 10
 
-    select aa+bb as t from (connect MockEngine select aa,bb from a)
+    # This is not supported
+    # transform (connect MockEngine select a,b from a) using mock_transformer2
+
+    # This is not supported
+    # select aa+bb as t from (connect MockEngine select aa,bb from a)
     """,
         dag,
     )

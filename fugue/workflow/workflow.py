@@ -8,7 +8,6 @@ from typing import (
     List,
     Optional,
     Set,
-    Type,
     TypeVar,
     Union,
 )
@@ -24,7 +23,6 @@ from fugue.constants import (
 from fugue.dataframe import DataFrame, YieldedDataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
-from fugue.execution import SQLEngine
 from fugue.extensions._builtins import (
     AlterColumns,
     AssertEqual,
@@ -1717,7 +1715,7 @@ class FugueWorkflow(object):
     def select(
         self,
         *statements: Any,
-        sql_engine: Optional[Type[SQLEngine]] = None,
+        sql_engine: Any = None,
         sql_engine_params: Any = None,
     ) -> WorkflowDataFrame:
         """Execute ``SELECT`` statement using
@@ -1725,8 +1723,11 @@ class FugueWorkflow(object):
 
         :param statements: a list of sub-statements in string
           or :class:`~.WorkflowDataFrame`
-        :param sql_engine: :class:`~fugue.execution.execution_engine.SQLEngine`
-          type for this select statement, defaults to None to use default sql engine
+        :param sql_engine: it can be empty string or null (use the default SQL
+          engine), a string (use the registered SQL engine), an
+          :class:`~fugue.execution.execution_engine.SQLEngine` type, or
+          the :class:`~fugue.execution.execution_engine.SQLEngine` instance
+          (you can use ``None`` to use the default one), defaults to None
         :return: result of the ``SELECT`` statement
 
         :Example:

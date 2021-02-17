@@ -733,7 +733,7 @@ class BuiltInTests(object):
                     "AS t1 INNER JOIN",
                     b,
                     "AS t2 ON t1.x=t2.x",
-                    sql_engine=SqliteEngine,
+                    sql_engine="sqlite",
                 ).assert_eq(c)
 
                 # specify sql engine and params

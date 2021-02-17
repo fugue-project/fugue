@@ -3,7 +3,8 @@ from fugue_version import __version__
 import os
 
 with open("README.md") as f:
-    LONG_DESCRIPTION = f.read()
+    _text = ["# Fugue"] + f.read().splitlines()[1:]
+    LONG_DESCRIPTION = "\n".join(_text)
 
 
 def get_version() -> str:
