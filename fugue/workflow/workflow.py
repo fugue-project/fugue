@@ -1752,7 +1752,9 @@ class FugueWorkflow(object):
                 dfs[ws.name] = ws
                 s_str.append(ws.name)
         sql = " ".join(s_str).strip()
-        if not sql.upper().startswith("SELECT"):
+        if not sql[:10].upper().startswith("SELECT") and not sql[
+            :10
+        ].upper().startswith("WITH"):
             sql = "SELECT " + sql
         return self.process(
             dfs,
