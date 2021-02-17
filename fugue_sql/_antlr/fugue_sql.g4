@@ -107,8 +107,7 @@ fugueNestableTask
     ;
 
 fugueNestableTaskCollectionNoSelect
-    : fugueEngineSpecificQueryTask
-    | fugueTransformTask
+    : fugueTransformTask
     | fugueProcessTask
     | fugueZipTask
     | fugueCreateTask
@@ -122,10 +121,6 @@ fugueNestableTaskCollectionNoSelect
     | fugueFillnaTask
     | fugueSampleTask
     | fugueTakeTask
-    ;
-
-fugueEngineSpecificQueryTask:
-    fugueSqlEngine queryPrimary
     ;
 
 fugueTransformTask:
@@ -700,7 +695,7 @@ commentSpec
     ;
 
 query
-    : ctes? queryTerm queryOrganization
+    : fugueSqlEngine? ctes? queryTerm queryOrganization
     ;
 
 insertInto

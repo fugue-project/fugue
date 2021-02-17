@@ -318,7 +318,6 @@ def test_yield():
     d=create using mock_create1 deterministic checkpoint yield file as bb
     create using mock_create1 deterministic checkpoint yield file as cc
     """,
-    
         dag,
     )
 
@@ -421,22 +420,32 @@ def test_select_plus_engine():
             self.p = p
 
     dag = FugueWorkflow()
-    dag.select("select * from xyz", sql_engine=MockEngine)
+    dag.select("select * from xyz", sql_engine=MockEngine).persist()
     dag.select("select * from xyz", sql_engine=MockEngine, sql_engine_params={"p": 2})
+    dag.select("select * from xyz order by t limit 10", sql_engine=MockEngine)
+    dag.select(
+        "with a as ( select * from b ) select * from a order by t limit 10",
+        sql_engine=MockEngine,
+    )
 
-    temp = dag.select("select a , b from a", sql_engine=MockEngine)
-    temp.transform(mock_transformer2)
+    # temp = dag.select("select a , b from a", sql_engine=MockEngine)
+    # temp.transform(mock_transformer2)
 
-    temp = dag.select("select aa , bb from a", sql_engine=MockEngine)
-    dag.select("select aa + bb as t from", temp)
+    # temp = dag.select("select aa , bb from a", sql_engine=MockEngine)
+    # dag.select("select aa + bb as t from", temp)
     assert_eq(
         """
-    connect MockEngine select * from xyz
+    connect MockEngine select * from xyz persist
     connect MockEngine(p=2) select * from xyz
+    connect MockEngine select * from xyz order by t limit 10
 
-    transform (connect MockEngine select a,b from a) using mock_transformer2
+    connect MockEngine with a as (select * from b) select * from a order by t limit 10
 
-    select aa+bb as t from (connect MockEngine select aa,bb from a)
+    # This is not supported
+    # transform (connect MockEngine select a,b from a) using mock_transformer2
+
+    # This is not supported
+    # select aa+bb as t from (connect MockEngine select aa,bb from a)
     """,
         dag,
     )

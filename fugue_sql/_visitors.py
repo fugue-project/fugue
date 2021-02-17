@@ -406,15 +406,6 @@ class _Extensions(_VisitorBase):
         dfs = self.collectChildren(ctx, fp.FugueDataFramePairContext)
         return WorkflowDataFrames(dfs)
 
-    def visitFugueEngineSpecificQueryTask(
-        self, ctx: fp.FugueEngineSpecificQueryTaskContext
-    ) -> WorkflowDataFrame:
-        engine, engine_params = self.visitFugueSqlEngine(ctx.fugueSqlEngine())
-        query = self.ctxToStr(ctx.queryPrimary())
-        return self.workflow.select(
-            query, sql_engine=engine, sql_engine_params=engine_params
-        )
-
     def visitFugueTransformTask(
         self, ctx: fp.FugueTransformTaskContext
     ) -> WorkflowDataFrame:
@@ -716,19 +707,24 @@ class _Extensions(_VisitorBase):
         return engine, data.get("params", {})
 
     def visitQuery(self, ctx: fp.QueryContext) -> Iterable[Any]:
-        if ctx.ctes() is None:
-            yield from self._get_query_elements(ctx)
-        else:
-            sql = " ".join(
+        def get_sql() -> str:
+            return " ".join(
                 [
-                    self.ctxToStr(ctx.ctes()),
+                    "" if ctx.ctes() is None else self.ctxToStr(ctx.ctes()),
                     self.ctxToStr(ctx.queryTerm()),
                     self.ctxToStr(ctx.queryOrganization()),
                 ]
+            ).strip()
+
+        if ctx.fugueSqlEngine() is not None:
+            engine, engine_params = self.visitFugueSqlEngine(ctx.fugueSqlEngine())
+            yield self.workflow.select(
+                get_sql(), sql_engine=engine, sql_engine_params=engine_params
             )
-            yield self.workflow.select(sql)
-        # if ctx.fugueSqlEngine() is not None:
-        #    engine, engine_params = self.visitFugueSqlEngine(ctx.fugueSqlEngine())
+        elif ctx.ctes() is None:
+            yield from self._get_query_elements(ctx)
+        else:
+            yield self.workflow.select(get_sql())
 
     def visitOptionalFromClause(
         self, ctx: fp.OptionalFromClauseContext
