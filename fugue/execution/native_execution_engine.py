@@ -123,7 +123,7 @@ class NativeExecutionEngine(ExecutionEngine):
     ) -> DataFrame:
         if partition_spec.num_partitions != "0":
             self.log.warning(
-                "%s doesn't respect num_partitions %i",
+                "%s doesn't respect num_partitions %s",
                 self,
                 partition_spec.num_partitions,
             )

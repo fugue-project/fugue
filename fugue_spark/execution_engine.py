@@ -549,7 +549,7 @@ class SparkExecutionEngine(ExecutionEngine):
         if isinstance(level, StorageLevel):
             df.native.persist()
             if not lazy:
-                self.log.info("Persist dataframe with %i, count %i", level, df.count())
+                self.log.info("Persist dataframe with %s, count %i", level, df.count())
             return df
         raise ValueError(f"{level} is not supported persist type")  # pragma: no cover
 
