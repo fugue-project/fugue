@@ -17,17 +17,13 @@ We're happy you're looking to contribute. We recommend you join the [Slack chann
 There are 4 main parts to the codebase
 
 -   fugue - This contains the core of Fugue, including the fundamental classes such as DataFrames, ExecutionEngine, and Extensions.
-
 -   fugue_sql - Fugue SQL is a Domain Specific Language (DSL) for Fugue
-
 -   fugue_spark - Spark specific components (DataFrame and ExecutionEngine)
-
 -   fugue_dask - Dask specific components (DataFrame and ExecutionEngine)
 
 There are 2 main parts to tests
 
 -   fugue_test - Contains suites for testing (dataframe, execution engine). These unify the concepts of distributed computing and ensure consistent behavior across different execution engines (Pandas, Spark, Dask).
-
 -   tests - Contains all tests for the repository
 
 Lastly, there is documentation. Note that tutorials live in another [repository](https://github.com/fugue-project/tutorials).
@@ -37,9 +33,7 @@ Lastly, there is documentation. Note that tutorials live in another [repository]
 There are three steps to setting-up a development environment
 
 1.  Create a virtual environment with your choice of environment manager
-
 2.  Install the requirements
-
 3.  Install the git hook scripts
 
 ### Creating an environment
@@ -48,13 +42,17 @@ Below are examples for how to create and activate an environment in virtualenv a
 
 **Using virtualenv**
 
-    python3 -m venv venv
-    . venv/bin/activate
+```bash
+python3 -m venv venv
+. venv/bin/activate
+```
 
 **Using conda**
 
-    conda create --name fugue-dev
-    conda activate fugue-dev
+```bash
+conda create --name fugue-dev
+conda activate fugue-dev
+```
 
 ### Installing requirements
 
@@ -62,22 +60,30 @@ The Fugue repo has a Makefile that can be used to install the requirements. It s
 
 **Pip install requirements**
 
-    make setupinpip
+```bash
+make setupinpip
+```
 
 **Conda install requirements**
 
-    make setupinconda
+```bash
+make setupinconda
+```
 
 **Manually install requirements**
 
 For Windows users who don't have the `make` command, you can use your package manager of choice. For pip:
 
-    pip3 install -r requirements.txt
+```bash
+pip3 install -r requirements.txt
+```
 
 For Anaconda users, first install `pip` in the newly created environment. If pip install is used without installing pip, conda will use the system-wide pip
 
-    conda install pip
-    pip install -r requirements.txt
+```bash
+conda install pip
+pip install -r requirements.txt
+```
 
 **Notes for Windows Users**
 For Windows users, you will need to download Microsoft C++ Build Tools found [here](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
@@ -92,14 +98,18 @@ Fugue has pre-commit hooks to check if code is appropriate to be committed. The 
 
 If you installed the requirements manually, install the git hook scripts with:
 
-    pre-commit install
+```bash
+pre-commit install
+```
 
 ## Running Tests
 
 The Makefile has the following targets for testing
 
-    make test      - All tests
-    make testcore  - All Fugue code not specific to Spark or Dask
-    make testspark - Only the Spark specific tests
-    make testdask  - Only the Dask specific tests
-    make testsql   - For Fugue SQL tests only
+```bash
+make test      - All tests
+make testcore  - All Fugue code not specific to Spark or Dask
+make testspark - Only the Spark specific tests
+make testdask  - Only the Dask specific tests
+make testsql   - For Fugue SQL tests only
+```
