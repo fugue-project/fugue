@@ -175,19 +175,25 @@ here is an example:
 
 In cell 1
 
-    %load_ext fugue_notebook
+```bash
+%load_ext fugue_notebook
+```
 
 In cell 2
 
-    %%fsql
-    CREATE [[0]] SCHEMA a:int
-    PRINT
+```bash
+%%fsql
+CREATE [[0]] SCHEMA a:int
+PRINT
+```
 
 In cell 3 where you want to use dask
 
-    %%fsql dask
-    CREATE [[0]] SCHEMA a:int
-    PRINT
+```bash
+%%fsql dask
+CREATE [[0]] SCHEMA a:int
+PRINT
+```
 
 Note that you can automatically load `fugue_notebook` ipthon extension at startup,
 read [this](https://ipython.readthedocs.io/en/stable/config/extensions/#using-extensions) to configure your jupyter environment.
