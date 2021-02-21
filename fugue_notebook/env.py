@@ -1,3 +1,4 @@
+# pylint: disable=W0611,W0613
 import html
 import json
 from typing import Any, Callable, Dict, List

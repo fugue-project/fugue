@@ -48,7 +48,7 @@ class ArrayDataFrame(LocalBoundedDataFrame):
             else:
                 raise ValueError(f"{df} is incompatible with ArrayDataFrame")
         except Exception as e:
-            raise FugueDataFrameInitError(e)
+            raise FugueDataFrameInitError from e
 
     @property
     def native(self) -> List[Any]:
@@ -76,7 +76,7 @@ class ArrayDataFrame(LocalBoundedDataFrame):
         try:
             schema = self.schema.rename(columns)
         except Exception as e:
-            raise FugueDataFrameOperationError(e)
+            raise FugueDataFrameOperationError from e
         return ArrayDataFrame(self.native, schema)
 
     def alter_columns(self, columns: Any) -> DataFrame:

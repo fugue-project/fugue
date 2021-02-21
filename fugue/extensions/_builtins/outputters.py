@@ -38,7 +38,7 @@ class Show(Outputter):
                     df._show(head_rows=head, rows=rows, count=count, title=None)
             else:
                 for df, head, count in zip(df_arr, heads, counts):
-                    Show._hook(
+                    Show._hook(  # pylint: disable=E1102
                         schema=df.schema,
                         head_rows=head,
                         title=title,

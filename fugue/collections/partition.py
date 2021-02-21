@@ -182,7 +182,7 @@ class PartitionSpec(object):
             if k in expr:
                 value = str(v())
                 expr = expr.replace(k, value)
-        return int(eval(expr))
+        return int(eval(expr))  # pylint: disable=W0123
 
     @property
     def algo(self) -> str:

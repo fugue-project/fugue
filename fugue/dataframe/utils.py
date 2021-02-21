@@ -131,7 +131,8 @@ def to_local_df(df: Any, schema: Any = None, metadata: Any = None) -> LocalDataF
 def to_local_bounded_df(
     df: Any, schema: Any = None, metadata: Any = None
 ) -> LocalBoundedDataFrame:
-    """Convert a data structure to :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`
+    """Convert a data structure to
+    :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`
 
     :param df: :class:`~fugue.dataframe.dataframe.DataFrame`, pandas DataFramme and
       list or iterable of arrays
@@ -219,8 +220,8 @@ def serialize_df(
         if fs is None:
             with open_fs(
                 os.path.dirname(file_path), writeable=True, create=False
-            ) as fs:
-                fs.writebytes(os.path.basename(file_path), data)
+            ) as _fs:
+                _fs.writebytes(os.path.basename(file_path), data)
         else:
             fs.writebytes(file_path, data)
         res = dict(path=file_path)
@@ -268,8 +269,8 @@ def deserialize_df(
         return unpickle_df(base64.b64decode(d["data"].encode()))
     elif "path" in d:
         if fs is None:
-            with open_fs(os.path.dirname(d["path"]), create=False) as fs:
-                return unpickle_df(fs.readbytes(os.path.basename(d["path"])))
+            with open_fs(os.path.dirname(d["path"]), create=False) as _fs:
+                return unpickle_df(_fs.readbytes(os.path.basename(d["path"])))
         return unpickle_df(fs.readbytes(d["path"]))
     raise ValueError(f"{json_str} is invalid")
 

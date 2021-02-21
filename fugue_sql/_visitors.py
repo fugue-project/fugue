@@ -1,3 +1,5 @@
+# pylint: disable-all
+
 from typing import (
     Any,
     Dict,
@@ -13,14 +15,18 @@ from typing import (
 import pyarrow as pa
 from antlr4.Token import CommonToken
 from antlr4.tree.Tree import TerminalNode, Token, Tree
-from fugue import PartitionSpec
-from fugue import SQLEngine
+from fugue import (
+    FugueWorkflow,
+    PartitionSpec,
+    SQLEngine,
+    WorkflowDataFrame,
+    WorkflowDataFrames,
+)
 from fugue.extensions.creator.convert import _to_creator
 from fugue.extensions.outputter.convert import _to_outputter
 from fugue.extensions.processor.convert import _to_processor
 from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
 from fugue.workflow.module import _to_module
-from fugue import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 from triad import to_uuid
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw

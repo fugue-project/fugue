@@ -1,4 +1,4 @@
-from typing import Any, List, no_type_check
+from typing import Any, List, Type, no_type_check
 
 from fugue.collections.partition import PartitionCursor
 from fugue.dataframe import (
@@ -288,7 +288,7 @@ class _TransformerRunner(object):
         else:
             try:
                 return to_local_bounded_df(self.transformer.transform(df))
-            except self.ignore_errors:  # type: ignore
+            except self.ignore_errors:  # type: ignore  # pylint: disable=E0712
                 return ArrayDataFrame([], self.transformer.output_schema)
 
     def on_init(self, partition_no: int, df: DataFrame) -> None:
@@ -302,7 +302,10 @@ class _TransformerRunner(object):
 
 class _CoTransformerRunner(object):
     def __init__(
-        self, df: DataFrame, transformer: CoTransformer, ignore_errors: List[type]
+        self,
+        df: DataFrame,
+        transformer: CoTransformer,
+        ignore_errors: List[Type[Exception]],
     ):
         self.schema = df.schema
         self.metadata = df.metadata
@@ -317,7 +320,7 @@ class _CoTransformerRunner(object):
         else:
             try:
                 return to_local_bounded_df(self.transformer.transform(dfs))
-            except self.ignore_errors:  # type: ignore
+            except self.ignore_errors:  # type: ignore  # pylint: disable=E0712
                 return ArrayDataFrame([], self.transformer.output_schema)
 
     def on_init(self, partition_no: int, dfs: DataFrames) -> None:

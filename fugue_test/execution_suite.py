@@ -1,3 +1,5 @@
+# pylint: disable-all
+
 import copy
 import os
 import pickle

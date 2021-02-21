@@ -215,7 +215,7 @@ class DataFrame(ABC):
         try:
             schema = self.schema - columns
         except Exception as e:
-            raise FugueDataFrameOperationError(e)
+            raise FugueDataFrameOperationError from e
         if len(schema) == 0:
             raise FugueDataFrameOperationError(
                 "can't remove all columns of a dataframe"
@@ -232,7 +232,7 @@ class DataFrame(ABC):
         try:
             schema = self.schema.extract(columns)
         except Exception as e:
-            raise FugueDataFrameOperationError(e)
+            raise FugueDataFrameOperationError from e
         if len(schema) == 0:
             raise FugueDataFrameOperationError("must select at least one column")
         return self._select_cols(columns)

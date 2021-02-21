@@ -1,16 +1,6 @@
 from collections import defaultdict
 from threading import RLock
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Set,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar, Union
 from uuid import uuid4
 
 from adagio.specs import WorkflowSpec
@@ -23,6 +13,7 @@ from fugue.constants import (
 from fugue.dataframe import DataFrame, YieldedDataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
+from fugue.execution.factory import make_execution_engine
 from fugue.extensions._builtins import (
     AlterColumns,
     AssertEqual,
@@ -54,7 +45,6 @@ from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, CreateData, FugueTask, Output, Process
 from fugue.workflow._workflow_context import FugueWorkflowContext
 from triad import ParamDict, Schema, assert_or_throw
-from fugue.execution.factory import make_execution_engine
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -1139,7 +1129,9 @@ class WorkflowDataFrames(DataFrames):
             )
         super().__setitem__(key, value, *args, **kwds)
 
-    def __getitem__(self, key: Union[str, int]) -> WorkflowDataFrame:  # type: ignore
+    def __getitem__(  # pylint: disable=W0235
+        self, key: Union[str, int]  # type: ignore
+    ) -> WorkflowDataFrame:
         return super().__getitem__(key)  # type: ignore
 
 
@@ -1299,19 +1291,19 @@ class FugueWorkflow(object):
             not isinstance(using, str),
             f"processor {using} can't be string expression",
         )
-        dfs = self._to_dfs(*dfs)
+        _dfs = self._to_dfs(*dfs)
         task = Process(
-            len(dfs),
+            len(_dfs),
             processor=using,
             schema=schema,
             params=params,
             pre_partition=pre_partition,
-            input_names=None if not dfs.has_key else list(dfs.keys()),
+            input_names=None if not _dfs.has_key else list(_dfs.keys()),
         )
-        if dfs.has_key:
-            return self.add(task, **dfs)
+        if _dfs.has_key:
+            return self.add(task, **_dfs)
         else:
-            return self.add(task, *dfs.values())
+            return self.add(task, *_dfs.values())
 
     def output(
         self, *dfs: Any, using: Any, params: Any = None, pre_partition: Any = None
@@ -1332,18 +1324,18 @@ class FugueWorkflow(object):
             not isinstance(using, str),
             f"outputter {using} can't be string expression",
         )
-        dfs = self._to_dfs(*dfs)
+        _dfs = self._to_dfs(*dfs)
         task = Output(
-            len(dfs),
+            len(_dfs),
             outputter=using,
             params=params,
             pre_partition=pre_partition,
-            input_names=None if not dfs.has_key else list(dfs.keys()),
+            input_names=None if not _dfs.has_key else list(_dfs.keys()),
         )
-        if dfs.has_key:
-            self.add(task, **dfs)
+        if _dfs.has_key:
+            self.add(task, **_dfs)
         else:
-            self.add(task, *dfs.values())
+            self.add(task, *_dfs.values())
 
     def create_data(
         self,

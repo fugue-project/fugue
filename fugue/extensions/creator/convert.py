@@ -78,6 +78,7 @@ class _FuncAsCreator(Creator):
     @no_type_check
     @staticmethod
     def from_func(func: Callable, schema: Any) -> "_FuncAsCreator":
+        # pylint: disable=W0201
         if schema is None:
             schema = parse_output_schema_from_comment(func)
         tr = _FuncAsCreator()

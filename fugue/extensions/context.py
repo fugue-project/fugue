@@ -11,6 +11,7 @@ from triad.utils.hash import to_uuid
 
 
 class ExtensionContext(object):
+    # pylint: disable=E1101
     """Context variables that extensions can access. It's also the base
     class of all extensions.
     """

@@ -80,7 +80,7 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
         except FugueDataFrameError:
             raise
         except Exception as e:
-            raise FugueDataFrameInitError(e)
+            raise FugueDataFrameInitError from e
 
     def _dfs_wrapper(self, dfs: Iterable[DataFrame]) -> Iterable[LocalDataFrame]:
         last_empty: Any = None

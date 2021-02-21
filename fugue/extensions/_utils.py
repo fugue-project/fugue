@@ -50,7 +50,7 @@ def to_validation_rules(data: Dict[str, Any]) -> Dict[str, Any]:
             try:
                 res[k] = str(Schema(v))
             except SyntaxError:
-                raise SyntaxError(
+                raise SyntaxError(  # pylint: disable=W0707
                     f"for input_is, the input must be a schema expression {v}"
                 )
         else:
