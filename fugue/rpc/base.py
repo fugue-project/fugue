@@ -102,9 +102,6 @@ class RPCHandler(RPCClient):
 class EmptyRPCHandler(RPCHandler):
     """The class representing empty :class:`~.RPCHandler`"""
 
-    def __init__(self):
-        super().__init__()
-
 
 class RPCServer(RPCHandler, ABC):
     """Server abstract class hosting multiple :class:`~.RPCHandler`.
@@ -203,9 +200,6 @@ class NativeRPCServer(RPCServer):
 
     :param conf: |FugueConfig|
     """
-
-    def __init__(self, conf: Any):
-        super().__init__(conf)
 
     def make_client(self, handler: Any) -> RPCClient:
         """Add ``handler`` and correspondent :class:`~.NativeRPCClient`

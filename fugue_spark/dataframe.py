@@ -56,7 +56,7 @@ class SparkDataFrame(DataFrame):
                 schema = to_schema(schema).assert_not_empty()
                 raise ValueError(f"{df} is incompatible with SparkDataFrame")
         except Exception as e:
-            raise FugueDataFrameInitError(e)
+            raise FugueDataFrameInitError from e
 
     @property
     def native(self) -> ps.DataFrame:
@@ -114,7 +114,7 @@ class SparkDataFrame(DataFrame):
         try:
             self.schema.rename(columns)
         except Exception as e:
-            raise FugueDataFrameOperationError(e)
+            raise FugueDataFrameOperationError from e
         df = self.native
         for o, n in columns.items():
             df = df.withColumnRenamed(o, n)

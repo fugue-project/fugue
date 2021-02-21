@@ -1,3 +1,5 @@
+# pylint: disable-all
+
 import datetime
 import os
 import pickle

@@ -75,7 +75,7 @@ class PandasDataFrame(LocalBoundedDataFrame):
             super().__init__(schema, metadata)
             self._native = pdf
         except Exception as e:
-            raise FugueDataFrameInitError(e)
+            raise FugueDataFrameInitError from e
 
     @property
     def native(self) -> pd.DataFrame:
@@ -110,7 +110,7 @@ class PandasDataFrame(LocalBoundedDataFrame):
         try:
             schema = self.schema.rename(columns)
         except Exception as e:
-            raise FugueDataFrameOperationError(e)
+            raise FugueDataFrameOperationError from e
         df = self.native.rename(columns=columns)
         return PandasDataFrame(df, schema, pandas_df_wrapper=True)
 

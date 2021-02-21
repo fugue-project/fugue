@@ -5,10 +5,10 @@ from fugue.dataframe.dataframe import (
     LocalUnboundedDataFrame,
     _get_schema_change,
 )
+from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.utils.iter import EmptyAwareIterable, make_empty_aware
 from triad.utils.pyarrow import apply_schema
-from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 
 
 class IterableDataFrame(LocalUnboundedDataFrame):
@@ -56,7 +56,7 @@ class IterableDataFrame(LocalUnboundedDataFrame):
             self._pos = pos
             self._native = make_empty_aware(self._preprocess(idf))
         except Exception as e:
-            raise FugueDataFrameInitError(e)
+            raise FugueDataFrameInitError from e
 
     @property
     def native(self) -> EmptyAwareIterable[Any]:
@@ -81,7 +81,7 @@ class IterableDataFrame(LocalUnboundedDataFrame):
         try:
             schema = self.schema.rename(columns)
         except Exception as e:
-            raise FugueDataFrameOperationError(e)
+            raise FugueDataFrameOperationError from e
         return IterableDataFrame(self.native, schema)
 
     def alter_columns(self, columns: Any) -> DataFrame:

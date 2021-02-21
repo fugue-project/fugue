@@ -28,7 +28,9 @@ class Checkpoint(object):
         self.lazy = lazy
         self.kwargs = dict(kwargs)
 
-    def run(self, df: DataFrame, path: "CheckpointPath") -> DataFrame:
+    def run(
+        self, df: DataFrame, path: "CheckpointPath"  # pylint: disable=W0613
+    ) -> DataFrame:
         return df
 
     @property

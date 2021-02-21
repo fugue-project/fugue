@@ -83,7 +83,8 @@ class DataFrames(IndexedOrderedDict[str, DataFrame]):
         return super().__getitem__(key)  # type: ignore
 
     def convert(self, func: Callable[["DataFrame"], DataFrame]) -> "DataFrames":
-        """Create another DataFrames with the same structure, but all converted by ``func``
+        """Create another DataFrames with the same structure,
+        but all converted by ``func``
 
         :return: the new DataFrames
 

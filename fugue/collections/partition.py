@@ -7,6 +7,7 @@ from triad.utils.assertion import assert_or_throw as aot
 from triad.utils.convert import to_size
 from triad.utils.pyarrow import SchemaedDataPartitioner
 from triad.utils.hash import to_uuid
+from ast import literal_eval
 
 
 def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C901]
@@ -182,7 +183,7 @@ class PartitionSpec(object):
             if k in expr:
                 value = str(v())
                 expr = expr.replace(k, value)
-        return int(eval(expr))
+        return int(literal_eval(expr))
 
     @property
     def algo(self) -> str:

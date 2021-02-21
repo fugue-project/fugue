@@ -109,7 +109,7 @@ class NativeExecutionEngine(ExecutionEngine):
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
     ) -> DataFrame:  # pragma: no cover
-        self.log.warning(f"{self} doesn't respect repartition")
+        self.log.warning("%s doesn't respect repartition", self)
         return df
 
     def map(
@@ -123,7 +123,9 @@ class NativeExecutionEngine(ExecutionEngine):
     ) -> DataFrame:
         if partition_spec.num_partitions != "0":
             self.log.warning(
-                f"{self} doesn't respect num_partitions {partition_spec.num_partitions}"
+                "%s doesn't respect num_partitions %i",
+                self,
+                partition_spec.num_partitions,
             )
         cursor = partition_spec.get_cursor(df.schema, 0)
         if on_init is not None:
@@ -358,7 +360,7 @@ class NativeExecutionEngine(ExecutionEngine):
     ) -> None:
         if not partition_spec.empty:
             self.log.warning(  # pragma: no cover
-                f"partition_spec is not respected in {self}.save_df"
+                "partition_spec is not respected in %s.save_df", self
             )
         df = self.to_df(df)
         save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)

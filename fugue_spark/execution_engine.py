@@ -71,12 +71,12 @@ class SparkSQLEngine(SQLEngine):
     :raises ValueError: if the engine is not :class:`~.SparkExecutionEngine`
     """
 
-    def __init__(self, execution_engine: ExecutionEngine) -> None:
+    def __init__(self, execution_engine: ExecutionEngine):
         assert_or_throw(
             isinstance(execution_engine, SparkExecutionEngine),
             ValueError("SparkSQLEngine must use SparkExecutionEngine"),
         )
-        return super().__init__(execution_engine)
+        super().__init__(execution_engine)
 
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:
         for k, v in dfs.items():
@@ -549,7 +549,7 @@ class SparkExecutionEngine(ExecutionEngine):
         if isinstance(level, StorageLevel):
             df.native.persist()
             if not lazy:
-                self.log.info(f"Persist dataframe with {level}, count {df.count()}")
+                self.log.info("Persist dataframe with %i, count %i", level, df.count())
             return df
         raise ValueError(f"{level} is not supported persist type")  # pragma: no cover
 

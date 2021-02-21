@@ -3,10 +3,10 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 import pyarrow as pa
 from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
+from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
-from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 
 
 class ArrowDataFrame(LocalBoundedDataFrame):
@@ -93,7 +93,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
             else:
                 raise ValueError(f"{df} is incompatible with ArrowDataFrame")
         except Exception as e:
-            raise FugueDataFrameInitError(e)
+            raise FugueDataFrameInitError from e
 
     @property
     def native(self) -> pa.Table:
@@ -128,7 +128,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
         try:
             schema = self.schema.rename(columns)
         except Exception as e:
-            raise FugueDataFrameOperationError(e)
+            raise FugueDataFrameOperationError from e
         df = pa.Table.from_arrays(self.native.columns, schema=schema.pa_schema)
         return ArrowDataFrame(df)
 

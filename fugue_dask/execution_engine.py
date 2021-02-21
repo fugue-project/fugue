@@ -430,7 +430,7 @@ class DaskExecutionEngine(ExecutionEngine):
     ) -> None:
         if not partition_spec.empty:
             self.log.warning(  # pragma: no cover
-                f"partition_spec is not respected in {self}.save_df"
+                "partition_spec is not respected in %s.save_df", self
             )
         df = self.to_df(df).as_local()
         save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)

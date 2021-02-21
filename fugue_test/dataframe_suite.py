@@ -1,3 +1,5 @@
+# pylint: disable-all
+
 from datetime import datetime, date
 from typing import Any
 from unittest import TestCase
