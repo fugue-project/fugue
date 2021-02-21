@@ -11,19 +11,19 @@
 
 Fugue is a pure abstraction layer that makes code portable across differing computing frameworks such as Pandas, Spark and Dask.
 
-* **Framework-agnostic code**: Write code once in native Python. Fugue makes it runnable on Pandas, Dask or Spark with minimal changes. Logic and code is decoupled from frameworks, even from Fugue itself. Fugue adapts user's code, as well as the underlying computing frameworks.
-* **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and saves cluster expense.  This lessens the frequency spinning up clusters to test code, and reduces expensive mistakes.
-* **Friendlier interface for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic. A lot of Fugue users see performance gains in their Spark jobs. Fugue SQL extends Spark SQL to be a programming language.
-* **Highly testable code**: Fugue naturally makes logic more testable because the code is in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
+-   **Framework-agnostic code**: Write code once in native Python. Fugue makes it runnable on Pandas, Dask or Spark with minimal changes. Logic and code is decoupled from frameworks, even from Fugue itself. Fugue adapts user's code, as well as the underlying computing frameworks.
+-   **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and saves cluster expense.  This lessens the frequency spinning up clusters to test code, and reduces expensive mistakes.
+-   **Friendlier interface for Spark**: Fugue handles some optimizations on Spark, making it easier for big data practitioners to focus on logic. A lot of Fugue users see performance gains in their Spark jobs. Fugue SQL extends Spark SQL to be a programming language.
+-   **Highly testable code**: Fugue naturally makes logic more testable because the code is in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
 
 ## Who is it for?
 
-* Big data practitioners looking to reduce compute costs and increase project velocity
-* Data practitioners who keep switching between data processing frameworks (Pandas, Spark, Dask)
-* Data engineers scaling data pipelines to handle bigger data in a consistent and reliable way
-* Data practitioners looking to write more testable code
-* Spark/Dask users who want to have an easier experience working with distributed computing
-* People who love using SQL. Fugue SQL extends standard SQL to be a programming language
+-   Big data practitioners looking to reduce compute costs and increase project velocity
+-   Data practitioners who keep switching between data processing frameworks (Pandas, Spark, Dask)
+-   Data engineers scaling data pipelines to handle bigger data in a consistent and reliable way
+-   Data practitioners looking to write more testable code
+-   Spark/Dask users who want to have an easier experience working with distributed computing
+-   People who love using SQL. Fugue SQL extends standard SQL to be a programming language
 
 ## Key Features
 
@@ -126,6 +126,7 @@ To read the complete static docs, [click here](https://fugue.readthedocs.org)
 The best way to start is to go through the tutorials. We have the tutorials in an interactive notebook environent.
 
 ### Run the tutorial using binder:
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/fugue-project/tutorials/master)
 
 **But it runs slow on binder**, the machine on binder isn't powerful enough for
@@ -136,24 +137,21 @@ performance comparison examples will not give you the correct numbers.
 
 Alternatively, you should get decent performance if running its docker image on your own machine:
 
-```
-docker run -p 8888:8888 fugueproject/tutorials:latest
-```
+    docker run -p 8888:8888 fugueproject/tutorials:latest
 
 ## Installation
-```
-pip install fugue
-```
+
+    pip install fugue
 
 Fugue has these extras:
-* **sql**: to support [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/sql.html)
-* **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
-* **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
+
+-   **sql**: to support [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/sql.html)
+-   **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
+-   **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
 
 For example a common use case is:
-```
-pip install fugue[sql,spark]
-```
+
+    pip install fugue[sql,spark]
 
 ## Jupyter Notebook Extension (since 0.5.1)
 
@@ -171,32 +169,25 @@ here is an example:
 
 In cell 1
 
-```
-%load_ext fugue_notebook
-```
+    %load_ext fugue_notebook
 
 In cell 2
 
-```
-%%fsql
-CREATE [[0]] SCHEMA a:int
-PRINT
-```
+    %%fsql
+    CREATE [[0]] SCHEMA a:int
+    PRINT
 
 In cell 3 where you want to use dask
 
-```
-%%fsql dask
-CREATE [[0]] SCHEMA a:int
-PRINT
-```
+    %%fsql dask
+    CREATE [[0]] SCHEMA a:int
+    PRINT
 
 Note that you can automatically load `fugue_notebook` ipthon extension at startup,
 read [this](https://ipython.readthedocs.io/en/stable/config/extensions/#using-extensions) to configure your jupyter environment.
 
 There is an ad-hoc way to setup your notebook environment, you don't need to install anything or change the startup script.
 You only need to do the following at the first cell of each of your notebook, and you will get highlights and `%%fsql` cells become runnable too:
-
 
 ```python
 from fugue_notebook import setup
