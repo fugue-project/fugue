@@ -19,8 +19,7 @@
 -   [README code](https://github.com/fugue-project/fugue/issues/132) is working now
 -   Limit was renamed to [take and added to SQL interface](https://github.com/fugue-project/fugue/issues/136)
 -   RPC for [Callbacks](https://github.com/fugue-project/fugue/issues/139) to collect information from workers in real time
--   Changes in handling [input dataframe determinism](https://github.com/fugue-project/fugue/issues/144). This fixes a bug
-    related to [thread locks with Spark DataFrames](https://github.com/fugue-project/fugue/issues/143) because of a deepcopy.
+-   Changes in handling [input dataframe determinism](https://github.com/fugue-project/fugue/issues/144). This fixes a bug related to [thread locks with Spark DataFrames](https://github.com/fugue-project/fugue/issues/143) because of a deepcopy.
 
 ## 0.4.9
 
