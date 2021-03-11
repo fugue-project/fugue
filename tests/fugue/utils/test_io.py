@@ -180,3 +180,19 @@ def test_json(tmpdir):
     actual = load_df(path, columns="b:str,a:int")
     df_eq(actual, [["2", 1]], "b:str,a:int")
     raises(KeyError, lambda: load_df(path, columns="bb:str,a:int"))
+
+
+def test_avro_io(tmpdir):
+    fs = FileSystem()
+    df1 = PandasDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
+    path = os.path.join(tmpdir, "a.avro") # what is tmpdir?
+    
+    # provide schema
+    
+    # provide columns
+
+    # provide schema and columns -> throw error
+    # provide schema and infer_schema is True -> throw error
+
+    # infer_schema is True
+    
