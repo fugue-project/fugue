@@ -236,9 +236,24 @@ def _convert_pyarrow_to_avro_schema(columns: Any = None):
         {'name': 'temp', 'type': 'int'},
     ],
     }
+
     """
-    # TODO
-    return columns
+    infer_fields = Schema(columns)
+    fields = [
+        {"name": k, "type": v} for k, v in infer_fields.pandas_dtype().items()
+    ]  # [ {column_name: np.dtype(str)}, ... ]
+
+    # TODO how does fugue handle complex types?
+    # for field in inferred_fields:
+    #     if 'complex' in field['type']:
+    #         field['type'] = [
+    #             'null',
+    #             pdx.__complex_field_infer(df, field['name'],{})
+    #         ]
+
+    schema = {"type": "record", "name": "Root", "fields": fields}
+
+    return schema
 
 
 def _save_avro(df: LocalDataFrame, p: FileParser, columns: Any = None, **kwargs: Any):
@@ -253,7 +268,9 @@ def _save_avro(df: LocalDataFrame, p: FileParser, columns: Any = None, **kwargs:
         schema = kw["schema"]
         if schema is None:
             if columns is not None:
-                schema = _convert_pyarrow_to_avro_schema(columns)
+                schema = _convert_pyarrow_to_avro_schema(
+                    columns
+                )  # pyarrow columns to pandas?
         else:
             if columns:
                 # both schema and columns provided
@@ -309,14 +326,14 @@ def _load_avro(
 
         # Populate pandas.DataFrame with records
         pdf = pd.DataFrame.from_records(records)
-        # Return created DataFrame
 
     if columns is None:
         return pdf, None
     if isinstance(columns, list):  # column names
         return pdf[columns], None
-    schema = Schema(columns)
+    schema = Schema(columns)  #
 
+    # Return created DataFrame
     return pdf[schema.names], schema
 
 
