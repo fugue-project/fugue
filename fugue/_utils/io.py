@@ -321,7 +321,7 @@ def _load_avro(
         return pdf, None
     if isinstance(columns, list):  # column names
         return pdf[columns], None
-    schema = Schema(columns)
+    schema = Schema(columns)  #
 
     # Return created DataFrame
     return pdf[schema.names], schema
