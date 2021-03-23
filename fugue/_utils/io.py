@@ -262,6 +262,11 @@ def _save_avro(df: LocalDataFrame, p: FileParser, columns: Any = None, **kwargs:
     append = False
     times_as_micros = True
 
+    # pandavro defaults
+    schema = None
+    append = False
+    times_as_micros = True
+
     if "schema" in kw:
         schema = kw["schema"]
         if schema is None:
@@ -273,7 +278,6 @@ def _save_avro(df: LocalDataFrame, p: FileParser, columns: Any = None, **kwargs:
                 raise Exception("set columns to None when schema is provided")
 
         del kw["infer_schema"]
-
 
     if "infer_schema" in kw:
         infer_schema = kw["infer_schema"]
@@ -321,7 +325,7 @@ def _load_avro(
         return pdf, None
     if isinstance(columns, list):  # column names
         return pdf[columns], None
-    schema = Schema(columns)  #
+    schema = Schema(columns)
 
     # Return created DataFrame
     return pdf[schema.names], schema
