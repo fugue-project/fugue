@@ -40,6 +40,7 @@ from fugue.extensions.transformer import (
     output_transformer,
     transformer,
 )
+from fugue.interfaceless import out_transform, transform
 from fugue.rpc import (
     EmptyRPCHandler,
     RPCClient,
