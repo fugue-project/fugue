@@ -219,17 +219,15 @@ def _load_json(
     return pdf[schema.names], schema
 
 
-def _convert_pyarrow_to_avro_schema(columns: Any = None):
+def _convert_pyarrow_to_avro_schema(df, columns: Any = None):
     """
     pyarrow schema:
     'station: str , time: long, temp: int'
 
     avro schema:
     {
-    'doc': 'A weather reading.',
-    'name': 'Weather',
-    'namespace': 'test',
     'type': 'record',
+    'name': 'Root',
     'fields': [
         {'name': 'station', 'type': 'string'},
         {'name': 'time', 'type': 'long'},
@@ -239,19 +237,15 @@ def _convert_pyarrow_to_avro_schema(columns: Any = None):
 
     """
     infer_fields = Schema(columns)
-    fields = [
+    inferred_fields = [
         {"name": k, "type": v} for k, v in infer_fields.pandas_dtype().items()
     ]  # [ {column_name: np.dtype(str)}, ... ]
 
-    # TODO how does fugue handle complex types?
-    # for field in inferred_fields:
-    #     if 'complex' in field['type']:
-    #         field['type'] = [
-    #             'null',
-    #             pdx.__complex_field_infer(df, field['name'],{})
-    #         ]
+    for field in inferred_fields:
+        if "complex" in field["type"]:
+            field["type"] = ["null", pdx.__complex_field_infer(df, field["name"], {})]
 
-    schema = {"type": "record", "name": "Root", "fields": fields}
+    schema = {"type": "record", "name": "Root", "fields": inferred_fields}
 
     return schema
 
@@ -264,19 +258,22 @@ def _save_avro(df: LocalDataFrame, p: FileParser, columns: Any = None, **kwargs:
 
     kw = ParamDict(kwargs)
 
+    # pandavro defaults
+    schema = None
+    append = False
+    times_as_micros = True
+
     if "schema" in kw:
         schema = kw["schema"]
         if schema is None:
             if columns is not None:
-                schema = _convert_pyarrow_to_avro_schema(
-                    columns
-                )  # pyarrow columns to pandas?
+                schema = _convert_pyarrow_to_avro_schema(df, columns)
         else:
             if columns:
                 # both schema and columns provided
                 raise Exception("set columns to None when schema is provided")
 
-        del kw["infer_schema"]  # QN why del kw?
+        del kw["infer_schema"]
 
     if "infer_schema" in kw:
         infer_schema = kw["infer_schema"]
@@ -285,16 +282,9 @@ def _save_avro(df: LocalDataFrame, p: FileParser, columns: Any = None, **kwargs:
             raise Exception("set infer_schema to False when schema is provided")
         del kw["infer_schema"]
 
-    if "append" in kw["append"]:
-        # default is overwrite (False) instead of append (True)
-        append = kw["append"]
+    if "append" in kw:
+        append = kw["append"]  # default is overwrite (False) instead of append (True)
         del kw["append"]
-
-    # if "header" in kw:
-    #     header = kw[
-    #         "header"
-    #     ]  # TODO what happens if header is False? maybe this is just a pandas thing?
-    #     del kw["header"]
 
     if "times_as_micros" in kw:
         times_as_micros = kw["times_as_micros"]
@@ -331,7 +321,7 @@ def _load_avro(
         return pdf, None
     if isinstance(columns, list):  # column names
         return pdf[columns], None
-    schema = Schema(columns)  #
+    schema = Schema(columns)
 
     # Return created DataFrame
     return pdf[schema.names], schema
