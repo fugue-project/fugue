@@ -185,14 +185,31 @@ def test_json(tmpdir):
 def test_avro_io(tmpdir):
     fs = FileSystem()
     df1 = PandasDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
-    path = os.path.join(tmpdir, "a.avro") # what is tmpdir?
-    
-    # provide schema
-    
-    # provide columns
+    path = os.path.join(tmpdir, "a.avro")
+    save_df(df1, path)
+    actual = load_df(path)
 
+    df_eq(actual,[["1", 2, 3]], "a:str,b:int,c:long")
+    
+    actual = load_df(path, columns=["a", "b"])
+    df_eq(actual,[[2, 3]], "a:str,b:int") # not sure if it would map to str?
+    
+    actual = load_df(path, columns="a:str,b:int,c:long")
+    df_eq(actual,[[2, 3]], "a:str,b:int,c:long") # not sure if it would map to str?
+
+    actual = load_df(path, columns=["a", "b"], infer_schema=True)
+    df_eq(actual,[[2, 3]], "a:str,b:int") # not sure if it would map to str?
+    
     # provide schema and columns -> throw error
+    raises(Exception, lambda: load_df(path, columns="a:str,b:int,c:long", schema={'type': 'record','name': 'Root','fields': [
+        {'name': 'station', 'type': 'string'},
+        {'name': 'time', 'type': 'long'},
+        {'name': 'temp', 'type': 'int'},
+    ],}))
     # provide schema and infer_schema is True -> throw error
-
-    # infer_schema is True
+    raises(Exception, lambda: load_df(path, columns=None, schema={'type': 'record','name': 'Root','fields': [
+        {'name': 'station', 'type': 'string'},
+        {'name': 'time', 'type': 'long'},
+        {'name': 'temp', 'type': 'int'},
+    ],}, infer_schema=True))
     
