@@ -84,6 +84,9 @@ def test_partition_spec():
     print(p)
     print(f"{p}")
 
+    assert PartitionSpec("per_row") == PartitionSpec(num="ROWCOUNT", algo="even")
+    assert PartitionSpec(by="abc") == PartitionSpec(by=["abc"])
+
     # partition by overlaps with presort
     raises(
         SyntaxError,
