@@ -91,7 +91,7 @@ class PartitionSpec(object):
     >>> p = PartitionSpec(num=4, by=["a"])
     >>> p_override = PartitionSpec(p, by=["a","b"], algo="even")
     >>> PartitionSpec(by="a")  # == PartitionSpec(by=["a"])
-    >>> PartitionSpec("per_row")  # == PartitionSpec(num="ROWCOUNT", alog="even")
+    >>> PartitionSpec("per_row")  # == PartitionSpec(num="ROWCOUNT", algo="even")
 
     It's important to understand this concept, please read |PartitionTutorial|
 

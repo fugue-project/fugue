@@ -396,7 +396,7 @@ class BuiltInTests(object):
                 )
                 dag.df([[1, 2], [3, 4]], "a:double,b:int").assert_eq(c)
 
-                c = a.partition(by=["a"], presort="b DESC").transform(
+                c = a.partition(by="a", presort="b DESC").transform(
                     mock_tf2_except, schema="*", ignore_errors=[NotImplementedError]
                 )
                 dag.df([[1, 2], [3, 4]], "a:double,b:int").assert_eq(c)
@@ -440,7 +440,7 @@ class BuiltInTests(object):
                 c = dag.transform(a.zip(partition=dict(by=["a"])), using=mock_co_tf3)
                 e = dag.df([[1, 2, 1], [2, 1, 1]], "a:int,ct1:int,p:int")
                 e.assert_eq(c)
-                c = a.partition(by=["a"]).zip().transform(mock_co_tf3)
+                c = a.partition_by("a").zip().transform(mock_co_tf3)
                 e = dag.df([[1, 2, 1], [2, 1, 1]], "a:int,ct1:int,p:int")
                 e.assert_eq(c)
                 # ignore errors
@@ -550,12 +550,12 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:double,b:int")
                 a.out_transform(t1)  # +2
-                a.partition(by=["b"]).out_transform(t2)  # +1 or +2
-                a.partition(by=["b"]).out_transform(t3)  # +1 or +2
-                a.partition(by=["b"]).out_transform(t4)  # +2
-                a.partition(by=["b"]).out_transform(t5)  # +2
+                a.partition_by("b").out_transform(t2)  # +1 or +2
+                a.partition_by("b").out_transform(t3)  # +1 or +2
+                a.partition_by("b").out_transform(t4)  # +2
+                a.partition_by("b").out_transform(t5)  # +2
                 a.out_transform(T6)  # +1
-                a.partition(by=["b"]).out_transform(T7)  # +1
+                a.partition_by("b").out_transform(T7)  # +1
                 a.out_transform(t8, ignore_errors=[NotImplementedError])  # +1
                 a.out_transform(t9)  # +1
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t2))

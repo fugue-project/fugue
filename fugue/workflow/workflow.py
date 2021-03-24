@@ -810,7 +810,7 @@ class WorkflowDataFrame(DataFrame):
         self._task.broadcast()
         return self
 
-    def partition(self: TDF, *args, **kwargs) -> TDF:
+    def partition(self: TDF, *args: Any, **kwargs: Any) -> TDF:
         """Partition the current dataframe. Please read |PartitionTutorial|
 
         :param args: |PartitionLikeObject|
@@ -830,6 +830,52 @@ class WorkflowDataFrame(DataFrame):
                 {"pre_partition": PartitionSpec(*args, **kwargs)},
             )
         )
+
+    def partition_by(self: TDF, *keys: str, **kwargs: Any) -> TDF:
+        """Partition the current dataframe by keys. Please read |PartitionTutorial|.
+        This is a wrapper of :meth:`~.partition`
+
+        :param keys: partition keys
+        :param kwargs: |PartitionLikeObject| excluding ``by`` and ``partition_by``
+        :return: dataframe with the partition hint
+        :rtype: :class:`~.WorkflowDataFrame`
+        """
+        assert_or_throw(len(keys) > 0, FugueWorkflowCompileError("keys can't be empty"))
+        assert_or_throw(
+            "by" not in kwargs and "partition_by" not in kwargs,
+            FugueWorkflowCompileError("by and partition_by can't be in kwargs"),
+        )
+        return self.partition(by=keys, **kwargs)
+
+    def per_partition_by(self: TDF, *keys: str) -> TDF:
+        """Partition the current dataframe by keys so each physical partition contains
+        only one logical partition. Please read |PartitionTutorial|.
+        This is a wrapper of :meth:`~.partition`
+
+        :param keys: partition keys
+        :return: dataframe that is both logically and physically partitioned by ``keys``
+        :rtype: :class:`~.WorkflowDataFrame`
+
+        :Notice:
+
+        This is a hint but not enforced, certain execution engines will not
+        respect this hint.
+        """
+        return self.partition_by(*keys, algo="even")
+
+    def per_row(self: TDF) -> TDF:
+        """Partition the current dataframe to one row per partition.
+        Please read |PartitionTutorial|. This is a wrapper of :meth:`~.partition`
+
+        :return: dataframe that is evenly partitioned by row count
+        :rtype: :class:`~.WorkflowDataFrame`
+
+        :Notice:
+
+        This is a hint but not enforced, certain execution engines will not
+        respect this hint.
+        """
+        return self.partition("per_row")
 
     def _to_self_type(self: TDF, df: "WorkflowDataFrame") -> TDF:
         return df  # type: ignore

@@ -163,11 +163,11 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             a = dag.df(
                 [[0, 1], [0, 2], [0, 3], [0, 4], [1, 1], [1, 2], [1, 3]], "a:int,b:int"
             )
-            c = a.partition(algo="even", num="ROWCOUNT").transform(count_partition)
+            c = a.per_row().transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[1, 1, 1, 1, 1, 1, 1]))
             c = a.partition(algo="even", num="ROWCOUNT/2").transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[3, 2, 2]))
-            c = a.partition(algo="even", by=["a"]).transform(count_partition)
+            c = a.per_partition_by("a").transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[3, 4]))
             c = a.partition(algo="even", by=["a"]).transform(AssertMaxNTransform)
             dag.output(c, using=assert_match, params=dict(values=[3, 4]))
