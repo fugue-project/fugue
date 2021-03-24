@@ -219,7 +219,7 @@ def _load_json(
     return pdf[schema.names], schema
 
 
-def _convert_pyarrow_to_avro_schema(df, columns: Any = None):
+def _convert_pyarrow_to_avro_schema(pdf: pd.DataFrame, columns: Any = None):
     """
     pyarrow schema:
     'station: str , time: long, temp: int'
@@ -243,7 +243,7 @@ def _convert_pyarrow_to_avro_schema(df, columns: Any = None):
 
     for field in inferred_fields:
         if "complex" in field["type"]:
-            field["type"] = ["null", pdx.__complex_field_infer(df, field["name"], {})]
+            field["type"] = ["null", pdx.__complex_field_infer(pdf, field["name"], {})]
 
     schema = {"type": "record", "name": "Root", "fields": inferred_fields}
 
@@ -290,8 +290,9 @@ def _save_avro(df: LocalDataFrame, p: FileParser, columns: Any = None, **kwargs:
         times_as_micros = kw["times_as_micros"]
         del kw["times_as_micros"]
 
+    pdf = df.as_pandas()
     pdx.to_avro(
-        p.uri, df, schema=schema, append=append, times_as_micros=times_as_micros, **kw
+        p.uri, pdf, schema=schema, append=append, times_as_micros=times_as_micros, **kw
     )  # QN what is uri, is this the path?
 
 
