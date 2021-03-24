@@ -101,6 +101,9 @@ def test_partition_spec():
     # partition by has dups
     raises(SyntaxError, lambda: PartitionSpec(partition_by=["a", "b", "b"]))
 
+    # partition by is invalid
+    raises(SyntaxError, lambda: PartitionSpec(partition_by=123))
+
     # bad input
     raises(TypeError, lambda: PartitionSpec(1))
 
