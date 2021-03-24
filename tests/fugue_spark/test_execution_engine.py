@@ -2,7 +2,9 @@ from typing import Any, Iterable, List
 
 import numpy as np
 import pandas as pd
+import pyspark.sql as ps
 import pytest
+from fugue import transform
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import (
     ArrayDataFrame,
@@ -15,8 +17,8 @@ from fugue.workflow.workflow import FugueWorkflow
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 from pyspark import StorageLevel
+from pyspark.sql import DataFrame as SDataFrame
 from pyspark.sql import SparkSession
-import pyspark.sql as ps
 from pytest import raises
 
 from fugue_spark.execution_engine import SparkExecutionEngine
@@ -161,11 +163,11 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             a = dag.df(
                 [[0, 1], [0, 2], [0, 3], [0, 4], [1, 1], [1, 2], [1, 3]], "a:int,b:int"
             )
-            c = a.partition(algo="even", num="ROWCOUNT").transform(count_partition)
+            c = a.per_row().transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[1, 1, 1, 1, 1, 1, 1]))
             c = a.partition(algo="even", num="ROWCOUNT/2").transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[3, 2, 2]))
-            c = a.partition(algo="even", by=["a"]).transform(count_partition)
+            c = a.per_partition_by("a").transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[3, 4]))
             c = a.partition(algo="even", by=["a"]).transform(AssertMaxNTransform)
             dag.output(c, using=assert_match, params=dict(values=[3, 4]))
@@ -198,6 +200,19 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             dag.output(c, using=assert_all_n, params=dict(n=2, l=50))
             c = a.partition(num=1).transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[100]))
+
+    def test_interfaceless(self):
+        sdf = self.spark_session.createDataFrame(
+            [[1, 10], [0, 0], [1, 1], [0, 20]], "a int,b int"
+        )
+
+        # schema:*
+        def f1(df: pd.DataFrame) -> pd.DataFrame:
+            return df.sort_values("b").head(1)
+
+        result = transform(sdf, f1, partition=dict(by=["a"]), engine=self.engine)
+        assert isinstance(result, SDataFrame)
+        assert result.toPandas().sort_values(["a"]).values.tolist() == [[0, 0], [1, 1]]
 
 
 class SparkExecutionEnginePandasUDFBuiltInTests(SparkExecutionEngineBuiltInTests):

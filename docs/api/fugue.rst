@@ -47,3 +47,11 @@ fugue.exceptions
    :undoc-members:
    :show-inheritance:
 
+fugue.interfaceless
+-------------------
+
+.. automodule:: fugue.interfaceless
+   :members:
+   :undoc-members:
+   :show-inheritance:
+

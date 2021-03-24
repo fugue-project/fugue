@@ -84,6 +84,9 @@ def test_partition_spec():
     print(p)
     print(f"{p}")
 
+    assert PartitionSpec("per_row") == PartitionSpec(num="ROWCOUNT", algo="even")
+    assert PartitionSpec(by="abc") == PartitionSpec(by=["abc"])
+
     # partition by overlaps with presort
     raises(
         SyntaxError,
@@ -97,6 +100,9 @@ def test_partition_spec():
 
     # partition by has dups
     raises(SyntaxError, lambda: PartitionSpec(partition_by=["a", "b", "b"]))
+
+    # partition by is invalid
+    raises(SyntaxError, lambda: PartitionSpec(partition_by=123))
 
     # bad input
     raises(TypeError, lambda: PartitionSpec(1))

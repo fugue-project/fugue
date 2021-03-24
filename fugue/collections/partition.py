@@ -90,6 +90,8 @@ class PartitionSpec(object):
     >>> PartitionSpec(algo="even", num=4)
     >>> p = PartitionSpec(num=4, by=["a"])
     >>> p_override = PartitionSpec(p, by=["a","b"], algo="even")
+    >>> PartitionSpec(by="a")  # == PartitionSpec(by=["a"])
+    >>> PartitionSpec("per_row")  # == PartitionSpec(num="ROWCOUNT", algo="even")
 
     It's important to understand this concept, please read |PartitionTutorial|
 
@@ -105,23 +107,39 @@ class PartitionSpec(object):
     * row_limit and size_limit are to be deprecated
     """
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, **kwargs: Any):  # noqa: C901
         p = ParamDict()
-        for a in args:
-            if a is None:
-                continue
-            elif isinstance(a, PartitionSpec):
-                self._update_dict(p, a.jsondict)
-            elif isinstance(a, Dict):
-                self._update_dict(p, a)
-            elif isinstance(a, str):
-                self._update_dict(p, json.loads(a))
-            else:
-                raise TypeError(f"{a} is not supported")
-        self._update_dict(p, kwargs)
+        if (
+            len(args) == 1
+            and len(kwargs) == 0
+            and isinstance(args[0], str)
+            and args[0].lower() == "per_row"
+        ):
+            p["algo"] = "even"
+            p["num_partitions"] = "ROWCOUNT"
+        else:
+            for a in args:
+                if a is None:
+                    continue
+                elif isinstance(a, PartitionSpec):
+                    self._update_dict(p, a.jsondict)
+                elif isinstance(a, Dict):
+                    self._update_dict(p, a)
+                elif isinstance(a, str):
+                    self._update_dict(p, json.loads(a))
+                else:
+                    raise TypeError(f"{a} is not supported")
+            self._update_dict(p, kwargs)
         self._num_partitions = p.get("num_partitions", "0")
         self._algo = p.get("algo", "").lower()
-        self._partition_by = p.get("partition_by", [])
+        if "partition_by" not in p:
+            self._partition_by: List[str] = []
+        elif isinstance(p["partition_by"], str):
+            self._partition_by = [p["partition_by"]]
+        elif isinstance(p["partition_by"], (list, tuple)):
+            self._partition_by = list(p["partition_by"])
+        else:
+            raise SyntaxError(p["partition_by"])
         aot(
             len(self._partition_by) == len(set(self._partition_by)),
             SyntaxError(f"{self._partition_by} has duplicated keys"),
