@@ -219,7 +219,7 @@ def _load_json(
     return pdf[schema.names], schema
 
 
-def _convert_pyarrow_to_avro_schema(pdf: pd.DataFrame, columns: Any = None):
+def _convert_pyarrow_to_avro_schema(pdf: pd.DataFrame, columns: Any = None) -> Dict:
     """
     pyarrow schema:
     'station: str , time: long, temp: int'
@@ -229,9 +229,9 @@ def _convert_pyarrow_to_avro_schema(pdf: pd.DataFrame, columns: Any = None):
     'type': 'record',
     'name': 'Root',
     'fields': [
-        {'name': 'station', 'type': 'string'},
-        {'name': 'time', 'type': 'long'},
-        {'name': 'temp', 'type': 'int'},
+        {'name': 'a', 'type': 'string'},
+        {'name': 'b', 'type': 'int'},
+        {'name': 'c', 'type': 'long'},
     ],
     }
 
@@ -293,7 +293,7 @@ def _save_avro(df: LocalDataFrame, p: FileParser, columns: Any = None, **kwargs:
     pdf = df.as_pandas()
     pdx.to_avro(
         p.uri, pdf, schema=schema, append=append, times_as_micros=times_as_micros, **kw
-    )  # QN what is uri, is this the path?
+    )
 
 
 def _load_avro(
