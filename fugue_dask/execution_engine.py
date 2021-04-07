@@ -390,7 +390,11 @@ class DaskExecutionEngine(ExecutionEngine):
                 d = d.head(n)
             else:
                 # Use the default partition
-                d = d.map_partitions(_partition_take, n, _presort, meta=meta).compute()
+                d = (
+                    d.map_partitions(_partition_take, n, _presort, meta=meta)
+                    .reset_index(drop=True)
+                    .compute()
+                )
                 # compute() brings this to Pandas so we can use pandas
                 d = d.sort_values(
                     list(_presort.keys()),
@@ -399,8 +403,10 @@ class DaskExecutionEngine(ExecutionEngine):
                 ).head(n)
 
         else:
-            d = d.groupby(partition_spec.partition_by, dropna=False).apply(
-                _partition_take, n=n, presort=_presort, meta=meta
+            d = (
+                d.groupby(partition_spec.partition_by, dropna=False)
+                .apply(_partition_take, n=n, presort=_presort, meta=meta)
+                .reset_index(drop=True)
             )
 
         return DaskDataFrame(d, df.schema, metadata)

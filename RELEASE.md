@@ -1,11 +1,15 @@
 # Release Notes
 
-## 0.5.2
-* Added Codacy and Slack channel badges, [fixed pylint](https://github.com/fugue-project/fugue/pull/177)
-* Created [transform and out_transform](https://github.com/fugue-project/fugue/issues/181) functions
-* Added partition syntax [sugar](https://github.com/fugue-project/fugue/issues/183)
-* Fixed FugueSQL `CONNECT` [bug](https://github.com/fugue-project/fugue/pull/175)
+## 0.5.3
 
+-   Fixed multi take [issue](https://github.com/fugue-project/fugue/issues/184) for dask
+
+## 0.5.2
+
+-   Added Codacy and Slack channel badges, [fixed pylint](https://github.com/fugue-project/fugue/pull/177)
+-   Created [transform and out_transform](https://github.com/fugue-project/fugue/issues/181) functions
+-   Added partition syntax [sugar](https://github.com/fugue-project/fugue/issues/183)
+-   Fixed FugueSQL `CONNECT` [bug](https://github.com/fugue-project/fugue/pull/175)
 
 ## 0.5.1
 
