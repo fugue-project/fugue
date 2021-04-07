@@ -1014,6 +1014,24 @@ class BuiltInTests(object):
                 with raises(ValueError):
                     a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")
                     a.take(1, na_position=["True", "False"]).show()
+            # Multiple takes
+            with self.dag() as dag:
+                df = dag.df(
+                    pd.DataFrame({"aaa": [1, 1, 2, 2], "bbb": ["a", "b", "c", "d"]})
+                )
+                df1 = (
+                    df.partition(by=["aaa"], presort="bbb")
+                    .take(1)
+                    .take(1, presort="aaa")
+                )
+                df1.show()
+                df2 = (
+                    df.partition(by=["aaa"], presort="bbb")
+                    .take(1)
+                    .partition(by=["aaa"], presort="bbb")
+                    .take(1, presort="aaa")
+                )
+                df2.show()
 
         def test_col_ops(self):
             with self.dag() as dag:
