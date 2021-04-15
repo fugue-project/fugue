@@ -189,16 +189,16 @@ def test_avro_io(tmpdir):
     save_df(df1, path)
     actual = load_df(path)
 
-    df_eq(actual,[["1", 2, 3]], "a:str,b:int,c:long")
+    df_eq(actual,[["1", 2, 3]], "a:str,b:long,c:long")
     
     actual = load_df(path, columns=["a", "b"])
-    df_eq(actual,[["1", 3]], "a:str,b:int") 
+    df_eq(actual,[["1", 3]], "a:str,b:long") 
     
     actual = load_df(path, columns="a:str,b:int,c:long")
     df_eq(actual,[["1", 2, 3]], "a:str,b:int,c:long")
 
     actual = load_df(path, columns=["b", "c"], infer_schema=True)
-    df_eq(actual,[[2, 3]], "b:int,c:long")
+    df_eq(actual,[[2, 3]], "b:long,c:long")
     
     # provide schema and columns -> throw error
     raises(Exception, lambda: save_df(path, columns="a:str,b:int,c:long", schema={'type': 'record','name': 'Root','fields': [
