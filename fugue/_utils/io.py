@@ -299,6 +299,7 @@ def _save_avro(df: LocalDataFrame, p: FileParser, columns: Any = None, **kwargs:
         p.uri, pdf, schema=schema, append=append, times_as_micros=times_as_micros, **kw
     )
 
+
 def _load_avro(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[pd.DataFrame, Any]:
