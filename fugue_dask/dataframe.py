@@ -189,7 +189,7 @@ class DaskDataFrame(DataFrame):
         :param columns: selected columns, defaults to None (all columns)
         :return: 2-dimensional array
         """
-        tdf = PandasDataFrame(self._native.head(n).as_pandas(), schema=self.schema)
+        tdf = PandasDataFrame(self.native.head(n, compute=True), schema=self.schema)
         return tdf.head(n, columns=columns)
 
     def _apply_schema(
