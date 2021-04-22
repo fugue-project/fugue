@@ -182,6 +182,16 @@ class DaskDataFrame(DataFrame):
             type_safe=type_safe,
         )
 
+    def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
+        """Get first n rows of the dataframe as 2-dimensional array
+
+        :param n: number of rows
+        :param columns: selected columns, defaults to None (all columns)
+        :return: 2-dimensional array
+        """
+        tdf = PandasDataFrame(self._native.head(n).as_pandas(), schema=self.schema)
+        return tdf.head(n, columns=columns)
+
     def _apply_schema(
         self, pdf: pd.DataFrame, schema: Optional[Schema], type_safe: bool = True
     ) -> Tuple[pd.DataFrame, Schema]:
