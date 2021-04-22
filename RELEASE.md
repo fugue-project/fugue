@@ -3,6 +3,7 @@
 ## 0.5.3
 
 -   Fixed multi take [issue](https://github.com/fugue-project/fugue/issues/184) for dask
+-   Fixed pandas, dask print [slow](https://github.com/fugue-project/fugue/issues/186)
 
 ## 0.5.2
 
