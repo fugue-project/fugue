@@ -58,7 +58,7 @@ def _jupyter_nbextension_paths():
     ]
 
 
-def setup(notebook_setup: Any = None) -> Any:
+def setup(notebook_setup: Any = None, is_lab: bool = False) -> Any:
     """Setup the notebook environment inside notebook without
     installing the jupyter extension or loading ipython extension
 
@@ -67,4 +67,5 @@ def setup(notebook_setup: Any = None) -> Any:
     """
     ip = get_ipython()
     _setup_fugue_notebook(ip, notebook_setup)
-    return Javascript(_HIGHLIGHT_JS)
+    if not is_lab:
+        return Javascript(_HIGHLIGHT_JS)
