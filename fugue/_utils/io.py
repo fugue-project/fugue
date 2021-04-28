@@ -3,6 +3,8 @@ import pathlib
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Iterable
 from urllib.parse import urlparse
 
+from fastavro import reader
+import pandavro as pdx
 import pandas as pd
 from fugue.dataframe import LocalBoundedDataFrame, LocalDataFrame, PandasDataFrame
 from triad.collections.fs import FileSystem
@@ -217,22 +219,139 @@ def _load_json(
     return pdf[schema.names], schema
 
 
+def _convert_pyarrow_to_avro_schema(pdf: pd.DataFrame, columns: Any = None) -> Dict:
+    """
+    pyarrow schema:
+    'station: str , time: long, temp: int'
+
+    avro schema:
+    {
+    'type': 'record',
+    'name': 'Root',
+    'fields': [
+        {'name': 'a', 'type': 'string'},
+        {'name': 'b', 'type': 'int'},
+        {'name': 'c', 'type': 'long'},
+    ],
+    }
+
+    """
+    infer_fields = Schema(columns)
+    inferred_fields = [
+        {"name": k, "type": v} for k, v in infer_fields.pandas_dtype().items()
+    ]  # [ {column_name: np.dtype(str)}, ... ]
+
+    for field in inferred_fields:
+        if "complex" in field["type"]:
+            field["type"] = ["null", pdx.__complex_field_infer(pdf, field["name"], {})]
+
+    schema = {"type": "record", "name": "Root", "fields": inferred_fields}
+
+    return schema
+
+
+def _save_avro(df: LocalDataFrame, p: FileParser, columns: Any = None, **kwargs: Any):
+    """Save pandas dataframe as avro.
+    If providing your own schema, the usage of schema argument is preferred
+
+    """
+
+    kw = ParamDict(kwargs)
+    # pandavro defaults
+    schema = None
+    append = False
+    times_as_micros = True
+
+    # pandavro defaults
+    schema = None
+    append = False
+    times_as_micros = True
+
+    if "schema" in kw:
+        schema = kw["schema"]
+        if schema is None:
+            if columns is not None:
+                schema = _convert_pyarrow_to_avro_schema(df, columns)
+        else:
+            if columns:
+                # both schema and columns provided
+                raise Exception("set columns to None when schema is provided")
+
+        del kw["infer_schema"]
+
+    if "infer_schema" in kw:
+        infer_schema = kw["infer_schema"]
+        if infer_schema and (schema is not None):
+            # infer_schema set to True but schema was provided
+            raise Exception("set infer_schema to False when schema is provided")
+        del kw["infer_schema"]
+
+    if "append" in kw:
+        append = kw["append"]  # default is overwrite (False) instead of append (True)
+        del kw["append"]
+
+    if "times_as_micros" in kw:
+        times_as_micros = kw["times_as_micros"]
+        del kw["times_as_micros"]
+
+    pdf = df.as_pandas()
+    pdx.to_avro(
+        p.uri, pdf, schema=schema, append=append, times_as_micros=times_as_micros, **kw
+    )
+
+
+def _load_avro(
+    p: FileParser, columns: Any = None, **kwargs: Any
+) -> Tuple[pd.DataFrame, Any]:
+
+    kw = ParamDict(kwargs)
+    preprocess_record = None
+    if "process_record" in kw:
+        process_record = kw["process_record"]
+        del kw["process_record"]
+
+    with open(p.uri, "rb") as fp:  # QN is p.uri the path?
+        # Configure Avro reader
+        avro_reader = reader(fp)
+        # Load records in memory
+        if preprocess_record:
+            records = [process_record(r) for r in avro_reader]
+        else:
+            records = list(avro_reader)
+
+        # Populate pandas.DataFrame with records
+        pdf = pd.DataFrame.from_records(records)
+
+    if columns is None:
+        return pdf, None
+    if isinstance(columns, list):  # column names
+        return pdf[columns], None
+    schema = Schema(columns)
+
+    # Return created DataFrame
+    return pdf[schema.names], schema
+
+
 _FORMAT_MAP: Dict[str, str] = {
     ".csv": "csv",
     ".csv.gz": "csv",
     ".parquet": "parquet",
     ".json": "json",
     ".json.gz": "json",
+    ".avro": "avro",
+    ".avro.gz": "avro",
 }
 
 _FORMAT_LOAD: Dict[str, Callable[..., Tuple[pd.DataFrame, Any]]] = {
     "csv": _load_csv,
     "parquet": _load_parquet,
     "json": _load_json,
+    "avro": _load_avro,
 }
 
 _FORMAT_SAVE: Dict[str, Callable] = {
     "csv": _save_csv,
     "parquet": _save_parquet,
     "json": _save_json,
+    "avro": _save_avro,
 }

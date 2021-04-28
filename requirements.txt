@@ -16,6 +16,8 @@ sphinx>=2.4.0
 sphinx-rtd-theme
 sphinx-autodoc-typehints
 flask
+pandavro
+fastavro
 
 # publish to pypi
 wheel
