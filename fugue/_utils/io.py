@@ -132,9 +132,6 @@ def _get_single_files(
                 for x in fs.opendir(f.uri).glob(f.glob_pattern)
             ]
             yield from _get_single_files(files, fs)
-        elif fs.isdir(f.uri):
-            for x in fs.filterdir(f.uri, files=["*." + f.file_format]):
-                yield FileParser(os.path.join(f.uri, x.name))
         else:
             yield f
 

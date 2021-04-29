@@ -2,7 +2,6 @@ import logging
 from typing import Any, Callable, List, Optional, Union
 
 import dask.dataframe as dd
-from fugue._utils.io import load_df, save_df
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
@@ -29,6 +28,7 @@ from fugue_dask._constants import (
     FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS,
     FUGUE_DASK_DEFAULT_CONF,
 )
+from fugue_dask._io import load_df, save_df
 from fugue_dask._utils import DaskUtils
 from fugue_dask.dataframe import DaskDataFrame
 
@@ -438,5 +438,5 @@ class DaskExecutionEngine(ExecutionEngine):
             self.log.warning(  # pragma: no cover
                 "partition_spec is not respected in %s.save_df", self
             )
-        df = self.to_df(df).as_local()
+        df = self.to_df(df)
         save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
