@@ -180,34 +180,56 @@ def test_json(tmpdir):
     df_eq(actual, [["2", 1]], "b:str,a:int")
     raises(KeyError, lambda: load_df(path, columns="bb:str,a:int"))
 
-@mark.skip(reason="Unable to test due to spark jars not being downloaded properly")
+
 def test_avro_io(tmpdir):
     df1 = PandasDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
     path = os.path.join(tmpdir, "a.avro")
     save_df(df1, path)
     actual = load_df(path)
 
-    df_eq(actual,[["1", 2, 3]], "a:str,b:long,c:long") 
+    df_eq(actual, [["1", 2, 3]], "a:str,b:long,c:long")
     actual = load_df(path, columns=["a", "b"])
-    df_eq(actual,[["1", 3]], "a:str,b:long") 
-    
+    df_eq(actual, [["1", 3]], "a:str,b:long")
+
     actual = load_df(path, columns="a:str,b:int,c:long")
-    df_eq(actual,[["1", 2, 3]], "a:str,b:int,c:long")
+    df_eq(actual, [["1", 2, 3]], "a:str,b:int,c:long")
 
     actual = load_df(path, columns=["b", "c"], infer_schema=True)
-    df_eq(actual,[[2, 3]], "b:long,c:long")
-    
+    df_eq(actual, [[2, 3]], "b:long,c:long")
+
     # provide schema and columns -> throw error
-    raises(Exception, lambda: save_df(path, columns="a:str,b:int,c:long", schema={'type': 'record','name': 'Root','fields': [
-        {'name': 'station', 'type': 'string'},
-        {'name': 'time', 'type': 'long'},
-        {'name': 'temp', 'type': 'int'},
-    ],}))
+    raises(
+        Exception,
+        lambda: save_df(
+            path,
+            columns="a:str,b:int,c:long",
+            schema={
+                "type": "record",
+                "name": "Root",
+                "fields": [
+                    {"name": "station", "type": "string"},
+                    {"name": "time", "type": "long"},
+                    {"name": "temp", "type": "int"},
+                ],
+            },
+        ),
+    )
 
     # provide schema and infer_schema is True -> throw error
-    raises(Exception, lambda: save_df(path, columns=None, schema={'type': 'record','name': 'Root','fields': [
-        {'name': 'station', 'type': 'string'},
-        {'name': 'time', 'type': 'long'},
-        {'name': 'temp', 'type': 'int'},
-    ],}, infer_schema=True))
-    
+    raises(
+        Exception,
+        lambda: save_df(
+            path,
+            columns=None,
+            schema={
+                "type": "record",
+                "name": "Root",
+                "fields": [
+                    {"name": "station", "type": "string"},
+                    {"name": "time", "type": "long"},
+                    {"name": "temp", "type": "int"},
+                ],
+            },
+            infer_schema=True,
+        ),
+    )
