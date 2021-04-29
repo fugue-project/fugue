@@ -54,8 +54,9 @@ def test_parquet_io(tmpdir, spark_session):
     df_eq(actual, [["2", "1"], ["2", "1"]], "a:str,b:int,c:long")
 
     # overwrite = False
-    raises((FileExistsError, AnalysisException),
-           lambda: si.save_df(df1, f1, mode="error"))
+    raises(
+        (FileExistsError, AnalysisException), lambda: si.save_df(df1, f1, mode="error")
+    )
     # wrong mode
     raises(Exception, lambda: si.save_df(df1, f1, mode="dummy"))
 
@@ -84,8 +85,10 @@ def test_csv_io(tmpdir, spark_session):
     assert [["2", 1.0]] == actual.as_array()
     raises(Exception, lambda: si.load_df(path, columns="b:str,x:double", header=True))
 
-    raises(NotImplementedError, lambda: si.load_df(
-        path, columns="b:str,x:double", header=2))
+    raises(
+        NotImplementedError,
+        lambda: si.load_df(path, columns="b:str,x:double", header=2),
+    )
 
 
 def test_json_io(tmpdir, spark_session):
@@ -102,8 +105,10 @@ def test_json_io(tmpdir, spark_session):
     df_eq(actual, [["2", 1]], "b:str,a:int")
     raises(Exception, lambda: si.load_df(path, columns="bb:str,a:int"))
 
-@mark.skip(reason="Unable to test due to spark jars not being downloaded properly")
+
 def test_avro_io(tmpdir, spark_session):
+    if spark_session.version < "3.0.0":
+        return
     fs = FileSystem()
     si = SparkIO(spark_session, fs)
     df1 = _df([["1", 2, 3]], "a:str,b:int,c:long")
@@ -116,6 +121,7 @@ def test_avro_io(tmpdir, spark_session):
     actual = si.load_df(path, columns="b:str,a:int")
     df_eq(actual, [["2", 1]], "b:str,a:int")
     raises(Exception, lambda: si.load_df(path, columns="bb:str,a:int"))
+
 
 def test_save_with_partition(tmpdir, spark_session):
     si = SparkIO(spark_session, FileSystem())
@@ -130,6 +136,7 @@ def test_save_with_partition(tmpdir, spark_session):
     si.save_df(df1, path, partition_spec=PartitionSpec(by=["a"], num=2))
     actual = si.load_df(path, columns=["b", "a"])
     df_eq(actual, [[2, "1"]], "b:int,a:str")
+
 
 def _df(data, schema=None, metadata=None):
     session = SparkSession.builder.getOrCreate()

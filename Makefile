@@ -30,9 +30,12 @@ setupinconda:
 
 devenv:
 	pip3 install -r requirements.txt
-	export SPARK_JAR=$(cd / ; find -wholename */pyspark/jars)/
 	pre-commit install
-	wget -U "Any User Agent" -O "${SPARK_JAR}spark-avro_2.12-3.0.1.jar"  https://repo1.maven.org/maven2/org/apache/spark/spark-avro_2.12/3.0.1/spark-avro_2.12-3.0.1.jar
+	bash scripts/add_avro_jar.sh
+
+devenvlegacy:
+	pip3 install -r requirements.txt
+	pre-commit install
 
 dev:
 	pip3 install -r requirements.txt

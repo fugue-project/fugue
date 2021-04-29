@@ -34,7 +34,7 @@ jobs:
         pip install pyspark==2.4.5
     - name: Install dependencies
       run: |
-        make devenv
+        make devenvlegacy
     - name: Test
       env:
         ARROW_PRE_0_15_IPC_FORMAT: 1
