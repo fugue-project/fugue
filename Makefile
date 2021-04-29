@@ -33,6 +33,9 @@ devenv:
 	pre-commit install
 	bash scripts/add_avro_jar.sh
 
+devenvlegacy:
+	pip3 install -r requirements.txt
+	pre-commit install
 
 dev:
 	pip3 install -r requirements.txt
