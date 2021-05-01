@@ -210,4 +210,4 @@ Feel free to message us on [Slack](https://join.slack.com/t/fugue-project/shared
 
 ## Partner with Us
 
-The Fugue Project is looking for select companies to partner closely with and implement solutions built on any of the Fugue libraries (Fugue core, Fugue SQL, Tune). As part of the partnership, our team will closely work with you, or give trainings and workshops to your team members. If you're interested, please fill out [this form](https://docs.google.com/forms/d/e/1FAIpQLScsBnQg78ScNn4tXMLSEiNnNOBR2ZVxRyOgGUOohzPk8KFGoA/viewform?usp=sf_link).
+The Fugue Project is looking for select companies to partner closely with and implement solutions built on any of the Fugue libraries (Fugue core, Fugue SQL, Tune). As part of the partnership, our team will closely work with you, or give trainings and workshops to your team members. If you're interested, please fill out [this form](https://docs.google.com/forms/d/e/1FAIpQLScsBnQg78ScNn4tXMLSEiNnNOBR2ZVxRyOgGUOohzPk8KFGoA/viewform?usp=sf_link) and we'll reach out to you.
