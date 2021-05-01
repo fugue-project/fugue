@@ -18,7 +18,7 @@ Fugue is a pure abstraction layer that makes Python code portable across differi
 
 ## Key Features
 
-Here is an example Fugue code snippet that illustrates some of the key features of the framework. A `fillna` function creates a new column named `filled`, which is the same as the column `value` except that the `None` values are filled. Notice that the `fillna` function written below is purely in native Python. The code will still run without Fugue installed. 
+Here is an example Fugue code snippet that illustrates some of the key features of the framework. A `fillna` function creates a new column named `filled`, which is the same as the column `value` except that the `None` values are filled. Notice that the `fillna` function written below is purely in native Python. The code will still run without Fugue installed.
 
 ```python
 from fugue import FugueWorkflow
