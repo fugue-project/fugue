@@ -11,8 +11,8 @@
 
 Fugue is a pure abstraction layer that makes Python code portable across differing computing frameworks such as Pandas, Spark and Dask.
 
--   **Framework-agnostic code**: Write code once in native Python. Fugue makes it runnable on Pandas, Dask or Spark with minimal changes. Logic and code is decoupled from frameworks, even from Fugue itself. Fugue makes the user's code adapt to the underlying computing frameworks. Users can use the Spark and Dask engines without learning the framework syntax.
--   **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and saves cluster expense.  This lessens the frequency spinning up clusters to test code, and reduces expensive mistakes.
+-   **Framework-agnostic code**: Write code once in native Python. Fugue makes it runnable on Pandas, Dask or Spark with minimal changes. Logic and code is decoupled from frameworks, even from Fugue itself. Fugue makes the user's code adapt to the underlying computing frameworks. Users can use the Spark and Dask engines without learning the specific framework syntax.
+-   **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and reduce cluster usage.  This lessens the frequency spinning up clusters to test code, and reduces expensive mistakes. It also becomes trivial to transition from Pandas-sized data to bigger datasets.
 -   **Friendlier interface for Spark**: Fugue provides a friendlier interface compared to Spark user-defined functions (UDF). Users can get Python/Pandas code running on Spark with less effort. Fugue SQL extends Spark SQL to be a more complete programming language. Lastly, Fugue as some optimizations that make the Spark engine easier to use.
 -   **Highly testable code**: Fugue naturally makes logic more testable because the code will be written in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
 
