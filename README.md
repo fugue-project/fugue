@@ -96,7 +96,7 @@ spark_session = (SparkSession
 engine = SparkExecutionEngine(spark_session, {"additional_conf":"abc"})
 ```
 
-### [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/sql.html)
+### [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/fugue_sql/index.html)
 
 A SQL-based language capable of expressing end-to-end workflows. The `fillna` function above is used in the SQL query below. This is how to use a Python-defined transformer along with the standard SQL `SELECT` statement.
 
@@ -119,7 +119,7 @@ pip install fugue
 
 Fugue has these extras:
 
--   **sql**: to support [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/sql.html)
+-   **sql**: to support [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/fugue_sql/index.html)
 -   **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
 -   **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/execution_engine.html)
 
@@ -179,7 +179,7 @@ PRINT
 
 To read the complete static docs, [click here](https://fugue.readthedocs.org)
 
-The best way to start is to go through the tutorials. We have the tutorials in an interactive notebook environent.
+The best way to start is to go through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner.html). We have the tutorials in an interactive notebook environent.
 
 ### Run the tutorial using binder:
 
@@ -196,6 +196,11 @@ Alternatively, you should get decent performance if running its docker image on 
 ```bash
 docker run -p 8888:8888 fugueproject/tutorials:latest
 ```
+
+## Resources
+* [Spark AI Summit 2020 Fugue Talk](https://www.youtube.com/watch?v=BBd4b2pMk0c&)
+* [Video Tutorial on Fugue SQL](https://youtu.be/iROWlAVa2Kk)
+* [Data Science Cross-Framework Library Blog](https://towardsdatascience.com/creating-pandas-and-spark-compatible-functions-with-fugue-8617c0b3d3a8)
 
 ## Contributing
 
