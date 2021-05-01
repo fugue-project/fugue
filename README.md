@@ -188,9 +188,9 @@ The best way to start is to go through the [tutorials](https://fugue-tutorials.r
 a distributed framework such as Spark. Parallel executions can become sequential, so some of the
 performance comparison examples will not give you the correct numbers.
 
-### Run the tutorial using docker
+### Run the tutorial using Docker
 
-Alternatively, you should get decent performance if running its docker image on your own machine:
+Alternatively, you should get decent performance if running its Docker image on your own machine:
 
 ```bash
 docker run -p 8888:8888 fugueproject/tutorials:latest
