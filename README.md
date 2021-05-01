@@ -197,6 +197,9 @@ docker run -p 8888:8888 fugueproject/tutorials:latest
 ```
 
 ## Resources
+
+View our latest presentations and content
+
 * [Spark AI Summit 2020 Fugue Talk](https://www.youtube.com/watch?v=BBd4b2pMk0c&)
 * [Video Tutorial on Fugue SQL](https://youtu.be/iROWlAVa2Kk)
 * [Data Science Cross-Framework Library Blog](https://towardsdatascience.com/creating-pandas-and-spark-compatible-functions-with-fugue-8617c0b3d3a8)
@@ -204,3 +207,7 @@ docker run -p 8888:8888 fugueproject/tutorials:latest
 ## Contributing
 
 Feel free to message us on [Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ). We also have [contributing instructions](CONTRIBUTING.md).
+
+## Partner with Us
+
+The Fugue Project is looking for select companies to partner closely with and implement solutions built on any of the Fugue libraries (Fugue core, Fugue SQL, Tune). As part of the partnership, our team will closely work with you, or give trainings and workshops to your team members. If you're interested, please fill out [this form](https://docs.google.com/forms/d/e/1FAIpQLScsBnQg78ScNn4tXMLSEiNnNOBR2ZVxRyOgGUOohzPk8KFGoA/viewform?usp=sf_link).
