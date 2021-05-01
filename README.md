@@ -134,7 +134,7 @@ There is an accompanying notebook extension for Fugue SQL that lets users use th
 
 ![Fugue SQL gif](https://miro.medium.com/max/700/1*6091-RcrOPyifJTLjo0anA.gif)
 
-### Installation
+### Installating Notebook Extension
 
 To install the notebook extension:
 
@@ -200,9 +200,9 @@ docker run -p 8888:8888 fugueproject/tutorials:latest
 
 View our latest presentations and content
 
--  [Spark AI Summit 2020 Fugue Talk](https://www.youtube.com/watch?v=BBd4b2pMk0c&)
--  [Video Tutorial on Fugue SQL](https://youtu.be/iROWlAVa2Kk)
--  [Data Science Cross-Framework Library Blog](https://towardsdatascience.com/creating-pandas-and-spark-compatible-functions-with-fugue-8617c0b3d3a8)
+-   [Spark AI Summit 2020 Fugue Talk](https://www.youtube.com/watch?v=BBd4b2pMk0c&)
+-   [Video Tutorial on Fugue SQL](https://youtu.be/iROWlAVa2Kk)
+-   [Data Science Cross-Framework Library Blog](https://towardsdatascience.com/creating-pandas-and-spark-compatible-functions-with-fugue-8617c0b3d3a8)
 
 ## Contributing
 
