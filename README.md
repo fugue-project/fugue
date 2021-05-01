@@ -16,18 +16,9 @@ Fugue is a pure abstraction layer that makes Python code portable across differi
 -   **Friendlier interface for Spark**: Fugue provides a friendlier interface compared to Spark user-defined functions (UDF). Users can get Python/Pandas code running on Spark with less effort. Fugue SQL extends Spark SQL to be a more complete programming language. Lastly, Fugue as some optimizations that make the Spark engine easier to use.
 -   **Highly testable code**: Fugue naturally makes logic more testable because the code will be written in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
 
-## Who is it for?
-
--   Big data practitioners looking to reduce compute costs and increase project velocity
--   Data practitioners who keep switching between data processing frameworks (Pandas, Spark, Dask)
--   Data engineers scaling data pipelines to handle bigger data in a consistent and reliable way
--   Data practitioners looking to write more testable code
--   Spark/Dask users who want to have an easier experience working with distributed computing
--   People who love using SQL. Fugue SQL extends standard SQL to be a programming language
-
 ## Key Features
 
-Here is an example Fugue code snippet that illustrates some of the key features of the framework. A fillna function creates a new column named `filled`, which is the same as the column `value` except that the `None` values are filled.
+Here is an example Fugue code snippet that illustrates some of the key features of the framework. A `fillna` function creates a new column named `filled`, which is the same as the column `value` except that the `None` values are filled. Notice that the `fillna` function written below is purely in native Python. The code will still run without Fugue installed. 
 
 ```python
 from fugue import FugueWorkflow
@@ -55,13 +46,9 @@ with FugueWorkflow() as dag:
     df.show()
 ```
 
-### Catch errors faster
-
-Fugue builds a [directed acyclic graph (DAG)](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/dag.html) before running code, allowing users to receive errors faster. This catches more errors before expensive jobs are run on a cluster. For example, mismatches in specified [schema](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/schema_dataframes.html#Schema) will raise errors. In the code above, the schema hint comment is read and the schema is enforced during execution. Schema is required for Fugue [extensions](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/extensions.html).
-
 ### Cross-platform execution
 
-Notice that the `fillna` function written above is purely in native Python. The code will still run without Fugue. Fugue lets users write code in Python, and then port the logic to Pandas, Spark, or Dask. Users can focus on the logic, rather than on what engine it will be executed. To bring it to Spark, simply pass the `SparkExecutionEngine` into the `FugueWorkflow` as follows.
+Fugue lets users write code in Python, and then port the logic to Pandas, Spark, or Dask. Users can focus on the logic, rather than on what engine it will be executed. To bring it to Spark, simply pass the `SparkExecutionEngine` into the `FugueWorkflow` as follows.
 
 ```python
 from fugue_spark import SparkExecutionEngine
@@ -71,7 +58,22 @@ with FugueWorkflow(SparkExecutionEngine) as dag:
     df.show()
 ```
 
-Similarly for Dask, we can pass the `DaskExecutionEngine` into the `FugueWorkflow` instead.
+Similarly for Dask, we can pass the `DaskExecutionEngine` into the `FugueWorkflow` instead. The example above is to illustrate that native Python can be used on top of Spark. In practice, using the Pandas `fillna` will be easier to use in this case. We can run the Pandas `fillna` on Spark or Dask like follows:
+
+```python
+# schema: *, filled:double
+def fillna_pandas(df:pd.DataFrame, value:float=0) -> pd.DataFrame:
+    df["filled"] = df["value"].fillna(value)
+    return df
+
+with FugueWorkflow(SparkExecutionEngine) as dag:
+    df = dag.df(data, schema).transform(fillna_pandas)
+    df.show()
+```
+
+### Catch errors faster
+
+Fugue builds a [directed acyclic graph (DAG)](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/dag.html) before running code, allowing users to receive errors faster. This catches more errors before expensive jobs are run on a cluster. For example, mismatches in specified [schema](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/schema_dataframes.html#Schema) will raise errors. In the code above, the schema hint comment is read and the schema is enforced during execution. Schema is required for Fugue [extensions](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/extensions.html).
 
 ### Spark optimizations
 
