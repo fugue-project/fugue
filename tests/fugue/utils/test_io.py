@@ -4,6 +4,7 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue._utils.io import FileParser, load_df, save_df, _FORMAT_MAP
+from fugue.exceptions import FugueDataFrameOperationError
 from pytest import raises, mark
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
@@ -183,53 +184,76 @@ def test_json(tmpdir):
 
 def test_avro_io(tmpdir):
     df1 = PandasDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
-    path = os.path.join(tmpdir, "a.avro")
-    save_df(df1, path)
-    actual = load_df(path)
+    df2 = PandasDataFrame([["hello", 2, 3]], "a:str,b:int,c:long")
+    path1 = os.path.join(tmpdir, "df1.avro")
+    path2 = os.path.join(tmpdir, "df2.avro")
+    save_df(df1, path1)
+    actual = load_df(path1)
 
     df_eq(actual, [["1", 2, 3]], "a:str,b:long,c:long")
-    actual = load_df(path, columns=["a", "b"])
+    actual = load_df(path1, columns=["a", "b"])
     df_eq(actual, [["1", 3]], "a:str,b:long")
 
-    actual = load_df(path, columns="a:str,b:int,c:long")
+    actual = load_df(path1, columns="a:str,b:int,c:long")
     df_eq(actual, [["1", 2, 3]], "a:str,b:int,c:long")
 
-    actual = load_df(path, columns=["b", "c"], infer_schema=True)
+    actual = load_df(path1, columns="a:str,b:int,c:long", infer_schema=True) # TODO raise error when both provided?
+    df_eq(actual, [["1", 2, 3]], "a:str,b:int,c:long")
+
+    actual = load_df(path1, columns=["b", "c"], infer_schema=True) 
     df_eq(actual, [[2, 3]], "b:long,c:long")
 
-    # provide schema and columns -> throw error
+    # save in append mode
+    path3 = os.path.join(tmpdir, "append.avro")
+    save_df(df1, path3)
+    save_df(df2, path3 ,append=True)
+    actual = load_df(path1, columns="a:str,b:int,c:long")
+    df_eq(actual, [['1', 2, 3],['hello', 2, 3]], "a:str,b:int,c:long")
+
+    # save times_as_micros =False (i.e milliseconds instead)
+    df4 = PandasDataFrame([["2021-05-04", 2, 3]], "a:datetime,b:int,c:long")
+    path4 = os.path.join(tmpdir, "df4.avro")
+    save_df(df4, path4)
+    actual = load_df(path4, columns="a:datetime,b:int,c:long")
+    df_eq(actual, [["2021-05-04", 2, 3]], "a:datetime,b:int,c:long")
+    save_df(df4, path4, times_as_micros=False)
+    actual = load_df(path4, columns="a:datetime,b:int,c:long")
+    df_eq(actual, [["2021-05-04", 2, 3]], "a:datetime,b:int,c:long")
+
+    # provide avro schema
+    schema = {
+    'type': 'record',
+    'name': 'Root',
+    'fields': [
+        {'name': 'a', 'type': 'string'},
+        {'name': 'b', 'type': 'int'},
+        {'name': 'c', 'type': 'long'},
+    ],
+    }
+    save_df(df1, path1, schema=schema)
+    actual = load_df(path1, columns="a:str,b:int,c:long")
+    df_eq(actual, [['1', 2, 3]], "a:str,b:int,c:long")
+
+    # provide wrong types in columns arg
+    save_df(df2, path2, schema=schema)
     raises(
-        Exception,
-        lambda: save_df(
-            path,
-            columns="a:str,b:int,c:long",
-            schema={
-                "type": "record",
-                "name": "Root",
-                "fields": [
-                    {"name": "station", "type": "string"},
-                    {"name": "time", "type": "long"},
-                    {"name": "temp", "type": "int"},
-                ],
-            },
-        ),
+        FugueDataFrameOperationError,
+        lambda: load_df(df2, path2, columns="a:int,b:int,c:long"),
     )
 
-    # provide schema and infer_schema is True -> throw error
-    raises(
-        Exception,
-        lambda: save_df(
-            path,
-            columns=None,
-            schema={
-                "type": "record",
-                "name": "Root",
-                "fields": [
-                    {"name": "station", "type": "string"},
-                    {"name": "time", "type": "long"},
-                    {"name": "temp", "type": "int"},
-                ],
-            },
-            infer_schema=True,
-        ),
-    )
+    # load with process_record function
+    actual = load_df(path2, columns="a:str,b:int,c:long", process_record=lambda s: {'a' :str.upper(s['a']), 'b': s['b'], 'c': s['c']})
+    df_eq(actual, [['HELLO', 2, 3]], "a:str,b:int,c:long")
+
+
+    # provide wrong type in avro schema
+    schema = {
+    'type': 'record',
+    'name': 'Root',
+    'fields': [
+        {'name': 'a', 'type': 'int'},
+        {'name': 'b', 'type': 'int'},
+        {'name': 'c', 'type': 'long'},
+    ],
+    }
+    raises(TypeError, lambda: save_df(df2, path2, schema=schema))

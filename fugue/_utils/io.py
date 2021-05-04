@@ -219,48 +219,14 @@ def _load_json(
     return pdf[schema.names], schema
 
 
-def _convert_pyarrow_to_avro_schema(pdf: pd.DataFrame, columns: Any = None) -> Dict:
-    """
-    pyarrow schema:
-    'station: str , time: long, temp: int'
-
-    avro schema:
-    {
-    'type': 'record',
-    'name': 'Root',
-    'fields': [
-        {'name': 'a', 'type': 'string'},
-        {'name': 'b', 'type': 'int'},
-        {'name': 'c', 'type': 'long'},
-    ],
-    }
-
-    """
-    infer_fields = Schema(columns)
-    inferred_fields = [
-        {"name": k, "type": v} for k, v in infer_fields.pandas_dtype().items()
-    ]  # [ {column_name: np.dtype(str)}, ... ]
-
-    for field in inferred_fields:
-        if "complex" in field["type"]:
-            field["type"] = ["null", pdx.__complex_field_infer(pdf, field["name"], {})]
-
-    schema = {"type": "record", "name": "Root", "fields": inferred_fields}
-
-    return schema
-
-
-def _save_avro(df: LocalDataFrame, p: FileParser, columns: Any = None, **kwargs: Any):
+def _save_avro(df: LocalDataFrame, p: FileParser, **kwargs: Any):
     """Save pandas dataframe as avro.
     If providing your own schema, the usage of schema argument is preferred
 
+    :param schema: Avro Schema determines dtypes saved
     """
 
     kw = ParamDict(kwargs)
-    # pandavro defaults
-    schema = None
-    append = False
-    times_as_micros = True
 
     # pandavro defaults
     schema = None
@@ -269,22 +235,7 @@ def _save_avro(df: LocalDataFrame, p: FileParser, columns: Any = None, **kwargs:
 
     if "schema" in kw:
         schema = kw["schema"]
-        if schema is None:
-            if columns is not None:
-                schema = _convert_pyarrow_to_avro_schema(df, columns)
-        else:
-            if columns:
-                # both schema and columns provided
-                raise Exception("set columns to None when schema is provided")
-
-        del kw["infer_schema"]
-
-    if "infer_schema" in kw:
-        infer_schema = kw["infer_schema"]
-        if infer_schema and (schema is not None):
-            # infer_schema set to True but schema was provided
-            raise Exception("set infer_schema to False when schema is provided")
-        del kw["infer_schema"]
+        del kw["schema"]
 
     if "append" in kw:
         append = kw["append"]  # default is overwrite (False) instead of append (True)
@@ -305,17 +256,18 @@ def _load_avro(
 ) -> Tuple[pd.DataFrame, Any]:
 
     kw = ParamDict(kwargs)
-    preprocess_record = None
+    process_record = None
     if "process_record" in kw:
         process_record = kw["process_record"]
         del kw["process_record"]
 
-    with open(p.uri, "rb") as fp:  # QN is p.uri the path?
+    with open(p.uri, "rb") as fp:
         # Configure Avro reader
         avro_reader = reader(fp)
         # Load records in memory
-        if preprocess_record:
+        if process_record:
             records = [process_record(r) for r in avro_reader]
+
         else:
             records = list(avro_reader)
 
@@ -326,6 +278,7 @@ def _load_avro(
         return pdf, None
     if isinstance(columns, list):  # column names
         return pdf[columns], None
+
     schema = Schema(columns)
 
     # Return created DataFrame

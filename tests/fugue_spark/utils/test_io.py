@@ -9,7 +9,7 @@ from fugue_spark._utils.convert import to_schema, to_spark_schema
 from fugue_spark._utils.io import SparkIO
 from pyspark.sql import SparkSession
 from pyspark.sql.utils import AnalysisException
-from pytest import raises, mark
+from pytest import raises
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 
