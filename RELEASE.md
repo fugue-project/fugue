@@ -1,5 +1,9 @@
 # Release Notes
 
+## 0.5.5
+
+-   HOTFIX [avro support](https://github.com/fugue-project/fugue/issues/200)
+
 ## 0.5.4
 
 -   Added built in [avro support](https://github.com/fugue-project/fugue/issues/125)

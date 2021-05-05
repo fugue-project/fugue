@@ -3,8 +3,6 @@ import pathlib
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Iterable
 from urllib.parse import urlparse
 
-from fastavro import reader
-import pandavro as pdx
 import pandas as pd
 from fugue.dataframe import LocalBoundedDataFrame, LocalDataFrame, PandasDataFrame
 from triad.collections.fs import FileSystem
@@ -225,6 +223,7 @@ def _save_avro(df: LocalDataFrame, p: FileParser, **kwargs: Any):
 
     :param schema: Avro Schema determines dtypes saved
     """
+    import pandavro as pdx
 
     kw = ParamDict(kwargs)
 
@@ -254,6 +253,7 @@ def _save_avro(df: LocalDataFrame, p: FileParser, **kwargs: Any):
 def _load_avro(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[pd.DataFrame, Any]:
+    from fastavro import reader
 
     kw = ParamDict(kwargs)
     process_record = None
