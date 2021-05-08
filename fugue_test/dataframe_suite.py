@@ -223,6 +223,11 @@ class DataFrameTests(object):
                 assert [["a", 1]] == df.head(1)
             assert [[1, "a"]] == df.head(1, ["b", "a"])
 
+            df = self.df([[0, 1], [0, 2], [1, 1], [1, 3]], "a:int,b:int")
+            assert 2 == len(df.head(2))
+            df = self.df([[0, 1], [0, 2], [1, 1], [1, 3]], "a:int,b:int")
+            assert 4 == len(df.head(10))
+
         def test_show(self):
             df = self.df([["a", 1]], "a:str,b:int")
             df.show()

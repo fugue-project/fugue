@@ -1,5 +1,14 @@
 # Release Notes
 
+## 0.5.5
+
+-   HOTFIX [avro support](https://github.com/fugue-project/fugue/issues/200)
+
+## 0.5.4
+
+-   Added built in [avro support](https://github.com/fugue-project/fugue/issues/125)
+-   Fixed dask print [bug](https://github.com/fugue-project/fugue/issues/195)
+
 ## 0.5.3
 
 -   Fixed multi take [issue](https://github.com/fugue-project/fugue/issues/184) for dask
