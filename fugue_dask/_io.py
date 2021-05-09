@@ -1,10 +1,10 @@
 import os
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from dask import dataframe as dd
 from fugue._utils.io import FileParser
 from fugue._utils.io import _load_avro as _pd_load_avro
-from fugue._utils.io import _save_avro
+from fugue._utils.io import _save_avro, _get_single_files
 from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
@@ -27,7 +27,7 @@ def load_df(
         fp = [FileParser(u, format_hint) for u in uri]
     dfs: List[dd.DataFrame] = []
     schema: Any = None
-    for f in _dask_get_single_files(fp, fs):
+    for f in _get_single_files(fp, fs):
         df, schema = _FORMAT_LOAD[f.file_format](f, columns, **kwargs)
         dfs.append(df)
     return DaskDataFrame(dd.concat(dfs), schema)
@@ -80,7 +80,16 @@ def _load_parquet(
 
 
 def _save_csv(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
-    df.native.to_csv(p.uri, **{"index": False, "header": False, **kwargs})
+    df.native.to_csv(
+        os.path.join(p.uri, "*.csv"), **{"index": False, "header": False, **kwargs}
+    )
+
+
+def _safe_load_csv(path: str, **kwargs: Any) -> dd.DataFrame:
+    try:
+        return dd.read_csv(path, **kwargs)
+    except IsADirectoryError:
+        return dd.read_csv(os.path.join(path, "*.csv"), **kwargs)
 
 
 def _load_csv(
@@ -97,7 +106,7 @@ def _load_csv(
         header = kw["header"]
         del kw["header"]
     if str(header) in ["True", "0"]:
-        pdf = dd.read_csv(p.uri, **{"header": 0, **kw})
+        pdf = _safe_load_csv(p.uri, **{"header": 0, **kw})
         if columns is None:
             return pdf, None
         if isinstance(columns, list):  # column names
@@ -108,23 +117,30 @@ def _load_csv(
         if columns is None:
             raise InvalidOperationError("columns must be set if without header")
         if isinstance(columns, list):  # column names
-            pdf = dd.read_csv(p.uri, **{"header": None, "names": columns, **kw})
+            pdf = _safe_load_csv(p.uri, **{"header": None, "names": columns, **kw})
             return pdf, None
         schema = Schema(columns)
-        pdf = dd.read_csv(p.uri, **{"header": None, "names": schema.names, **kw})
+        pdf = _safe_load_csv(p.uri, **{"header": None, "names": schema.names, **kw})
         return pdf, schema
     else:
         raise NotImplementedError(f"{header} is not supported")
 
 
 def _save_json(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
-    df.native.to_json(p.uri, **kwargs)
+    df.native.to_json(os.path.join(p.uri, "*.json"), **kwargs)
+
+
+def _safe_load_json(path: str, **kwargs: Any) -> dd.DataFrame:
+    try:
+        return dd.read_json(path, **kwargs)
+    except IsADirectoryError:
+        return dd.read_json(os.path.join(path, "*.json"), **kwargs)
 
 
 def _load_json(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[dd.DataFrame, Any]:
-    pdf = dd.read_json(p.uri, **kwargs).reset_index(drop=True)
+    pdf = _safe_load_json(p.uri, **kwargs).reset_index(drop=True)
     if columns is None:
         return pdf, None
     if isinstance(columns, list):  # column names
@@ -139,33 +155,6 @@ def _load_avro(
     pdf, schema = _pd_load_avro(p, columns, **kwargs)
 
     return dd.from_pandas(pdf), schema
-
-
-def _dask_get_single_files(
-    fp: Iterable[FileParser], fs: Optional[FileSystem]
-) -> Iterable[FileParser]:
-    if fs is None:
-        fs = FileSystem()
-    for f in fp:
-        if f.glob_pattern != "":
-            files = [
-                FileParser(os.path.join(f.uri, os.path.basename(x.path)))
-                for x in fs.opendir(f.uri).glob(f.glob_pattern)
-            ]
-            yield from _dask_get_single_files(files, fs)
-        elif fs.isdir(f.uri):
-            if f.uri.endswith(f.file_format):
-                if f.file_format in ["csv", "json"]:
-                    yield FileParser(f.uri + "/[!_]*", format_hint=f.file_format)
-                else:
-                    yield f
-            else:
-                for x in fs.filterdir(f.uri, files=["*." + f.file_format]):
-                    yield FileParser(
-                        os.path.join(f.uri, x.name), format_hint=f.file_format
-                    )
-        else:
-            yield f
 
 
 _FORMAT_LOAD: Dict[str, Callable[..., Tuple[dd.DataFrame, Any]]] = {
