@@ -66,12 +66,12 @@ class DaskDataFrame(DataFrame):
             elif isinstance(df, (pandas.DataFrame, pandas.Series)):
                 if isinstance(df, pandas.Series):
                     df = df.to_frame()
-                pdf = pd.from_pandas(df, npartitions=num_partitions)
+                pdf = pd.from_pandas(df, npartitions=num_partitions, sort=False)
                 schema = None if schema is None else _input_schema(schema)
             elif isinstance(df, Iterable):
                 schema = _input_schema(schema).assert_not_empty()
                 t = PandasDataFrame(df, schema)
-                pdf = pd.from_pandas(t.native, npartitions=num_partitions)
+                pdf = pd.from_pandas(t.native, npartitions=num_partitions, sort=False)
                 type_safe = False
             else:
                 raise ValueError(f"{df} is incompatible with DaskDataFrame")

@@ -36,6 +36,8 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
         assert 3 == b.num_partitions
         b = e.repartition(a, PartitionSpec(num="0"))
         assert a is b
+        b = e.repartition(a, PartitionSpec(num="ROWCOUNT"))
+        assert 5 == b.num_partitions
         b = e.repartition(a, PartitionSpec(num="ROWCOUNT/2"))
         assert 2 == b.num_partitions
         b = e.repartition(a, PartitionSpec(num="ROWCOUNT-ROWCOUNT"))
