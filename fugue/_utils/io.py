@@ -160,6 +160,19 @@ def _save_csv(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
     df.as_pandas().to_csv(p.uri, **{"index": False, "header": False, **kwargs})
 
 
+def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
+    try:
+        return pd.read_csv(path, **kwargs)
+    except IsADirectoryError:
+        fs = FileSystem()
+        return pd.concat(
+            [
+                pd.read_csv(os.path.join(path, os.path.basename(x.path)), **kwargs)
+                for x in fs.opendir(path).glob("*.csv")
+            ]
+        )
+
+
 def _load_csv(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[pd.DataFrame, Any]:
@@ -174,7 +187,7 @@ def _load_csv(
         header = kw["header"]
         del kw["header"]
     if str(header) in ["True", "0"]:
-        pdf = pd.read_csv(p.uri, **{"index_col": False, "header": 0, **kw})
+        pdf = _safe_load_csv(p.uri, **{"index_col": False, "header": 0, **kw})
         if columns is None:
             return pdf, None
         if isinstance(columns, list):  # column names
@@ -185,12 +198,12 @@ def _load_csv(
         if columns is None:
             raise InvalidOperationError("columns must be set if without header")
         if isinstance(columns, list):  # column names
-            pdf = pd.read_csv(
+            pdf = _safe_load_csv(
                 p.uri, **{"index_col": False, "header": None, "names": columns, **kw}
             )
             return pdf, None
         schema = Schema(columns)
-        pdf = pd.read_csv(
+        pdf = _safe_load_csv(
             p.uri, **{"index_col": False, "header": None, "names": schema.names, **kw}
         )
         return pdf, schema
@@ -202,10 +215,23 @@ def _save_json(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
     df.as_pandas().to_json(p.uri, **kwargs)
 
 
+def _safe_load_json(path: str, **kwargs: Any) -> pd.DataFrame:
+    try:
+        return pd.read_json(path, **kwargs)
+    except IsADirectoryError:
+        fs = FileSystem()
+        return pd.concat(
+            [
+                pd.read_json(os.path.join(path, os.path.basename(x.path)), **kwargs)
+                for x in fs.opendir(path).glob("*.json")
+            ]
+        )
+
+
 def _load_json(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[pd.DataFrame, Any]:
-    pdf = pd.read_json(p.uri, **kwargs).reset_index(drop=True)
+    pdf = _safe_load_json(p.uri, **kwargs).reset_index(drop=True)
     if columns is None:
         return pdf, None
     if isinstance(columns, list):  # column names

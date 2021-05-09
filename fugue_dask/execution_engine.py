@@ -16,6 +16,7 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
+from fugue.execution.native_execution_engine import NativeExecutionEngine
 from qpd_dask import run_sql_on_dask
 from triad.collections import Schema
 from triad.collections.dict import IndexedOrderedDict, ParamDict
@@ -75,6 +76,7 @@ class DaskExecutionEngine(ExecutionEngine):
         super().__init__(p)
         self._fs = FileSystem()
         self._log = logging.getLogger()
+        self._native = NativeExecutionEngine(conf=conf)
 
     def __repr__(self) -> str:
         return "DaskExecutionEngine"
@@ -434,9 +436,19 @@ class DaskExecutionEngine(ExecutionEngine):
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
-        if not partition_spec.empty:
-            self.log.warning(  # pragma: no cover
-                "partition_spec is not respected in %s.save_df", self
+        if force_single:
+            self._native.save_df(
+                df,
+                path=path,
+                format_hint=format_hint,
+                mode=mode,
+                partition_spec=partition_spec,
+                **kwargs,
             )
-        df = self.to_df(df)
-        save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
+        else:
+            if not partition_spec.empty:
+                self.log.warning(  # pragma: no cover
+                    "partition_spec is not respected in %s.save_df", self
+                )
+            df = self.to_df(df)
+            save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
