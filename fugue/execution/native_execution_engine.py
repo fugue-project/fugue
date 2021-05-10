@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Any, Callable, List, Optional, Union
 
 import pandas as pd
@@ -362,5 +363,6 @@ class NativeExecutionEngine(ExecutionEngine):
             self.log.warning(  # pragma: no cover
                 "partition_spec is not respected in %s.save_df", self
             )
+        self.fs.makedirs(os.path.dirname(path), recreate=True)
         df = self.to_df(df)
         save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)

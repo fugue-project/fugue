@@ -8,6 +8,7 @@ from unittest import TestCase
 
 import pandas as pd
 import pytest
+from triad.collections.fs import FileSystem
 from fugue import (
     ArrayDataFrame,
     DataFrames,
@@ -17,6 +18,7 @@ from fugue import (
     register_default_sql_engine,
 )
 from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.execution.native_execution_engine import NativeExecutionEngine
 from pytest import raises
 from triad.exceptions import InvalidOperationError
 
@@ -844,54 +846,204 @@ class ExecutionEngineTests(object):
         def init_tmpdir(self, tmpdir):
             self.tmpdir = tmpdir
 
-        def test_io(self):
+        def test_save_single_and_load_parquet(self):
             e = self.engine
             b = ArrayDataFrame([[6, 1], [2, 7]], "c:int,a:long")
-            path = os.path.join(self.tmpdir, "a")
+            path = os.path.join(self.tmpdir, "a", "b")
+            e.fs.makedirs(path, recreate=True)
+            # over write folder with single file
             e.save_df(b, path, format_hint="parquet", force_single=True)
             assert e.fs.isfile(path)
             c = e.load_df(path, format_hint="parquet", columns=["a", "c"])
             df_eq(c, [[1, 6], [7, 2]], "a:long,c:int", throw=True)
 
-            path = os.path.join(self.tmpdir, "b.csv")
-            e.save_df(b, path, header=True)
-            c = e.load_df(path, header=True, columns="c:int,a:long")
-            df_eq(c, b, throw=True)
+            # overwirte single with folder (if applicable)
+            b = ArrayDataFrame([[60, 1], [20, 7]], "c:int,a:long")
+            e.save_df(b, path, format_hint="parquet", mode="overwrite")
+            c = e.load_df(path, format_hint="parquet", columns=["a", "c"])
+            df_eq(c, [[1, 60], [7, 20]], "a:long,c:int", throw=True)
 
-            # reading multiple csv using wildcard from folder
-            fpath = os.path.join(self.tmpdir, "f.csv")
-            e.fs.makedir(fpath)
-            e.save_df(b, os.path.join(fpath, "1.csv"), header=True, force_single=True)
-            e.save_df(b, os.path.join(fpath, "2.csv"), header=True, force_single=True)
+        def test_save_and_load_parquet(self):
+            e = self.engine
+            b = ArrayDataFrame([[6, 1], [2, 7]], "c:int,a:long")
+            path = os.path.join(self.tmpdir, "a", "b")
+            e.save_df(b, path, format_hint="parquet")
+            c = e.load_df(path, format_hint="parquet", columns=["a", "c"])
+            df_eq(c, [[1, 6], [7, 2]], "a:long,c:int", throw=True)
 
-            r = e.load_df(os.path.join(fpath, "*.csv"), header=True, infer_schema=False)
+        def test_load_parquet_folder(self):
+            e = self.engine
+            native = NativeExecutionEngine()
+            a = ArrayDataFrame([[6, 1]], "c:int,a:long")
+            b = ArrayDataFrame([[2, 7], [4, 8]], "c:int,a:long")
+            path = os.path.join(self.tmpdir, "a", "b")
+            native.save_df(a, os.path.join(path, "a.parquet"))
+            native.save_df(b, os.path.join(path, "b.parquet"))
+            FileSystem().touch(os.path.join(path, "_SUCCESS"))
+            c = e.load_df(path, format_hint="parquet", columns=["a", "c"])
+            df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:int", throw=True)
+
+        def test_save_single_and_load_avro(self):
+            # TODO: switch to c:int,a:long when we can preserve schema to avro
+            e = self.engine
+            b = ArrayDataFrame([[6, 1], [2, 7]], "c:long,a:long")
+            path = os.path.join(self.tmpdir, "a", "b")
+            e.fs.makedirs(path, recreate=True)
+            # over write folder with single file
+            e.save_df(b, path, format_hint="avro", force_single=True)
+            assert e.fs.isfile(path)
+            c = e.load_df(path, format_hint="avro", columns=["a", "c"])
+            df_eq(c, [[1, 6], [7, 2]], "a:long,c:long", throw=True)
+
+            # overwirte single with folder (if applicable)
+            b = ArrayDataFrame([[60, 1], [20, 7]], "c:long,a:long")
+            e.save_df(b, path, format_hint="avro", mode="overwrite")
+            c = e.load_df(path, format_hint="avro", columns=["a", "c"])
+            df_eq(c, [[1, 60], [7, 20]], "a:long,c:long", throw=True)
+
+        def test_save_and_load_avro(self):
+            # TODO: switch to c:int,a:long when we can preserve schema to avro
+            e = self.engine
+            b = ArrayDataFrame([[6, 1], [2, 7]], "c:long,a:long")
+            path = os.path.join(self.tmpdir, "a", "b")
+            e.save_df(b, path, format_hint="avro")
+            c = e.load_df(path, format_hint="avro", columns=["a", "c"])
+            df_eq(c, [[1, 6], [7, 2]], "a:long,c:long", throw=True)
+
+        def test_load_avro_folder(self):
+            # TODO: switch to c:int,a:long when we can preserve schema to avro
+            e = self.engine
+            native = NativeExecutionEngine()
+            a = ArrayDataFrame([[6, 1]], "c:long,a:long")
+            b = ArrayDataFrame([[2, 7], [4, 8]], "c:long,a:long")
+            path = os.path.join(self.tmpdir, "a", "b")
+            native.save_df(a, os.path.join(path, "a.avro"))
+            native.save_df(b, os.path.join(path, "b.avro"))
+            FileSystem().touch(os.path.join(path, "_SUCCESS"))
+            c = e.load_df(path, format_hint="avro", columns=["a", "c"])
+            df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:long", throw=True)
+
+        def test_save_single_and_load_csv(self):
+            e = self.engine
+            b = ArrayDataFrame([[6.1, 1.1], [2.1, 7.1]], "c:double,a:double")
+            path = os.path.join(self.tmpdir, "a", "b")
+            e.fs.makedirs(path, recreate=True)
+            # over write folder with single file
+            e.save_df(b, path, format_hint="csv", header=True, force_single=True)
+            assert e.fs.isfile(path)
+            c = e.load_df(
+                path,
+                format_hint="csv",
+                header=True,
+                infer_schema=False,
+                columns=["a", "c"],
+            )
+            df_eq(c, [["1.1", "6.1"], ["7.1", "2.1"]], "a:str,c:str", throw=True)
+
+            # overwirte single with folder (if applicable)
+            b = ArrayDataFrame([[60.1, 1.1], [20.1, 7.1]], "c:double,a:double")
+            e.save_df(b, path, format_hint="csv", header=True, mode="overwrite")
+            c = e.load_df(
+                path,
+                format_hint="csv",
+                header=True,
+                infer_schema=False,
+                columns=["a", "c"],
+            )
+            df_eq(c, [["1.1", "60.1"], ["7.1", "20.1"]], "a:str,c:str", throw=True)
+
+        def test_save_and_load_csv(self):
+            e = self.engine
+            b = ArrayDataFrame([[6.1, 1.1], [2.1, 7.1]], "c:double,a:double")
+            path = os.path.join(self.tmpdir, "a", "b")
+            e.save_df(b, path, format_hint="csv", header=True)
+            c = e.load_df(
+                path,
+                format_hint="csv",
+                header=True,
+                infer_schema=True,
+                columns=["a", "c"],
+            )
+            df_eq(c, [[1.1, 6.1], [7.1, 2.1]], "a:double,c:double", throw=True)
+
+        def test_load_csv_folder(self):
+            e = self.engine
+            native = NativeExecutionEngine()
+            a = ArrayDataFrame([[6.1, 1.1]], "c:double,a:double")
+            b = ArrayDataFrame([[2.1, 7.1], [4.1, 8.1]], "c:double,a:double")
+            path = os.path.join(self.tmpdir, "a", "b")
+            native.save_df(
+                a, os.path.join(path, "a.csv"), format_hint="csv", header=True
+            )
+            native.save_df(
+                b, os.path.join(path, "b.csv"), format_hint="csv", header=True
+            )
+            FileSystem().touch(os.path.join(path, "_SUCCESS"))
+            c = e.load_df(
+                path,
+                format_hint="csv",
+                header=True,
+                infer_schema=True,
+                columns=["a", "c"],
+            )
             df_eq(
-                r,
-                [["6", "1"], ["2", "7"], ["6", "1"], ["2", "7"]],
-                "c:str,a:str",
-                throw=True,
+                c, [[1.1, 6.1], [7.1, 2.1], [8.1, 4.1]], "a:double,c:double", throw=True
             )
 
-            # reading multiple csv with/without infer schema
-            e.fs.touch(os.path.join(fpath, "_SUCCESS"))
+        def test_save_single_and_load_json(self):
+            e = self.engine
+            b = ArrayDataFrame([[6, 1], [2, 7]], "c:int,a:long")
+            path = os.path.join(self.tmpdir, "a", "b")
+            e.fs.makedirs(path, recreate=True)
+            # over write folder with single file
+            e.save_df(b, path, format_hint="json", force_single=True)
+            assert e.fs.isfile(path)
+            c = e.load_df(
+                path,
+                format_hint="json",
+                columns=["a", "c"],
+            )
+            df_eq(c, [[1, 6], [7, 2]], "a:long,c:long", throw=True)
 
-            r = e.load_df(fpath, header=True, infer_schema=False)
+            # overwirte single with folder (if applicable)
+            b = ArrayDataFrame([[60, 1], [20, 7]], "c:long,a:long")
+            e.save_df(b, path, format_hint="json", mode="overwrite")
+            c = e.load_df(path, format_hint="json", columns=["a", "c"])
+            df_eq(c, [[1, 60], [7, 20]], "a:long,c:long", throw=True)
+
+        def test_save_and_load_json(self):
+            e = self.engine
+            b = ArrayDataFrame([[6, 1], [3, 4], [2, 7], [4, 8], [6, 7]], "c:int,a:long")
+            path = os.path.join(self.tmpdir, "a", "b")
+            e.save_df(
+                e.repartition(e.to_df(b), PartitionSpec(num=2)),
+                path,
+                format_hint="json",
+            )
+            c = e.load_df(
+                path,
+                format_hint="json",
+                columns=["a", "c"],
+            )
             df_eq(
-                r,
-                [["6", "1"], ["2", "7"], ["6", "1"], ["2", "7"]],
-                "c:str,a:str",
-                throw=True,
+                c, [[1, 6], [7, 2], [4, 3], [8, 4], [7, 6]], "a:long,c:long", throw=True
             )
 
-            r = e.load_df(fpath, header=True, infer_schema=True)
-            assert sorted(r.as_array()) == sorted([[6, 1], [2, 7], [6, 1], [2, 7]])
-
-            # write single file to overwirte folder
-            assert e.fs.isdir(fpath)
-            e.save_df(r, fpath, force_single=True, header=True)
-            assert e.fs.isfile(fpath)
-            r = e.load_df(fpath, header=True, infer_schema=True)
-            assert sorted(r.as_array()) == sorted([[6, 1], [2, 7], [6, 1], [2, 7]])
+        def test_load_json_folder(self):
+            e = self.engine
+            native = NativeExecutionEngine()
+            a = ArrayDataFrame([[6, 1], [3, 4]], "c:int,a:long")
+            b = ArrayDataFrame([[2, 7], [4, 8]], "c:int,a:long")
+            path = os.path.join(self.tmpdir, "a", "b")
+            native.save_df(a, os.path.join(path, "a.json"), format_hint="json")
+            native.save_df(b, os.path.join(path, "b.json"), format_hint="json")
+            FileSystem().touch(os.path.join(path, "_SUCCESS"))
+            c = e.load_df(
+                path,
+                format_hint="json",
+                columns=["a", "c"],
+            )
+            df_eq(c, [[1, 6], [7, 2], [8, 4], [4, 3]], "a:long,c:long", throw=True)
 
 
 def select_top(cursor, data):

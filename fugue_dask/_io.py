@@ -134,7 +134,9 @@ def _safe_load_json(path: str, **kwargs: Any) -> dd.DataFrame:
     try:
         return dd.read_json(path, **kwargs)
     except IsADirectoryError:
-        return dd.read_json(os.path.join(path, "*.json"), **kwargs)
+        x = dd.read_json(os.path.join(path, "*.json"), **kwargs)
+        print(x.compute())
+        return x
 
 
 def _load_json(
@@ -152,9 +154,10 @@ def _load_json(
 def _load_avro(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[dd.DataFrame, Any]:
+    # TODO: change this hacky implementation!
     pdf, schema = _pd_load_avro(p, columns, **kwargs)
 
-    return dd.from_pandas(pdf), schema
+    return dd.from_pandas(pdf, npartitions=4), schema
 
 
 _FORMAT_LOAD: Dict[str, Callable[..., Tuple[dd.DataFrame, Any]]] = {
