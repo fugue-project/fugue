@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.5.6
+
+-   Dask repartitioning [improvement](https://github.com/fugue-project/fugue/issues/201)
+-   [Separate](https://github.com/fugue-project/fugue/issues/192) Dask IO to use its own APIs
+
 ## 0.5.5
 
 -   HOTFIX [avro support](https://github.com/fugue-project/fugue/issues/200)

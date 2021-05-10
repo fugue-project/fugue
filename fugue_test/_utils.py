@@ -6,7 +6,7 @@ def _is_spark2():
         import pyspark
 
         return pyspark.__version__ < "3.0.0"
-    except Exception:
+    except Exception:  # pragma: no cover
         return False
 
 
