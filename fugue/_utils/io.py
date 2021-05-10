@@ -10,6 +10,7 @@ from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.collections.dict import ParamDict
+from fs.errors import FileExpected
 
 
 class FileParser(object):
@@ -130,9 +131,6 @@ def _get_single_files(
                 for x in fs.opendir(f.uri).glob(f.glob_pattern)
             ]
             yield from _get_single_files(files, fs)
-        elif fs.isdir(f.uri):
-            for x in fs.filterdir(f.uri, files=["*." + f.file_format]):
-                yield FileParser(os.path.join(f.uri, x.name))
         else:
             yield f
 
@@ -163,6 +161,25 @@ def _save_csv(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
     df.as_pandas().to_csv(p.uri, **{"index": False, "header": False, **kwargs})
 
 
+def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
+    def load_dir() -> pd.DataFrame:
+        fs = FileSystem()
+        return pd.concat(
+            [
+                pd.read_csv(os.path.join(path, os.path.basename(x.path)), **kwargs)
+                for x in fs.opendir(path).glob("*.csv")
+            ]
+        )
+
+    try:
+        return pd.read_csv(path, **kwargs)
+    except IsADirectoryError:
+        return load_dir()
+    except pd.errors.ParserError:  # pragma: no cover
+        # for python < 3.7
+        return load_dir()
+
+
 def _load_csv(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[pd.DataFrame, Any]:
@@ -177,7 +194,7 @@ def _load_csv(
         header = kw["header"]
         del kw["header"]
     if str(header) in ["True", "0"]:
-        pdf = pd.read_csv(p.uri, **{"index_col": False, "header": 0, **kw})
+        pdf = _safe_load_csv(p.uri, **{"index_col": False, "header": 0, **kw})
         if columns is None:
             return pdf, None
         if isinstance(columns, list):  # column names
@@ -188,12 +205,12 @@ def _load_csv(
         if columns is None:
             raise InvalidOperationError("columns must be set if without header")
         if isinstance(columns, list):  # column names
-            pdf = pd.read_csv(
+            pdf = _safe_load_csv(
                 p.uri, **{"index_col": False, "header": None, "names": columns, **kw}
             )
             return pdf, None
         schema = Schema(columns)
-        pdf = pd.read_csv(
+        pdf = _safe_load_csv(
             p.uri, **{"index_col": False, "header": None, "names": schema.names, **kw}
         )
         return pdf, schema
@@ -202,13 +219,27 @@ def _load_csv(
 
 
 def _save_json(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
-    df.as_pandas().to_json(p.uri, **kwargs)
+    df.as_pandas().to_json(p.uri, **{"orient": "records", "lines": True, **kwargs})
+
+
+def _safe_load_json(path: str, **kwargs: Any) -> pd.DataFrame:
+    kw = {"orient": "records", "lines": True, **kwargs}
+    try:
+        return pd.read_json(path, **kw)
+    except IsADirectoryError:
+        fs = FileSystem()
+        return pd.concat(
+            [
+                pd.read_json(os.path.join(path, os.path.basename(x.path)), **kw)
+                for x in fs.opendir(path).glob("*.json")
+            ]
+        )
 
 
 def _load_json(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[pd.DataFrame, Any]:
-    pdf = pd.read_json(p.uri, **kwargs).reset_index(drop=True)
+    pdf = _safe_load_json(p.uri, **kwargs).reset_index(drop=True)
     if columns is None:
         return pdf, None
     if isinstance(columns, list):  # column names
@@ -253,26 +284,19 @@ def _save_avro(df: LocalDataFrame, p: FileParser, **kwargs: Any):
 def _load_avro(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[pd.DataFrame, Any]:
-    from fastavro import reader
-
-    kw = ParamDict(kwargs)
-    process_record = None
-    if "process_record" in kw:
-        process_record = kw["process_record"]
-        del kw["process_record"]
-
-    with open(p.uri, "rb") as fp:
-        # Configure Avro reader
-        avro_reader = reader(fp)
-        # Load records in memory
-        if process_record:
-            records = [process_record(r) for r in avro_reader]
-
-        else:
-            records = list(avro_reader)
-
-        # Populate pandas.DataFrame with records
-        pdf = pd.DataFrame.from_records(records)
+    path = p.uri
+    try:
+        pdf = _load_single_avro(path, **kwargs)
+    except (IsADirectoryError, FileExpected):
+        fs = FileSystem()
+        pdf = pd.concat(
+            [
+                _load_single_avro(
+                    os.path.join(path, os.path.basename(x.path)), **kwargs
+                )
+                for x in fs.opendir(path).glob("*.avro")
+            ]
+        )
 
     if columns is None:
         return pdf, None
@@ -283,6 +307,29 @@ def _load_avro(
 
     # Return created DataFrame
     return pdf[schema.names], schema
+
+
+def _load_single_avro(path: str, **kwargs: Any) -> pd.DataFrame:
+    from fastavro import reader
+
+    kw = ParamDict(kwargs)
+    process_record = None
+    if "process_record" in kw:
+        process_record = kw["process_record"]
+        del kw["process_record"]
+
+    with FileSystem().openbin(path) as fp:
+        # Configure Avro reader
+        avro_reader = reader(fp)
+        # Load records in memory
+        if process_record:
+            records = [process_record(r) for r in avro_reader]
+
+        else:
+            records = list(avro_reader)
+
+        # Populate pandas.DataFrame with records
+        return pd.DataFrame.from_records(records)
 
 
 _FORMAT_MAP: Dict[str, str] = {

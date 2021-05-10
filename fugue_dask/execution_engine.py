@@ -1,8 +1,8 @@
 import logging
+import os
 from typing import Any, Callable, List, Optional, Union
 
 import dask.dataframe as dd
-from fugue._utils.io import load_df, save_df
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
@@ -17,6 +17,7 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
+from fugue.execution.native_execution_engine import NativeExecutionEngine
 from qpd_dask import run_sql_on_dask
 from triad.collections import Schema
 from triad.collections.dict import IndexedOrderedDict, ParamDict
@@ -29,6 +30,7 @@ from fugue_dask._constants import (
     FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS,
     FUGUE_DASK_DEFAULT_CONF,
 )
+from fugue_dask._io import load_df, save_df
 from fugue_dask._utils import DaskUtils
 from fugue_dask.dataframe import DaskDataFrame
 
@@ -75,6 +77,7 @@ class DaskExecutionEngine(ExecutionEngine):
         super().__init__(p)
         self._fs = FileSystem()
         self._log = logging.getLogger()
+        self._native = NativeExecutionEngine(conf=conf)
 
     def __repr__(self) -> str:
         return "DaskExecutionEngine"
@@ -434,9 +437,20 @@ class DaskExecutionEngine(ExecutionEngine):
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
-        if not partition_spec.empty:
-            self.log.warning(  # pragma: no cover
-                "partition_spec is not respected in %s.save_df", self
+        if force_single:
+            self._native.save_df(
+                df,
+                path=path,
+                format_hint=format_hint,
+                mode=mode,
+                partition_spec=partition_spec,
+                **kwargs,
             )
-        df = self.to_df(df).as_local()
-        save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
+        else:
+            if not partition_spec.empty:
+                self.log.warning(  # pragma: no cover
+                    "partition_spec is not respected in %s.save_df", self
+                )
+            self.fs.makedirs(os.path.dirname(path), recreate=True)
+            df = self.to_df(df)
+            save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)

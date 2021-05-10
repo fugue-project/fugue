@@ -1,10 +1,11 @@
 from fugue.collections.partition import PartitionSpec
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue_dask.execution_engine import DaskExecutionEngine
+from fugue.workflow.workflow import FugueWorkflow
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
-from fugue.dataframe.pandas_dataframe import PandasDataFrame
-from fugue.workflow.workflow import FugueWorkflow
+
+from fugue_dask.execution_engine import DaskExecutionEngine
 
 
 class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -36,6 +37,8 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
         assert 3 == b.num_partitions
         b = e.repartition(a, PartitionSpec(num="0"))
         assert a is b
+        b = e.repartition(a, PartitionSpec(num="ROWCOUNT"))
+        assert 5 == b.num_partitions
         b = e.repartition(a, PartitionSpec(num="ROWCOUNT/2"))
         assert 2 == b.num_partitions
         b = e.repartition(a, PartitionSpec(num="ROWCOUNT-ROWCOUNT"))
