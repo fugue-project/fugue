@@ -172,6 +172,15 @@ def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
                 for x in fs.opendir(path).glob("*.csv")
             ]
         )
+    except pd.errors.ParserError:  # pragma: no cover
+        # for python < 3.7
+        fs = FileSystem()
+        return pd.concat(
+            [
+                pd.read_csv(os.path.join(path, os.path.basename(x.path)), **kwargs)
+                for x in fs.opendir(path).glob("*.csv")
+            ]
+        )
 
 
 def _load_csv(

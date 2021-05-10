@@ -8,7 +8,6 @@ from unittest import TestCase
 
 import pandas as pd
 import pytest
-from triad.collections.fs import FileSystem
 from fugue import (
     ArrayDataFrame,
     DataFrames,
@@ -20,7 +19,10 @@ from fugue import (
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from pytest import raises
+from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
+
+from fugue_test._utils import skip_spark2
 
 
 class ExecutionEngineTests(object):
@@ -883,6 +885,7 @@ class ExecutionEngineTests(object):
             c = e.load_df(path, format_hint="parquet", columns=["a", "c"])
             df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:int", throw=True)
 
+        @skip_spark2
         def test_save_single_and_load_avro(self):
             # TODO: switch to c:int,a:long when we can preserve schema to avro
             e = self.engine
@@ -901,6 +904,7 @@ class ExecutionEngineTests(object):
             c = e.load_df(path, format_hint="avro", columns=["a", "c"])
             df_eq(c, [[1, 60], [7, 20]], "a:long,c:long", throw=True)
 
+        @skip_spark2
         def test_save_and_load_avro(self):
             # TODO: switch to c:int,a:long when we can preserve schema to avro
             e = self.engine
@@ -910,6 +914,7 @@ class ExecutionEngineTests(object):
             c = e.load_df(path, format_hint="avro", columns=["a", "c"])
             df_eq(c, [[1, 6], [7, 2]], "a:long,c:long", throw=True)
 
+        @skip_spark2
         def test_load_avro_folder(self):
             # TODO: switch to c:int,a:long when we can preserve schema to avro
             e = self.engine
