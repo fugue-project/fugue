@@ -162,25 +162,22 @@ def _save_csv(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
 
 
 def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
+    def load_dir() -> pd.DataFrame:
+        fs = FileSystem()
+        return pd.concat(
+            [
+                pd.read_csv(os.path.join(path, os.path.basename(x.path)), **kwargs)
+                for x in fs.opendir(path).glob("*.csv")
+            ]
+        )
+
     try:
         return pd.read_csv(path, **kwargs)
     except IsADirectoryError:
-        fs = FileSystem()
-        return pd.concat(
-            [
-                pd.read_csv(os.path.join(path, os.path.basename(x.path)), **kwargs)
-                for x in fs.opendir(path).glob("*.csv")
-            ]
-        )
+        return load_dir()
     except pd.errors.ParserError:  # pragma: no cover
         # for python < 3.7
-        fs = FileSystem()
-        return pd.concat(
-            [
-                pd.read_csv(os.path.join(path, os.path.basename(x.path)), **kwargs)
-                for x in fs.opendir(path).glob("*.csv")
-            ]
-        )
+        return load_dir()
 
 
 def _load_csv(
