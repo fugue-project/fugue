@@ -44,7 +44,7 @@ class QPDDaskEngine(SQLEngine):
     def __init__(self, execution_engine: ExecutionEngine):
         assert_or_throw(
             isinstance(execution_engine, DaskExecutionEngine),
-            f"{self} must be used with DaskExecutionEngine",
+            lambda: f"{self} must be used with DaskExecutionEngine",
         )
         super().__init__(execution_engine)
 
@@ -251,7 +251,8 @@ class DaskExecutionEngine(ExecutionEngine):
         metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
-            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+            df1.schema == df2.schema,
+            lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
         d = self.pl_utils.union(
             self.to_df(df1).native, self.to_df(df2).native, unique=distinct
@@ -269,7 +270,8 @@ class DaskExecutionEngine(ExecutionEngine):
             distinct, NotImplementedError("EXCEPT ALL for DaskExecutionEngine")
         )
         assert_or_throw(
-            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+            df1.schema == df2.schema,
+            lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
         d = self.pl_utils.except_df(
             self.to_df(df1).native, self.to_df(df2).native, unique=distinct
@@ -287,7 +289,8 @@ class DaskExecutionEngine(ExecutionEngine):
             distinct, NotImplementedError("INTERSECT ALL for DaskExecutionEngine")
         )
         assert_or_throw(
-            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+            df1.schema == df2.schema,
+            lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
         d = self.pl_utils.intersect(
             self.to_df(df1).native, self.to_df(df2).native, unique=distinct

@@ -87,7 +87,7 @@ class FugueTask(TaskSpec, ABC):
     def single_output_expression(self) -> str:
         assert_or_throw(
             len(self.outputs) == 1,
-            FugueWorkflowError(f"{self.name} does not have single output"),
+            lambda: FugueWorkflowError(f"{self.name} does not have single output"),
         )
         return self.name + "." + self.outputs.get_key_by_index(0)
 

@@ -23,7 +23,7 @@ def parse_validation_rules_from_comment(func: Callable) -> Dict[str, Any]:
         v = parse_comment_annotation(func, key)
         if v is None:
             continue
-        assert_or_throw(v != "", SyntaxError(f"{key} can't be empty"))
+        assert_or_throw(v != "", lambda: SyntaxError(f"{key} can't be empty"))
         res[key] = v
     return to_validation_rules(res)
 
@@ -43,7 +43,7 @@ def to_validation_rules(data: Dict[str, Any]) -> Dict[str, Any]:
             else:
                 assert_or_throw(
                     isinstance(v, list),
-                    SyntaxError(f"{v} is neither a string or a list"),
+                    lambda: SyntaxError(f"{v} is neither a string or a list"),
                 )
                 res[k] = [x.replace(" ", "") for x in v]
         elif k in ["input_is"]:
@@ -64,14 +64,16 @@ def validate_partition_spec(spec: PartitionSpec, rules: Dict[str, Any]) -> None:
             for x in v:
                 assert_or_throw(
                     x in spec.partition_by,
-                    FugueWorkflowCompileValidationError(
+                    lambda: FugueWorkflowCompileValidationError(
                         f"required partition key {x} is not in {spec}"
                     ),
                 )
             if k == "partitionby_is":
                 assert_or_throw(
                     len(v) == len(spec.partition_by),
-                    FugueWorkflowCompileValidationError(f"{v} does not match {spec}"),
+                    lambda: FugueWorkflowCompileValidationError(
+                        f"{v} does not match {spec}"
+                    ),
                 )
         if k in ["presort_has", "presort_is"]:
             expected = spec.presort
@@ -79,24 +81,26 @@ def validate_partition_spec(spec: PartitionSpec, rules: Dict[str, Any]) -> None:
                 o = "ASC" if pv else "DESC"
                 assert_or_throw(
                     pk in expected,
-                    FugueWorkflowCompileValidationError(
+                    lambda: FugueWorkflowCompileValidationError(
                         f"required presort key {pk} is not in presort of {spec}"
                     ),
                 )
                 assert_or_throw(
                     pv == expected[pk],
-                    FugueWorkflowCompileValidationError(
+                    lambda: FugueWorkflowCompileValidationError(
                         f"({pk},{o}) order does't match presort of {spec}"
                     ),
                 )
             if k == "presort_is":
                 assert_or_throw(
                     len(v) == len(expected),
-                    FugueWorkflowCompileValidationError(f"{v} does not match {spec}"),
+                    lambda: FugueWorkflowCompileValidationError(
+                        f"{v} does not match {spec}"
+                    ),
                 )
                 assert_or_throw(
                     v == list(expected.items()),
-                    FugueWorkflowCompileValidationError(
+                    lambda: FugueWorkflowCompileValidationError(
                         f"{v} order does not match {spec}"
                     ),
                 )
@@ -108,12 +112,14 @@ def validate_input_schema(schema: Schema, rules: Dict[str, Any]) -> None:
             for x in v:
                 assert_or_throw(
                     x in schema,
-                    FugueWorkflowRuntimeValidationError(
+                    lambda: FugueWorkflowRuntimeValidationError(
                         f"required column {x} is not in {schema}"
                     ),
                 )
         if k == "input_is":
             assert_or_throw(
                 schema == v,
-                FugueWorkflowRuntimeValidationError(f"{v} does not match {schema}"),
+                lambda: FugueWorkflowRuntimeValidationError(
+                    f"{v} does not match {schema}"
+                ),
             )

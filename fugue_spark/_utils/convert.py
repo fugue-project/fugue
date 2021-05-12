@@ -42,7 +42,7 @@ def to_cast_expression(
     schema2 = to_spark_schema(schema2)
     assert_or_throw(
         len(schema1) == len(schema2),
-        ValueError(f"schema mismatch: {schema1}, {schema2}"),
+        lambda: ValueError(f"schema mismatch: {schema1}, {schema2}"),
     )
     expr: List[str] = []
     has_cast = False
@@ -50,7 +50,7 @@ def to_cast_expression(
         name_match = schema1[i].name == schema2[i].name
         assert_or_throw(
             name_match or allow_name_mismatch,
-            ValueError(f"schema name mismatch: {schema1}, {schema2}"),
+            lambda: ValueError(f"schema name mismatch: {schema1}, {schema2}"),
         )
         if schema1[i].dataType != schema2[i].dataType:
             type2 = schema2[i].dataType.simpleString()

@@ -133,7 +133,7 @@ class _ModuleFunctionWrapper(FunctionWrapper):
                 for k, v in a.items():
                     assert_or_throw(
                         isinstance(v, WorkflowDataFrame),
-                        ValueError(f"{k}:{v} is not a WorkflowDataFrame"),
+                        lambda: ValueError(f"{k}:{v} is not a WorkflowDataFrame"),
                     )
                     assert_or_throw(
                         wf is None or v.workflow is wf,

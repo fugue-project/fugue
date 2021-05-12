@@ -74,7 +74,7 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
                 schema = Schema(schema) if not isinstance(schema, Schema) else schema
                 assert_or_throw(
                     orig_schema == schema,
-                    f"iterable schema {orig_schema} is different from {schema}",
+                    lambda: f"iterable schema {orig_schema} is different from {schema}",
                 )
             super().__init__(schema, metadata)
         except FugueDataFrameError:
@@ -92,7 +92,7 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
             else:
                 assert_or_throw(
                     last_schema is None or df.schema == last_schema,
-                    FugueDataFrameInitError(
+                    lambda: FugueDataFrameInitError(
                         f"encountered schema {df.schema} doesn't match"
                         f" the original schema {df.schema}"
                     ),

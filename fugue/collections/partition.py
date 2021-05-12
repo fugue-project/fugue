@@ -269,10 +269,10 @@ class PartitionSpec(object):
         """
         d: IndexedOrderedDict[str, bool] = IndexedOrderedDict()
         for p in self.partition_by:
-            aot(p in schema, KeyError(f"{p} not in {schema}"))
+            aot(p in schema, lambda: KeyError(f"{p} not in {schema}"))
             d[p] = True
         for p, v in self.presort.items():
-            aot(p in schema, KeyError(f"{p} not in {schema}"))
+            aot(p in schema, lambda: KeyError(f"{p} not in {schema}"))
             d[p] = v
         return d
 

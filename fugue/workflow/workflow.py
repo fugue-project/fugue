@@ -172,7 +172,8 @@ class WorkflowDataFrame(DataFrame):
         :rtype: :class:`~.WorkflowDataFrame`
         """
         assert_or_throw(
-            not isinstance(using, str), f"processor {using} can't be string expression"
+            not isinstance(using, str),
+            lambda: f"processor {using} can't be string expression",
         )
         if pre_partition is None:
             pre_partition = self.partition_spec
@@ -196,7 +197,8 @@ class WorkflowDataFrame(DataFrame):
           :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
         """
         assert_or_throw(
-            not isinstance(using, str), f"outputter {using} can't be string expression"
+            not isinstance(using, str),
+            lambda: f"outputter {using} can't be string expression",
         )
         if pre_partition is None:
             pre_partition = self.partition_spec
@@ -307,7 +309,7 @@ class WorkflowDataFrame(DataFrame):
         """
         assert_or_throw(
             not isinstance(using, str),
-            f"transformer {using} can't be string expression",
+            lambda: f"transformer {using} can't be string expression",
         )
         if pre_partition is None:
             pre_partition = self.partition_spec
@@ -355,7 +357,7 @@ class WorkflowDataFrame(DataFrame):
         """
         assert_or_throw(
             not isinstance(using, str),
-            f"output transformer {using} can't be string expression",
+            lambda: f"output transformer {using} can't be string expression",
         )
         if pre_partition is None:
             pre_partition = self.partition_spec
@@ -1164,7 +1166,7 @@ class WorkflowDataFrames(DataFrames):
     ) -> None:
         assert_or_throw(
             isinstance(value, WorkflowDataFrame),
-            ValueError(f"{key}:{value} is not WorkflowDataFrame)"),
+            lambda: ValueError(f"{key}:{value} is not WorkflowDataFrame)"),
         )
         if self._parent is None:
             self._parent = value.workflow
@@ -1302,7 +1304,7 @@ class FugueWorkflow(object):
         """
         assert_or_throw(
             not isinstance(using, str),
-            f"creator {using} can't be string expression",
+            lambda: f"creator {using} can't be string expression",
         )
         task = Create(creator=using, schema=schema, params=params)
         return self.add(task)
@@ -1335,7 +1337,7 @@ class FugueWorkflow(object):
         """
         assert_or_throw(
             not isinstance(using, str),
-            f"processor {using} can't be string expression",
+            lambda: f"processor {using} can't be string expression",
         )
         _dfs = self._to_dfs(*dfs)
         task = Process(
@@ -1368,7 +1370,7 @@ class FugueWorkflow(object):
         """
         assert_or_throw(
             not isinstance(using, str),
-            f"outputter {using} can't be string expression",
+            lambda: f"outputter {using} can't be string expression",
         )
         _dfs = self._to_dfs(*dfs)
         task = Output(
@@ -1409,7 +1411,9 @@ class FugueWorkflow(object):
         if isinstance(data, WorkflowDataFrame):
             assert_or_throw(
                 data.workflow is self,
-                FugueWorkflowCompileError(f"{data} does not belong to this workflow"),
+                lambda: FugueWorkflowCompileError(
+                    f"{data} does not belong to this workflow"
+                ),
             )
             assert_or_throw(
                 schema is None and metadata is None,
@@ -1664,7 +1668,7 @@ class FugueWorkflow(object):
         """
         assert_or_throw(
             not isinstance(using, str),
-            f"transformer {using} can't be string expression",
+            lambda: f"transformer {using} can't be string expression",
         )
         assert_or_throw(
             len(dfs) == 1,
@@ -1727,7 +1731,7 @@ class FugueWorkflow(object):
         """
         assert_or_throw(
             not isinstance(using, str),
-            f"output transformer {using} can't be string expression",
+            lambda: f"output transformer {using} can't be string expression",
         )
         assert_or_throw(
             len(dfs) == 1,
@@ -1850,7 +1854,7 @@ class FugueWorkflow(object):
         """This method should not be called directly by users. Use
         :meth:`~.create`, :meth:`~.process`, :meth:`~.output` instead
         """
-        assert_or_throw(task._node_spec is None, f"can't reuse {task}")
+        assert_or_throw(task._node_spec is None, lambda: f"can't reuse {task}")
         dep = _Dependencies(self, task, {}, *args, **kwargs)
         name = "_" + str(len(self._spec.tasks))
         wt = self._spec.add_task(name, task, dep.dependency)

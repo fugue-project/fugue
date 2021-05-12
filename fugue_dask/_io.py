@@ -42,7 +42,8 @@ def save_df(
     **kwargs: Any,
 ) -> None:
     assert_or_throw(
-        mode in ["overwrite", "error"], NotImplementedError(f"{mode} is not supported")
+        mode in ["overwrite", "error"],
+        lambda: NotImplementedError(f"{mode} is not supported"),
     )
     p = FileParser(uri, format_hint).assert_no_glob()
     if fs is None:

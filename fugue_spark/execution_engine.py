@@ -318,7 +318,8 @@ class SparkExecutionEngine(ExecutionEngine):
         metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
-            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+            df1.schema == df2.schema,
+            lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
         d1 = self.to_df(df1).native
         d2 = self.to_df(df2).native
@@ -335,7 +336,8 @@ class SparkExecutionEngine(ExecutionEngine):
         metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
-            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+            df1.schema == df2.schema,
+            lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
         d1 = self.to_df(df1).native
         d2 = self.to_df(df2).native
@@ -353,7 +355,8 @@ class SparkExecutionEngine(ExecutionEngine):
         metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
-            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+            df1.schema == df2.schema,
+            lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
         d1 = self.to_df(df1).native
         d2 = self.to_df(df2).native

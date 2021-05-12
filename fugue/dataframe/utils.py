@@ -320,7 +320,9 @@ def get_join_schemas(
         on = list(df1.schema.intersect(df2.schema.names).names)
         aot(
             len(on) > 0,
-            SchemaError(f"no common columns between {df1.schema} and {df2.schema}"),
+            lambda: SchemaError(
+                f"no common columns between {df1.schema} and {df2.schema}"
+            ),
         )
     schema2 = df2.schema
     aot(
@@ -333,7 +335,9 @@ def get_join_schemas(
         schema2 = schema2.extract(on)
     aot(
         on in df1.schema and on in schema2,
-        SchemaError(f"{on} is not the intersection of {df1.schema} & {df2.schema}"),
+        lambda: SchemaError(
+            f"{on} is not the intersection of {df1.schema} & {df2.schema}"
+        ),
     )
     cm = df1.schema.intersect(on)
     if how == "cross":
