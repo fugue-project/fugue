@@ -89,7 +89,7 @@ class FileCheckpoint(Checkpoint):
     def yielded_file(self) -> YieldedFile:
         assert_or_throw(
             self.permanent,
-            FugueWorkflowCompileError(f"yield is not allowed for {self}"),
+            lambda: FugueWorkflowCompileError(f"yield is not allowed for {self}"),
         )
         return self._yielded
 

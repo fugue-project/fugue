@@ -142,7 +142,8 @@ class NativeExecutionEngine(ExecutionEngine):
                 output_df = PandasDataFrame(output_df.native, output_schema)
             assert_or_throw(
                 output_df.schema == output_schema,
-                f"map output {output_df.schema} mismatches given {output_schema}",
+                lambda: f"map output {output_df.schema} "
+                f"mismatches given {output_schema}",
             )
             output_df._metadata = ParamDict(metadata, deep=True)
             output_df._metadata.set_readonly()
@@ -200,7 +201,8 @@ class NativeExecutionEngine(ExecutionEngine):
         metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
-            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+            df1.schema == df2.schema,
+            lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
         d = self.pl_utils.union(df1.as_pandas(), df2.as_pandas(), unique=distinct)
         return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
@@ -216,7 +218,8 @@ class NativeExecutionEngine(ExecutionEngine):
             distinct, NotImplementedError("EXCEPT ALL for NativeExecutionEngine")
         )
         assert_or_throw(
-            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+            df1.schema == df2.schema,
+            lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
         d = self.pl_utils.except_df(df1.as_pandas(), df2.as_pandas(), unique=distinct)
         return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
@@ -232,7 +235,8 @@ class NativeExecutionEngine(ExecutionEngine):
             distinct, NotImplementedError("INTERSECT ALL for NativeExecutionEngine")
         )
         assert_or_throw(
-            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+            df1.schema == df2.schema,
+            lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
         d = self.pl_utils.intersect(df1.as_pandas(), df2.as_pandas(), unique=distinct)
         return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)

@@ -72,7 +72,8 @@ class DataFrames(IndexedOrderedDict[str, DataFrame]):
             InvalidOperationError("this DataFrames can's have key"),
         )
         assert_or_throw(
-            isinstance(value, DataFrame), ValueError(f"{key} has non DataFrame value")
+            isinstance(value, DataFrame),
+            lambda: ValueError(f"{key} has non DataFrame value"),
         )
         super().__setitem__(key, value, *args, **kwds)  # type: ignore
         self._has_key = True
@@ -102,6 +103,7 @@ class DataFrames(IndexedOrderedDict[str, DataFrame]):
             not self.has_key, InvalidOperationError("this DataFrames must have key")
         )
         assert_or_throw(
-            isinstance(value, DataFrame), ValueError(f"{value} is not a DataFrame")
+            isinstance(value, DataFrame),
+            lambda: ValueError(f"{value} is not a DataFrame"),
         )
         super().__setitem__("_" + str(len(self)), value)

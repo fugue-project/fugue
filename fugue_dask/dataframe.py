@@ -210,7 +210,9 @@ class DaskDataFrame(DataFrame):
             schema = _input_schema(schema).assert_not_empty()
             assert_or_throw(
                 pdf.shape[1] == len(schema),
-                ValueError(f"Pandas datafame column count doesn't match {schema}"),
+                lambda: ValueError(
+                    f"Pandas datafame column count doesn't match {schema}"
+                ),
             )
             pdf.columns = schema.names
         return DASK_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True), schema

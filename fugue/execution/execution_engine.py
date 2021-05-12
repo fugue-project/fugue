@@ -602,7 +602,7 @@ class ExecutionEngine(ABC):
                 )
             for k in df.metadata["serialized_cols"].keys():
                 assert_or_throw(
-                    k not in serialized_cols, ValueError(f"{k} is duplicated")
+                    k not in serialized_cols, lambda: ValueError(f"{k} is duplicated")
                 )
                 serialized_cols[k] = df.metadata["serialized_cols"][k]
                 schemas[k] = df.metadata["schemas"][k]

@@ -353,7 +353,7 @@ class _Extensions(_VisitorBase):
     ) -> WorkflowDataFrame:
         assert_or_throw(
             key in self.variables,
-            FugueSQLSyntaxError(f"{key} is not defined"),
+            lambda: FugueSQLSyntaxError(f"{key} is not defined"),
         )
         if isinstance(self.variables[key], LazyWorkflowDataFrame):
             assert_or_throw(

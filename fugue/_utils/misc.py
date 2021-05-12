@@ -10,6 +10,6 @@ def get_attribute(obj: object, attr_name: str, data_type: Type[T]) -> T:
         obj.__dict__[attr_name] = data_type()
     assert_or_throw(
         isinstance(obj.__dict__[attr_name], data_type),
-        TypeError(f"{obj.__dict__[attr_name]} is not type {data_type}"),
+        lambda: TypeError(f"{obj.__dict__[attr_name]} is not type {data_type}"),
     )
     return obj.__dict__[attr_name]

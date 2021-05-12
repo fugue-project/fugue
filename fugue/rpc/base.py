@@ -227,7 +227,7 @@ class RPCFunc(RPCHandler):
 
     def __init__(self, func: Callable):
         super().__init__()
-        assert_or_throw(callable(func), ValueError(func))
+        assert_or_throw(callable(func), lambda: ValueError(func))
         self._func = func
         if isinstance(func, LambdaType):
             self._uuid = to_uuid("lambda")

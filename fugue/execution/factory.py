@@ -50,7 +50,7 @@ class _ExecutionEngineFactory(object):
         if isinstance(engine, ExecutionEngine):
             assert_or_throw(
                 conf is None and len(kwargs) == 0,
-                ValueError(
+                lambda: ValueError(
                     f"{engine} is an instance, "
                     f"can't take arguments conf={conf}, kwargs={kwargs}"
                 ),
@@ -71,7 +71,7 @@ class _ExecutionEngineFactory(object):
         if isinstance(engine, SQLEngine):
             assert_or_throw(
                 execution_engine is None and len(kwargs) == 0,
-                ValueError(
+                lambda: ValueError(
                     f"{engine} is an instance, can't take arguments "
                     f"execution_engine={execution_engine}, kwargs={kwargs}"
                 ),

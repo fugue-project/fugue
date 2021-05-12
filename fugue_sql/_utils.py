@@ -57,7 +57,9 @@ class LazyWorkflowDataFrame:
         if isinstance(self._df, WorkflowDataFrame):
             assert_or_throw(
                 self._df.workflow is self._workflow,
-                FugueSQLError(f"{self._key}, {self._df} is from another workflow"),
+                lambda: FugueSQLError(
+                    f"{self._key}, {self._df} is from another workflow"
+                ),
             )
             return self._df
         return self._workflow.df(self._df)

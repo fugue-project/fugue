@@ -354,7 +354,9 @@ class DataFrame(ABC):
         sub = Schema(subschema)
         assert_or_throw(
             sub.names in self.schema,
-            FugueDataFrameOperationError(f"{sub.names} are not all in {self.schema}"),
+            lambda: FugueDataFrameOperationError(
+                f"{sub.names} are not all in {self.schema}"
+            ),
         )
         for k, v in sub.items():
             old_type = self.schema[k].type
@@ -364,13 +366,13 @@ class DataFrame(ABC):
                     not pa.types.is_struct(old_type)
                     and not pa.types.is_list(old_type)
                     and not pa.types.is_binary(old_type),
-                    NotImplementedError(f"can't convert from {old_type}"),
+                    lambda: NotImplementedError(f"can't convert from {old_type}"),
                 )
                 assert_or_throw(
                     not pa.types.is_struct(new_type)
                     and not pa.types.is_list(new_type)
                     and not pa.types.is_binary(new_type),
-                    NotImplementedError(f"can't convert to {new_type}"),
+                    lambda: NotImplementedError(f"can't convert to {new_type}"),
                 )
         return Schema([(k, sub.get(k, v)) for k, v in self.schema.items()])
 

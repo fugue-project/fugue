@@ -54,7 +54,9 @@ class FugueSQLWorkflow(FugueWorkflow):
         # TODO: move dict construction to triad
         params: Dict[str, Any] = {}
         for a in args:
-            assert_or_throw(isinstance(a, Dict), f"args can only have dict: {a}")
+            assert_or_throw(
+                isinstance(a, Dict), lambda: f"args can only have dict: {a}"
+            )
             params.update(a)
         params.update(kwargs)
         params, dfs = self._split_params(params)

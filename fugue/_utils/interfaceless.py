@@ -142,7 +142,7 @@ class FunctionWrapper(object):
                 if isinstance(v, _DataFrameParamBase):
                     assert_or_throw(
                         isinstance(p[k], DataFrame),
-                        TypeError(f"{p[k]} is not a DataFrame"),
+                        lambda: TypeError(f"{p[k]} is not a DataFrame"),
                     )
                     rargs[k] = v.to_input_data(p[k])
                 else:
@@ -181,10 +181,12 @@ class FunctionWrapper(object):
         rt = self._parse_param(anno, None, none_as_other=False)
         params_str = "".join(x.code for x in res.values())
         assert_or_throw(
-            re.match(params_re, params_str), TypeError(f"Input types not valid {res}")
+            re.match(params_re, params_str),
+            lambda: TypeError(f"Input types not valid {res}"),
         )
         assert_or_throw(
-            re.match(return_re, rt.code), TypeError(f"Return type not valid {rt}")
+            re.match(return_re, rt.code),
+            lambda: TypeError(f"Return type not valid {rt}"),
         )
         return class_method, res, rt
 
@@ -283,7 +285,7 @@ class _DataFramesParam(_FuncParam):
 class _DataFrameParamBase(_FuncParam):
     def __init__(self, param: Optional[inspect.Parameter], annotation: Any, code: str):
         super().__init__(param, annotation, code)
-        assert_or_throw(self.required, TypeError(f"{self} must be required"))
+        assert_or_throw(self.required, lambda: TypeError(f"{self} must be required"))
 
     def to_input_data(self, df: DataFrame) -> Any:  # pragma: no cover
         raise NotImplementedError
@@ -305,7 +307,7 @@ class _DataFrameParam(_DataFrameParamBase):
     def to_output_df(self, output: DataFrame, schema: Any) -> DataFrame:
         assert_or_throw(
             schema is None or output.schema == schema,
-            f"Output schema mismatch {output.schema} vs {schema}",
+            lambda: f"Output schema mismatch {output.schema} vs {schema}",
         )
         return output
 
@@ -326,7 +328,7 @@ class _LocalDataFrameParam(_DataFrameParamBase):
     def to_output_df(self, output: LocalDataFrame, schema: Any) -> DataFrame:
         assert_or_throw(
             schema is None or output.schema == schema,
-            f"Output schema mismatch {output.schema} vs {schema}",
+            lambda: f"Output schema mismatch {output.schema} vs {schema}",
         )
         return output
 
