@@ -29,8 +29,8 @@ setup(
     keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
     install_requires=[
-        "triad>=0.5.2",
-        "adagio>=0.2.2",
+        "triad>=0.5.3",
+        "adagio>=0.2.3",
         "qpd>=0.2.4",
         "sqlalchemy",
         "pyarrow>=0.15.1",
@@ -40,7 +40,7 @@ setup(
         "sql": ["antlr4-python3-runtime", "jinja2"],
         "spark": ["pyspark"],
         "dask": ["qpd[dask]"],
-        "notebook": ["notebook", "jupyterlab"],
+        "notebook": ["notebook", "jupyterlab", "dash"],
         "all": [
             "antlr4-python3-runtime",
             "jinja2",
@@ -48,6 +48,7 @@ setup(
             "qpd[dask]",
             "notebook",
             "jupyterlab",
+            "dash",
         ],
     },
     classifiers=[
