@@ -5,7 +5,7 @@ import pyspark.sql as ps
 import pyspark.sql.types as pt
 
 try:  # pyspark < 3
-    from pyspark.sql.types import from_arrow_type, to_arrow_type
+    from pyspark.sql.types import from_arrow_type, to_arrow_type  # type: ignore
 except ImportError:  # pyspark >=3
     from pyspark.sql.pandas.types import from_arrow_type, to_arrow_type
 from pyarrow.types import is_list, is_struct, is_timestamp
@@ -14,7 +14,7 @@ from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
 
 # https://issues.apache.org/jira/browse/SPARK-29041
-pt._acceptable_types[pt.BinaryType] = (bytearray, bytes)
+pt._acceptable_types[pt.BinaryType] = (bytearray, bytes)  # type: ignore
 
 
 def to_spark_schema(obj: Any) -> pt.StructType:

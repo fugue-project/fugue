@@ -3,7 +3,7 @@ from typing import Any
 
 from fugue_version import __version__
 from IPython import get_ipython
-from IPython.display import Javascript
+from IPython.display import Javascript, display
 
 from fugue_notebook.env import NotebookSetup, _setup_fugue_notebook
 
@@ -68,4 +68,4 @@ def setup(notebook_setup: Any = None, is_lab: bool = False) -> Any:
     ip = get_ipython()
     _setup_fugue_notebook(ip, notebook_setup)
     if not is_lab:
-        return Javascript(_HIGHLIGHT_JS)
+        display(Javascript(_HIGHLIGHT_JS))
