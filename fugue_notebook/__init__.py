@@ -58,7 +58,7 @@ def _jupyter_nbextension_paths():
     ]
 
 
-def setup(notebook_setup: Any = None, is_lab: bool = False) -> Any:
+def setup(notebook_setup: Any = None, is_lab: bool = False) -> None:
     """Setup the notebook environment inside notebook without
     installing the jupyter extension or loading ipython extension
 
