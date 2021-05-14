@@ -4,6 +4,9 @@
 
 -   Dask repartitioning [improvement](https://github.com/fugue-project/fugue/issues/201)
 -   [Separate](https://github.com/fugue-project/fugue/issues/192) Dask IO to use its own APIs
+-   Improved Dask print function by adding back [head](https://github.com/fugue-project/fugue/issues/205)
+-   Made `assert_or_throw` [lazy](https://github.com/fugue-project/fugue/issues/206)
+-   Improved notebook [setup handling](https://github.com/fugue-project/fugue/issues/192) for jupyter lab
 
 ## 0.5.5
 

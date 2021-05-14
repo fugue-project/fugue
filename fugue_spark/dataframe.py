@@ -155,8 +155,8 @@ class SparkDataFrame(DataFrame):
             if "_first_row" not in self.__dict__:
                 self._first_row = self.native.first()
                 if self._first_row is not None:
-                    self._first_row = list(self._first_row)
-            return self._first_row
+                    self._first_row = list(self._first_row)  # type: ignore
+            return self._first_row  # type: ignore
 
     def _withColumns(self, columns: Optional[List[str]]) -> "SparkDataFrame":
         if columns is None:
