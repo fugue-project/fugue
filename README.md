@@ -16,6 +16,14 @@ Fugue is a pure abstraction layer that makes Python and SQL code portable across
 -   **Friendlier interface for Spark**: Fugue provides a friendlier interface compared to Spark user-defined functions (UDF). Users can get Python/Pandas code running on Spark with less effort. Fugue SQL extends Spark SQL to be a more complete programming language. Lastly, Fugue as some optimizations that make the Spark engine easier to use.
 -   **Highly testable code**: Fugue naturally makes logic more testable because the code will be written in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
 
+## Getting Started
+
+View our latest presentations and content
+
+-   [Beginner Tutorial](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner/index.html))
+-   [Interoperable Python and SQL blog](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
+-   [Data Science Cross-Framework Library Blog](https://towardsdatascience.com/creating-pandas-and-spark-compatible-functions-with-fugue-8617c0b3d3a8)
+
 ## Key Features
 
 Here is an example Fugue code snippet that illustrates some of the key features of the framework. A `fillna` function creates a new column named `filled`, which is the same as the column `value` except that the `None` values are filled. Notice that the `fillna` function written below is purely in native Python. The code will still run without Fugue installed.
@@ -178,7 +186,7 @@ PRINT
 
 To read the complete static docs, [click here](https://fugue.readthedocs.org)
 
-The best way to start is to go through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner.html). We have the tutorials in an interactive notebook environent.
+The best way to start is to go through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner/index.html). We have the tutorials in an interactive notebook environent.
 
 ### Run the tutorial using binder:
 
@@ -195,14 +203,6 @@ Alternatively, you should get decent performance if running its Docker image on 
 ```bash
 docker run -p 8888:8888 fugueproject/tutorials:latest
 ```
-
-## Resources
-
-View our latest presentations and content
-
--   [Spark AI Summit 2020 Fugue Talk](https://www.youtube.com/watch?v=BBd4b2pMk0c&)
--   [Video Tutorial on Fugue SQL](https://youtu.be/iROWlAVa2Kk)
--   [Data Science Cross-Framework Library Blog](https://towardsdatascience.com/creating-pandas-and-spark-compatible-functions-with-fugue-8617c0b3d3a8)
 
 ## Contributing
 
