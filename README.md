@@ -20,7 +20,7 @@ Fugue is a pure abstraction layer that makes Python and SQL code portable across
 
 View our latest presentations and content
 
--   [Beginner Tutorial](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner/index.html)
+-   [Tutorials](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/index.html)
 -   [Interoperable Python and SQL blog](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
 -   [Data Science Cross-Framework Library Blog](https://towardsdatascience.com/creating-pandas-and-spark-compatible-functions-with-fugue-8617c0b3d3a8)
 
@@ -184,9 +184,9 @@ PRINT
 
 ## Get started
 
-To read the complete static docs, [click here](https://fugue.readthedocs.org)
+The best way to start is to go through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/index.html). We have the tutorials in an interactive notebook environent.
 
-The best way to start is to go through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner/index.html). We have the tutorials in an interactive notebook environent.
+For the API docs, [click here](https://fugue.readthedocs.org)
 
 ### Run the tutorial using binder:
 
