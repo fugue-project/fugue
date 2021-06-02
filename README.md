@@ -20,7 +20,7 @@ Fugue is a pure abstraction layer that makes Python and SQL code portable across
 
 View our latest presentations and content
 
--   [Tutorials](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/index.html)
+-   [Tutorials](https://fugue-tutorials.readthedocs.io/en/latest/)
 -   [Interoperable Python and SQL blog](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
 -   [Data Science Cross-Framework Library Blog](https://towardsdatascience.com/creating-pandas-and-spark-compatible-functions-with-fugue-8617c0b3d3a8)
 
