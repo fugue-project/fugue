@@ -8,7 +8,7 @@ try:  # pyspark < 3
     from pyspark.sql.types import from_arrow_type, to_arrow_type  # type: ignore
 
     # https://issues.apache.org/jira/browse/SPARK-29041
-    pt._acceptable_types[pt.BinaryType] = (bytearray, bytes)  # type: ignore
+    pt._acceptable_types[pt.BinaryType] = (bytearray, bytes)  # type: ignore  # pragma: no cover  # noqa: E501  # pylint: disable=line-too-long
 except ImportError:  # pyspark >=3
     from pyspark.sql.pandas.types import from_arrow_type, to_arrow_type
 from pyarrow.types import is_list, is_struct, is_timestamp

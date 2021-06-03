@@ -150,6 +150,42 @@ def test_use_df(tmpdir):
         )
 
 
+def test_use_soecial_df(tmpdir):
+    # external non-workflowdataframe
+    arr = ArrayDataFrame([[0], [1]], "a:int")
+    fsql(
+        """
+        b=CREATE[[0], [1]] SCHEMA a: int
+        a = SELECT * FROM a.x
+        OUTPUT a, b USING assert_eq
+        a = SELECT x.* FROM a.x AS x
+        OUTPUT a, b USING assert_eq
+        c=CREATE [[0,0],[1,1]] SCHEMA a:int,b:int
+        d = SELECT x.*,y.a AS b FROM a.x x INNER JOIN a.x y ON x.a=y.a
+        OUTPUT c, d USING assert_eq
+        """,
+        {"a.x": arr},
+    ).run()
+
+    # from yield file
+    engine = NativeExecutionEngine(
+        conf={"fugue.workflow.checkpoint.path": os.path.join(tmpdir, "ck")}
+    )
+    with FugueSQLWorkflow(engine) as dag:
+        dag("CREATE[[0], [1]] SCHEMA a: int YIELD FILE AS b")
+        res = dag.yields["b"]
+
+    with FugueSQLWorkflow(engine) as dag:
+        dag(
+            """
+        b=CREATE[[0], [1]] SCHEMA a: int
+        a = SELECT * FROM a.x
+        OUTPUT a, b USING assert_eq
+        """,
+            {"a.x": res},
+        )
+
+
 def test_lazy_use_df():
     df1 = pd.DataFrame([[0]], columns=["a"])
     df2 = pd.DataFrame([[1]], columns=["a"])

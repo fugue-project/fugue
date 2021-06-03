@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
@@ -243,6 +243,15 @@ class ExecutionEngine(ABC):
         :ref:`this <tutorial:/tutorials/execution_engine.ipynb#map>` to understand
         what map is used for and how it should work.
         """
+        raise NotImplementedError
+
+    def aggregate(
+        self,
+        df: DataFrame,
+        funcs: List[Tuple[str, Any, str]],
+        partition_spec: PartitionSpec,
+        metadata: Any = None,
+    ) -> DataFrame:  # pragma: no cover
         raise NotImplementedError
 
     @abstractmethod

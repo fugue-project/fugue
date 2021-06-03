@@ -37,6 +37,7 @@ from triad.utils.convert import (
     to_type,
 )
 from triad.utils.pyarrow import to_pa_datatype
+from triad.utils.string import validate_triad_var_name
 
 from fugue_sql._antlr import FugueSQLParser as fp
 from fugue_sql._antlr import FugueSQLVisitor
@@ -766,7 +767,7 @@ class _Extensions(_VisitorBase):
             yield from self._get_query_elements(ctx.sample())
             if ctx.tableAlias().strictIdentifier() is not None:
                 yield from self._get_query_elements(ctx.tableAlias())
-            else:
+            elif validate_triad_var_name(table_name):
                 yield "AS"
                 yield table_name
 
