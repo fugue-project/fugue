@@ -36,6 +36,7 @@ from triad import FileSystem, IndexedOrderedDict, ParamDict, Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.iter import EmptyAwareIterable
+from triad.utils.pandas_like import PD_UTILS
 from triad.utils.threading import RunOnce
 
 from fugue_spark._constants import (
@@ -191,7 +192,11 @@ class SparkExecutionEngine(ExecutionEngine):
             sdf = self.spark_session.createDataFrame(df, to_spark_schema(schema))
             return SparkDataFrame(sdf, to_schema(schema), metadata)
         if isinstance(df, pd.DataFrame):
-            sdf = self.spark_session.createDataFrame(df)
+            if PD_UTILS.empty(df):
+                temp_schema = to_spark_schema(PD_UTILS.to_schema(df))
+                sdf = self.spark_session.createDataFrame([], temp_schema)
+            else:
+                sdf = self.spark_session.createDataFrame(df)
             return SparkDataFrame(sdf, schema, metadata)
 
         # use arrow dataframe here to handle nulls in int cols

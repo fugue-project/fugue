@@ -83,6 +83,12 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
 
+            # should handle empty pandas dataframe
+            o = ArrayDataFrame([], "a:double,b:str")
+            pdf = pd.DataFrame([[0.1, "a"]], columns=["a", "b"])
+            pdf = pdf[pdf.a < 0]
+            df_eq(o, e.to_df(pdf), throw=True)
+
         def test_map(self):
             def noop(cursor, data):
                 return data
