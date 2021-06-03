@@ -22,14 +22,6 @@ jobs:
     - name: Test
       if: "!github.event.release.prerelease"
       run: make test
-    - name: Coveralls
-      if: "!github.event.release.prerelease"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-      run: |
-        pip install coveralls
-        coveralls
     - name: Build and publish
       env:
         RELEASE_TAG: ${{ github.event.release.tag_name }}
