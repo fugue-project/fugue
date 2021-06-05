@@ -248,7 +248,7 @@ class ExecutionEngine(ABC):
     def aggregate(
         self,
         df: DataFrame,
-        funcs: List[Tuple[str, Any, str]],
+        funcs: List[Tuple[str, str, str]],
         partition_spec: PartitionSpec,
         metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
