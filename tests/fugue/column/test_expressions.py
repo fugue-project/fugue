@@ -6,6 +6,10 @@ def test_named_col():
     assert "a" == str(col("a"))
     assert "a" == str(col(col("a")))
     assert "ab AS xx" == str(col("ab").alias("xx"))
+
+    assert "DISTINCT ab" == str(col("ab").distinct())
+    assert "ab AS xx" == str(col("ab").alias("xx"))
+
     assert "DISTINCT ab AS xx" == str(col("ab").alias("xx").distinct())
     assert "DISTINCT ab AS xx" == str(col("ab").distinct().alias("xx"))
 
@@ -39,12 +43,8 @@ def test_unary_op():
     assert "IS_NULL(a)" == str(col("a").is_null())
     assert "NOT_NULL(a)" == str(col("a").not_null())
 
-    assert "NOT_NULL(a) AS xx" == str(
-        col("a").not_null().alias("xx")
-    )
-    assert "DISTINCT NOT_NULL(a)" == str(
-        col("a").not_null().distinct()
-    )
+    assert "NOT_NULL(a) AS xx" == str(col("a").not_null().alias("xx"))
+    assert "DISTINCT NOT_NULL(a)" == str(col("a").not_null().distinct())
     assert "DISTINCT NOT_NULL(a) AS xx" == str(
         col("a").not_null().alias("xx").distinct()
     )
@@ -64,6 +64,9 @@ def test_binary_op():
     assert "*(1.1,a)" == str(1.1 * col("a"))
     assert "/(a,1)" == str(col("a") / 1)
     assert "/(1.1,a)" == str(1.1 / col("a"))
+
+    assert "DISTINCT +(ab,1)" == str((col("ab") + 1).distinct())
+    assert "+(ab,1) AS xx" == str((col("ab") + 1).alias("xx"))
 
     assert "DISTINCT +(ab,1) AS xx" == str((col("ab") + 1).alias("xx").distinct())
     assert "DISTINCT +(ab,1) AS xx" == str((col("ab") + 1).distinct().alias("xx"))
