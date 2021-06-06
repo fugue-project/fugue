@@ -9,6 +9,10 @@ class ColumnExpr:
         self._as_name = ""
 
     @property
+    def name(self) -> str:
+        return ""
+
+    @property
     def as_name(self) -> str:
         return self._as_name
 
@@ -104,19 +108,80 @@ class ColumnExpr:
         return _BinaryOpExpr("!=", self, other)
 
 
-def lit(obj: Any) -> ColumnExpr:
-    return _LiteralColumnExpr(obj)
+class SelectColumns:
+    def __init__(self, *cols: ColumnExpr):
+        self._all: List[ColumnExpr] = []
+        self._literals: List[ColumnExpr] = []
+        self._cols: List[ColumnExpr] = []
+        self._non_agg_funcs: List[ColumnExpr] = []
+        self._agg_funcs: List[ColumnExpr] = []
+
+        for c in cols:
+            self._all.append(c)
+            if isinstance(c, _LiteralColumnExpr):
+                self._literals.append(c)
+            elif isinstance(c, _NamedColumnExpr):
+                self._cols.append(c)
+            elif isinstance(c, _FuncExpr):
+                if _is_agg(c):
+                    self._agg_funcs.append(c)
+                else:
+                    self._non_agg_funcs.append(c)
+
+    def assert_all_with_names(self) -> "SelectColumns":
+        assert all(x.name != "" or x.as_name != "" for x in self._all)
+        return self
+
+    @property
+    def all_cols(self) -> List[ColumnExpr]:
+        return self._all
+
+    @property
+    def literals(self) -> List[ColumnExpr]:
+        return self._literals
+
+    @property
+    def simple_cols(self) -> List[ColumnExpr]:
+        return self._cols
+
+    @property
+    def non_agg_funcs(self) -> List[ColumnExpr]:
+        return self._non_agg_funcs
+
+    @property
+    def agg_funcs(self) -> List[ColumnExpr]:
+        return self._agg_funcs
+
+    @property
+    def has_agg(self) -> bool:
+        return len(self.agg_funcs) > 0
+
+    @property
+    def has_literals(self) -> bool:
+        return len(self.literals) > 0
+
+    @property
+    def simple(self) -> bool:
+        return len(self.simple_cols) == len(self.all_cols)
+
+
+def lit(obj: Any, alias: str = "") -> ColumnExpr:
+    return (
+        _LiteralColumnExpr(obj) if alias == "" else _LiteralColumnExpr(obj).alias(alias)
+    )
 
 
 def null() -> ColumnExpr:
     return lit(None)
 
 
-def col(obj: Any) -> ColumnExpr:
+def col(obj: Any, alias: str = "") -> ColumnExpr:
     if isinstance(obj, ColumnExpr):
-        return obj
+        return obj if alias == "" else obj.alias(alias)
     if isinstance(obj, str):
-        return _NamedColumnExpr(obj)
+        return (
+            _NamedColumnExpr(obj) if alias == "" else _NamedColumnExpr(obj).alias(alias)
+        )
     raise NotImplementedError(obj)
 
 
@@ -124,8 +189,18 @@ def function(name: str, *args: Any, **kwargs) -> ColumnExpr:
     return _FuncExpr(name, *args, **kwargs)
 
 
-def coalesce(*args: Any) -> ColumnExpr:
-    return _FuncExpr("COALESCE", *[_to_col(x) for x in args])
+def agg(name: str, *args: Any, **kwargs) -> ColumnExpr:
+    return _AggFuncExpr(name, *args, **kwargs)
+
+
+def _is_agg(column: Any) -> bool:
+    if isinstance(column, _AggFuncExpr):
+        return True
+    if isinstance(column, _FuncExpr):
+        return any(_is_agg(x) for x in column.args) or any(
+            _is_agg(x) for x in column.kwargs.values()
+        )
+    return False
 
 
 def _to_col(obj: Any) -> ColumnExpr:
@@ -175,11 +250,20 @@ class _LiteralColumnExpr(ColumnExpr):
     def body_str(self) -> str:
         if self.value is None:
             return "NULL"
-        if isinstance(self.value, str):
-            return f'"{self.value}"'
-        if isinstance(self.value, bool):
+        elif isinstance(self.value, str):
+            body = self.value.translate(
+                str.maketrans(
+                    {  # type: ignore
+                        "\\": r"\\",
+                        "'": r"\'",
+                    }
+                )
+            )
+            return f"'{body}'"
+        elif isinstance(self.value, bool):
             return "TRUE" if self.value else "FALSE"
-        return str(self.value)
+        else:
+            return str(self.value)
 
     @property
     def value(self) -> Any:
@@ -211,7 +295,7 @@ class _FuncExpr(ColumnExpr):
     def body_str(self) -> str:
         def to_str(v: Any):
             if isinstance(v, str):
-                return f'"{v}"'
+                return f"'{v}'"
             if isinstance(v, bool):
                 return "TRUE" if v else "FALSE"
             return str(v)
@@ -234,16 +318,24 @@ class _FuncExpr(ColumnExpr):
         return self._kwargs
 
     def distinct(self) -> ColumnExpr:
-        other = _FuncExpr(self.func, *self.args, **self.kwargs)
+        other = self._copy()
         other._distinct = True
         other._as_name = self.as_name
         return other
 
     def alias(self, as_name: str) -> ColumnExpr:
-        other = _FuncExpr(self.func, *self.args, **self.kwargs)
+        other = self._copy()
         other._as_name = as_name
         other._distinct = self.is_distinct
         return other
+
+    def _copy(self) -> "_FuncExpr":
+        return _FuncExpr(self.func, *self.args, **self.kwargs)
+
+
+class _AggFuncExpr(_FuncExpr):
+    def _copy(self) -> _FuncExpr:
+        return _AggFuncExpr(self.func, *self.args, **self.kwargs)
 
 
 class _UnaryOpExpr(_FuncExpr):
@@ -258,17 +350,8 @@ class _UnaryOpExpr(_FuncExpr):
     def op(self) -> str:
         return self.func
 
-    def distinct(self) -> ColumnExpr:
-        other = _UnaryOpExpr(self.op, self.col)
-        other._distinct = True
-        other._as_name = self.as_name
-        return other
-
-    def alias(self, as_name: str) -> ColumnExpr:
-        other = _UnaryOpExpr(self.op, self.col)
-        other._as_name = as_name
-        other._distinct = self.is_distinct
-        return other
+    def _copy(self) -> _FuncExpr:
+        return _UnaryOpExpr(self.op, self.col)
 
 
 class _BinaryOpExpr(_FuncExpr):
@@ -287,14 +370,5 @@ class _BinaryOpExpr(_FuncExpr):
     def op(self) -> str:
         return self.func
 
-    def distinct(self) -> ColumnExpr:
-        other = _BinaryOpExpr(self.op, self.left, self.right)
-        other._distinct = True
-        other._as_name = self.as_name
-        return other
-
-    def alias(self, as_name: str) -> ColumnExpr:
-        other = _BinaryOpExpr(self.op, self.left, self.right)
-        other._as_name = as_name
-        other._distinct = self.is_distinct
-        return other
+    def _copy(self) -> _FuncExpr:
+        return _BinaryOpExpr(self.op, self.left, self.right)
