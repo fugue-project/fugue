@@ -1,3 +1,4 @@
+from fugue.column.expressions import SelectColumns
 from fugue.column import SQLExpressionGenerator, col, lit, null, function
 import fugue.column.functions as f
 
@@ -13,7 +14,7 @@ def test_basic():
     assert "'a' AS bc" == gen.generate(lit("a").alias("bc"))
 
 
-def test_select():
+def test_select_exprs():
     gen = SQLExpressionGenerator()
     assert "(a+2)*3" == gen.generate((col("a") + 2) * 3)
     assert "(-a+2)*3" == gen.generate((-col("a") + 2) * 3)
@@ -42,16 +43,20 @@ def test_functions():
             col("a"), col("b") + col("c"), col("d") + col("e") - 1, null()
         ).is_null()
     )
-    assert "MY(MIN(x),MAX(y+1),AVG(z),2,aa=FIRST(a),bb=LAST('b')) AS x" == gen.generate(
-        function(
-            "MY",
-            f.min(col("x")),
-            f.max(col("y") + 1),
-            f.avg(col("z")),
-            2,
-            aa=f.first(col("a")),
-            bb=f.last(lit("b")),
-        ).alias("x")
+    assert (
+        "MY(MIN(x),MAX(y+1),AVG(z),2,aa=FIRST(a),bb=LAST('b'),cc=COUNT(DISTINCT *)) AS x"
+        == gen.generate(
+            function(
+                "MY",
+                f.min(col("x")),
+                f.max(col("y") + 1),
+                f.avg(col("z")),
+                2,
+                aa=f.first(col("a")),
+                bb=f.last(lit("b")),
+                cc=f.count(col("*").distinct()),
+            ).alias("x")
+        )
     )
 
     def dummy(expr):
@@ -60,4 +65,40 @@ def test_functions():
     gen.add_func_handler("MY", dummy)
     assert "DISTINCT DUMMY AS x" == gen.generate(
         function("MY", 2, 3).distinct().alias("x")
+    )
+
+
+def test_select():
+    gen = SQLExpressionGenerator()
+
+    # no aggregation
+    cols = SelectColumns(col("*"))
+    assert "SELECT * FROM x" == gen.select(cols, "x")
+
+    cols = SelectColumns(col("a"), lit(1).alias("b"), (col("b") + col("c")).alias("x"))
+    assert "SELECT a, 1 AS b, b+c AS x FROM t" == gen.select(cols, "t")
+
+    # aggregation without literals
+    cols = SelectColumns(f.max(col("c")).alias("c"), col("a", "aa"), col("b"))
+    assert "SELECT MAX(c) AS c, a AS aa, b FROM t GROUP BY a, b" == gen.select(
+        cols, "t"
+    )
+
+    cols = SelectColumns(
+        f.min(col("c") + 1).alias("c"), f.avg(col("d") + col("e")).alias("d")
+    )
+    assert "SELECT MIN(c+1) AS c, AVG(d+e) AS d FROM t" == gen.select(cols, "t")
+
+    # aggregation with literals
+    cols = SelectColumns(
+        lit(1, "k"), f.max(col("c")).alias("c"), lit(2, "j"), col("a", "aa"), col("b")
+    )
+    assert (
+        "SELECT 1 AS k, c, 2 AS j, aa, b FROM (SELECT MAX(c) AS c, a AS aa, b FROM t GROUP BY a, b)"
+        == gen.select(cols, "t")
+    )
+
+    cols = SelectColumns(lit(1, "k"), f.max(col("c")).alias("c"), lit(2, "j"))
+    assert "SELECT 1 AS k, c, 2 AS j FROM (SELECT MAX(c) AS c FROM t)" == gen.select(
+        cols, "t"
     )

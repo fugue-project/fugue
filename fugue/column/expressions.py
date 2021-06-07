@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 from triad import assert_or_throw
 
@@ -15,6 +15,10 @@ class ColumnExpr:
     @property
     def as_name(self) -> str:
         return self._as_name
+
+    @property
+    def output_name(self) -> str:
+        return self.as_name if self.as_name != "" else self.name
 
     @property
     def is_distinct(self) -> bool:
@@ -115,21 +119,58 @@ class SelectColumns:
         self._cols: List[ColumnExpr] = []
         self._non_agg_funcs: List[ColumnExpr] = []
         self._agg_funcs: List[ColumnExpr] = []
+        self._group_keys: List[ColumnExpr] = []
+        self._has_wildcard = False
 
         for c in cols:
+            is_agg = False
             self._all.append(c)
             if isinstance(c, _LiteralColumnExpr):
                 self._literals.append(c)
-            elif isinstance(c, _NamedColumnExpr):
-                self._cols.append(c)
-            elif isinstance(c, _FuncExpr):
-                if _is_agg(c):
-                    self._agg_funcs.append(c)
-                else:
-                    self._non_agg_funcs.append(c)
+            else:
+                if isinstance(c, _NamedColumnExpr):
+                    self._cols.append(c)
+                    if c.wildcard:
+                        if self._has_wildcard:
+                            raise ValueError("'*' can be used at most once")
+                        self._has_wildcard = True
+                elif isinstance(c, _FuncExpr):
+                    if _is_agg(c):
+                        is_agg = True
+                        self._agg_funcs.append(c)
+                    else:
+                        self._non_agg_funcs.append(c)
+                if not is_agg:
+                    self._group_keys.append(c.alias(""))
+
+        if len(self._agg_funcs) > 0 and self._has_wildcard:
+            raise ValueError(f"'*' can't be used in aggregation: {self}")
+
+    def __str__(self):
+        expr = ", ".join(str(x) for x in self.all_cols)
+        return f"[{expr}]"
 
     def assert_all_with_names(self) -> "SelectColumns":
-        assert all(x.name != "" or x.as_name != "" for x in self._all)
+        names: Set[str] = set()
+        for x in self.all_cols:
+            if isinstance(x, _NamedColumnExpr):
+                if x.wildcard:
+                    continue
+                if self._has_wildcard:
+                    if x.as_name == "":
+                        raise ValueError(
+                            f"with '*', all other columns must have an alias: {self}"
+                        )
+            if x.output_name == "":
+                raise ValueError(f"{x} does not have an alias: {self}")
+            if x.output_name in names:
+                raise ValueError(f"{x} can't be reused in select: {self}")
+            names.add(x.output_name)
+
+        return self
+
+    def assert_no_wildcard(self) -> "SelectColumns":
+        assert not self._has_wildcard
         return self
 
     @property
@@ -151,6 +192,10 @@ class SelectColumns:
     @property
     def agg_funcs(self) -> List[ColumnExpr]:
         return self._agg_funcs
+
+    @property
+    def group_keys(self) -> List[ColumnExpr]:
+        return self._group_keys
 
     @property
     def has_agg(self) -> bool:
@@ -189,12 +234,12 @@ def function(name: str, *args: Any, **kwargs) -> ColumnExpr:
     return _FuncExpr(name, *args, **kwargs)
 
 
-def agg(name: str, *args: Any, **kwargs) -> ColumnExpr:
-    return _AggFuncExpr(name, *args, **kwargs)
+def agg(name: str, column: ColumnExpr, *args: Any, **kwargs) -> ColumnExpr:
+    return _UnaryAggFuncExpr(name, column, *args, **kwargs)
 
 
 def _is_agg(column: Any) -> bool:
-    if isinstance(column, _AggFuncExpr):
+    if isinstance(column, _UnaryAggFuncExpr):
         return True
     if isinstance(column, _FuncExpr):
         return any(_is_agg(x) for x in column.args) or any(
@@ -221,6 +266,10 @@ class _NamedColumnExpr(ColumnExpr):
     @property
     def name(self) -> str:
         return self._name
+
+    @property
+    def wildcard(self) -> bool:
+        return self.name == "*"
 
     def distinct(self) -> ColumnExpr:
         other = _NamedColumnExpr(self.name)
@@ -333,14 +382,9 @@ class _FuncExpr(ColumnExpr):
         return _FuncExpr(self.func, *self.args, **self.kwargs)
 
 
-class _AggFuncExpr(_FuncExpr):
-    def _copy(self) -> _FuncExpr:
-        return _AggFuncExpr(self.func, *self.args, **self.kwargs)
-
-
 class _UnaryOpExpr(_FuncExpr):
-    def __init__(self, op: str, column: ColumnExpr):
-        super().__init__(op, column)
+    def __init__(self, op: str, column: ColumnExpr, *args: Any, **kwargs: Any):
+        super().__init__(op, column, *args, **kwargs)
 
     @property
     def col(self) -> ColumnExpr:
@@ -352,6 +396,11 @@ class _UnaryOpExpr(_FuncExpr):
 
     def _copy(self) -> _FuncExpr:
         return _UnaryOpExpr(self.op, self.col)
+
+
+class _UnaryAggFuncExpr(_FuncExpr):
+    def _copy(self) -> _FuncExpr:
+        return _UnaryAggFuncExpr(self.func, *self.args, **self.kwargs)
 
 
 class _BinaryOpExpr(_FuncExpr):

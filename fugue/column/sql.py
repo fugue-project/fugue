@@ -2,6 +2,7 @@ from typing import Any, Callable, Dict, Iterable
 
 from fugue.column.expressions import (
     ColumnExpr,
+    SelectColumns,
     _BinaryOpExpr,
     _FuncExpr,
     _LiteralColumnExpr,
@@ -30,6 +31,31 @@ _SUPPORTED_OPERATORS: Dict[str, str] = {
 class SQLExpressionGenerator:
     def __init__(self):
         self._func_handler: Dict[str, Callable[[_FuncExpr], Iterable[str]]] = {}
+
+    def select(self, columns: SelectColumns, table: str) -> str:
+        columns.assert_all_with_names()
+        if not columns.has_agg:
+            expr = ", ".join(self.generate(x) for x in columns.all_cols)
+            return f"SELECT {expr} FROM {table}"
+        columns.assert_no_wildcard()
+        if len(columns.literals) == 0:
+            expr = ", ".join(self.generate(x) for x in columns.all_cols)
+            if len(columns.group_keys) == 0:
+                return f"SELECT {expr} FROM {table}"
+            else:
+                keys = ", ".join(self.generate(x) for x in columns.group_keys)
+                return f"SELECT {expr} FROM {table} GROUP BY {keys}"
+        else:
+            no_lit = [
+                x for x in columns.all_cols if not isinstance(x, _LiteralColumnExpr)
+            ]
+            sub = self.select(SelectColumns(*no_lit), table)
+            names = [
+                self.generate(x) if isinstance(x, _LiteralColumnExpr) else x.output_name
+                for x in columns.all_cols
+            ]
+            expr = ", ".join(names)
+            return f"SELECT {expr} FROM ({sub})"
 
     def generate(self, expr: ColumnExpr) -> str:
         return "".join(self._generate(expr)).strip()

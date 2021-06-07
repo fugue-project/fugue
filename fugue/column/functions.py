@@ -17,6 +17,11 @@ def max(col: ColumnExpr):  # pylint: disable=redefined-builtin
     return agg("MAX", col)
 
 
+def count(col: ColumnExpr):
+    assert isinstance(col, ColumnExpr)
+    return agg("COUNT", col)
+
+
 def avg(col: ColumnExpr):
     assert isinstance(col, ColumnExpr)
     return agg("AVG", col)
@@ -28,4 +33,5 @@ def first(col: ColumnExpr):
 
 
 def last(col: ColumnExpr):
+    assert isinstance(col, ColumnExpr)
     return agg("LAST", col)

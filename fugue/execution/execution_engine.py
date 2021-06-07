@@ -1,6 +1,8 @@
+from fugue.column.sql import SQLExpressionGenerator
+from fugue.column.expressions import SelectColumns
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
@@ -245,14 +247,19 @@ class ExecutionEngine(ABC):
         """
         raise NotImplementedError
 
-    def aggregate(
+    @property
+    def sql_expression_generator(self) -> SQLExpressionGenerator:
+        return SQLExpressionGenerator()
+
+    def select(
         self,
         df: DataFrame,
-        funcs: List[Tuple[str, str, str]],
-        partition_spec: PartitionSpec,
+        cols: SelectColumns,
         metadata: Any = None,
-    ) -> DataFrame:  # pragma: no cover
-        raise NotImplementedError
+    ) -> DataFrame:
+        gen = self.sql_expression_generator
+        sql = gen.select(cols, "df")
+        return self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
 
     @abstractmethod
     def broadcast(self, df: DataFrame) -> DataFrame:  # pragma: no cover

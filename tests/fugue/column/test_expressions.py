@@ -1,5 +1,5 @@
-from fugue.column import SelectColumns, col, function, lit, null, agg
-from fugue.column.expressions import _is_agg
+from fugue.column import SelectColumns, agg, col, function, lit, null
+from fugue.column.expressions import _BinaryOpExpr, _is_agg
 from fugue.column.functions import coalesce, first
 from pytest import raises
 
@@ -152,17 +152,33 @@ def test_is_agg():
 
 
 def test_select_columns():
+    # not all with names
     cols = SelectColumns(col("a"), lit(1, "b"), col("bb") + col("cc"), first(col("c")))
-    raises(AssertionError, lambda: cols.assert_all_with_names())
+    raises(ValueError, lambda: cols.assert_all_with_names())
+
+    # duplicated names
+    cols = SelectColumns(col("a").alias("b"), lit(1, "b"))
+    raises(ValueError, lambda: cols.assert_all_with_names())
+
+    # with *, all cols must have alias
+    cols = SelectColumns(col("*"), col("a"))
+    raises(ValueError, lambda: cols.assert_all_with_names())
+
+    # * can be used at most once
+    raises(ValueError, lambda: SelectColumns(col("*"), col("*"), col("a").alias("p")))
+
+    # * can't be used with aggregation
+    raises(ValueError, lambda: SelectColumns(col("*"), first(col("a")).alias("x")))
+
     cols = SelectColumns(
-        col("a"),
+        col("aa").alias("a"),
         lit(1, "b"),
         (col("bb") + col("cc")).alias("c"),
         first(col("c")).alias("d"),
     ).assert_all_with_names()
     assert not cols.simple
     assert 1 == len(cols.simple_cols)
-    assert "a" == str(cols.simple_cols[0])
+    assert "aa AS a" == str(cols.simple_cols[0])
     assert cols.has_literals
     assert 1 == len(cols.literals)
     assert "1 AS b" == str(cols.literals[0])
@@ -171,8 +187,12 @@ def test_select_columns():
     assert "+(bb,cc) AS c" == str(cols.non_agg_funcs[0])
     assert 1 == len(cols.agg_funcs)
     assert "FIRST(c) AS d" == str(cols.agg_funcs[0])
+    assert 2 == len(cols.group_keys)  # a, c
+    assert "aa" == cols.group_keys[0].output_name
+    assert "" == cols.group_keys[1].output_name
+    assert isinstance(cols.group_keys[1], _BinaryOpExpr)
 
-    cols = SelectColumns(col("a"))
+    cols = SelectColumns(col("a")).assert_no_wildcard()
     assert cols.simple
     assert not cols.has_literals
     assert not cols.has_agg
