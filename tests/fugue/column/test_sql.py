@@ -1,6 +1,7 @@
-from fugue.column.expressions import SelectColumns
-from fugue.column import SQLExpressionGenerator, col, lit, null, function
 import fugue.column.functions as f
+from fugue.column import SQLExpressionGenerator, col, function, lit, null
+from fugue.column.expressions import SelectColumns
+from pytest import raises
 
 
 def test_basic():
@@ -68,6 +69,16 @@ def test_functions():
     )
 
 
+def test_where():
+    gen = SQLExpressionGenerator()
+    assert "SELECT * FROM x WHERE (a<5) AND b IS NULL" == gen.where(
+        (col("a") < 5) & col("b").is_null(), "x"
+    )
+    assert "SELECT * FROM x WHERE a<5" == gen.where((col("a") < 5).alias("x"), "x")
+
+    raises(ValueError, lambda: gen.where(f.max(col("a")), "x"))
+
+
 def test_select():
     gen = SQLExpressionGenerator()
 
@@ -76,13 +87,27 @@ def test_select():
     assert "SELECT * FROM x" == gen.select(cols, "x")
 
     cols = SelectColumns(col("a"), lit(1).alias("b"), (col("b") + col("c")).alias("x"))
-    assert "SELECT a, 1 AS b, b+c AS x FROM t" == gen.select(cols, "t")
+    where = (col("a") > 5).alias("aa")
+    assert "SELECT a, 1 AS b, b+c AS x FROM t WHERE a>5" == gen.select(
+        cols, "t", where=where
+    )
 
     # aggregation without literals
     cols = SelectColumns(f.max(col("c")).alias("c"), col("a", "aa"), col("b"))
     assert "SELECT MAX(c) AS c, a AS aa, b FROM t GROUP BY a, b" == gen.select(
         cols, "t"
     )
+
+    where = col("a") < 10
+    having = (col("aa") > 5).alias("aaa")
+    assert (
+        "SELECT MAX(c) AS c, a AS aa, b FROM t WHERE a<10 GROUP BY a, b HAVING aa>5"
+        == gen.select(cols, "t", where=where, having=having)
+    )
+
+    # a is not in selected columns
+    having = col("a") > 5
+    raises(ValueError, lambda: gen.select(cols, "t", having=having))
 
     cols = SelectColumns(
         f.min(col("c") + 1).alias("c"), f.avg(col("d") + col("e")).alias("d")

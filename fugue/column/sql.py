@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Iterable
+from typing import Any, Callable, Dict, Iterable, Optional
 
 from fugue.column.expressions import (
     ColumnExpr,
@@ -9,6 +9,8 @@ from fugue.column.expressions import (
     _NamedColumnExpr,
     _UnaryOpExpr,
     lit,
+    _is_agg,
+    _get_column_mentions,
 )
 from triad import assert_or_throw
 
@@ -32,30 +34,70 @@ class SQLExpressionGenerator:
     def __init__(self):
         self._func_handler: Dict[str, Callable[[_FuncExpr], Iterable[str]]] = {}
 
-    def select(self, columns: SelectColumns, table: str) -> str:
+    def where(self, condition: ColumnExpr, table: str) -> str:
+        assert_or_throw(
+            not _is_agg(condition),
+            lambda: ValueError(f"{condition} has aggregation functions"),
+        )
+        cond = self.generate(condition.alias(""))
+        return f"SELECT * FROM {table} WHERE {cond}"
+
+    def select(
+        self,
+        columns: SelectColumns,
+        table: str,
+        where: Optional[ColumnExpr] = None,
+        having: Optional[ColumnExpr] = None,
+    ) -> str:
         columns.assert_all_with_names()
+
+        def _where() -> str:
+            if where is None:
+                return ""
+            assert_or_throw(
+                not _is_agg(where),
+                lambda: ValueError(f"{where} has aggregation functions"),
+            )
+            return " WHERE " + self.generate(where.alias(""))
+
+        def _having(as_where: bool = False) -> str:
+            if having is None:
+                return ""
+            assert_or_throw(
+                not _is_agg(having),
+                lambda: ValueError(f"{where} has aggregation functions"),
+            )
+            names = set(c.output_name for c in columns.all_cols)
+            diff = set(_get_column_mentions(having)).difference(names)
+            if len(diff) > 0:
+                raise ValueError(f"{diff} are in HAVING but not in SELECT")
+            pre = " WHERE " if as_where else " HAVING "
+            return pre + self.generate(having.alias(""))
+
         if not columns.has_agg:
             expr = ", ".join(self.generate(x) for x in columns.all_cols)
-            return f"SELECT {expr} FROM {table}"
+            return f"SELECT {expr} FROM {table}{_where()}"
         columns.assert_no_wildcard()
         if len(columns.literals) == 0:
             expr = ", ".join(self.generate(x) for x in columns.all_cols)
             if len(columns.group_keys) == 0:
-                return f"SELECT {expr} FROM {table}"
+                return f"SELECT {expr} FROM {table}{_where()}{_having()}"
             else:
                 keys = ", ".join(self.generate(x) for x in columns.group_keys)
-                return f"SELECT {expr} FROM {table} GROUP BY {keys}"
+                return (
+                    f"SELECT {expr} FROM {table}{_where()} GROUP BY {keys}{_having()}"
+                )
         else:
             no_lit = [
                 x for x in columns.all_cols if not isinstance(x, _LiteralColumnExpr)
             ]
-            sub = self.select(SelectColumns(*no_lit), table)
+            sub = self.select(SelectColumns(*no_lit), table, where=where)
             names = [
                 self.generate(x) if isinstance(x, _LiteralColumnExpr) else x.output_name
                 for x in columns.all_cols
             ]
             expr = ", ".join(names)
-            return f"SELECT {expr} FROM ({sub})"
+            return f"SELECT {expr} FROM ({sub}){_having(as_where=True)}"
 
     def generate(self, expr: ColumnExpr) -> str:
         return "".join(self._generate(expr)).strip()

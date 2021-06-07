@@ -1,5 +1,5 @@
 from fugue.column.sql import SQLExpressionGenerator
-from fugue.column.expressions import SelectColumns
+from fugue.column.expressions import ColumnExpr, SelectColumns
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
@@ -260,6 +260,9 @@ class ExecutionEngine(ABC):
         gen = self.sql_expression_generator
         sql = gen.select(cols, "df")
         return self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
+
+    def filter(self, df: DataFrame, condition: ColumnExpr, metadata: Any = None):
+        pass
 
     @abstractmethod
     def broadcast(self, df: DataFrame) -> DataFrame:  # pragma: no cover

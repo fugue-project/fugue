@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, Iterable, List, Set
 
 from triad import assert_or_throw
 
@@ -246,6 +246,16 @@ def _is_agg(column: Any) -> bool:
             _is_agg(x) for x in column.kwargs.values()
         )
     return False
+
+
+def _get_column_mentions(column: ColumnExpr) -> Iterable[str]:
+    if isinstance(column, _NamedColumnExpr):
+        yield column.name
+    elif isinstance(column, _FuncExpr):
+        for a in column.args:
+            yield from _get_column_mentions(a)
+        for a in column.kwargs.values():
+            yield from _get_column_mentions(a)
 
 
 def _to_col(obj: Any) -> ColumnExpr:

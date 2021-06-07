@@ -1,5 +1,5 @@
 from fugue.column import SelectColumns, agg, col, function, lit, null
-from fugue.column.expressions import _BinaryOpExpr, _is_agg
+from fugue.column.expressions import _BinaryOpExpr, _get_column_mentions, _is_agg
 from fugue.column.functions import coalesce, first
 from pytest import raises
 
@@ -149,6 +149,11 @@ def test_is_agg():
     assert not _is_agg(null())
 
     assert _is_agg(agg("x", 1))
+
+
+def test_get_column_mentions():
+    expr = (col("a") + col("b")) * function("x", col("b"), a=col("c"), b=lit(1))
+    assert set(["a", "b", "c"]) == set(_get_column_mentions(expr))
 
 
 def test_select_columns():
