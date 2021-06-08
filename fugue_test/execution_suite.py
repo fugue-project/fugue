@@ -1,6 +1,7 @@
 # pylint: disable-all
 
 import copy
+from fugue.column import col
 import os
 import pickle
 from datetime import datetime
@@ -88,6 +89,19 @@ class ExecutionEngineTests(object):
             pdf = pd.DataFrame([[0.1, "a"]], columns=["a", "b"])
             pdf = pdf[pdf.a < 0]
             df_eq(o, e.to_df(pdf), throw=True)
+
+        def test_filter(self):
+            e = self.engine
+            o = ArrayDataFrame(
+                [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
+                "a:double,b:int",
+                dict(a=1),
+            )
+            a = e.to_df(o)
+            b = e.filter(a, col("a").not_null())
+            df_eq(b, [[1, 2], [3, 4]], "a:double,b:int", throw=True)
+            c = e.filter(a, col("a").not_null() & (col("b") < 3))
+            df_eq(c, [[1, 2]], "a:double,b:int", throw=True)
 
         def test_map(self):
             def noop(cursor, data):

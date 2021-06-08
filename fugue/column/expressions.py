@@ -1,12 +1,15 @@
-from typing import Any, Dict, Iterable, List, Set
+from typing import Any, Dict, Iterable, List, Optional
 
-from triad import assert_or_throw
+import pyarrow as pa
+from triad import Schema, assert_or_throw
+from triad.utils.pyarrow import _type_to_expression, to_pa_datatype
 
 
 class ColumnExpr:
     def __init__(self):
         self._distinct = False
         self._as_name = ""
+        self._as_type: Optional[pa.DataType] = None
 
     @property
     def name(self) -> str:
@@ -15,6 +18,10 @@ class ColumnExpr:
     @property
     def as_name(self) -> str:
         return self._as_name
+
+    @property
+    def as_type(self) -> Optional[pa.DataType]:
+        return self._as_type
 
     @property
     def output_name(self) -> str:
@@ -30,8 +37,16 @@ class ColumnExpr:
     def alias(self, as_name: str) -> "ColumnExpr":  # pragma: no cover
         raise NotImplementedError
 
+    def cast(self, data_type: Any) -> "ColumnExpr":  # pragma: no cover
+        raise NotImplementedError
+
+    def infer_schema(self, schema: Schema) -> Optional[pa.DataType]:
+        return self.as_type  # pragma: no cover
+
     def __str__(self) -> str:
         res = self.body_str
+        if self.as_type is not None:
+            res = f"CAST({res} AS {_type_to_expression(self.as_type)})"
         if self.is_distinct:
             res = f"DISTINCT {res}"
         if self.as_name != "":
@@ -49,13 +64,13 @@ class ColumnExpr:
         return _UnaryOpExpr("NOT_NULL", self)
 
     def __neg__(self) -> "ColumnExpr":
-        return _UnaryOpExpr("-", self)
+        return _InvertOpExpr("-", self)
 
     def __pos__(self) -> "ColumnExpr":
         return self
 
     def __invert__(self) -> "ColumnExpr":
-        return _UnaryOpExpr("~", self)
+        return _NotOpExpr("~", self)
 
     def __add__(self, other: Any) -> "ColumnExpr":
         return _BinaryOpExpr("+", self, other)
@@ -82,132 +97,34 @@ class ColumnExpr:
         return _BinaryOpExpr("/", other, self)
 
     def __and__(self, other: Any) -> "ColumnExpr":
-        return _BinaryOpExpr("&", self, other)
+        return _BoolBinaryOpExpr("&", self, other)
 
     def __rand__(self, other: Any) -> "ColumnExpr":
-        return _BinaryOpExpr("&", other, self)
+        return _BoolBinaryOpExpr("&", other, self)
 
     def __or__(self, other: Any) -> "ColumnExpr":
-        return _BinaryOpExpr("|", self, other)
+        return _BoolBinaryOpExpr("|", self, other)
 
     def __ror__(self, other: Any) -> "ColumnExpr":
-        return _BinaryOpExpr("|", other, self)
+        return _BoolBinaryOpExpr("|", other, self)
 
     def __lt__(self, other: Any) -> "ColumnExpr":
-        return _BinaryOpExpr("<", self, other)
+        return _BoolBinaryOpExpr("<", self, other)
 
     def __gt__(self, other: Any) -> "ColumnExpr":
-        return _BinaryOpExpr(">", self, other)
+        return _BoolBinaryOpExpr(">", self, other)
 
     def __le__(self, other: Any) -> "ColumnExpr":
-        return _BinaryOpExpr("<=", self, other)
+        return _BoolBinaryOpExpr("<=", self, other)
 
     def __ge__(self, other: Any) -> "ColumnExpr":
-        return _BinaryOpExpr(">=", self, other)
+        return _BoolBinaryOpExpr(">=", self, other)
 
     def __eq__(self, other: Any) -> "ColumnExpr":  # type: ignore
-        return _BinaryOpExpr("==", self, other)
+        return _BoolBinaryOpExpr("==", self, other)
 
     def __ne__(self, other: Any) -> "ColumnExpr":  # type: ignore
-        return _BinaryOpExpr("!=", self, other)
-
-
-class SelectColumns:
-    def __init__(self, *cols: ColumnExpr):
-        self._all: List[ColumnExpr] = []
-        self._literals: List[ColumnExpr] = []
-        self._cols: List[ColumnExpr] = []
-        self._non_agg_funcs: List[ColumnExpr] = []
-        self._agg_funcs: List[ColumnExpr] = []
-        self._group_keys: List[ColumnExpr] = []
-        self._has_wildcard = False
-
-        for c in cols:
-            is_agg = False
-            self._all.append(c)
-            if isinstance(c, _LiteralColumnExpr):
-                self._literals.append(c)
-            else:
-                if isinstance(c, _NamedColumnExpr):
-                    self._cols.append(c)
-                    if c.wildcard:
-                        if self._has_wildcard:
-                            raise ValueError("'*' can be used at most once")
-                        self._has_wildcard = True
-                elif isinstance(c, _FuncExpr):
-                    if _is_agg(c):
-                        is_agg = True
-                        self._agg_funcs.append(c)
-                    else:
-                        self._non_agg_funcs.append(c)
-                if not is_agg:
-                    self._group_keys.append(c.alias(""))
-
-        if len(self._agg_funcs) > 0 and self._has_wildcard:
-            raise ValueError(f"'*' can't be used in aggregation: {self}")
-
-    def __str__(self):
-        expr = ", ".join(str(x) for x in self.all_cols)
-        return f"[{expr}]"
-
-    def assert_all_with_names(self) -> "SelectColumns":
-        names: Set[str] = set()
-        for x in self.all_cols:
-            if isinstance(x, _NamedColumnExpr):
-                if x.wildcard:
-                    continue
-                if self._has_wildcard:
-                    if x.as_name == "":
-                        raise ValueError(
-                            f"with '*', all other columns must have an alias: {self}"
-                        )
-            if x.output_name == "":
-                raise ValueError(f"{x} does not have an alias: {self}")
-            if x.output_name in names:
-                raise ValueError(f"{x} can't be reused in select: {self}")
-            names.add(x.output_name)
-
-        return self
-
-    def assert_no_wildcard(self) -> "SelectColumns":
-        assert not self._has_wildcard
-        return self
-
-    @property
-    def all_cols(self) -> List[ColumnExpr]:
-        return self._all
-
-    @property
-    def literals(self) -> List[ColumnExpr]:
-        return self._literals
-
-    @property
-    def simple_cols(self) -> List[ColumnExpr]:
-        return self._cols
-
-    @property
-    def non_agg_funcs(self) -> List[ColumnExpr]:
-        return self._non_agg_funcs
-
-    @property
-    def agg_funcs(self) -> List[ColumnExpr]:
-        return self._agg_funcs
-
-    @property
-    def group_keys(self) -> List[ColumnExpr]:
-        return self._group_keys
-
-    @property
-    def has_agg(self) -> bool:
-        return len(self.agg_funcs) > 0
-
-    @property
-    def has_literals(self) -> bool:
-        return len(self.literals) > 0
-
-    @property
-    def simple(self) -> bool:
-        return len(self.simple_cols) == len(self.all_cols)
+        return _BoolBinaryOpExpr("!=", self, other)
 
 
 def lit(obj: Any, alias: str = "") -> ColumnExpr:
@@ -232,20 +149,6 @@ def col(obj: Any, alias: str = "") -> ColumnExpr:
 
 def function(name: str, *args: Any, **kwargs) -> ColumnExpr:
     return _FuncExpr(name, *args, **kwargs)
-
-
-def agg(name: str, column: ColumnExpr, *args: Any, **kwargs) -> ColumnExpr:
-    return _UnaryAggFuncExpr(name, column, *args, **kwargs)
-
-
-def _is_agg(column: Any) -> bool:
-    if isinstance(column, _UnaryAggFuncExpr):
-        return True
-    if isinstance(column, _FuncExpr):
-        return any(_is_agg(x) for x in column.args) or any(
-            _is_agg(x) for x in column.kwargs.values()
-        )
-    return False
 
 
 def _get_column_mentions(column: ColumnExpr) -> Iterable[str]:
@@ -285,13 +188,31 @@ class _NamedColumnExpr(ColumnExpr):
         other = _NamedColumnExpr(self.name)
         other._distinct = True
         other._as_name = self.as_name
+        other._as_type = self.as_type
         return other
 
     def alias(self, as_name: str) -> ColumnExpr:
+        if self.wildcard and as_name != "":
+            raise ValueError("'*' can't have alias")
         other = _NamedColumnExpr(self.name)
         other._as_name = as_name
         other._distinct = self.is_distinct
+        other._as_type = self.as_type
         return other
+
+    def cast(self, data_type: Any) -> "ColumnExpr":
+        if self.wildcard and data_type is not None:
+            raise ValueError("'*' can't cast")
+        other = _NamedColumnExpr(self.name)
+        other._as_name = self.as_name
+        other._distinct = self.is_distinct
+        other._as_type = None if data_type is None else to_pa_datatype(data_type)
+        return other
+
+    def infer_schema(self, schema: Schema) -> Optional[pa.DataType]:
+        if self.name not in schema:
+            return self.as_type
+        return self.as_type or schema[self.name].type
 
 
 class _LiteralColumnExpr(ColumnExpr):
@@ -340,7 +261,19 @@ class _LiteralColumnExpr(ColumnExpr):
     def alias(self, as_name: str) -> ColumnExpr:
         other = _LiteralColumnExpr(self.value)
         other._as_name = as_name
+        other._as_type = self.as_type
         return other
+
+    def cast(self, data_type: Any) -> ColumnExpr:
+        other = _LiteralColumnExpr(self.value)
+        other._as_name = self.as_name
+        other._as_type = None if data_type is None else to_pa_datatype(data_type)
+        return other
+
+    def infer_schema(self, schema: Schema) -> Optional[pa.DataType]:
+        if self.value is None:
+            return self.as_type
+        return self.as_type or to_pa_datatype(type(self.value))
 
 
 class _FuncExpr(ColumnExpr):
@@ -380,12 +313,21 @@ class _FuncExpr(ColumnExpr):
         other = self._copy()
         other._distinct = True
         other._as_name = self.as_name
+        other._as_type = self.as_type
         return other
 
     def alias(self, as_name: str) -> ColumnExpr:
         other = self._copy()
         other._as_name = as_name
         other._distinct = self.is_distinct
+        other._as_type = self.as_type
+        return other
+
+    def cast(self, data_type: Any) -> ColumnExpr:
+        other = self._copy()
+        other._as_name = self.as_name
+        other._distinct = self.is_distinct
+        other._as_type = None if data_type is None else to_pa_datatype(data_type)
         return other
 
     def _copy(self) -> "_FuncExpr":
@@ -393,8 +335,8 @@ class _FuncExpr(ColumnExpr):
 
 
 class _UnaryOpExpr(_FuncExpr):
-    def __init__(self, op: str, column: ColumnExpr, *args: Any, **kwargs: Any):
-        super().__init__(op, column, *args, **kwargs)
+    def __init__(self, op: str, column: ColumnExpr):
+        super().__init__(op, column)
 
     @property
     def col(self) -> ColumnExpr:
@@ -408,9 +350,30 @@ class _UnaryOpExpr(_FuncExpr):
         return _UnaryOpExpr(self.op, self.col)
 
 
-class _UnaryAggFuncExpr(_FuncExpr):
+class _InvertOpExpr(_UnaryOpExpr):
     def _copy(self) -> _FuncExpr:
-        return _UnaryAggFuncExpr(self.func, *self.args, **self.kwargs)
+        return _InvertOpExpr(self.op, self.col)
+
+    def infer_schema(self, schema: Schema) -> Optional[pa.DataType]:
+        if self.as_type is not None:
+            return self.as_type
+        tp = self.col.infer_schema(schema)
+        if pa.types.is_signed_integer(tp) or pa.types.is_floating(tp):
+            return tp
+        return None
+
+
+class _NotOpExpr(_UnaryOpExpr):
+    def _copy(self) -> _FuncExpr:
+        return _NotOpExpr(self.op, self.col)
+
+    def infer_schema(self, schema: Schema) -> Optional[pa.DataType]:
+        if self.as_type is not None:
+            return self.as_type
+        tp = self.col.infer_schema(schema)
+        if pa.types.is_boolean(tp):
+            return tp
+        return None
 
 
 class _BinaryOpExpr(_FuncExpr):
@@ -431,3 +394,11 @@ class _BinaryOpExpr(_FuncExpr):
 
     def _copy(self) -> _FuncExpr:
         return _BinaryOpExpr(self.op, self.left, self.right)
+
+
+class _BoolBinaryOpExpr(_BinaryOpExpr):
+    def _copy(self) -> _FuncExpr:
+        return _BoolBinaryOpExpr(self.op, self.left, self.right)
+
+    def infer_schema(self, schema: Schema) -> Optional[pa.DataType]:
+        return self.as_type or pa.bool_()

@@ -1,18 +1,19 @@
-from typing import Any, Callable, Dict, Iterable, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set
 
+import pyarrow as pa
 from fugue.column.expressions import (
     ColumnExpr,
-    SelectColumns,
     _BinaryOpExpr,
     _FuncExpr,
+    _get_column_mentions,
     _LiteralColumnExpr,
     _NamedColumnExpr,
     _UnaryOpExpr,
     lit,
-    _is_agg,
-    _get_column_mentions,
+    col,
 )
-from triad import assert_or_throw
+from fugue.column.functions import is_agg
+from triad import Schema, assert_or_throw
 
 _SUPPORTED_OPERATORS: Dict[str, str] = {
     "+": "+",
@@ -30,13 +31,121 @@ _SUPPORTED_OPERATORS: Dict[str, str] = {
 }
 
 
+class SelectColumns:
+    def __init__(self, *cols: ColumnExpr):
+        self._all: List[ColumnExpr] = []
+        self._literals: List[ColumnExpr] = []
+        self._cols: List[ColumnExpr] = []
+        self._non_agg_funcs: List[ColumnExpr] = []
+        self._agg_funcs: List[ColumnExpr] = []
+        self._group_keys: List[ColumnExpr] = []
+        self._has_wildcard = False
+
+        for c in cols:
+            _is_agg = False
+            self._all.append(c)
+            if isinstance(c, _LiteralColumnExpr):
+                self._literals.append(c)
+            else:
+                if isinstance(c, _NamedColumnExpr):
+                    self._cols.append(c)
+                    if c.wildcard:
+                        if self._has_wildcard:
+                            raise ValueError("'*' can be used at most once")
+                        self._has_wildcard = True
+                elif isinstance(c, _FuncExpr):
+                    if is_agg(c):
+                        _is_agg = True
+                        self._agg_funcs.append(c)
+                    else:
+                        self._non_agg_funcs.append(c)
+                if not _is_agg:
+                    self._group_keys.append(c.alias(""))
+
+        if len(self._agg_funcs) > 0 and self._has_wildcard:
+            raise ValueError(f"'*' can't be used in aggregation: {self}")
+
+    def __str__(self):
+        expr = ", ".join(str(x) for x in self.all_cols)
+        return f"[{expr}]"
+
+    def replace_wildcard(self, schema: Schema) -> "SelectColumns":
+        def _get_cols() -> Iterable[ColumnExpr]:
+            for c in self.all_cols:
+                if isinstance(c, _NamedColumnExpr) and c.wildcard:
+                    yield from [col(n) for n in schema.names]
+                else:
+                    yield c
+
+        return SelectColumns(*list(_get_cols()))
+
+    def assert_all_with_names(self) -> "SelectColumns":
+        names: Set[str] = set()
+        for x in self.all_cols:
+            if isinstance(x, _NamedColumnExpr):
+                if x.wildcard:
+                    continue
+                if self._has_wildcard:
+                    if x.as_name == "":
+                        raise ValueError(
+                            f"with '*', all other columns must have an alias: {self}"
+                        )
+            if x.output_name == "":
+                raise ValueError(f"{x} does not have an alias: {self}")
+            if x.output_name in names:
+                raise ValueError(f"{x} can't be reused in select: {self}")
+            names.add(x.output_name)
+
+        return self
+
+    def assert_no_wildcard(self) -> "SelectColumns":
+        assert not self._has_wildcard
+        return self
+
+    @property
+    def all_cols(self) -> List[ColumnExpr]:
+        return self._all
+
+    @property
+    def literals(self) -> List[ColumnExpr]:
+        return self._literals
+
+    @property
+    def simple_cols(self) -> List[ColumnExpr]:
+        return self._cols
+
+    @property
+    def non_agg_funcs(self) -> List[ColumnExpr]:
+        return self._non_agg_funcs
+
+    @property
+    def agg_funcs(self) -> List[ColumnExpr]:
+        return self._agg_funcs
+
+    @property
+    def group_keys(self) -> List[ColumnExpr]:
+        return self._group_keys
+
+    @property
+    def has_agg(self) -> bool:
+        return len(self.agg_funcs) > 0
+
+    @property
+    def has_literals(self) -> bool:
+        return len(self.literals) > 0
+
+    @property
+    def simple(self) -> bool:
+        return len(self.simple_cols) == len(self.all_cols)
+
+
 class SQLExpressionGenerator:
     def __init__(self):
         self._func_handler: Dict[str, Callable[[_FuncExpr], Iterable[str]]] = {}
 
     def where(self, condition: ColumnExpr, table: str) -> str:
         assert_or_throw(
-            not _is_agg(condition),
+            not is_agg(condition),
             lambda: ValueError(f"{condition} has aggregation functions"),
         )
         cond = self.generate(condition.alias(""))
@@ -55,7 +164,7 @@ class SQLExpressionGenerator:
             if where is None:
                 return ""
             assert_or_throw(
-                not _is_agg(where),
+                not is_agg(where),
                 lambda: ValueError(f"{where} has aggregation functions"),
             )
             return " WHERE " + self.generate(where.alias(""))
@@ -64,7 +173,7 @@ class SQLExpressionGenerator:
             if having is None:
                 return ""
             assert_or_throw(
-                not _is_agg(having),
+                not is_agg(having),
                 lambda: ValueError(f"{where} has aggregation functions"),
             )
             names = set(c.output_name for c in columns.all_cols)
@@ -107,6 +216,18 @@ class SQLExpressionGenerator:
     ) -> "SQLExpressionGenerator":
         self._func_handler[name] = handler
         return self
+
+    def correct_select_schema(
+        self, input_schema: Schema, select: SelectColumns, output_schema: Schema
+    ) -> Schema:
+        cols = select.replace_wildcard(input_schema).assert_all_with_names()
+        corrections: Dict[str, pa.DataType] = {}
+        for c in cols.all_cols:
+            tp = c.infer_schema(input_schema)
+            if tp is not None:
+                corrections[c.output_name] = pa.field(c.output_name, tp)
+        fields = [corrections.get(x.name, x) for x in output_schema.fields]
+        return Schema(fields)
 
     def _generate(self, expr: ColumnExpr, bracket: bool = False) -> Iterable[str]:
         if expr.is_distinct:
@@ -183,3 +304,12 @@ class SQLExpressionGenerator:
         yield "("
         yield from args
         yield ")"
+
+
+class SQLExpressionHiddenCastGenerator(SQLExpressionGenerator):
+    def __init__(self):
+        super().__init__()
+        self.add_func_handler("CAST", self._on_cast)
+
+    def _on_cast(self, c: ColumnExpr) -> Iterable[str]:
+        raise NotImplementedError

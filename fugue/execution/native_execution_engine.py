@@ -10,6 +10,7 @@ from fugue.collections.partition import (
     PartitionSpec,
     parse_presort_exp,
 )
+from fugue.column import ColumnExpr
 from fugue.dataframe import (
     DataFrame,
     DataFrames,
@@ -167,6 +168,14 @@ class NativeExecutionEngine(ExecutionEngine):
             df.as_pandas(), partition_spec.partition_by, _map
         )
         return PandasDataFrame(result, output_schema, metadata)
+
+    def filter(
+        self, df: DataFrame, condition: ColumnExpr, metadata: Any = None
+    ) -> DataFrame:
+        res = super().filter(df, condition, metadata=metadata)
+        if df.schema == res.schema:
+            return res
+        return self.to_df(res.as_pandas(), df.schema)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)

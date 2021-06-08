@@ -1,7 +1,6 @@
-from fugue.column.sql import SQLExpressionGenerator
-from fugue.column.expressions import ColumnExpr, SelectColumns
 import logging
 from abc import ABC, abstractmethod
+from threading import RLock
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 from fugue.collections.partition import (
@@ -9,6 +8,7 @@ from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
 )
+from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col
 from fugue.constants import FUGUE_DEFAULT_CONF
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
@@ -22,7 +22,6 @@ from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_size
 from triad.utils.string import validate_triad_var_name
-from threading import RLock
 
 _DEFAULT_JOIN_KEYS: List[str] = []
 
@@ -255,14 +254,31 @@ class ExecutionEngine(ABC):
         self,
         df: DataFrame,
         cols: SelectColumns,
+        where: Optional[ColumnExpr] = None,
+        having: Optional[ColumnExpr] = None,
         metadata: Any = None,
     ) -> DataFrame:
         gen = self.sql_expression_generator
-        sql = gen.select(cols, "df")
+        sql = gen.select(cols, "df", where=where, having=having)
         return self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
 
-    def filter(self, df: DataFrame, condition: ColumnExpr, metadata: Any = None):
-        pass
+    def filter(
+        self, df: DataFrame, condition: ColumnExpr, metadata: Any = None
+    ) -> DataFrame:
+        gen = self.sql_expression_generator
+        sql = gen.where(condition, "df")
+        return self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
+
+    def set_columns(
+        self, df: DataFrame, columns: List[ColumnExpr], metadata: Any
+    ) -> DataFrame:
+        cols = [col(n) for n in df.schema.names]
+        for c in columns:
+            if c.output_name not in df.schema:
+                cols.append(c)
+            else:
+                cols[df.schema.index_of_key(c.output_name)] = c
+        return self.select(df, SelectColumns(*cols), metadata=metadata)
 
     @abstractmethod
     def broadcast(self, df: DataFrame) -> DataFrame:  # pragma: no cover

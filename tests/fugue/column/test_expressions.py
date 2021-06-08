@@ -1,20 +1,32 @@
-from fugue.column import SelectColumns, agg, col, function, lit, null
-from fugue.column.expressions import _BinaryOpExpr, _get_column_mentions, _is_agg
-from fugue.column.functions import coalesce, first
+import pyarrow as pa
+from fugue.column import col, function, lit, null
+from fugue.column.expressions import _get_column_mentions
+from fugue.column.functions import coalesce
 from pytest import raises
+from triad import Schema
 
 
 def test_named_col():
+    assert "*" == str(col("*"))
+    assert "DISTINCT *" == str(col("*").distinct())
+    assert col("*").wildcard
+    raises(ValueError, lambda: col("*").alias("x"))
+    raises(ValueError, lambda: col("*").cast("long"))
+
     assert "a" == str(col("a"))
+    assert not col("a").wildcard
     assert "a" == str(col(col("a")))
     assert "ab AS xx" == str(col("ab").alias("xx"))
-    assert "ab AS xx" == str(col("ab", "xx"))
+    assert "ab AS xx" == str(col("ab", "xx").cast(None))
+    assert "CAST(ab AS long) AS xx" == str(col("ab", "xx").cast("long"))
 
     assert "DISTINCT ab" == str(col("ab").distinct())
     assert "ab AS xx" == str(col("ab").alias("xx"))
 
     assert "DISTINCT ab AS xx" == str(col("ab").alias("xx").distinct())
-    assert "DISTINCT ab AS xx" == str(col("ab").distinct().alias("xx"))
+    assert "DISTINCT CAST(ab AS long) AS xx" == str(
+        col("ab").distinct().alias("xx").cast(int)
+    )
 
     raises(NotImplementedError, lambda: col([1, 2]))
 
@@ -134,70 +146,48 @@ def test_coalesce():
     )
 
 
-def test_is_agg():
-    assert _is_agg(first(col("a")))
-    assert _is_agg(first(col("a")).alias("x"))
-    assert _is_agg(first(col("a")).distinct())
-    assert _is_agg(first(col("a") + 1))
-    assert _is_agg(first(col("a")) + 1)
-    assert _is_agg((first(col("a")) < 1).alias("x"))
-    assert _is_agg(col("a") * first(col("a")) + 1)
-
-    assert not _is_agg(col("a"))
-    assert not _is_agg(lit("a"))
-    assert not _is_agg(col("a") + col("b"))
-    assert not _is_agg(null())
-
-    assert _is_agg(agg("x", 1))
-
-
 def test_get_column_mentions():
     expr = (col("a") + col("b")) * function("x", col("b"), a=col("c"), b=lit(1))
     assert set(["a", "b", "c"]) == set(_get_column_mentions(expr))
 
 
-def test_select_columns():
-    # not all with names
-    cols = SelectColumns(col("a"), lit(1, "b"), col("bb") + col("cc"), first(col("c")))
-    raises(ValueError, lambda: cols.assert_all_with_names())
+def test_schema_inference():
+    schema = Schema("a:int,b:str,c:bool,d:double")
+    assert pa.int32() == col("a").infer_schema(schema)
+    assert pa.int32() == (-col("a")).distinct().infer_schema(schema)
+    assert pa.int64() == (-col("a")).cast(int).distinct().infer_schema(schema)
+    assert pa.int64() == (-col("a").cast(int)).distinct().infer_schema(schema)
+    assert pa.string() == col("b").infer_schema(schema)
+    assert (-col("b")).infer_schema(schema) is None
+    assert (~col("b")).infer_schema(schema) is None
+    assert pa.bool_() == col("c").infer_schema(schema)
+    assert pa.bool_() == (~col("c")).alias("x").infer_schema(schema)
+    assert pa.float64() == col("d").infer_schema(schema)
+    assert pa.float64() == (-col("d").alias("x").distinct()).infer_schema(schema)
+    assert col("x").infer_schema(schema) is None
+    assert pa.string() == col("x").cast(str).infer_schema(schema)
+    assert col("*").infer_schema(schema) is None
 
-    # duplicated names
-    cols = SelectColumns(col("a").alias("b"), lit(1, "b"))
-    raises(ValueError, lambda: cols.assert_all_with_names())
+    assert pa.bool_() == (col("a") < col("d")).infer_schema(schema)
+    assert pa.bool_() == (col("a") > col("d")).infer_schema(schema)
+    assert pa.bool_() == (col("a") <= col("d")).infer_schema(schema)
+    assert pa.bool_() == (col("a") >= col("d")).infer_schema(schema)
+    assert pa.bool_() == (col("a") == col("d")).infer_schema(schema)
+    assert pa.bool_() == (col("a") != col("d")).infer_schema(schema)
+    assert pa.bool_() == (~(col("a") != col("d"))).infer_schema(schema)
+    assert pa.int64() == (~(col("a") != col("d"))).cast(int).infer_schema(schema)
 
-    # with *, all cols must have alias
-    cols = SelectColumns(col("*"), col("a"))
-    raises(ValueError, lambda: cols.assert_all_with_names())
+    assert (col("a") - col("d")).infer_schema(schema) is None
 
-    # * can be used at most once
-    raises(ValueError, lambda: SelectColumns(col("*"), col("*"), col("a").alias("p")))
+    assert pa.int64() == lit(1).infer_schema(schema)
+    assert pa.string() == lit("a").infer_schema(schema)
+    assert pa.bool_() == lit(False).infer_schema(schema)
+    assert pa.string() == lit(False).cast(str).infer_schema(schema)
+    assert pa.float64() == lit(2.2).infer_schema(schema)
+    assert null().infer_schema(schema) is None
+    assert pa.string() == null().cast(str).infer_schema(schema)
 
-    # * can't be used with aggregation
-    raises(ValueError, lambda: SelectColumns(col("*"), first(col("a")).alias("x")))
-
-    cols = SelectColumns(
-        col("aa").alias("a"),
-        lit(1, "b"),
-        (col("bb") + col("cc")).alias("c"),
-        first(col("c")).alias("d"),
-    ).assert_all_with_names()
-    assert not cols.simple
-    assert 1 == len(cols.simple_cols)
-    assert "aa AS a" == str(cols.simple_cols[0])
-    assert cols.has_literals
-    assert 1 == len(cols.literals)
-    assert "1 AS b" == str(cols.literals[0])
-    assert cols.has_agg
-    assert 1 == len(cols.non_agg_funcs)
-    assert "+(bb,cc) AS c" == str(cols.non_agg_funcs[0])
-    assert 1 == len(cols.agg_funcs)
-    assert "FIRST(c) AS d" == str(cols.agg_funcs[0])
-    assert 2 == len(cols.group_keys)  # a, c
-    assert "aa" == cols.group_keys[0].output_name
-    assert "" == cols.group_keys[1].output_name
-    assert isinstance(cols.group_keys[1], _BinaryOpExpr)
-
-    cols = SelectColumns(col("a")).assert_no_wildcard()
-    assert cols.simple
-    assert not cols.has_literals
-    assert not cols.has_agg
+    assert function("a", col("a").cast("int")).infer_schema(schema) is None
+    assert pa.string() == function("a", col("a").cast("int")).cast(str).infer_schema(
+        schema
+    )

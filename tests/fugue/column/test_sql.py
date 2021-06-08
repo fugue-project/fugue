@@ -1,7 +1,69 @@
 import fugue.column.functions as f
-from fugue.column import SQLExpressionGenerator, col, function, lit, null
-from fugue.column.expressions import SelectColumns
+from fugue.column import (
+    SelectColumns,
+    SQLExpressionGenerator,
+    SQLExpressionHiddenCastGenerator,
+    col,
+    function,
+    lit,
+    null,
+)
+from fugue.column.expressions import _BinaryOpExpr
 from pytest import raises
+from triad import Schema
+
+
+def test_select_columns():
+    # not all with names
+    cols = SelectColumns(
+        col("a"), lit(1, "b"), col("bb") + col("cc"), f.first(col("c"))
+    )
+    raises(ValueError, lambda: cols.assert_all_with_names())
+
+    # duplicated names
+    cols = SelectColumns(col("a").alias("b"), lit(1, "b"))
+    raises(ValueError, lambda: cols.assert_all_with_names())
+
+    # with *, all cols must have alias
+    cols = SelectColumns(col("*"), col("a"))
+    raises(ValueError, lambda: cols.assert_all_with_names())
+
+    # * can be used at most once
+    raises(ValueError, lambda: SelectColumns(col("*"), col("*"), col("a").alias("p")))
+
+    # * can't be used with aggregation
+    raises(ValueError, lambda: SelectColumns(col("*"), f.first(col("a")).alias("x")))
+
+    cols = SelectColumns(
+        col("aa").alias("a"),
+        lit(1, "b"),
+        (col("bb") + col("cc")).alias("c"),
+        f.first(col("c")).alias("d"),
+    ).assert_all_with_names()
+    assert not cols.simple
+    assert 1 == len(cols.simple_cols)
+    assert "aa AS a" == str(cols.simple_cols[0])
+    assert cols.has_literals
+    assert 1 == len(cols.literals)
+    assert "1 AS b" == str(cols.literals[0])
+    assert cols.has_agg
+    assert 1 == len(cols.non_agg_funcs)
+    assert "+(bb,cc) AS c" == str(cols.non_agg_funcs[0])
+    assert 1 == len(cols.agg_funcs)
+    assert "FIRST(c) AS d" == str(cols.agg_funcs[0])
+    assert 2 == len(cols.group_keys)  # a, c
+    assert "aa" == cols.group_keys[0].output_name
+    assert "" == cols.group_keys[1].output_name
+    assert isinstance(cols.group_keys[1], _BinaryOpExpr)
+
+    cols = SelectColumns(col("a")).assert_no_wildcard()
+    assert cols.simple
+    assert not cols.has_literals
+    assert not cols.has_agg
+
+    cols = SelectColumns(col("x"), col("*"), col("y") + col("z"))
+    cols = cols.replace_wildcard(Schema("a:int,b:int"))
+    assert "x" == str(cols.all_cols[0])
 
 
 def test_basic():
@@ -75,7 +137,6 @@ def test_where():
         (col("a") < 5) & col("b").is_null(), "x"
     )
     assert "SELECT * FROM x WHERE a<5" == gen.where((col("a") < 5).alias("x"), "x")
-
     raises(ValueError, lambda: gen.where(f.max(col("a")), "x"))
 
 
@@ -110,9 +171,12 @@ def test_select():
     raises(ValueError, lambda: gen.select(cols, "t", having=having))
 
     cols = SelectColumns(
-        f.min(col("c") + 1).alias("c"), f.avg(col("d") + col("e")).alias("d")
+        f.min(col("c") + 1).alias("c"),
+        f.avg(col("d") + col("e")).cast(int).alias("d"),
     )
-    assert "SELECT MIN(c+1) AS c, AVG(d+e) AS d FROM t" == gen.select(cols, "t")
+    assert "SELECT MIN(c+1) AS c, CAST(AVG(d+e) AS long) AS d FROM t" == gen.select(
+        cols, "t"
+    )
 
     # aggregation with literals
     cols = SelectColumns(
@@ -125,5 +189,35 @@ def test_select():
 
     cols = SelectColumns(lit(1, "k"), f.max(col("c")).alias("c"), lit(2, "j"))
     assert "SELECT 1 AS k, c, 2 AS j FROM (SELECT MAX(c) AS c FROM t)" == gen.select(
+        cols, "t"
+    )
+
+
+def test_correct_select_schema():
+    schema = Schema("a:double,b:str")
+    gen = SQLExpressionGenerator()
+
+    sc = SelectColumns(col("*"), col("c"))
+    output = Schema("a:int,b:int,c:str")
+    c = gen.correct_select_schema(schema, sc, output)
+    assert c == "a:double,b:str,c:str"
+
+    sc = SelectColumns(f.count(col("*")).alias("t"), col("c").alias("a"))
+    output = Schema("t:int,a:str")
+    c = gen.correct_select_schema(schema, sc, output)
+    assert c == "t:int,a:str"
+
+    sc = SelectColumns((col("a") + col("b")).cast(str).alias("a"), lit(1, "c"))
+    output = Schema("a:int,c:str")
+    c = gen.correct_select_schema(schema, sc, output)
+    assert c == "a:str,c:long"
+
+
+def test_no_cast():
+    gen = SQLExpressionHiddenCastGenerator()
+    cols = SelectColumns(
+        f.max(col("c")).cast("long").alias("c"), col("a", "aa"), col("b")
+    )
+    assert "SELECT MAX(c) AS c, a AS aa, b FROM t GROUP BY a, b" == gen.select(
         cols, "t"
     )
