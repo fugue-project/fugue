@@ -259,7 +259,9 @@ class ExecutionEngine(ABC):
     def filter(
         self, df: DataFrame, condition: ColumnExpr, metadata: Any = None
     ) -> DataFrame:
-        raise NotImplementedError
+        return self.select(
+            df, cols=SelectColumns(col("*")), where=condition, metadata=metadata
+        )
 
     def set_columns(
         self, df: DataFrame, columns: List[ColumnExpr], metadata: Any = None

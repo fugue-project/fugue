@@ -100,7 +100,6 @@ class ExecutionEngineTests(object):
             )
             a = e.to_df(o)
             b = e.filter(a, col("a").not_null())
-            b.native.show()
             df_eq(b, [[1, 2], [3, 4]], "a:double,b:int", throw=True)
             c = e.filter(a, col("a").not_null() & (col("b") < 3))
             df_eq(c, [[1, 2]], "a:double,b:int", throw=True)

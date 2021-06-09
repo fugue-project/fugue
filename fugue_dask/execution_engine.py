@@ -234,18 +234,6 @@ class DaskExecutionEngine(ExecutionEngine):
             else self.to_df(self.to_df(res).native, output_schema)
         )
 
-    def filter(
-        self, df: DataFrame, condition: ColumnExpr, metadata: Any = None
-    ) -> DataFrame:
-        gen = SQLExpressionGenerator(enable_cast=False)
-        sql = gen.where(condition, "df")
-        res = self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
-        return (
-            res
-            if df.schema == res.schema
-            else self.to_df(self.to_df(res).native, df.schema)
-        )
-
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)
 
