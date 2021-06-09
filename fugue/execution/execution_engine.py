@@ -8,7 +8,7 @@ from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
 )
-from fugue.column import ColumnExpr, SelectColumns, col
+from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col
 from fugue.constants import FUGUE_DEFAULT_CONF
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
@@ -197,6 +197,15 @@ class ExecutionEngine(ABC):
         """
         raise NotImplementedError
 
+    def to_native_df(self, df: DataFrame) -> Any:
+        """Convert a Fugue dataframe to a native type dataframe for this ExecutionEngine
+
+        :param df: Fugue dataframe
+        :return: a native type dataframe for this engine, for example a
+          ``pandas.DataFrame``
+        """
+        return self.to_df(df).native  # type: ignore
+
     @abstractmethod
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
@@ -245,38 +254,6 @@ class ExecutionEngine(ABC):
         what map is used for and how it should work.
         """
         raise NotImplementedError
-
-    def select(
-        self,
-        df: DataFrame,
-        cols: SelectColumns,
-        where: Optional[ColumnExpr] = None,
-        having: Optional[ColumnExpr] = None,
-        metadata: Any = None,
-    ) -> DataFrame:
-        raise NotImplementedError
-
-    def filter(
-        self, df: DataFrame, condition: ColumnExpr, metadata: Any = None
-    ) -> DataFrame:
-        return self.select(
-            df, cols=SelectColumns(col("*")), where=condition, metadata=metadata
-        )
-
-    def set_columns(
-        self, df: DataFrame, columns: List[ColumnExpr], metadata: Any = None
-    ) -> DataFrame:
-        SelectColumns(
-            *columns
-        ).assert_no_wildcard().assert_all_with_names().assert_no_agg()
-
-        cols = [col(n) for n in df.schema.names]
-        for c in columns:
-            if c.output_name not in df.schema:
-                cols.append(c)
-            else:
-                cols[df.schema.index_of_key(c.output_name)] = c
-        return self.select(df, SelectColumns(*cols), metadata=metadata)
 
     @abstractmethod
     def broadcast(self, df: DataFrame) -> DataFrame:  # pragma: no cover
@@ -539,6 +516,46 @@ class ExecutionEngine(ABC):
         :rtype: DataFrame
         """
         pass
+
+    def select(
+        self,
+        df: DataFrame,
+        cols: SelectColumns,
+        where: Optional[ColumnExpr] = None,
+        having: Optional[ColumnExpr] = None,
+        metadata: Any = None,
+    ) -> DataFrame:
+        gen = SQLExpressionGenerator(enable_cast=False)
+        sql = gen.select(cols, "df", where=where, having=having)
+        res = self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
+        output_schema = gen.correct_select_schema(df.schema, cols, res.schema)
+        return (
+            res
+            if output_schema == res.schema
+            else self.to_df(self.to_native_df(res), output_schema)
+        )
+
+    def filter(
+        self, df: DataFrame, condition: ColumnExpr, metadata: Any = None
+    ) -> DataFrame:
+        return self.select(
+            df, cols=SelectColumns(col("*")), where=condition, metadata=metadata
+        )
+
+    def set_columns(
+        self, df: DataFrame, columns: List[ColumnExpr], metadata: Any = None
+    ) -> DataFrame:
+        SelectColumns(
+            *columns
+        ).assert_no_wildcard().assert_all_with_names().assert_no_agg()
+
+        cols = [col(n) for n in df.schema.names]
+        for c in columns:
+            if c.output_name not in df.schema:
+                cols.append(c)
+            else:
+                cols[df.schema.index_of_key(c.output_name)] = c
+        return self.select(df, SelectColumns(*cols), metadata=metadata)
 
     def convert_yield_dataframe(self, df: DataFrame) -> DataFrame:
         """Convert a yield dataframe to a dataframe that can be used after this

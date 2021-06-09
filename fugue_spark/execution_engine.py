@@ -11,7 +11,6 @@ from fugue.collections.partition import (
     PartitionSpec,
     parse_presort_exp,
 )
-from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator
 from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe import (
     DataFrame,
@@ -287,24 +286,6 @@ class SparkExecutionEngine(ExecutionEngine):
         mapper = _Mapper(df, map_func, output_schema, partition_spec, on_init)
         sdf = df.native.rdd.mapPartitionsWithIndex(mapper.run, True)
         return self.to_df(sdf, output_schema, metadata)
-
-    def select(
-        self,
-        df: DataFrame,
-        cols: SelectColumns,
-        where: Optional[ColumnExpr] = None,
-        having: Optional[ColumnExpr] = None,
-        metadata: Any = None,
-    ) -> DataFrame:
-        gen = SQLExpressionGenerator(enable_cast=False)
-        sql = gen.select(cols, "df", where=where, having=having)
-        res = self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
-        output_schema = gen.correct_select_schema(df.schema, cols, res.schema)
-        return (
-            res
-            if output_schema == res.schema
-            else self.to_df(self.to_df(res).native, output_schema)
-        )
 
     def broadcast(self, df: DataFrame) -> SparkDataFrame:
         return self._broadcast_func(self.to_df(df))

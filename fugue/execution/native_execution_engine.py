@@ -10,7 +10,6 @@ from fugue.collections.partition import (
     PartitionSpec,
     parse_presort_exp,
 )
-from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator
 from fugue.dataframe import (
     DataFrame,
     DataFrames,
@@ -108,6 +107,14 @@ class NativeExecutionEngine(ExecutionEngine):
     ) -> LocalBoundedDataFrame:
         return to_local_bounded_df(df, schema, metadata)
 
+    def to_native_df(self, df: DataFrame) -> pd.DataFrame:
+        """Convert a Fugue dataframe to a ``pandas.DataFrame``
+
+        :param df: Fugue dataframe
+        :return: the dataframe in the format of ``pandas.DataFrame``
+        """
+        return self.to_df(df).native  # type: ignore
+
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
     ) -> DataFrame:  # pragma: no cover
@@ -168,24 +175,6 @@ class NativeExecutionEngine(ExecutionEngine):
             df.as_pandas(), partition_spec.partition_by, _map
         )
         return PandasDataFrame(result, output_schema, metadata)
-
-    def select(
-        self,
-        df: DataFrame,
-        cols: SelectColumns,
-        where: Optional[ColumnExpr] = None,
-        having: Optional[ColumnExpr] = None,
-        metadata: Any = None,
-    ) -> DataFrame:
-        gen = SQLExpressionGenerator(enable_cast=False)
-        sql = gen.select(cols, "df", where=where, having=having)
-        res = self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
-        output_schema = gen.correct_select_schema(df.schema, cols, res.schema)
-        return (
-            res
-            if output_schema == res.schema
-            else self.to_df(res.as_pandas(), output_schema)
-        )
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)

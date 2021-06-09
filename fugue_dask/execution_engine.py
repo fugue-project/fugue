@@ -9,7 +9,6 @@ from fugue.collections.partition import (
     PartitionSpec,
     parse_presort_exp,
 )
-from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator
 from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.utils import get_join_schemas
@@ -215,24 +214,6 @@ class DaskExecutionEngine(ExecutionEngine):
                 meta=output_schema.pandas_dtype,
             )
         return DaskDataFrame(result, output_schema, metadata)
-
-    def select(
-        self,
-        df: DataFrame,
-        cols: SelectColumns,
-        where: Optional[ColumnExpr] = None,
-        having: Optional[ColumnExpr] = None,
-        metadata: Any = None,
-    ) -> DataFrame:
-        gen = SQLExpressionGenerator(enable_cast=False)
-        sql = gen.select(cols, "df", where=where, having=having)
-        res = self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
-        output_schema = gen.correct_select_schema(df.schema, cols, res.schema)
-        return (
-            res
-            if output_schema == res.schema
-            else self.to_df(self.to_df(res).native, output_schema)
-        )
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)
