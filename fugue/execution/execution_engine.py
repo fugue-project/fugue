@@ -525,6 +525,63 @@ class ExecutionEngine(ABC):
         having: Optional[ColumnExpr] = None,
         metadata: Any = None,
     ) -> DataFrame:
+        """The functional interface for SQL select statement
+
+        :param df: the dataframe to be operated on
+        :param cols: column expressions
+        :param where: ``WHERE`` condition expression, defaults to None
+        :param having: ``having`` condition expression, defaults to None. It
+          is used when ``cols`` contains aggregation columns
+        :param metadata: dict-like object to add to the result dataframe,
+            defaults to None. It's currently not used
+        :return: the select result as a dataframe
+
+        .. admonition:: New Since
+            :class: hint
+
+            **0.6.0**
+
+        .. attention::
+
+            This interface is experimental, it's subjected to change in new versions.
+
+        .. seealso::
+
+            Please find more expression examples in :mod:`fugue.column.sql` and
+            :mod:`fugue.column.functions`
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                import fugue.column.functions as f
+
+                # select existed and new columns
+                engine.select(df, SelectColumns(col("a"),col("b"),lit(1,"another")))
+                engine.select(df, SelectColumns(col("a"),(col("b")+lit(1)).alias("x")))
+
+                # aggregation
+                # SELECT COUNT(DISTINCT *) AS x FROM df
+                engine.select(
+                    df,
+                    SelectColumns(f.count(col("*").distinct()).alias("x")))
+
+                # SELECT a, MAX(b+1) AS x FROM df GROUP BY a
+                engine.select(
+                    df,
+                    SelectColumns(col("a"),f.max(col("b")+lit(1)).alias("x")))
+
+                # SELECT a, MAX(b+1) AS x FROM df
+                #   WHERE b<2 AND a>1
+                #   GROUP BY a
+                #   HAVING MAX(b+1)>0
+                engine.select(
+                    df,
+                    SelectColumns(col("a"),f.max(col("b")+lit(1)).alias("x")),
+                    where=(col("b")<2) & (col("a")>1),
+                    having=f.max(col("b")+lit(1))>0
+                )
+        """
         gen = SQLExpressionGenerator(enable_cast=False)
         sql = gen.select(cols, "df", where=where, having=having)
         res = self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
@@ -538,6 +595,33 @@ class ExecutionEngine(ABC):
     def filter(
         self, df: DataFrame, condition: ColumnExpr, metadata: Any = None
     ) -> DataFrame:
+        """Filter rows by the given condition
+
+        :param df: the dataframe to be filtered
+        :param condition: (boolean) column expression
+        :param metadata: dict-like object to add to the result dataframe,
+            defaults to None. It's currently not used
+        :return: the filtered dataframe
+
+        .. admonition:: New Since
+            :class: hint
+
+            **0.6.0**
+
+        .. seealso::
+
+            Please find more expression examples in :mod:`fugue.column.sql` and
+            :mod:`fugue.column.functions`
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                import fugue.column.functions as f
+
+                engine.filter(df, (col("a")>1) & (col("b")=="x"))
+                engine.filter(df, f.coalesce(col("a"),col("b"))>1)
+        """
         return self.select(
             df, cols=SelectColumns(col("*")), where=condition, metadata=metadata
         )
@@ -545,6 +629,47 @@ class ExecutionEngine(ABC):
     def set_columns(
         self, df: DataFrame, columns: List[ColumnExpr], metadata: Any = None
     ) -> DataFrame:
+        """Update existing columns with new values and add new columns
+
+        :param df: the dataframe to set columns
+        :param columns: column expressions
+        :param metadata: dict-like object to add to the result dataframe,
+            defaults to None. It's currently not used
+        :return: the updated dataframe
+
+        .. tip::
+
+            This can be used to cast data types, alter column values or add new
+            columns. But you can't use aggregation in columns.
+
+        .. admonition:: New Since
+            :class: hint
+
+            **0.6.0**
+
+        .. seealso::
+
+            Please find more expression examples in :mod:`fugue.column.sql` and
+            :mod:`fugue.column.functions`
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                # assume df has schema: a:int,b:str
+
+                # add constant column x
+                engine.set_columns(df, lit(1,"x"))
+
+                # change column b to be a constant integer
+                engine.set_columns(df, lit(1,"b"))
+
+                # add new x to be a+b
+                engine.set_columns(df, (col("a")+col("b")).alias("x"))
+
+                # cast column a data type to double
+                engine.set_columns(df, col("a").cast(float))
+        """
         SelectColumns(
             *columns
         ).assert_no_wildcard().assert_all_with_names().assert_no_agg()
@@ -606,17 +731,19 @@ class ExecutionEngine(ABC):
         :return: a zipped dataframe, the metadata of the
           dataframe will indicate it's zipped
 
-        :Notice:
+        .. note::
 
-        * Different from join, ``df1`` and ``df2`` can have common columns that you will
-          not use as partition keys.
-        * If ``on`` is not specified it will also use the common columns of the two
-          dataframes (if it's not a cross zip)
-        * For non-cross zip, the two dataframes must have common columns, or error will
-          be thrown
+            * Different from join, ``df1`` and ``df2`` can have common columns that you
+              will not use as partition keys.
+            * If ``on`` is not specified it will also use the common columns of the two
+              dataframes (if it's not a cross zip)
+            * For non-cross zip, the two dataframes must have common columns, or error
+              will be thrown
 
-        For more details and examples, read
-        :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`.
+        .. seealso::
+
+            For more details and examples, read
+            :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`.
         """
         on = list(partition_spec.partition_by)
         how = how.lower()

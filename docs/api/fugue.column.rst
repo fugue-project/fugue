@@ -1,16 +1,5 @@
-fugue 
-======
-
-.. toctree::
-   :maxdepth: 4
-
-   fugue.collections
-   fugue.column
-   fugue.dataframe
-   fugue.execution
-   fugue.extensions
-   fugue.rpc
-   fugue.workflow
+fugue.column 
+=============
 
 .. |SchemaLikeObject| replace:: :ref:`Schema like object <tutorial:/tutorials/x-like.ipynb#schema>`
 .. |ParamsLikeObject| replace:: :ref:`Parameters like object <tutorial:/tutorials/x-like.ipynb#parameters>`
@@ -32,26 +21,26 @@ fugue
 
 
 
-fugue.constants
----------------
+fugue.column.expressions
+------------------------
 
-.. automodule:: fugue.constants
+.. automodule:: fugue.column.expressions
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.exceptions
+fugue.column.functions
+----------------------
+
+.. automodule:: fugue.column.functions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+fugue.column.sql
 ----------------
 
-.. automodule:: fugue.exceptions
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-fugue.interfaceless
--------------------
-
-.. automodule:: fugue.interfaceless
+.. automodule:: fugue.column.sql
    :members:
    :undoc-members:
    :show-inheritance:
