@@ -8,6 +8,7 @@ from fugue import transform
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import (
     ArrayDataFrame,
+    ArrowDataFrame,
     LocalDataFrameIterableDataFrame,
     PandasDataFrame,
 )
@@ -40,15 +41,40 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
     def test_to_df(self):
         e = self.engine
         o = ArrayDataFrame(
-            [[1, 2]],
-            "a:int,b:int",
+            [[1, 2], [None, 3]],
+            "a:double,b:int",
             dict(a=1),
         )
         a = e.to_df(o)
         assert a is not o
+        res = a.native.collect()
+        assert res[0][0] == 1.0 or res[0][0] is None
+        assert res[1][0] == 1.0 or res[1][0] is None
         df_eq(a, o, throw=True)
+
+        o = ArrowDataFrame(
+            [[1, 2], [None, 3]],
+            "a:double,b:int",
+            dict(a=1),
+        )
+        a = e.to_df(o)
+        assert a is not o
+        res = a.native.collect()
+        assert res[0][0] == 1.0 or res[0][0] is None
+        assert res[1][0] == 1.0 or res[1][0] is None
+
         a = e.to_df([[1, None]], "a:int,b:int", dict(a=1))
         df_eq(a, [[1, None]], "a:int,b:int", dict(a=1), throw=True)
+
+        o = PandasDataFrame(
+            [[{"a": "b"}, 2]],
+            "a:{a:str},b:int",
+            dict(a=1),
+        )
+        a = e.to_df(o)
+        assert a is not o
+        res = a.as_array(type_safe=True)
+        assert res[0][0] == {"a": "b"}
 
     def test_persist(self):
         e = self.engine

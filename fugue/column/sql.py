@@ -5,7 +5,6 @@ from fugue.column.expressions import (
     ColumnExpr,
     _BinaryOpExpr,
     _FuncExpr,
-    _get_column_mentions,
     _LiteralColumnExpr,
     _NamedColumnExpr,
     _UnaryOpExpr,
@@ -14,6 +13,7 @@ from fugue.column.expressions import (
 )
 from fugue.column.functions import is_agg
 from triad import Schema, assert_or_throw
+from triad.utils.pyarrow import _type_to_expression
 
 _SUPPORTED_OPERATORS: Dict[str, str] = {
     "+": "+",
@@ -32,7 +32,7 @@ _SUPPORTED_OPERATORS: Dict[str, str] = {
 
 
 class SelectColumns:
-    def __init__(self, *cols: ColumnExpr):
+    def __init__(self, *cols: ColumnExpr):  # noqa: C901
         self._all: List[ColumnExpr] = []
         self._literals: List[ColumnExpr] = []
         self._cols: List[ColumnExpr] = []
@@ -40,6 +40,8 @@ class SelectColumns:
         self._agg_funcs: List[ColumnExpr] = []
         self._group_keys: List[ColumnExpr] = []
         self._has_wildcard = False
+
+        _g_keys: List[ColumnExpr] = []
 
         for c in cols:
             _is_agg = False
@@ -60,7 +62,13 @@ class SelectColumns:
                     else:
                         self._non_agg_funcs.append(c)
                 if not _is_agg:
-                    self._group_keys.append(c.alias(""))
+                    _g_keys.append(c.alias("").cast(None))
+
+        if self.has_agg:
+            for c in _g_keys:
+                if c.is_distinct:
+                    raise ValueError(f"can't use {c} as a group key")
+                self._group_keys.append(c)
 
         if len(self._agg_funcs) > 0 and self._has_wildcard:
             raise ValueError(f"'*' can't be used in aggregation: {self}")
@@ -102,6 +110,10 @@ class SelectColumns:
         assert not self._has_wildcard
         return self
 
+    def assert_no_agg(self) -> "SelectColumns":
+        assert not self.has_agg
+        return self
+
     @property
     def all_cols(self) -> List[ColumnExpr]:
         return self._all
@@ -140,7 +152,8 @@ class SelectColumns:
 
 
 class SQLExpressionGenerator:
-    def __init__(self):
+    def __init__(self, enable_cast: bool = True):
+        self._enable_cast = enable_cast
         self._func_handler: Dict[str, Callable[[_FuncExpr], Iterable[str]]] = {}
 
     def where(self, condition: ColumnExpr, table: str) -> str:
@@ -172,14 +185,6 @@ class SQLExpressionGenerator:
         def _having(as_where: bool = False) -> str:
             if having is None:
                 return ""
-            assert_or_throw(
-                not is_agg(having),
-                lambda: ValueError(f"{where} has aggregation functions"),
-            )
-            names = set(c.output_name for c in columns.all_cols)
-            diff = set(_get_column_mentions(having)).difference(names)
-            if len(diff) > 0:
-                raise ValueError(f"{diff} are in HAVING but not in SELECT")
             pre = " WHERE " if as_where else " HAVING "
             return pre + self.generate(having.alias(""))
 
@@ -200,13 +205,13 @@ class SQLExpressionGenerator:
             no_lit = [
                 x for x in columns.all_cols if not isinstance(x, _LiteralColumnExpr)
             ]
-            sub = self.select(SelectColumns(*no_lit), table, where=where)
+            sub = self.select(SelectColumns(*no_lit), table, where=where, having=having)
             names = [
                 self.generate(x) if isinstance(x, _LiteralColumnExpr) else x.output_name
                 for x in columns.all_cols
             ]
             expr = ", ".join(names)
-            return f"SELECT {expr} FROM ({sub}){_having(as_where=True)}"
+            return f"SELECT {expr} FROM ({sub})"
 
     def generate(self, expr: ColumnExpr) -> str:
         return "".join(self._generate(expr)).strip()
@@ -229,9 +234,13 @@ class SQLExpressionGenerator:
         fields = [corrections.get(x.name, x) for x in output_schema.fields]
         return Schema(fields)
 
-    def _generate(self, expr: ColumnExpr, bracket: bool = False) -> Iterable[str]:
+    def _generate(  # noqa: C901
+        self, expr: ColumnExpr, bracket: bool = False
+    ) -> Iterable[str]:
         if expr.is_distinct:
             yield "DISTINCT "
+        if self._enable_cast and expr.as_type is not None:
+            yield "CAST("
         if isinstance(expr, _LiteralColumnExpr):
             yield from self._on_lit(expr)
         elif isinstance(expr, _NamedColumnExpr):
@@ -245,8 +254,17 @@ class SQLExpressionGenerator:
                 yield from self._on_common_binary(expr, bracket)
             else:
                 yield from self._on_common_func(expr)
+        if self._enable_cast and expr.as_type is not None:
+            yield " AS "
+            yield self.type_to_expr(expr.as_type)
+            yield ")"
         if expr.as_name != "":
             yield " AS " + expr.as_name
+        elif expr.as_type is not None and expr.name != "":
+            yield " AS " + expr.name
+
+    def type_to_expr(self, data_type: pa.DataType):
+        return _type_to_expression(data_type)
 
     def _on_named(self, expr: _NamedColumnExpr) -> Iterable[str]:
         yield expr.name
@@ -304,12 +322,3 @@ class SQLExpressionGenerator:
         yield "("
         yield from args
         yield ")"
-
-
-class SQLExpressionHiddenCastGenerator(SQLExpressionGenerator):
-    def __init__(self):
-        super().__init__()
-        self.add_func_handler("CAST", self._on_cast)
-
-    def _on_cast(self, c: ColumnExpr) -> Iterable[str]:
-        raise NotImplementedError

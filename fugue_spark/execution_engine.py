@@ -11,6 +11,7 @@ from fugue.collections.partition import (
     PartitionSpec,
     parse_presort_exp,
 )
+from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator
 from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe import (
     DataFrame,
@@ -19,6 +20,7 @@ from fugue.dataframe import (
     LocalDataFrame,
     LocalDataFrameIterableDataFrame,
 )
+from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.arrow_dataframe import ArrowDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import get_join_schemas
@@ -174,6 +176,17 @@ class SparkExecutionEngine(ExecutionEngine):
             )
             if isinstance(df, SparkDataFrame):
                 return df
+            if isinstance(df, ArrowDataFrame):
+                sdf = self.spark_session.createDataFrame(
+                    df.as_array(), to_spark_schema(df.schema)
+                )
+                return SparkDataFrame(sdf, df.schema, df.metadata)
+            if isinstance(df, (ArrayDataFrame, IterableDataFrame)):
+                adf = ArrowDataFrame(df.as_array(type_safe=False), df.schema)
+                sdf = self.spark_session.createDataFrame(
+                    adf.as_array(), to_spark_schema(df.schema)
+                )
+                return SparkDataFrame(sdf, df.schema, df.metadata)
             if any(pa.types.is_struct(t) for t in df.schema.types):
                 sdf = self.spark_session.createDataFrame(
                     df.as_array(type_safe=True), to_spark_schema(df.schema)
@@ -274,6 +287,37 @@ class SparkExecutionEngine(ExecutionEngine):
         mapper = _Mapper(df, map_func, output_schema, partition_spec, on_init)
         sdf = df.native.rdd.mapPartitionsWithIndex(mapper.run, True)
         return self.to_df(sdf, output_schema, metadata)
+
+    def select(
+        self,
+        df: DataFrame,
+        cols: SelectColumns,
+        where: Optional[ColumnExpr] = None,
+        having: Optional[ColumnExpr] = None,
+        metadata: Any = None,
+    ) -> DataFrame:
+        gen = SQLExpressionGenerator(enable_cast=False)
+        sql = gen.select(cols, "df", where=where, having=having)
+        res = self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
+        output_schema = gen.correct_select_schema(df.schema, cols, res.schema)
+        return (
+            res
+            if output_schema == res.schema
+            else self.to_df(self.to_df(res).native, output_schema)
+        )
+
+    def filter(
+        self, df: DataFrame, condition: ColumnExpr, metadata: Any = None
+    ) -> DataFrame:
+        gen = SQLExpressionGenerator(enable_cast=False)
+        sql = gen.where(condition, "df")
+        print(sql)
+        res = self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
+        return (
+            res
+            if df.schema == res.schema
+            else self.to_df(self.to_df(res).native, df.schema)
+        )
 
     def broadcast(self, df: DataFrame) -> SparkDataFrame:
         return self._broadcast_func(self.to_df(df))

@@ -8,7 +8,7 @@ from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
 )
-from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col
+from fugue.column import ColumnExpr, SelectColumns, col
 from fugue.constants import FUGUE_DEFAULT_CONF
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
@@ -246,10 +246,6 @@ class ExecutionEngine(ABC):
         """
         raise NotImplementedError
 
-    @property
-    def sql_expression_generator(self) -> SQLExpressionGenerator:
-        return SQLExpressionGenerator()
-
     def select(
         self,
         df: DataFrame,
@@ -258,20 +254,20 @@ class ExecutionEngine(ABC):
         having: Optional[ColumnExpr] = None,
         metadata: Any = None,
     ) -> DataFrame:
-        gen = self.sql_expression_generator
-        sql = gen.select(cols, "df", where=where, having=having)
-        return self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
+        raise NotImplementedError
 
     def filter(
         self, df: DataFrame, condition: ColumnExpr, metadata: Any = None
     ) -> DataFrame:
-        gen = self.sql_expression_generator
-        sql = gen.where(condition, "df")
-        return self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
+        raise NotImplementedError
 
     def set_columns(
-        self, df: DataFrame, columns: List[ColumnExpr], metadata: Any
+        self, df: DataFrame, columns: List[ColumnExpr], metadata: Any = None
     ) -> DataFrame:
+        SelectColumns(
+            *columns
+        ).assert_no_wildcard().assert_all_with_names().assert_no_agg()
+
         cols = [col(n) for n in df.schema.names]
         for c in columns:
             if c.output_name not in df.schema:
