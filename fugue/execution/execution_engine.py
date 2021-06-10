@@ -197,15 +197,6 @@ class ExecutionEngine(ABC):
         """
         raise NotImplementedError
 
-    def to_native_df(self, df: DataFrame) -> Any:
-        """Convert a Fugue dataframe to a native type dataframe for this ExecutionEngine
-
-        :param df: Fugue dataframe
-        :return: a native type dataframe for this engine, for example a
-          ``pandas.DataFrame``
-        """
-        return self.to_df(df).native  # type: ignore
-
     @abstractmethod
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
@@ -585,12 +576,8 @@ class ExecutionEngine(ABC):
         gen = SQLExpressionGenerator(enable_cast=False)
         sql = gen.select(cols, "df", where=where, having=having)
         res = self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
-        output_schema = gen.correct_select_schema(df.schema, cols, res.schema)
-        return (
-            res
-            if output_schema == res.schema
-            else self.to_df(self.to_native_df(res), output_schema)
-        )
+        diff = gen.correct_select_schema(df.schema, cols, res.schema)
+        return res if diff is None else res.alter_columns(diff)
 
     def filter(
         self, df: DataFrame, condition: ColumnExpr, metadata: Any = None

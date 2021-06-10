@@ -107,14 +107,6 @@ class NativeExecutionEngine(ExecutionEngine):
     ) -> LocalBoundedDataFrame:
         return to_local_bounded_df(df, schema, metadata)
 
-    def to_native_df(self, df: DataFrame) -> pd.DataFrame:
-        """Convert a Fugue dataframe to a ``pandas.DataFrame``
-
-        :param df: Fugue dataframe
-        :return: the dataframe in the format of ``pandas.DataFrame``
-        """
-        return self.to_df(df).native  # type: ignore
-
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
     ) -> DataFrame:  # pragma: no cover

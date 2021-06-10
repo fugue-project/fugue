@@ -216,14 +216,18 @@ def test_correct_select_schema():
     gen = SQLExpressionGenerator()
 
     sc = SelectColumns(col("*"), col("c"))
+    output = Schema("a:double,b:str,c:str")
+    c = gen.correct_select_schema(schema, sc, output)
+    assert c is None
+
     output = Schema("a:int,b:int,c:str")
     c = gen.correct_select_schema(schema, sc, output)
-    assert c == "a:double,b:str,c:str"
+    assert c == "a:double,b:str"
 
     sc = SelectColumns(f.count(col("*")).alias("t"), col("c").alias("a"))
     output = Schema("t:int,a:str")
     c = gen.correct_select_schema(schema, sc, output)
-    assert c == "t:int,a:str"
+    assert c is None
 
     sc = SelectColumns((col("a") + col("b")).cast(str).alias("a"), lit(1, "c"))
     output = Schema("a:int,c:str")

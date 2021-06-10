@@ -224,14 +224,15 @@ class SQLExpressionGenerator:
 
     def correct_select_schema(
         self, input_schema: Schema, select: SelectColumns, output_schema: Schema
-    ) -> Schema:
+    ) -> Optional[Schema]:
         cols = select.replace_wildcard(input_schema).assert_all_with_names()
-        corrections: Dict[str, pa.DataType] = {}
+        fields: List[pa.Field] = []
         for c in cols.all_cols:
             tp = c.infer_schema(input_schema)
-            if tp is not None:
-                corrections[c.output_name] = pa.field(c.output_name, tp)
-        fields = [corrections.get(x.name, x) for x in output_schema.fields]
+            if tp is not None and tp != output_schema[c.output_name].type:
+                fields.append(pa.field(c.output_name, tp))
+        if len(fields) == 0:
+            return None
         return Schema(fields)
 
     def _generate(  # noqa: C901

@@ -1,6 +1,6 @@
 # Release Notes
 
-## 0.5.7
+## 0.6.0
 
 -   Let SparkExecutionEngine accept [empty](https://github.com/fugue-project/fugue/issues/217) pandas dataframes
 -   Move to [codecov](https://github.com/fugue-project/fugue/issues/216)
