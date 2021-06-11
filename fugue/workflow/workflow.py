@@ -278,11 +278,65 @@ class WorkflowDataFrame(DataFrame):
 
     def select(
         self: TDF,
-        *cols: Union[str, ColumnExpr],
+        *columns: Union[str, ColumnExpr],
         where: Optional[ColumnExpr] = None,
         having: Optional[ColumnExpr] = None,
     ) -> TDF:
-        sc = ColumnsSelect(*[col(x) if isinstance(x, str) else x for x in cols])
+        """The functional interface for SQL select statement
+
+        :param columns: column expressions, for strings they will represent
+          the column names
+        :param where: ``WHERE`` condition expression, defaults to None
+        :param having: ``having`` condition expression, defaults to None. It
+          is used when ``cols`` contains aggregation columns
+        :return: the select result as a dataframe
+
+        .. admonition:: New Since
+            :class: hint
+
+            **0.6.0**
+
+        .. attention::
+
+            This interface is experimental, it's subjected to change in new versions.
+
+        .. seealso::
+
+            Please find more expression examples in :mod:`fugue.column.sql` and
+            :mod:`fugue.column.functions`
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                import fugue.column.functions as f
+                from fugue import FugueWorkflow
+
+                dag = FugueWorkflow()
+                df = dag.df(pandas_df)
+
+                # select existed and new columns
+                df.select("a","b",lit(1,"another")))
+                df.select("a",(col("b")+lit(1)).alias("x"))
+
+                # aggregation
+                # SELECT COUNT(DISTINCT *) AS x FROM df
+                df.select(f.count(col("*").distinct()).alias("x"))
+
+                # SELECT a, MAX(b+1) AS x FROM df GROUP BY a
+                df.select("a",f.max(col("b")+lit(1)).alias("x"))
+
+                # SELECT a, MAX(b+1) AS x FROM df
+                #   WHERE b<2 AND a>1
+                #   GROUP BY a
+                #   HAVING MAX(b+1)>0
+                df.select(
+                    "a",f.max(col("b")+lit(1)).alias("x"),
+                    where=(col("b")<2) & (col("a")>1),
+                    having=f.max(col("b")+lit(1))>0
+                )
+        """
+        sc = ColumnsSelect(*[col(x) if isinstance(x, str) else x for x in columns])
         df = self.workflow.process(
             self, using=Select, params=dict(columns=sc, where=where, having=having)
         )

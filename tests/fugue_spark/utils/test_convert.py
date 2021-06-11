@@ -43,8 +43,8 @@ def test_to_select_expression():
     assert to_select_expression("a:int,b:str", "b:str,a:int") == ["b", "a"]
     assert to_select_expression("a:int,b:str", "b:str,a:long") == [
         "b", "CAST(a AS bigint) a"]
-    assert to_select_expression("a:int,b:double,c:float", "a:str,b:str,c:str") == [
+    assert to_select_expression("a:int,b:double,c:float", "a:str,b:str,c:long") == [
         "CAST(a AS string) a",
-        "CAST(IF(isnan(b), NULL, b) AS string) b",
-        "CAST(IF(isnan(c), NULL, c) AS string) c"]
+        "CAST(IF(isnan(b) OR b IS NULL, NULL, b) AS string) b",
+        "CAST(IF(isnan(c) OR c IS NULL, NULL, c) AS bigint) c"]
     raises(KeyError, lambda: to_select_expression("a:int,b:str",  "b:str,x:int"))
