@@ -13,6 +13,7 @@ from fugue.extensions._builtins.processors import (
     DropColumns,
     Dropna,
     Fillna,
+    Filter,
     Rename,
     RunJoin,
     RunSetOperation,
@@ -20,7 +21,9 @@ from fugue.extensions._builtins.processors import (
     RunTransformer,
     Sample,
     SaveAndUse,
+    Select,
     SelectColumns,
+    SetColumns,
     Take,
     Zip,
 )

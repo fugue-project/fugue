@@ -3,7 +3,7 @@ from fugue.column import col, function, lit, null
 from fugue.column.expressions import _get_column_mentions
 from fugue.column.functions import coalesce
 from pytest import raises
-from triad import Schema
+from triad import Schema, to_uuid
 
 
 def test_named_col():
@@ -30,6 +30,14 @@ def test_named_col():
 
     raises(NotImplementedError, lambda: col([1, 2]))
 
+    assert to_uuid(col("a")) != to_uuid(col("b"))
+    assert to_uuid(col("a")) != to_uuid(col("a").alias("v"))
+    assert to_uuid(col("a")) != to_uuid(col("a").distinct())
+    assert to_uuid(col("a")) != to_uuid(col("a").cast(int))
+    assert to_uuid(col("a").cast(int).alias("v")) == to_uuid(
+        col("a").alias("v").cast(int)
+    )
+
 
 def test_lit_col():
     assert "NULL" == str(lit(None))
@@ -52,6 +60,17 @@ def test_lit_col():
 
     raises(NotImplementedError, lambda: lit([1, 2]))
 
+    assert to_uuid(lit("a")) != to_uuid(col("a"))
+    assert to_uuid(lit(1)) != to_uuid(lit("1"))
+    assert to_uuid(null()) == to_uuid(null())
+    assert to_uuid(null()) != to_uuid(lit(1))
+    assert to_uuid(lit("a")) != to_uuid(lit("a").alias("v"))
+    assert to_uuid(lit("a")) == to_uuid(lit("a").distinct())  # distinct no effect
+    assert to_uuid(lit("a")) != to_uuid(lit("a").cast(int))
+    assert to_uuid(lit("a").cast(int).alias("v")) == to_uuid(
+        lit("a").alias("v").cast(int)
+    )
+
 
 def test_unary_op():
     assert "-(a)" == str(-col("a"))
@@ -68,6 +87,9 @@ def test_unary_op():
     assert "DISTINCT NOT_NULL(a) AS xx" == str(
         col("a").not_null().distinct().alias("xx")
     )
+
+    assert to_uuid(col("a").not_null()) == to_uuid(col("a").not_null())
+    assert to_uuid(col("a").not_null()) != to_uuid(col("a").is_null())
 
 
 def test_binary_op():

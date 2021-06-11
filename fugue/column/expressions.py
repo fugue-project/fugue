@@ -1,7 +1,7 @@
 from typing import Any, Dict, Iterable, List, Optional
 
 import pyarrow as pa
-from triad import Schema, assert_or_throw
+from triad import Schema, assert_or_throw, to_uuid
 from triad.utils.pyarrow import _type_to_expression, to_pa_datatype
 
 
@@ -126,6 +126,18 @@ class ColumnExpr:
     def __ne__(self, other: Any) -> "ColumnExpr":  # type: ignore
         return _BoolBinaryOpExpr("!=", self, other)
 
+    def __uuid__(self) -> str:
+        return to_uuid(
+            str(type(self)),
+            self.as_name,
+            self.is_distinct,
+            self.as_type,
+            *self._uuid_keys(),
+        )
+
+    def _uuid_keys(self) -> List[Any]:  # pragma: no cover
+        raise NotImplementedError
+
 
 def lit(obj: Any, alias: str = "") -> ColumnExpr:
     return (
@@ -214,6 +226,9 @@ class _NamedColumnExpr(ColumnExpr):
             return self.as_type
         return self.as_type or schema[self.name].type
 
+    def _uuid_keys(self) -> List[Any]:
+        return [self.name]
+
 
 class _LiteralColumnExpr(ColumnExpr):
     _VALID_TYPES = (int, bool, float, str)
@@ -275,6 +290,9 @@ class _LiteralColumnExpr(ColumnExpr):
             return self.as_type
         return self.as_type or to_pa_datatype(type(self.value))
 
+    def _uuid_keys(self) -> List[Any]:
+        return [self.value]
+
 
 class _FuncExpr(ColumnExpr):
     def __init__(self, func: str, *args: Any, **kwargs: Any):
@@ -332,6 +350,9 @@ class _FuncExpr(ColumnExpr):
 
     def _copy(self) -> "_FuncExpr":
         return _FuncExpr(self.func, *self.args, **self.kwargs)
+
+    def _uuid_keys(self) -> List[Any]:
+        return [self.func, self.args, self.kwargs]
 
 
 class _UnaryOpExpr(_FuncExpr):

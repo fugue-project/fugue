@@ -33,9 +33,12 @@ from fugue import (
     output_transformer,
     outputter,
     processor,
-    transformer,
     register_default_sql_engine,
+    transformer,
 )
+from fugue.column import col
+from fugue.column import functions as ff
+from fugue.column import lit
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import (
     FugueInterfacelessError,
@@ -697,6 +700,63 @@ class BuiltInTests(object):
                     [[1, 10, 2, 4], [1, 10, 3, 4], [2, 20, 2, 4], [2, 20, 3, 4]],
                     "a:int,b:int,c:int,d:int",
                 ).assert_eq(d)
+
+        def test_df_select(self):
+            with self.dag() as dag:
+                # wildcard
+                a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
+                a.select("*").assert_eq(a)
+
+                # column transformation
+                b = dag.df(
+                    [[1, 10, 11, "x"], [2, 20, 22, "x"], [3, 30, 33, "x"]],
+                    "x:int,y:int,c:int,d:str",
+                )
+                a.select(
+                    "*",
+                    (col("x") + col("y")).cast("int32").alias("c"),
+                    lit("x", "d"),
+                ).assert_eq(b)
+
+                # aggregation
+                a = dag.df([[1, 10], [1, 20], [3, 30]], "x:int,y:int")
+                b = dag.df([[1, 30], [3, 30]], "x:int,y:int")
+                a.select("x", ff.sum(col("y")).alias("y").cast("int32")).assert_eq(b)
+
+                # all together
+                a = dag.df([[1, 10], [1, 20], [3, 35], [3, 40]], "x:int,y:int")
+                b = dag.df([[3, 35]], "x:int,z:int")
+                a.select(
+                    "x",
+                    ff.sum(col("y")).alias("z").cast("int32"),
+                    where=col("y") < 40,
+                    having=ff.sum(col("y")) > 30,
+                ).assert_eq(b)
+
+                b = dag.df([[65]], "z:long")
+                a.select(
+                    ff.sum(col("y")).alias("z").cast(int), where=col("y") < 40
+                ).show()
+
+                raises(ValueError, lambda: a.select("*", "x"))
+
+        def test_df_filter(self):
+            with self.dag() as dag:
+                a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
+                b = dag.df([[2, 20]], "x:int,y:int")
+                a.filter((col("y") > 15) & (col("y") < 25)).assert_eq(b)
+
+        def test_df_set_columns(self):
+            with self.dag() as dag:
+                a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
+                b = dag.df([[1, "x"], [2, "x"], [3, "x"]], "x:int,y:str")
+                a.set_columns(y="x").assert_eq(b)
+
+                a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
+                b = dag.df(
+                    [[1, "x", 11], [2, "x", 21], [3, "x", 31]], "x:int,y:str,z:double"
+                )
+                a.set_columns(y="x", z=(col("y") + 1).cast(float)).assert_eq(b)
 
         def test_select(self):
             class MockEngine(SqliteEngine):

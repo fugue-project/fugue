@@ -12,7 +12,7 @@ from fugue.column.expressions import (
     col,
 )
 from fugue.column.functions import is_agg
-from triad import Schema, assert_or_throw
+from triad import Schema, assert_or_throw, to_uuid
 from triad.utils.pyarrow import _type_to_expression
 
 _SUPPORTED_OPERATORS: Dict[str, str] = {
@@ -76,6 +76,9 @@ class SelectColumns:
     def __str__(self):
         expr = ", ".join(str(x) for x in self.all_cols)
         return f"[{expr}]"
+
+    def __uuid__(self):
+        return to_uuid(self.all_cols)
 
     def replace_wildcard(self, schema: Schema) -> "SelectColumns":
         def _get_cols() -> Iterable[ColumnExpr]:

@@ -9,7 +9,7 @@ from fugue.column import (
 )
 from fugue.column.expressions import _BinaryOpExpr
 from pytest import raises
-from triad import Schema
+from triad import Schema, to_uuid
 
 
 def test_select_columns():
@@ -17,10 +17,12 @@ def test_select_columns():
     cols = SelectColumns(
         col("a"), lit(1, "b"), col("bb") + col("cc"), f.first(col("c"))
     )
+    assert to_uuid(cols) == to_uuid(cols)
     raises(ValueError, lambda: cols.assert_all_with_names())
 
     # duplicated names
     cols = SelectColumns(col("a").alias("b"), lit(1, "b"))
+    assert to_uuid(cols) != to_uuid(SelectColumns(col("a").alias("b"), lit(1, "c")))
     raises(ValueError, lambda: cols.assert_all_with_names())
 
     # with *, all cols must have alias

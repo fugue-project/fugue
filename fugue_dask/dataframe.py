@@ -8,6 +8,7 @@ from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
+from triad.utils.pyarrow import to_pandas_dtype
 
 from fugue_dask._constants import (
     FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS,
@@ -143,6 +144,7 @@ class DaskDataFrame(DataFrame):
         if new_schema == self.schema:
             return self
         new_pdf = self.native.assign()
+        pd_types = to_pandas_dtype(new_schema.pa_schema)
         for k, v in new_schema.items():
             if not v.type.equals(self.schema[k].type):
                 old_type = self.schema[k].type
@@ -160,10 +162,24 @@ class DaskDataFrame(DataFrame):
                     positive = series != 0
                     new_pdf[k] = "False"
                     new_pdf[k] = new_pdf[k].mask(positive, "True").mask(ns, None)
+                # str -> bool
+                elif pa.types.is_string(old_type) and pa.types.is_boolean(new_type):
+                    series = new_pdf[k]
+                    ns = series.isnull()
+                    new_pdf[k] = (
+                        series.fillna("true")
+                        .apply(lambda x: None if x is None else x.lower())
+                        .mask(ns, None)
+                    )
+                elif pa.types.is_integer(new_type):
+                    series = new_pdf[k]
+                    ns = series.isnull()
+                    series = series.fillna(0).astype(pd_types[k])
+                    new_pdf[k] = series.mask(ns, None)
                 else:
                     series = new_pdf[k]
                     ns = series.isnull()
-                    series = series.astype(str)
+                    series = series.astype(pd_types[k])
                     new_pdf[k] = series.mask(ns, None)
         return DaskDataFrame(new_pdf, new_schema, type_safe=True)
 

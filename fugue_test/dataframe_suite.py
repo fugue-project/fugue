@@ -276,10 +276,21 @@ class DataFrameTests(object):
             assert [["a", "1"], ["c", None]] == ndf.as_array(type_safe=True)
             assert ndf.schema == "a:str,b:str"
 
+            # int -> double
+            df = self.df([["a", 1], ["c", None]], "a:str,b:int")
+            ndf = df.alter_columns("b:double")
+            assert [["a", 1], ["c", None]] == ndf.as_array(type_safe=True)
+            assert ndf.schema == "a:str,b:double"
+
             # double -> str
             df = self.df([["a", 1.1], ["b", None]], "a:str,b:double")
             data = df.alter_columns("b:str").as_array(type_safe=True)
             assert [["a", "1.1"], ["b", None]] == data
+
+            # double -> int
+            df = self.df([["a", 1.0], ["b", None]], "a:str,b:double")
+            data = df.alter_columns("b:int").as_array(type_safe=True)
+            assert [["a", 1], ["b", None]] == data
 
             # date -> str
             df = self.df(

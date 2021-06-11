@@ -6,6 +6,9 @@ from uuid import uuid4
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
 from fugue.collections.yielded import Yielded
+from fugue.column import ColumnExpr
+from fugue.column import SelectColumns as ColumnsSelect
+from fugue.column import col, lit
 from fugue.constants import (
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE,
@@ -22,6 +25,7 @@ from fugue.extensions._builtins import (
     DropColumns,
     Dropna,
     Fillna,
+    Filter,
     Load,
     LoadYielded,
     Rename,
@@ -33,7 +37,9 @@ from fugue.extensions._builtins import (
     Sample,
     Save,
     SaveAndUse,
+    Select,
     SelectColumns,
+    SetColumns,
     Show,
     Take,
     Zip,
@@ -269,6 +275,30 @@ class WorkflowDataFrame(DataFrame):
         :raises AssertionError: if any dataframe is equal to the first dataframe
         """
         self.workflow.assert_not_eq(self, *dfs, **params)
+
+    def select(
+        self: TDF,
+        *cols: Union[str, ColumnExpr],
+        where: Optional[ColumnExpr] = None,
+        having: Optional[ColumnExpr] = None,
+    ) -> TDF:
+        sc = ColumnsSelect(*[col(x) if isinstance(x, str) else x for x in cols])
+        df = self.workflow.process(
+            self, using=Select, params=dict(columns=sc, where=where, having=having)
+        )
+        return self._to_self_type(df)
+
+    def filter(self: TDF, condition: ColumnExpr) -> TDF:
+        df = self.workflow.process(self, using=Filter, params=dict(condition=condition))
+        return self._to_self_type(df)
+
+    def set_columns(self: TDF, **kwargs: Any) -> TDF:
+        kv = [
+            v.alias(k) if isinstance(v, ColumnExpr) else lit(v).alias(k)
+            for k, v in kwargs.items()
+        ]
+        df = self.workflow.process(self, using=SetColumns, params=dict(columns=kv))
+        return self._to_self_type(df)
 
     def transform(
         self: TDF,
@@ -982,6 +1012,14 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(
             self, using=SelectColumns, params=dict(columns=columns)
         )
+        return self._to_self_type(df)
+
+    def __setitem__(self: TDF, key: str, value: Any) -> TDF:
+        if isinstance(value, ColumnExpr):
+            cl = value.alias(key)
+        else:
+            cl = lit(value).alias(key)
+        df = self.workflow.process(self, using=SetColumns, params=dict(columns=[cl]))
         return self._to_self_type(df)
 
     def save(
