@@ -20,6 +20,16 @@ def test_select_columns():
     assert to_uuid(cols) == to_uuid(cols)
     raises(ValueError, lambda: cols.assert_all_with_names())
 
+    # distinct
+    cols2 = SelectColumns(
+        col("a"),
+        lit(1, "b"),
+        col("bb") + col("cc"),
+        f.first(col("c")),
+        arg_distinct=True,
+    )
+    assert to_uuid(cols) != to_uuid(cols2)
+
     # duplicated names
     cols = SelectColumns(col("a").alias("b"), lit(1, "b"))
     assert to_uuid(cols) != to_uuid(SelectColumns(col("a").alias("b"), lit(1, "c")))

@@ -77,7 +77,7 @@ class SelectColumns:
         return f"[{expr}]"
 
     def __uuid__(self):
-        return to_uuid(self.all_cols)
+        return to_uuid(self._distinct, self.all_cols)
 
     @property
     def is_distinct(self) -> bool:

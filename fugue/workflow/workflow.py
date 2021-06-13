@@ -291,7 +291,7 @@ class WorkflowDataFrame(DataFrame):
         :param having: ``having`` condition expression, defaults to None. It
           is used when ``cols`` contains aggregation columns, defaults to None
         :param distinct: whether to return distinct result, defaults to False
-        :return: the select result as a dataframe
+        :return: the select result as a new dataframe
 
         .. admonition:: New Since
             :class: hint
@@ -355,7 +355,7 @@ class WorkflowDataFrame(DataFrame):
 
         :param df: the dataframe to be filtered
         :param condition: (boolean) column expression
-        :return: the filtered dataframe
+        :return: a new filtered dataframe
 
         .. admonition:: New Since
             :class: hint
@@ -383,12 +383,14 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(self, using=Filter, params=dict(condition=condition))
         return self._to_self_type(df)
 
-    def assign(self: TDF, **kwargs: Any) -> TDF:
+    def assign(self: TDF, *args: ColumnExpr, **kwargs: Any) -> TDF:
         """Update existing columns with new values and add new columns
 
         :param df: the dataframe to set columns
-        :param columns: column expressions
-        :return: the updated dataframe
+        :param args: column expressions
+        :param kwargs: column expressions to be renamed to the argument names,
+          if a value is not `ColumnExpr`, it will be treated as a literal
+        :return: a new dataframe with the updated values
 
         .. tip::
 
@@ -413,25 +415,28 @@ class WorkflowDataFrame(DataFrame):
 
                 dag = FugueWorkflow()
                 df = dag.df(pandas_df)
-                # assume df has schema: a:int,b:str
 
-                # add constant column x
+                # add/set 1 as column x
                 df.assign(lit(1,"x"))
+                df.assign(x=1)
 
-                # change column b to be a constant integer
-                df.assign(lit(1,"b"))
-
-                # add new x to be a+b
+                # add/set x to be a+b
                 df.assign((col("a")+col("b")).alias("x"))
+                df.assign(x=col("a")+col("b"))
 
                 # cast column a data type to double
                 df.assign(col("a").cast(float))
+
+                # cast + new columns
+                df.assign(col("a").cast(float),x=1,y=col("a")+col("b"))
         """
-        kv = [
+        kv: List[ColumnExpr] = [
             v.alias(k) if isinstance(v, ColumnExpr) else lit(v).alias(k)
             for k, v in kwargs.items()
         ]
-        df = self.workflow.process(self, using=SetColumns, params=dict(columns=kv))
+        df = self.workflow.process(
+            self, using=SetColumns, params=dict(columns=list(args) + kv)
+        )
         return self._to_self_type(df)
 
     def transform(
