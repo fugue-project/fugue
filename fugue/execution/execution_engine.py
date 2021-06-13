@@ -8,7 +8,7 @@ from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
 )
-from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col
+from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col, is_agg
 from fugue.constants import FUGUE_DEFAULT_CONF
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
@@ -668,6 +668,24 @@ class ExecutionEngine(ABC):
             else:
                 cols[df.schema.index_of_key(c.output_name)] = c
         return self.select(df, SelectColumns(*cols), metadata=metadata)
+
+    def aggregate(
+        self,
+        df: DataFrame,
+        partition_spec: Optional[PartitionSpec],
+        agg_cols: List[ColumnExpr],
+        metadata: Any = None,
+    ):
+        assert_or_throw(len(agg_cols) > 0, ValueError("agg_cols can't be empty"))
+        assert_or_throw(
+            all(is_agg(x) for x in agg_cols),
+            ValueError("all agg_cols must be aggregation functions"),
+        )
+        keys: List[ColumnExpr] = []
+        if partition_spec is not None and len(partition_spec.partition_by) > 0:
+            keys = [col(y) for y in partition_spec.partition_by]
+        cols = SelectColumns(*keys, *agg_cols)
+        return self.select(df, cols=cols, metadata=metadata)
 
     def convert_yield_dataframe(self, df: DataFrame) -> DataFrame:
         """Convert a yield dataframe to a dataframe that can be used after this

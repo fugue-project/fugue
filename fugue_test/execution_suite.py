@@ -160,14 +160,12 @@ class ExecutionEngineTests(object):
             )
             df_eq(b, [[1, 2], [None, 7]], "a:double,b:double", throw=True)
 
-            # literal
+            # literal + alias inference
             # https://github.com/fugue-project/fugue/issues/222
             col_b = ff.sum(col("b"))
             b = e.select(
                 a,
-                SelectColumns(
-                    col("a"), lit(1, "o").cast(str), col_b.cast(float).alias("b")
-                ),
+                SelectColumns(col("a"), lit(1, "o").cast(str), col_b.cast(float)),
                 having=(col_b >= 7) | (col("a") == 1),
             )
             df_eq(
@@ -199,6 +197,54 @@ class ExecutionEngineTests(object):
                 "a:double,b:str,x:long,c:long",
                 throw=True,
             )
+
+        def test_aggregate(self):
+            e = self.engine
+            o = ArrayDataFrame(
+                [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
+                "a:double,b:int",
+                dict(a=1),
+            )
+            a = e.to_df(o)
+
+            b = e.aggregate(
+                df=a,
+                partition_spec=None,
+                agg_cols=[
+                    ff.max(col("b")),
+                    (ff.max(col("b")) * 2).cast("int32").alias("c"),
+                ],
+            )
+            df_eq(b, [[4, 8]], "b:int,c:int", throw=True)
+
+            b = e.aggregate(
+                df=a,
+                partition_spec=PartitionSpec(by=["a"]),
+                agg_cols=[
+                    ff.max(col("b")),
+                    (ff.max(col("b")) * 2).cast("int32").alias("c"),
+                ],
+            )
+            df_eq(
+                b,
+                [[None, 4, 8], [1, 2, 4], [3, 4, 8]],
+                "a:double,b:int,c:int",
+                throw=True,
+            )
+
+            with raises(ValueError):
+                e.aggregate(
+                    df=a,
+                    partition_spec=PartitionSpec(by=["a"]),
+                    agg_cols=[ff.max(col("b")), lit(1)],
+                )
+
+            with raises(ValueError):
+                e.aggregate(
+                    df=a,
+                    partition_spec=PartitionSpec(by=["a"]),
+                    agg_cols=[],
+                )
 
         def test_map(self):
             def noop(cursor, data):
