@@ -127,10 +127,11 @@ class ExecutionEngineTests(object):
             )
 
             # with distinct
-            # TODO: distinct expression needs improvement
             b = e.select(
                 a,
-                SelectColumns(col("b").distinct(), (col("b") + 1).alias("c").cast(str)),
+                SelectColumns(
+                    col("b"), (col("b") + 1).alias("c").cast(str), arg_distinct=True
+                ),
             )
             df_eq(
                 b,
@@ -173,7 +174,7 @@ class ExecutionEngineTests(object):
                 b, [[1, "1", 2], [None, "1", 7]], "a:double,o:str,b:double", throw=True
             )
 
-        def test_set_columns(self):
+        def test_assign(self):
             e = self.engine
             o = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
@@ -182,7 +183,7 @@ class ExecutionEngineTests(object):
             )
             a = e.to_df(o)
 
-            b = e.set_columns(
+            b = e.assign(
                 a,
                 [lit(1, "x"), col("b").cast(str), (col("b") + 1).alias("c").cast(int)],
             )

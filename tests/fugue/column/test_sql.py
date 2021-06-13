@@ -35,12 +35,6 @@ def test_select_columns():
     # * can't be used with aggregation
     raises(ValueError, lambda: SelectColumns(col("*"), f.first(col("a")).alias("x")))
 
-    # can't use distinct with aggregation
-    raises(
-        ValueError,
-        lambda: SelectColumns(col("a").distinct(), f.first(col("a")).alias("x")),
-    )
-
     cols = SelectColumns(
         col("aa").alias("a").cast(int),
         lit(1, "b"),
@@ -78,8 +72,6 @@ def test_basic():
     gen = SQLExpressionGenerator()
     assert "a" == gen.generate(col("a"))
     assert "a AS bc" == gen.generate(col("a").alias("bc"))
-    assert "DISTINCT a" == gen.generate(col("a").distinct())
-    assert "DISTINCT a AS bc" == gen.generate(col("a").alias("bc").distinct())
 
     assert "'a'" == gen.generate(lit("a"))
     assert "'a' AS bc" == gen.generate(lit("a").alias("bc"))
@@ -90,8 +82,8 @@ def test_select_exprs():
     assert "(a+2)*3" == gen.generate((col("a") + 2) * 3)
     assert "(-a+2)*3" == gen.generate((-col("a") + 2) * 3)
     assert "(a*2)/3 AS x" == gen.generate(((col("a") * 2) / 3).alias("x"))
-    assert "DISTINCT (a+2)*-3 AS x" == gen.generate(
-        ((col("a") + 2) * -3).distinct().alias("x")
+    assert "COUNT(DISTINCT a) AS x" == gen.generate(
+        (f.count_distinct(col("a"))).alias("x")
     )
 
 
@@ -125,17 +117,19 @@ def test_functions():
                 2,
                 aa=f.first(col("a")),
                 bb=f.last(lit("b")),
-                cc=f.count(col("*").distinct()),
+                cc=f.count_distinct(col("*")),
             ).alias("x")
         )
     )
 
     def dummy(expr):
         yield "DUMMY"
+        if expr.is_distinct:
+            yield " D"
 
     gen.add_func_handler("MY", dummy)
-    assert "DISTINCT DUMMY AS x" == gen.generate(
-        function("MY", 2, 3).distinct().alias("x")
+    assert "DUMMY D AS x" == gen.generate(
+        function("MY", 2, 3, arg_distinct=True).alias("x")
     )
 
 
@@ -210,6 +204,17 @@ def test_select():
     assert (
         "SELECT CAST(c AS double) AS c, CAST(AVG(d+e) AS long) AS d FROM t GROUP BY c"
         == gen.select(cols, "t")
+    )
+
+    # infer alias
+    cols = SelectColumns(
+        (-col("c")).cast(float),
+        f.max(col("e")).cast(int),
+        f.avg(col("d") + col("e")).cast(int).alias("d"),
+    )
+    assert (
+        "SELECT CAST(-c AS double) AS c, CAST(MAX(e) AS long) AS e, "
+        "CAST(AVG(d+e) AS long) AS d FROM t GROUP BY -c" == gen.select(cols, "t")
     )
 
 

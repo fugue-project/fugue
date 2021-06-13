@@ -718,10 +718,15 @@ class BuiltInTests(object):
                     lit("x", "d"),
                 ).assert_eq(b)
 
-                # aggregation
+                # distinct
+                a = dag.df([[1, 10], [2, 20], [1, 10]], "x:int,y:int")
+                b = dag.df([[1, 10], [2, 20]], "x:int,y:int")
+                a.select("*", distinct=True).assert_eq(b)
+
+                # aggregation plus infer alias
                 a = dag.df([[1, 10], [1, 20], [3, 30]], "x:int,y:int")
                 b = dag.df([[1, 30], [3, 30]], "x:int,y:int")
-                a.select("x", ff.sum(col("y")).alias("y").cast("int32")).assert_eq(b)
+                a.select("x", ff.sum(col("y")).cast("int32")).assert_eq(b)
 
                 # all together
                 a = dag.df([[1, 10], [1, 20], [3, 35], [3, 40]], "x:int,y:int")
@@ -746,17 +751,17 @@ class BuiltInTests(object):
                 b = dag.df([[2, 20]], "x:int,y:int")
                 a.filter((col("y") > 15) & (col("y") < 25)).assert_eq(b)
 
-        def test_df_set_columns(self):
+        def test_df_assign(self):
             with self.dag() as dag:
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
                 b = dag.df([[1, "x"], [2, "x"], [3, "x"]], "x:int,y:str")
-                a.set_columns(y="x").assert_eq(b)
+                a.assign(y="x").assert_eq(b)
 
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
                 b = dag.df(
                     [[1, "x", 11], [2, "x", 21], [3, "x", 31]], "x:int,y:str,z:double"
                 )
-                a.set_columns(y="x", z=(col("y") + 1).cast(float)).assert_eq(b)
+                a.assign(y="x", z=(col("y") + 1).cast(float)).assert_eq(b)
 
         def test_select(self):
             class MockEngine(SqliteEngine):

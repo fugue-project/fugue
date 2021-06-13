@@ -8,7 +8,6 @@ from triad import Schema, to_uuid
 
 def test_named_col():
     assert "*" == str(col("*"))
-    assert "DISTINCT *" == str(col("*").distinct())
     assert col("*").wildcard
     raises(ValueError, lambda: col("*").alias("x"))
     raises(ValueError, lambda: col("*").cast("long"))
@@ -20,23 +19,27 @@ def test_named_col():
     assert "ab AS xx" == str(col("ab", "xx").cast(None))
     assert "CAST(ab AS long) AS xx" == str(col("ab", "xx").cast("long"))
 
-    assert "DISTINCT ab" == str(col("ab").distinct())
     assert "ab AS xx" == str(col("ab").alias("xx"))
 
-    assert "DISTINCT ab AS xx" == str(col("ab").alias("xx").distinct())
-    assert "DISTINCT CAST(ab AS long) AS xx" == str(
-        col("ab").distinct().alias("xx").cast(int)
-    )
+    assert "ab AS xx" == str(col("ab").alias("xx"))
+    assert "CAST(ab AS long) AS xx" == str(col("ab").alias("xx").cast(int))
 
     raises(NotImplementedError, lambda: col([1, 2]))
 
     assert to_uuid(col("a")) != to_uuid(col("b"))
     assert to_uuid(col("a")) != to_uuid(col("a").alias("v"))
-    assert to_uuid(col("a")) != to_uuid(col("a").distinct())
     assert to_uuid(col("a")) != to_uuid(col("a").cast(int))
     assert to_uuid(col("a").cast(int).alias("v")) == to_uuid(
         col("a").alias("v").cast(int)
     )
+
+    assert "" == col("a").infer_alias().as_name
+    assert "a" == str(col("a").infer_alias())
+    assert "a" == col("a").cast(int).infer_alias().as_name
+    c = col("a").cast(int).infer_alias()
+    assert "CAST(a AS long) AS a" == str(c)
+    c = col("a").cast(int).alias("x").infer_alias()
+    assert "CAST(a AS long) AS x" == str(c)
 
 
 def test_lit_col():
@@ -55,8 +58,8 @@ def test_lit_col():
     assert "TRUE" == str(lit(True))
     assert "FALSE" == str(lit(False))
 
-    assert "1 AS xx" == str(lit(1).alias("xx").distinct())
-    assert "'ab' AS xx" == str(lit("ab").distinct().alias("xx"))
+    assert "1 AS xx" == str(lit(1).alias("xx"))
+    assert "'ab' AS xx" == str(lit("ab").alias("xx"))
 
     raises(NotImplementedError, lambda: lit([1, 2]))
 
@@ -65,7 +68,6 @@ def test_lit_col():
     assert to_uuid(null()) == to_uuid(null())
     assert to_uuid(null()) != to_uuid(lit(1))
     assert to_uuid(lit("a")) != to_uuid(lit("a").alias("v"))
-    assert to_uuid(lit("a")) == to_uuid(lit("a").distinct())  # distinct no effect
     assert to_uuid(lit("a")) != to_uuid(lit("a").cast(int))
     assert to_uuid(lit("a").cast(int).alias("v")) == to_uuid(
         lit("a").alias("v").cast(int)
@@ -74,19 +76,18 @@ def test_lit_col():
 
 def test_unary_op():
     assert "-(a)" == str(-col("a"))
+    assert "a" == (-col("a")).infer_alias().output_name
     assert "a" == str(+col("a"))
     assert "~(a)" == str(~col("a"))
     assert "IS_NULL(a)" == str(col("a").is_null())
     assert "NOT_NULL(a)" == str(col("a").not_null())
 
     assert "NOT_NULL(a) AS xx" == str(col("a").not_null().alias("xx"))
-    assert "DISTINCT NOT_NULL(a)" == str(col("a").not_null().distinct())
-    assert "DISTINCT NOT_NULL(a) AS xx" == str(
-        col("a").not_null().alias("xx").distinct()
-    )
-    assert "DISTINCT NOT_NULL(a) AS xx" == str(
-        col("a").not_null().distinct().alias("xx")
-    )
+    assert "NOT_NULL(a)" == str(col("a").not_null())
+    assert "NOT_NULL(a) AS xx" == str(col("a").not_null().alias("xx"))
+
+    assert "a" == col("a").not_null().infer_alias().output_name
+    assert "NOT_NULL(a) AS a" == str(col("a").not_null().infer_alias())
 
     assert to_uuid(col("a").not_null()) == to_uuid(col("a").not_null())
     assert to_uuid(col("a").not_null()) != to_uuid(col("a").is_null())
@@ -104,11 +105,10 @@ def test_binary_op():
     assert "/(a,1)" == str(col("a") / 1)
     assert "/(1.1,a)" == str(1.1 / col("a"))
 
-    assert "DISTINCT +(ab,1)" == str((col("ab") + 1).distinct())
+    assert "+(ab,1)" == str((col("ab") + 1))
     assert "+(ab,1) AS xx" == str((col("ab") + 1).alias("xx"))
 
-    assert "DISTINCT +(ab,1) AS xx" == str((col("ab") + 1).alias("xx").distinct())
-    assert "DISTINCT +(ab,1) AS xx" == str((col("ab") + 1).distinct().alias("xx"))
+    assert "+(ab,1) AS xx" == str((col("ab") + 1).alias("xx"))
 
     assert "&(a,TRUE)" == str(col("a") & True)
     assert "&(TRUE,a)" == str(True & col("a"))
@@ -149,23 +149,13 @@ def test_comb():
 def test_function():
     expr = function("f", col("x") + col("z"), col("y"), 1, 1.1, False, "t")
     assert "f(+(x,z),y,1,1.1,FALSE,'t')" == str(expr)
-    assert "DISTINCT f(+(x,z),y,1,1.1,FALSE,'t') AS x" == str(
-        expr.distinct().alias("x")
-    )
-    assert "DISTINCT f(+(x,z),y,1,1.1,FALSE,'t') AS x" == str(
-        expr.alias("x").distinct()
-    )
+    assert "f(+(x,z),y,1,1.1,FALSE,'t') AS x" == str(expr.alias("x"))
 
 
 def test_coalesce():
     expr = coalesce(col("x") + col("z"), col("y"), 1, 1.1, False, "t")
     assert "COALESCE(+(x,z),y,1,1.1,FALSE,'t')" == str(expr)
-    assert "DISTINCT COALESCE(+(x,z),y,1,1.1,FALSE,'t') AS x" == str(
-        expr.distinct().alias("x")
-    )
-    assert "DISTINCT COALESCE(+(x,z),y,1,1.1,FALSE,'t') AS x" == str(
-        expr.alias("x").distinct()
-    )
+    assert "COALESCE(+(x,z),y,1,1.1,FALSE,'t') AS x" == str(expr.alias("x"))
 
 
 def test_get_column_mentions():
@@ -175,41 +165,41 @@ def test_get_column_mentions():
 
 def test_schema_inference():
     schema = Schema("a:int,b:str,c:bool,d:double")
-    assert pa.int32() == col("a").infer_schema(schema)
-    assert pa.int32() == (-col("a")).distinct().infer_schema(schema)
-    assert pa.int64() == (-col("a")).cast(int).distinct().infer_schema(schema)
-    assert pa.int64() == (-col("a").cast(int)).distinct().infer_schema(schema)
-    assert pa.string() == col("b").infer_schema(schema)
-    assert (-col("b")).infer_schema(schema) is None
-    assert (~col("b")).infer_schema(schema) is None
-    assert pa.bool_() == col("c").infer_schema(schema)
-    assert pa.bool_() == (~col("c")).alias("x").infer_schema(schema)
-    assert pa.float64() == col("d").infer_schema(schema)
-    assert pa.float64() == (-col("d").alias("x").distinct()).infer_schema(schema)
-    assert col("x").infer_schema(schema) is None
-    assert pa.string() == col("x").cast(str).infer_schema(schema)
-    assert col("*").infer_schema(schema) is None
+    assert pa.int32() == col("a").infer_type(schema)
+    assert pa.int32() == (-col("a")).infer_type(schema)
+    assert pa.int64() == (-col("a")).cast(int).infer_type(schema)
+    assert pa.int64() == (-col("a").cast(int)).infer_type(schema)
+    assert pa.string() == col("b").infer_type(schema)
+    assert (-col("b")).infer_type(schema) is None
+    assert (~col("b")).infer_type(schema) is None
+    assert pa.bool_() == col("c").infer_type(schema)
+    assert pa.bool_() == (~col("c")).alias("x").infer_type(schema)
+    assert pa.float64() == col("d").infer_type(schema)
+    assert pa.float64() == (-col("d").alias("x")).infer_type(schema)
+    assert col("x").infer_type(schema) is None
+    assert pa.string() == col("x").cast(str).infer_type(schema)
+    assert col("*").infer_type(schema) is None
 
-    assert pa.bool_() == (col("a") < col("d")).infer_schema(schema)
-    assert pa.bool_() == (col("a") > col("d")).infer_schema(schema)
-    assert pa.bool_() == (col("a") <= col("d")).infer_schema(schema)
-    assert pa.bool_() == (col("a") >= col("d")).infer_schema(schema)
-    assert pa.bool_() == (col("a") == col("d")).infer_schema(schema)
-    assert pa.bool_() == (col("a") != col("d")).infer_schema(schema)
-    assert pa.bool_() == (~(col("a") != col("d"))).infer_schema(schema)
-    assert pa.int64() == (~(col("a") != col("d"))).cast(int).infer_schema(schema)
+    assert pa.bool_() == (col("a") < col("d")).infer_type(schema)
+    assert pa.bool_() == (col("a") > col("d")).infer_type(schema)
+    assert pa.bool_() == (col("a") <= col("d")).infer_type(schema)
+    assert pa.bool_() == (col("a") >= col("d")).infer_type(schema)
+    assert pa.bool_() == (col("a") == col("d")).infer_type(schema)
+    assert pa.bool_() == (col("a") != col("d")).infer_type(schema)
+    assert pa.bool_() == (~(col("a") != col("d"))).infer_type(schema)
+    assert pa.int64() == (~(col("a") != col("d"))).cast(int).infer_type(schema)
 
-    assert (col("a") - col("d")).infer_schema(schema) is None
+    assert (col("a") - col("d")).infer_type(schema) is None
 
-    assert pa.int64() == lit(1).infer_schema(schema)
-    assert pa.string() == lit("a").infer_schema(schema)
-    assert pa.bool_() == lit(False).infer_schema(schema)
-    assert pa.string() == lit(False).cast(str).infer_schema(schema)
-    assert pa.float64() == lit(2.2).infer_schema(schema)
-    assert null().infer_schema(schema) is None
-    assert pa.string() == null().cast(str).infer_schema(schema)
+    assert pa.int64() == lit(1).infer_type(schema)
+    assert pa.string() == lit("a").infer_type(schema)
+    assert pa.bool_() == lit(False).infer_type(schema)
+    assert pa.string() == lit(False).cast(str).infer_type(schema)
+    assert pa.float64() == lit(2.2).infer_type(schema)
+    assert null().infer_type(schema) is None
+    assert pa.string() == null().cast(str).infer_type(schema)
 
-    assert function("a", col("a").cast("int")).infer_schema(schema) is None
-    assert pa.string() == function("a", col("a").cast("int")).cast(str).infer_schema(
+    assert function("a", col("a").cast("int")).infer_type(schema) is None
+    assert pa.string() == function("a", col("a").cast("int")).cast(str).infer_type(
         schema
     )

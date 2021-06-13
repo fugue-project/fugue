@@ -281,6 +281,7 @@ class WorkflowDataFrame(DataFrame):
         *columns: Union[str, ColumnExpr],
         where: Optional[ColumnExpr] = None,
         having: Optional[ColumnExpr] = None,
+        distinct: bool = False,
     ) -> TDF:
         """The functional interface for SQL select statement
 
@@ -288,7 +289,8 @@ class WorkflowDataFrame(DataFrame):
           the column names
         :param where: ``WHERE`` condition expression, defaults to None
         :param having: ``having`` condition expression, defaults to None. It
-          is used when ``cols`` contains aggregation columns
+          is used when ``cols`` contains aggregation columns, defaults to None
+        :param distinct: whether to return distinct result, defaults to False
         :return: the select result as a dataframe
 
         .. admonition:: New Since
@@ -319,9 +321,12 @@ class WorkflowDataFrame(DataFrame):
                 df.select("a","b",lit(1,"another")))
                 df.select("a",(col("b")+lit(1)).alias("x"))
 
+                # select distinct
+                df.select("a","b",lit(1,"another")),distinct=True)
+
                 # aggregation
                 # SELECT COUNT(DISTINCT *) AS x FROM df
-                df.select(f.count(col("*").distinct()).alias("x"))
+                df.select(f.count_distinct(col("*")).alias("x"))
 
                 # SELECT a, MAX(b+1) AS x FROM df GROUP BY a
                 df.select("a",f.max(col("b")+lit(1)).alias("x"))
@@ -336,17 +341,92 @@ class WorkflowDataFrame(DataFrame):
                     having=f.max(col("b")+lit(1))>0
                 )
         """
-        sc = ColumnsSelect(*[col(x) if isinstance(x, str) else x for x in columns])
+        sc = ColumnsSelect(
+            *[col(x) if isinstance(x, str) else x for x in columns],
+            arg_distinct=distinct,
+        )
         df = self.workflow.process(
             self, using=Select, params=dict(columns=sc, where=where, having=having)
         )
         return self._to_self_type(df)
 
     def filter(self: TDF, condition: ColumnExpr) -> TDF:
+        """Filter rows by the given condition
+
+        :param df: the dataframe to be filtered
+        :param condition: (boolean) column expression
+        :return: the filtered dataframe
+
+        .. admonition:: New Since
+            :class: hint
+
+            **0.6.0**
+
+        .. seealso::
+
+            Please find more expression examples in :mod:`fugue.column.sql` and
+            :mod:`fugue.column.functions`
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                import fugue.column.functions as f
+                from fugue import FugueWorkflow
+
+                dag = FugueWorkflow()
+                df = dag.df(pandas_df)
+
+                df.filter((col("a")>1) & (col("b")=="x"))
+                df.filter(f.coalesce(col("a"),col("b"))>1)
+        """
         df = self.workflow.process(self, using=Filter, params=dict(condition=condition))
         return self._to_self_type(df)
 
-    def set_columns(self: TDF, **kwargs: Any) -> TDF:
+    def assign(self: TDF, **kwargs: Any) -> TDF:
+        """Update existing columns with new values and add new columns
+
+        :param df: the dataframe to set columns
+        :param columns: column expressions
+        :return: the updated dataframe
+
+        .. tip::
+
+            This can be used to cast data types, alter column values or add new
+            columns. But you can't use aggregation in columns.
+
+        .. admonition:: New Since
+            :class: hint
+
+            **0.6.0**
+
+        .. seealso::
+
+            Please find more expression examples in :mod:`fugue.column.sql` and
+            :mod:`fugue.column.functions`
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                from fugue import FugueWorkflow
+
+                dag = FugueWorkflow()
+                df = dag.df(pandas_df)
+                # assume df has schema: a:int,b:str
+
+                # add constant column x
+                df.assign(lit(1,"x"))
+
+                # change column b to be a constant integer
+                df.assign(lit(1,"b"))
+
+                # add new x to be a+b
+                df.assign((col("a")+col("b")).alias("x"))
+
+                # cast column a data type to double
+                df.assign(col("a").cast(float))
+        """
         kv = [
             v.alias(k) if isinstance(v, ColumnExpr) else lit(v).alias(k)
             for k, v in kwargs.items()
@@ -1066,14 +1146,6 @@ class WorkflowDataFrame(DataFrame):
         df = self.workflow.process(
             self, using=SelectColumns, params=dict(columns=columns)
         )
-        return self._to_self_type(df)
-
-    def __setitem__(self: TDF, key: str, value: Any) -> TDF:
-        if isinstance(value, ColumnExpr):
-            cl = value.alias(key)
-        else:
-            cl = lit(value).alias(key)
-        df = self.workflow.process(self, using=SetColumns, params=dict(columns=[cl]))
         return self._to_self_type(df)
 
     def save(

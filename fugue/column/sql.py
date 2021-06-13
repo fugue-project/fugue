@@ -32,7 +32,8 @@ _SUPPORTED_OPERATORS: Dict[str, str] = {
 
 
 class SelectColumns:
-    def __init__(self, *cols: ColumnExpr):  # noqa: C901
+    def __init__(self, *cols: ColumnExpr, arg_distinct: bool = False):  # noqa: C901
+        self._distinct = arg_distinct
         self._all: List[ColumnExpr] = []
         self._literals: List[ColumnExpr] = []
         self._cols: List[ColumnExpr] = []
@@ -44,6 +45,7 @@ class SelectColumns:
         _g_keys: List[ColumnExpr] = []
 
         for c in cols:
+            c = c.infer_alias()
             _is_agg = False
             self._all.append(c)
             if isinstance(c, _LiteralColumnExpr):
@@ -65,10 +67,7 @@ class SelectColumns:
                     _g_keys.append(c.alias("").cast(None))
 
         if self.has_agg:
-            for c in _g_keys:
-                if c.is_distinct:
-                    raise ValueError(f"can't use {c} as a group key")
-                self._group_keys.append(c)
+            self._group_keys += _g_keys
 
         if len(self._agg_funcs) > 0 and self._has_wildcard:
             raise ValueError(f"'*' can't be used in aggregation: {self}")
@@ -79,6 +78,10 @@ class SelectColumns:
 
     def __uuid__(self):
         return to_uuid(self.all_cols)
+
+    @property
+    def is_distinct(self) -> bool:
+        return self._distinct
 
     def replace_wildcard(self, schema: Schema) -> "SelectColumns":
         def _get_cols() -> Iterable[ColumnExpr]:
@@ -191,18 +194,21 @@ class SQLExpressionGenerator:
             pre = " WHERE " if as_where else " HAVING "
             return pre + self.generate(having.alias(""))
 
+        distinct = "" if not columns.is_distinct else "DISTINCT "
+
         if not columns.has_agg:
             expr = ", ".join(self.generate(x) for x in columns.all_cols)
-            return f"SELECT {expr} FROM {table}{_where()}"
+            return f"SELECT {distinct}{expr} FROM {table}{_where()}"
         columns.assert_no_wildcard()
         if len(columns.literals) == 0:
             expr = ", ".join(self.generate(x) for x in columns.all_cols)
             if len(columns.group_keys) == 0:
-                return f"SELECT {expr} FROM {table}{_where()}{_having()}"
+                return f"SELECT {distinct}{expr} FROM {table}{_where()}{_having()}"
             else:
                 keys = ", ".join(self.generate(x) for x in columns.group_keys)
                 return (
-                    f"SELECT {expr} FROM {table}{_where()} GROUP BY {keys}{_having()}"
+                    f"SELECT {distinct}{expr} FROM "
+                    f"{table}{_where()} GROUP BY {keys}{_having()}"
                 )
         else:
             no_lit = [
@@ -231,7 +237,7 @@ class SQLExpressionGenerator:
         cols = select.replace_wildcard(input_schema).assert_all_with_names()
         fields: List[pa.Field] = []
         for c in cols.all_cols:
-            tp = c.infer_schema(input_schema)
+            tp = c.infer_type(input_schema)
             if tp is not None and tp != output_schema[c.output_name].type:
                 fields.append(pa.field(c.output_name, tp))
         if len(fields) == 0:
@@ -241,8 +247,6 @@ class SQLExpressionGenerator:
     def _generate(  # noqa: C901
         self, expr: ColumnExpr, bracket: bool = False
     ) -> Iterable[str]:
-        if expr.is_distinct:
-            yield "DISTINCT "
         if self._enable_cast and expr.as_type is not None:
             yield "CAST("
         if isinstance(expr, _LiteralColumnExpr):
@@ -296,6 +300,8 @@ class SQLExpressionGenerator:
         assert_or_throw(expr.op in _SUPPORTED_OPERATORS, NotImplementedError(expr))
         if bracket:
             yield "("
+        if expr.is_distinct:
+            yield "DISTINCT "
         yield from self._generate(expr.left, bracket=True)
         yield _SUPPORTED_OPERATORS[expr.op]
         yield from self._generate(expr.right, bracket=True)
@@ -324,5 +330,7 @@ class SQLExpressionGenerator:
             args = args[:-1]
         yield expr.func
         yield "("
+        if expr.is_distinct:
+            yield "DISTINCT "
         yield from args
         yield ")"

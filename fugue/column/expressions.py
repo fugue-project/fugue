@@ -7,7 +7,6 @@ from triad.utils.pyarrow import _type_to_expression, to_pa_datatype
 
 class ColumnExpr:
     def __init__(self):
-        self._distinct = False
         self._as_name = ""
         self._as_type: Optional[pa.DataType] = None
 
@@ -27,28 +26,22 @@ class ColumnExpr:
     def output_name(self) -> str:
         return self.as_name if self.as_name != "" else self.name
 
-    @property
-    def is_distinct(self) -> bool:
-        return self._distinct
-
-    def distinct(self) -> "ColumnExpr":  # pragma: no cover
-        raise NotImplementedError
-
     def alias(self, as_name: str) -> "ColumnExpr":  # pragma: no cover
         raise NotImplementedError
+
+    def infer_alias(self) -> "ColumnExpr":
+        return self
 
     def cast(self, data_type: Any) -> "ColumnExpr":  # pragma: no cover
         raise NotImplementedError
 
-    def infer_schema(self, schema: Schema) -> Optional[pa.DataType]:
+    def infer_type(self, schema: Schema) -> Optional[pa.DataType]:
         return self.as_type  # pragma: no cover
 
     def __str__(self) -> str:
         res = self.body_str
         if self.as_type is not None:
             res = f"CAST({res} AS {_type_to_expression(self.as_type)})"
-        if self.is_distinct:
-            res = f"DISTINCT {res}"
         if self.as_name != "":
             res = res + " AS " + self.as_name
         return res
@@ -130,7 +123,6 @@ class ColumnExpr:
         return to_uuid(
             str(type(self)),
             self.as_name,
-            self.is_distinct,
             self.as_type,
             *self._uuid_keys(),
         )
@@ -159,8 +151,8 @@ def col(obj: Any, alias: str = "") -> ColumnExpr:
     raise NotImplementedError(obj)
 
 
-def function(name: str, *args: Any, **kwargs) -> ColumnExpr:
-    return _FuncExpr(name, *args, **kwargs)
+def function(name: str, *args: Any, arg_distinct: bool = False, **kwargs) -> ColumnExpr:
+    return _FuncExpr(name, *args, arg_distinct=arg_distinct, **kwargs)
 
 
 def _get_column_mentions(column: ColumnExpr) -> Iterable[str]:
@@ -196,19 +188,11 @@ class _NamedColumnExpr(ColumnExpr):
     def wildcard(self) -> bool:
         return self.name == "*"
 
-    def distinct(self) -> ColumnExpr:
-        other = _NamedColumnExpr(self.name)
-        other._distinct = True
-        other._as_name = self.as_name
-        other._as_type = self.as_type
-        return other
-
     def alias(self, as_name: str) -> ColumnExpr:
         if self.wildcard and as_name != "":
             raise ValueError("'*' can't have alias")
         other = _NamedColumnExpr(self.name)
         other._as_name = as_name
-        other._distinct = self.is_distinct
         other._as_type = self.as_type
         return other
 
@@ -217,11 +201,15 @@ class _NamedColumnExpr(ColumnExpr):
             raise ValueError("'*' can't cast")
         other = _NamedColumnExpr(self.name)
         other._as_name = self.as_name
-        other._distinct = self.is_distinct
         other._as_type = None if data_type is None else to_pa_datatype(data_type)
         return other
 
-    def infer_schema(self, schema: Schema) -> Optional[pa.DataType]:
+    def infer_alias(self) -> ColumnExpr:
+        if self.as_name == "" and self.as_type is not None:
+            return self.alias(self.output_name)
+        return self
+
+    def infer_type(self, schema: Schema) -> Optional[pa.DataType]:
         if self.name not in schema:
             return self.as_type
         return self.as_type or schema[self.name].type
@@ -270,9 +258,6 @@ class _LiteralColumnExpr(ColumnExpr):
     def not_null(self) -> ColumnExpr:
         return _LiteralColumnExpr(self.value is not None)
 
-    def distinct(self) -> ColumnExpr:
-        return self
-
     def alias(self, as_name: str) -> ColumnExpr:
         other = _LiteralColumnExpr(self.value)
         other._as_name = as_name
@@ -285,7 +270,7 @@ class _LiteralColumnExpr(ColumnExpr):
         other._as_type = None if data_type is None else to_pa_datatype(data_type)
         return other
 
-    def infer_schema(self, schema: Schema) -> Optional[pa.DataType]:
+    def infer_type(self, schema: Schema) -> Optional[pa.DataType]:
         if self.value is None:
             return self.as_type
         return self.as_type or to_pa_datatype(type(self.value))
@@ -295,7 +280,14 @@ class _LiteralColumnExpr(ColumnExpr):
 
 
 class _FuncExpr(ColumnExpr):
-    def __init__(self, func: str, *args: Any, **kwargs: Any):
+    def __init__(
+        self,
+        func: str,
+        *args: Any,
+        arg_distinct: bool = False,
+        **kwargs: Any,
+    ):
+        self._distinct = arg_distinct
         self._func = func
         self._args = list(args)
         self._kwargs = dict(kwargs)
@@ -313,11 +305,16 @@ class _FuncExpr(ColumnExpr):
         a1 = [to_str(x) for x in self.args]
         a2 = [k + "=" + to_str(v) for k, v in self.kwargs.items()]
         args = ",".join(a1 + a2)
-        return f"{self.func}({args})"
+        distinct = "DISTINCT " if self.is_distinct else ""
+        return f"{self.func}({distinct}{args})"
 
     @property
     def func(self) -> str:
         return self._func
+
+    @property
+    def is_distinct(self) -> bool:
+        return self._distinct
 
     @property
     def args(self) -> List[Any]:
@@ -326,13 +323,6 @@ class _FuncExpr(ColumnExpr):
     @property
     def kwargs(self) -> Dict[str, Any]:
         return self._kwargs
-
-    def distinct(self) -> ColumnExpr:
-        other = self._copy()
-        other._distinct = True
-        other._as_name = self.as_name
-        other._as_type = self.as_type
-        return other
 
     def alias(self, as_name: str) -> ColumnExpr:
         other = self._copy()
@@ -352,12 +342,12 @@ class _FuncExpr(ColumnExpr):
         return _FuncExpr(self.func, *self.args, **self.kwargs)
 
     def _uuid_keys(self) -> List[Any]:
-        return [self.func, self.args, self.kwargs]
+        return [self.func, self.is_distinct, self.args, self.kwargs]
 
 
 class _UnaryOpExpr(_FuncExpr):
-    def __init__(self, op: str, column: ColumnExpr):
-        super().__init__(op, column)
+    def __init__(self, op: str, column: ColumnExpr, arg_distinct: bool = False):
+        super().__init__(op, column, arg_distinct=arg_distinct)
 
     @property
     def col(self) -> ColumnExpr:
@@ -367,6 +357,9 @@ class _UnaryOpExpr(_FuncExpr):
     def op(self) -> str:
         return self.func
 
+    def infer_alias(self) -> ColumnExpr:
+        return self if self.output_name != "" else self.alias(self.col.output_name)
+
     def _copy(self) -> _FuncExpr:
         return _UnaryOpExpr(self.op, self.col)
 
@@ -375,10 +368,10 @@ class _InvertOpExpr(_UnaryOpExpr):
     def _copy(self) -> _FuncExpr:
         return _InvertOpExpr(self.op, self.col)
 
-    def infer_schema(self, schema: Schema) -> Optional[pa.DataType]:
+    def infer_type(self, schema: Schema) -> Optional[pa.DataType]:
         if self.as_type is not None:
             return self.as_type
-        tp = self.col.infer_schema(schema)
+        tp = self.col.infer_type(schema)
         if pa.types.is_signed_integer(tp) or pa.types.is_floating(tp):
             return tp
         return None
@@ -388,18 +381,18 @@ class _NotOpExpr(_UnaryOpExpr):
     def _copy(self) -> _FuncExpr:
         return _NotOpExpr(self.op, self.col)
 
-    def infer_schema(self, schema: Schema) -> Optional[pa.DataType]:
+    def infer_type(self, schema: Schema) -> Optional[pa.DataType]:
         if self.as_type is not None:
             return self.as_type
-        tp = self.col.infer_schema(schema)
+        tp = self.col.infer_type(schema)
         if pa.types.is_boolean(tp):
             return tp
         return None
 
 
 class _BinaryOpExpr(_FuncExpr):
-    def __init__(self, op: str, left: Any, right: Any):
-        super().__init__(op, _to_col(left), _to_col(right))
+    def __init__(self, op: str, left: Any, right: Any, arg_distinct: bool = False):
+        super().__init__(op, _to_col(left), _to_col(right), arg_distinct=arg_distinct)
 
     @property
     def left(self) -> ColumnExpr:
@@ -421,5 +414,5 @@ class _BoolBinaryOpExpr(_BinaryOpExpr):
     def _copy(self) -> _FuncExpr:
         return _BoolBinaryOpExpr(self.op, self.left, self.right)
 
-    def infer_schema(self, schema: Schema) -> Optional[pa.DataType]:
+    def infer_type(self, schema: Schema) -> Optional[pa.DataType]:
         return self.as_type or pa.bool_()

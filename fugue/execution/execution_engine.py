@@ -522,7 +522,7 @@ class ExecutionEngine(ABC):
         :param cols: column expressions
         :param where: ``WHERE`` condition expression, defaults to None
         :param having: ``having`` condition expression, defaults to None. It
-          is used when ``cols`` contains aggregation columns
+          is used when ``cols`` contains aggregation columns, defaults to None
         :param metadata: dict-like object to add to the result dataframe,
             defaults to None. It's currently not used
         :return: the select result as a dataframe
@@ -555,7 +555,7 @@ class ExecutionEngine(ABC):
                 # SELECT COUNT(DISTINCT *) AS x FROM df
                 engine.select(
                     df,
-                    SelectColumns(f.count(col("*").distinct()).alias("x")))
+                    SelectColumns(f.count_distinct(col("*")).alias("x")))
 
                 # SELECT a, MAX(b+1) AS x FROM df GROUP BY a
                 engine.select(
@@ -613,7 +613,7 @@ class ExecutionEngine(ABC):
             df, cols=SelectColumns(col("*")), where=condition, metadata=metadata
         )
 
-    def set_columns(
+    def assign(
         self, df: DataFrame, columns: List[ColumnExpr], metadata: Any = None
     ) -> DataFrame:
         """Update existing columns with new values and add new columns
@@ -646,16 +646,16 @@ class ExecutionEngine(ABC):
                 # assume df has schema: a:int,b:str
 
                 # add constant column x
-                engine.set_columns(df, lit(1,"x"))
+                engine.assign(df, lit(1,"x"))
 
                 # change column b to be a constant integer
-                engine.set_columns(df, lit(1,"b"))
+                engine.assign(df, lit(1,"b"))
 
                 # add new x to be a+b
-                engine.set_columns(df, (col("a")+col("b")).alias("x"))
+                engine.assign(df, (col("a")+col("b")).alias("x"))
 
                 # cast column a data type to double
-                engine.set_columns(df, col("a").cast(float))
+                engine.assign(df, col("a").cast(float))
         """
         SelectColumns(
             *columns

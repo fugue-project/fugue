@@ -202,7 +202,7 @@ class SetColumns(Processor):
     def process(self, dfs: DataFrames) -> DataFrame:
         assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
         columns = self.params.get_or_throw("columns", list)
-        return self.execution_engine.set_columns(df=dfs[0], columns=columns)
+        return self.execution_engine.assign(df=dfs[0], columns=columns)
 
 
 class Rename(Processor):
