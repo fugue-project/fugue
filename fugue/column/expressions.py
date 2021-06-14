@@ -508,6 +508,7 @@ def col(obj: Union[str, ColumnExpr], alias: str = "") -> ColumnExpr:
         .. code-block:: python
 
             import fugue.column import col
+            import fugue.column.functions as f
 
             col("a")
             col("a").alias("x")
@@ -533,6 +534,13 @@ def col(obj: Union[str, ColumnExpr], alias: str = "") -> ColumnExpr:
             col("a") <= 5
             col("a") >= 5
             (col("a") < col("b")) & (col("b") > 1) | col("c").is_null()
+
+            # with functions
+            f.max(col("a"))
+            f.max(col("a")+col("b"))
+            f.max(col("a")) + f.min(col("b"))
+            f.count_distinct(col("a")).alias("dcount")
+
     """
     if isinstance(obj, ColumnExpr):
         return obj if alias == "" else obj.alias(alias)
@@ -544,6 +552,18 @@ def col(obj: Union[str, ColumnExpr], alias: str = "") -> ColumnExpr:
 
 
 def function(name: str, *args: Any, arg_distinct: bool = False, **kwargs) -> ColumnExpr:
+    """Construct a function expression
+
+    :param name: the name of the function
+    :param arg_distinct: whether to add ``DISTINCT`` before all arguments,
+      defaults to False
+    :return: the function expression
+
+    .. caution::
+
+        Users should not use this directly
+
+    """
     return _FuncExpr(name, *args, arg_distinct=arg_distinct, **kwargs)
 
 
