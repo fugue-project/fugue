@@ -676,6 +676,43 @@ class ExecutionEngine(ABC):
         agg_cols: List[ColumnExpr],
         metadata: Any = None,
     ):
+        """Aggregate on dataframe
+
+        :param df: the dataframe to aggregate on
+        :param partition_spec: PartitionSpec to specify partition keys
+        :param agg_cols: aggregation expressions
+        :param metadata: dict-like object to add to the result dataframe,
+            defaults to None. It's currently not used
+        :return: the aggregated result as a dataframe
+
+        .. admonition:: New Since
+            :class: hint
+
+            **0.6.0**
+
+        .. seealso::
+
+            Please find more expression examples in :mod:`fugue.column.sql` and
+            :mod:`fugue.column.functions`
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                import fugue.column.functions as f
+
+                # SELECT MAX(b) AS b FROM df
+                engine.aggregate(
+                    df,
+                    partition_spec=None,
+                    agg_cols=[f.max(col("b"))])
+
+                # SELECT a, MAX(b) AS x FROM df GROUP BY a
+                engine.aggregate(
+                    df,
+                    partition_spec=PartitionSpec(by=["a"]),
+                    agg_cols=[f.max(col("b")).alias("x")])
+        """
         assert_or_throw(len(agg_cols) > 0, ValueError("agg_cols can't be empty"))
         assert_or_throw(
             all(is_agg(x) for x in agg_cols),

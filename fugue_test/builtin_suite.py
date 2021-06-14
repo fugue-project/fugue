@@ -761,7 +761,19 @@ class BuiltInTests(object):
                 b = dag.df(
                     [[1, "x", 11], [2, "x", 21], [3, "x", 31]], "x:int,y:str,z:double"
                 )
-                a.assign(y="x", z=(col("y") + 1).cast(float)).assert_eq(b)
+                a.assign(lit("x").alias("y"), z=(col("y") + 1).cast(float)).assert_eq(b)
+
+        def test_aggregate(self):
+            with self.dag() as dag:
+                a = dag.df([[1, 10], [1, 200], [3, 30]], "x:int,y:int")
+                b = dag.df([[1, 200], [3, 30]], "x:int,y:int")
+                c = dag.df([[10, 200, 70]], "y:int,zz:int,ww:int")
+                a.partition_by("x").aggregate(ff.max(col("y"))).assert_eq(b)
+                a.aggregate(
+                    ff.min(col("y")),
+                    zz=ff.max(col("y")),
+                    ww=((ff.min(col("y")) + ff.max(col("y"))) / 3).cast("int32"),
+                ).assert_eq(c)
 
         def test_select(self):
             class MockEngine(SqliteEngine):

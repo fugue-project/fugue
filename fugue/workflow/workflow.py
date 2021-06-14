@@ -18,6 +18,7 @@ from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
 from fugue.execution.factory import make_execution_engine
 from fugue.extensions._builtins import (
+    Aggregate,
     AlterColumns,
     AssertEqual,
     AssertNotEqual,
@@ -39,7 +40,7 @@ from fugue.extensions._builtins import (
     SaveAndUse,
     Select,
     SelectColumns,
-    SetColumns,
+    Assign,
     Show,
     Take,
     Zip,
@@ -435,7 +436,49 @@ class WorkflowDataFrame(DataFrame):
             for k, v in kwargs.items()
         ]
         df = self.workflow.process(
-            self, using=SetColumns, params=dict(columns=list(args) + kv)
+            self, using=Assign, params=dict(columns=list(args) + kv)
+        )
+        return self._to_self_type(df)
+
+    def aggregate(self: TDF, *agg_cols: ColumnExpr, **kwagg_cols: ColumnExpr) -> TDF:
+        """Aggregate on dataframe
+
+        :param df: the dataframe to aggregate on
+        :param agg_cols: aggregation expressions
+        :param kwagg_cols: aggregation expressions to be renamed to the argument names
+        :return: the aggregated result as a dataframe
+
+        .. admonition:: New Since
+            :class: hint
+
+            **0.6.0**
+
+        .. seealso::
+
+            Please find more expression examples in :mod:`fugue.column.sql` and
+            :mod:`fugue.column.functions`
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                import fugue.column.functions as f
+
+                # SELECT MAX(b) AS b FROM df
+                df.aggregate(f.max(col("b")))
+
+                # SELECT a, MAX(b) AS x FROM df GROUP BY a
+                df.partition_by("a").aggregate(f.max(col("b")).alias("x"))
+                df.partition_by("a").aggregate(x=f.max(col("b")))
+        """
+        columns: List[ColumnExpr] = list(agg_cols) + [
+            v.alias(k) for k, v in kwagg_cols.items()
+        ]
+        df = self.workflow.process(
+            self,
+            using=Aggregate,
+            params=dict(columns=columns),
+            pre_partition=self.partition_spec,
         )
         return self._to_self_type(df)
 

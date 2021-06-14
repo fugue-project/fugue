@@ -8,7 +8,9 @@ from fugue.extensions._builtins.outputters import (
     Show,
 )
 from fugue.extensions._builtins.processors import (
+    Aggregate,
     AlterColumns,
+    Assign,
     Distinct,
     DropColumns,
     Dropna,
@@ -23,7 +25,6 @@ from fugue.extensions._builtins.processors import (
     SaveAndUse,
     Select,
     SelectColumns,
-    SetColumns,
     Take,
     Zip,
 )

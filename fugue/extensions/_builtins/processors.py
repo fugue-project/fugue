@@ -195,7 +195,7 @@ class Filter(Processor):
         return self.execution_engine.filter(df=dfs[0], condition=condition)
 
 
-class SetColumns(Processor):
+class Assign(Processor):
     def validate_on_compile(self):
         self.params.get_or_throw("columns", list)
 
@@ -203,6 +203,18 @@ class SetColumns(Processor):
         assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
         columns = self.params.get_or_throw("columns", list)
         return self.execution_engine.assign(df=dfs[0], columns=columns)
+
+
+class Aggregate(Processor):
+    def validate_on_compile(self):
+        self.params.get_or_throw("columns", list)
+
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        columns = self.params.get_or_throw("columns", list)
+        return self.execution_engine.aggregate(
+            df=dfs[0], partition_spec=self.partition_spec, agg_cols=columns
+        )
 
 
 class Rename(Processor):
