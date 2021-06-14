@@ -18,7 +18,7 @@ fugue.dataframe
 .. |FugueSQLTutorial| replace:: :ref:`the Fugue SQL Tutorial <tutorial:/tutorials/sql.ipynb>`
 .. |DataFrameTutorial| replace:: :ref:`the DataFrame Tutorial <tutorial:/tutorials/schema_dataframes.ipynb#dataframe>`
 .. |ExecutionEngineTutorial| replace:: :ref:`the ExecutionEngine Tutorial <tutorial:/tutorials/execution_engine.ipynb>`
-
+.. |FugueDataTypes| replace:: :ref:`Fugue Data Types <tutorial:/tutorials/appendix/generate_types.ipynb>`
 
 
 fugue.dataframe.array\_dataframe
