@@ -767,10 +767,10 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 a = dag.df([[1, 10], [1, 200], [3, 30]], "x:int,y:int")
                 b = dag.df([[1, 200], [3, 30]], "x:int,y:int")
-                c = dag.df([[10, 200, 70]], "y:int,zz:int,ww:int")
+                c = dag.df([[-200, 200, 70]], "y:int,zz:int,ww:int")
                 a.partition_by("x").aggregate(ff.max(col("y"))).assert_eq(b)
                 a.aggregate(
-                    ff.min(col("y")),
+                    ff.min(-col("y")),
                     zz=ff.max(col("y")),
                     ww=((ff.min(col("y")) + ff.max(col("y"))) / 3).cast("int32"),
                 ).assert_eq(c)
