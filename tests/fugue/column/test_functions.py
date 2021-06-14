@@ -32,6 +32,8 @@ def test_functions():
     assert "CAST(MIN(a) AS long) AS a" == str(expr.cast(int).infer_alias())
     assert "MIN(a) AS b" == str(expr.alias("b").infer_alias())
 
+    assert "MIN(-(a)) AS a" == str(f.min(-col("a")).infer_alias())
+
     expr = f.min(lit(1.1))
     assert "MIN(1.1)" == str(expr)
     assert pa.float64() == expr.infer_type(schema)

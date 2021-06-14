@@ -1,12 +1,5 @@
 import fugue.column.functions as f
-from fugue.column import (
-    SelectColumns,
-    SQLExpressionGenerator,
-    col,
-    function,
-    lit,
-    null,
-)
+from fugue.column import SelectColumns, SQLExpressionGenerator, col, function, lit, null
 from fugue.column.expressions import _BinaryOpExpr
 from pytest import raises
 from triad import Schema, to_uuid
@@ -85,6 +78,8 @@ def test_basic():
 
     assert "'a'" == gen.generate(lit("a"))
     assert "'a' AS bc" == gen.generate(lit("a").alias("bc"))
+
+    assert "CAST(a AS long) AS a" == gen.generate(col("a").cast(int))
 
 
 def test_select_exprs():

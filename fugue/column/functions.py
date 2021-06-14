@@ -69,7 +69,11 @@ class _UnaryAggFuncExpr(_FuncExpr):
         super().__init__(func, col, arg_distinct=arg_distinct)
 
     def infer_alias(self) -> ColumnExpr:
-        return self if self.output_name != "" else self.alias(self.args[0].output_name)
+        return (
+            self
+            if self.output_name != ""
+            else self.alias(self.args[0].infer_alias().output_name)
+        )
 
     def _copy(self) -> _FuncExpr:
         return _UnaryAggFuncExpr(self.func, *self.args, **self.kwargs)

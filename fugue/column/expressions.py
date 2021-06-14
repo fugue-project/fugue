@@ -358,7 +358,11 @@ class _UnaryOpExpr(_FuncExpr):
         return self.func
 
     def infer_alias(self) -> ColumnExpr:
-        return self if self.output_name != "" else self.alias(self.col.output_name)
+        return (
+            self
+            if self.output_name != ""
+            else self.alias(self.col.infer_alias().output_name)
+        )
 
     def _copy(self) -> _FuncExpr:
         return _UnaryOpExpr(self.op, self.col)

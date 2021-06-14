@@ -8,10 +8,11 @@ from fugue.column.expressions import (
     _LiteralColumnExpr,
     _NamedColumnExpr,
     _UnaryOpExpr,
-    lit,
     col,
+    lit,
 )
 from fugue.column.functions import is_agg
+from fugue.exceptions import FugueBug
 from triad import Schema, assert_or_throw, to_uuid
 from triad.utils.pyarrow import _type_to_expression
 
@@ -300,8 +301,8 @@ class SQLExpressionGenerator:
         assert_or_throw(expr.op in _SUPPORTED_OPERATORS, NotImplementedError(expr))
         if bracket:
             yield "("
-        if expr.is_distinct:
-            yield "DISTINCT "
+        if expr.is_distinct:  # pragma: no cover
+            raise FugueBug(f"impossible case {expr}")
         yield from self._generate(expr.left, bracket=True)
         yield _SUPPORTED_OPERATORS[expr.op]
         yield from self._generate(expr.right, bracket=True)
