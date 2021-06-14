@@ -17,7 +17,7 @@ class ColumnExpr:
     .. caution::
 
         This is a base class of different column classes, and users are not supposed
-        to construct this class directly. Use :func:`~.col` and :func:`~.lit instead`.
+        to construct this class directly. Use :func:`~.col` and :func:`~.lit` instead.
     """
 
     def __init__(self):
@@ -526,7 +526,7 @@ def col(obj: Union[str, ColumnExpr], alias: str = "") -> ColumnExpr:
             col("a") * col("b")
             col("a") / col("b")
 
-            # binary boolean expression
+            # binary boolean expressions
             col("a") == 1  # col("a") == lit(1)
             2 != col("a")  # col("a") != lit(2)
             col("a") < 5
