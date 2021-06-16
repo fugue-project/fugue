@@ -8,6 +8,7 @@ from fugue.dataframe import (
     LocalDataFrame,
     to_local_bounded_df,
 )
+from fugue.column import ColumnExpr, SelectColumns as ColumnsSelect
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution import make_sql_engine
 from fugue.execution.execution_engine import _generate_comap_empty_dfs
@@ -166,6 +167,53 @@ class Zip(Processor):
             partition_spec=partition_spec,
             temp_path=temp_path,
             to_file_threshold=to_file_threshold,
+        )
+
+
+class Select(Processor):
+    def validate_on_compile(self):
+        sc = self.params.get_or_throw("columns", ColumnsSelect)
+        sc.assert_all_with_names()
+
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        columns = self.params.get_or_throw("columns", ColumnsSelect)
+        where = None if "where" not in self.params else self.params["where"]
+        having = None if "having" not in self.params else self.params["having"]
+        return self.execution_engine.select(
+            df=dfs[0], cols=columns, where=where, having=having
+        )
+
+
+class Filter(Processor):
+    def validate_on_compile(self):
+        self.params.get_or_throw("condition", ColumnExpr)
+
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        condition = self.params.get_or_throw("condition", ColumnExpr)
+        return self.execution_engine.filter(df=dfs[0], condition=condition)
+
+
+class Assign(Processor):
+    def validate_on_compile(self):
+        self.params.get_or_throw("columns", list)
+
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        columns = self.params.get_or_throw("columns", list)
+        return self.execution_engine.assign(df=dfs[0], columns=columns)
+
+
+class Aggregate(Processor):
+    def validate_on_compile(self):
+        self.params.get_or_throw("columns", list)
+
+    def process(self, dfs: DataFrames) -> DataFrame:
+        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
+        columns = self.params.get_or_throw("columns", list)
+        return self.execution_engine.aggregate(
+            df=dfs[0], partition_spec=self.partition_spec, agg_cols=columns
         )
 
 

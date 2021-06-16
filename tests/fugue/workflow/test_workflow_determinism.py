@@ -252,6 +252,37 @@ def test_workflow_determinism_7():
     assert dag1.spec_uuid() != dag3.spec_uuid()
 
 
+def test_workflow_determinism_8():
+    dag1 = FugueWorkflow()
+    a1 = dag1.create_data([[0], [0], [1]], "a:int32")
+    a1.select("a", "b")
+    a1.show()
+
+    dag2 = FugueWorkflow()
+    a2 = dag2.create_data([[0], [0], [1]], "a:int32")
+    a2.select("a", "b")
+    a2.show()
+
+    dag3 = FugueWorkflow()
+    a3 = dag3.create_data([[0], [0], [1]], "a:int32")
+    a3.select("b", "a")
+    a3.show()
+
+    dag4 = FugueWorkflow()
+    a4 = dag4.create_data([[0], [0], [1]], "a:int32")
+    a4.select("a", "b", distinct=True)
+    a4.show()
+
+    assert a1.spec_uuid() == a2.spec_uuid()
+    assert dag1.spec_uuid() == dag2.spec_uuid()
+
+    assert a1.spec_uuid() == a3.spec_uuid()
+    assert dag1.spec_uuid() != dag3.spec_uuid()
+
+    assert a1.spec_uuid() == a4.spec_uuid()
+    assert dag1.spec_uuid() != dag4.spec_uuid()
+
+
 def mock_tf1(df: List[Dict[str, Any]], v: int = 1) -> Iterable[Dict[str, Any]]:
     for r in df:
         r["b"] = v * len(df)

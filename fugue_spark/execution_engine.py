@@ -19,6 +19,7 @@ from fugue.dataframe import (
     LocalDataFrame,
     LocalDataFrameIterableDataFrame,
 )
+from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.arrow_dataframe import ArrowDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import get_join_schemas
@@ -174,6 +175,17 @@ class SparkExecutionEngine(ExecutionEngine):
             )
             if isinstance(df, SparkDataFrame):
                 return df
+            if isinstance(df, ArrowDataFrame):
+                sdf = self.spark_session.createDataFrame(
+                    df.as_array(), to_spark_schema(df.schema)
+                )
+                return SparkDataFrame(sdf, df.schema, df.metadata)
+            if isinstance(df, (ArrayDataFrame, IterableDataFrame)):
+                adf = ArrowDataFrame(df.as_array(type_safe=False), df.schema)
+                sdf = self.spark_session.createDataFrame(
+                    adf.as_array(), to_spark_schema(df.schema)
+                )
+                return SparkDataFrame(sdf, df.schema, df.metadata)
             if any(pa.types.is_struct(t) for t in df.schema.types):
                 sdf = self.spark_session.createDataFrame(
                     df.as_array(type_safe=True), to_spark_schema(df.schema)

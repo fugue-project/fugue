@@ -8,11 +8,14 @@ from fugue.extensions._builtins.outputters import (
     Show,
 )
 from fugue.extensions._builtins.processors import (
+    Aggregate,
     AlterColumns,
+    Assign,
     Distinct,
     DropColumns,
     Dropna,
     Fillna,
+    Filter,
     Rename,
     RunJoin,
     RunSetOperation,
@@ -20,6 +23,7 @@ from fugue.extensions._builtins.processors import (
     RunTransformer,
     Sample,
     SaveAndUse,
+    Select,
     SelectColumns,
     Take,
     Zip,

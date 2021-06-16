@@ -1,7 +1,8 @@
 # Release Notes
 
-## 0.5.7
+## 0.6.0
 
+-   Added Select, Aggregate, Filter, Assign [interfaces](https://github.com/fugue-project/fugue/issues/211)
 -   Let SparkExecutionEngine accept [empty](https://github.com/fugue-project/fugue/issues/217) pandas dataframes
 -   Move to [codecov](https://github.com/fugue-project/fugue/issues/216)
 -   Let Fugue SQL take input dataframes with name such as [a.b](https://github.com/fugue-project/fugue/issues/215)

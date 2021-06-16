@@ -6,6 +6,9 @@ from uuid import uuid4
 from adagio.specs import WorkflowSpec
 from fugue.collections.partition import PartitionSpec
 from fugue.collections.yielded import Yielded
+from fugue.column import ColumnExpr
+from fugue.column import SelectColumns as ColumnsSelect
+from fugue.column import col, lit
 from fugue.constants import (
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE,
@@ -15,6 +18,7 @@ from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
 from fugue.execution.factory import make_execution_engine
 from fugue.extensions._builtins import (
+    Aggregate,
     AlterColumns,
     AssertEqual,
     AssertNotEqual,
@@ -22,6 +26,7 @@ from fugue.extensions._builtins import (
     DropColumns,
     Dropna,
     Fillna,
+    Filter,
     Load,
     LoadYielded,
     Rename,
@@ -33,7 +38,9 @@ from fugue.extensions._builtins import (
     Sample,
     Save,
     SaveAndUse,
+    Select,
     SelectColumns,
+    Assign,
     Show,
     Take,
     Zip,
@@ -269,6 +276,211 @@ class WorkflowDataFrame(DataFrame):
         :raises AssertionError: if any dataframe is equal to the first dataframe
         """
         self.workflow.assert_not_eq(self, *dfs, **params)
+
+    def select(
+        self: TDF,
+        *columns: Union[str, ColumnExpr],
+        where: Optional[ColumnExpr] = None,
+        having: Optional[ColumnExpr] = None,
+        distinct: bool = False,
+    ) -> TDF:
+        """The functional interface for SQL select statement
+
+        :param columns: column expressions, for strings they will represent
+          the column names
+        :param where: ``WHERE`` condition expression, defaults to None
+        :param having: ``having`` condition expression, defaults to None. It
+          is used when ``cols`` contains aggregation columns, defaults to None
+        :param distinct: whether to return distinct result, defaults to False
+        :return: the select result as a new dataframe
+
+        .. admonition:: New Since
+            :class: hint
+
+            **0.6.0**
+
+        .. attention::
+
+            This interface is experimental, it's subjected to change in new versions.
+
+        .. seealso::
+
+            Please find more expression examples in :mod:`fugue.column.sql` and
+            :mod:`fugue.column.functions`
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                import fugue.column.functions as f
+                from fugue import FugueWorkflow
+
+                dag = FugueWorkflow()
+                df = dag.df(pandas_df)
+
+                # select existed and new columns
+                df.select("a","b",lit(1,"another")))
+                df.select("a",(col("b")+lit(1)).alias("x"))
+
+                # select distinct
+                df.select("a","b",lit(1,"another")),distinct=True)
+
+                # aggregation
+                # SELECT COUNT(DISTINCT *) AS x FROM df
+                df.select(f.count_distinct(col("*")).alias("x"))
+
+                # SELECT a, MAX(b+1) AS x FROM df GROUP BY a
+                df.select("a",f.max(col("b")+lit(1)).alias("x"))
+
+                # SELECT a, MAX(b+1) AS x FROM df
+                #   WHERE b<2 AND a>1
+                #   GROUP BY a
+                #   HAVING MAX(b+1)>0
+                df.select(
+                    "a",f.max(col("b")+lit(1)).alias("x"),
+                    where=(col("b")<2) & (col("a")>1),
+                    having=f.max(col("b")+lit(1))>0
+                )
+        """
+        sc = ColumnsSelect(
+            *[col(x) if isinstance(x, str) else x for x in columns],
+            arg_distinct=distinct,
+        )
+        df = self.workflow.process(
+            self, using=Select, params=dict(columns=sc, where=where, having=having)
+        )
+        return self._to_self_type(df)
+
+    def filter(self: TDF, condition: ColumnExpr) -> TDF:
+        """Filter rows by the given condition
+
+        :param df: the dataframe to be filtered
+        :param condition: (boolean) column expression
+        :return: a new filtered dataframe
+
+        .. admonition:: New Since
+            :class: hint
+
+            **0.6.0**
+
+        .. seealso::
+
+            Please find more expression examples in :mod:`fugue.column.sql` and
+            :mod:`fugue.column.functions`
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                import fugue.column.functions as f
+                from fugue import FugueWorkflow
+
+                dag = FugueWorkflow()
+                df = dag.df(pandas_df)
+
+                df.filter((col("a")>1) & (col("b")=="x"))
+                df.filter(f.coalesce(col("a"),col("b"))>1)
+        """
+        df = self.workflow.process(self, using=Filter, params=dict(condition=condition))
+        return self._to_self_type(df)
+
+    def assign(self: TDF, *args: ColumnExpr, **kwargs: Any) -> TDF:
+        """Update existing columns with new values and add new columns
+
+        :param df: the dataframe to set columns
+        :param args: column expressions
+        :param kwargs: column expressions to be renamed to the argument names,
+          if a value is not `ColumnExpr`, it will be treated as a literal
+        :return: a new dataframe with the updated values
+
+        .. tip::
+
+            This can be used to cast data types, alter column values or add new
+            columns. But you can't use aggregation in columns.
+
+        .. admonition:: New Since
+            :class: hint
+
+            **0.6.0**
+
+        .. seealso::
+
+            Please find more expression examples in :mod:`fugue.column.sql` and
+            :mod:`fugue.column.functions`
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                from fugue import FugueWorkflow
+
+                dag = FugueWorkflow()
+                df = dag.df(pandas_df)
+
+                # add/set 1 as column x
+                df.assign(lit(1,"x"))
+                df.assign(x=1)
+
+                # add/set x to be a+b
+                df.assign((col("a")+col("b")).alias("x"))
+                df.assign(x=col("a")+col("b"))
+
+                # cast column a data type to double
+                df.assign(col("a").cast(float))
+
+                # cast + new columns
+                df.assign(col("a").cast(float),x=1,y=col("a")+col("b"))
+        """
+        kv: List[ColumnExpr] = [
+            v.alias(k) if isinstance(v, ColumnExpr) else lit(v).alias(k)
+            for k, v in kwargs.items()
+        ]
+        df = self.workflow.process(
+            self, using=Assign, params=dict(columns=list(args) + kv)
+        )
+        return self._to_self_type(df)
+
+    def aggregate(self: TDF, *agg_cols: ColumnExpr, **kwagg_cols: ColumnExpr) -> TDF:
+        """Aggregate on dataframe
+
+        :param df: the dataframe to aggregate on
+        :param agg_cols: aggregation expressions
+        :param kwagg_cols: aggregation expressions to be renamed to the argument names
+        :return: the aggregated result as a dataframe
+
+        .. admonition:: New Since
+            :class: hint
+
+            **0.6.0**
+
+        .. seealso::
+
+            Please find more expression examples in :mod:`fugue.column.sql` and
+            :mod:`fugue.column.functions`
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                import fugue.column.functions as f
+
+                # SELECT MAX(b) AS b FROM df
+                df.aggregate(f.max(col("b")))
+
+                # SELECT a, MAX(b) AS x FROM df GROUP BY a
+                df.partition_by("a").aggregate(f.max(col("b")).alias("x"))
+                df.partition_by("a").aggregate(x=f.max(col("b")))
+        """
+        columns: List[ColumnExpr] = list(agg_cols) + [
+            v.alias(k) for k, v in kwagg_cols.items()
+        ]
+        df = self.workflow.process(
+            self,
+            using=Aggregate,
+            params=dict(columns=columns),
+            pre_partition=self.partition_spec,
+        )
+        return self._to_self_type(df)
 
     def transform(
         self: TDF,
