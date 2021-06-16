@@ -33,6 +33,17 @@ _SUPPORTED_OPERATORS: Dict[str, str] = {
 
 
 class SelectColumns:
+    """SQL ``SELECT`` columns collection.
+
+    :param cols: collection of :class:`~fugue.column.expressions.ColumnExpr`
+    :param arg_distinct: whether this is ``SELECT DISTINCT``, defaults to False
+
+    .. admonition:: New Since
+        :class: hint
+
+        **0.6.0**
+    """
+
     def __init__(self, *cols: ColumnExpr, arg_distinct: bool = False):  # noqa: C901
         self._distinct = arg_distinct
         self._all: List[ColumnExpr] = []
@@ -74,17 +85,32 @@ class SelectColumns:
             raise ValueError(f"'*' can't be used in aggregation: {self}")
 
     def __str__(self):
+        """String representation for debug purpose"""
         expr = ", ".join(str(x) for x in self.all_cols)
         return f"[{expr}]"
 
     def __uuid__(self):
+        """Unique id for this collection"""
         return to_uuid(self._distinct, self.all_cols)
 
     @property
     def is_distinct(self) -> bool:
+        """Whether this is a ``SELECT DISTINCT``"""
         return self._distinct
 
     def replace_wildcard(self, schema: Schema) -> "SelectColumns":
+        """Replace wildcard ``*`` with explicit column names
+
+        :param schema: the schema used to parse the wildcard
+        :return: a new instance containing only explicit columns
+
+        .. note::
+
+            It only replaces the top level ``*``. For example
+            ``count_distinct(col("*"))`` will not be transformed because
+            this ``*`` is not first level.
+        """
+
         def _get_cols() -> Iterable[ColumnExpr]:
             for c in self.all_cols:
                 if isinstance(c, _NamedColumnExpr) and c.wildcard:
@@ -95,6 +121,15 @@ class SelectColumns:
         return SelectColumns(*list(_get_cols()))
 
     def assert_all_with_names(self) -> "SelectColumns":
+        """Assert every column have explicit alias or the alias can
+        be inferred (non empty value). It will also validate there is
+        no duplicated aliases
+
+        :raises ValueError: if there are columns without alias, or there are
+          duplicated names.
+        :return: the instance itself
+        """
+
         names: Set[str] = set()
         for x in self.all_cols:
             if isinstance(x, _NamedColumnExpr):
@@ -114,56 +149,113 @@ class SelectColumns:
         return self
 
     def assert_no_wildcard(self) -> "SelectColumns":
+        """Assert there is no ``*`` on first level columns
+
+        :raises AssertionError: if ``col("*")`` exists
+        :return: the instance itself
+        """
         assert not self._has_wildcard
         return self
 
     def assert_no_agg(self) -> "SelectColumns":
+        """Assert there is no aggregation operation on any column.
+
+        :raises AssertionError: if there is any aggregation in the
+          collection.
+        :return: the instance itself
+
+        .. seealso::
+            Go to :func:`~fugue.column.functions.is_agg` to see how the
+            aggregations are detected.
+        """
         assert not self.has_agg
         return self
 
     @property
     def all_cols(self) -> List[ColumnExpr]:
+        """All columns (with inferred aliases)"""
         return self._all
 
     @property
     def literals(self) -> List[ColumnExpr]:
+        """All literal columns"""
         return self._literals
 
     @property
     def simple_cols(self) -> List[ColumnExpr]:
+        """All columns directly representing column names"""
         return self._cols
 
     @property
     def non_agg_funcs(self) -> List[ColumnExpr]:
+        """All columns with non-aggregation operations"""
         return self._non_agg_funcs
 
     @property
     def agg_funcs(self) -> List[ColumnExpr]:
+        """All columns with aggregation operations"""
         return self._agg_funcs
 
     @property
     def group_keys(self) -> List[ColumnExpr]:
+        """Group keys inferred from the columns.
+
+        .. note::
+
+            * if there is no aggregation, the result will be empty
+            * it is :meth:`~.simple_cols` plus :meth:`~.non_agg_funcs`
+        """
         return self._group_keys
 
     @property
     def has_agg(self) -> bool:
+        """Whether this select is an aggregation"""
         return len(self.agg_funcs) > 0
 
     @property
     def has_literals(self) -> bool:
+        """Whether this select contains literal columns"""
         return len(self.literals) > 0
 
     @property
     def simple(self) -> bool:
+        """Whether this select contains only simple column representations"""
         return len(self.simple_cols) == len(self.all_cols)
 
 
 class SQLExpressionGenerator:
+    """SQL generator for :class:`~.SelectColumns`
+
+    :param enable_cast: whether convert ``cast`` into the statement, defaults to True
+
+    .. admonition:: New Since
+        :class: hint
+
+        **0.6.0**
+    """
+
     def __init__(self, enable_cast: bool = True):
         self._enable_cast = enable_cast
         self._func_handler: Dict[str, Callable[[_FuncExpr], Iterable[str]]] = {}
 
     def where(self, condition: ColumnExpr, table: str) -> str:
+        """Generate a ``SELECT *`` statement with the given where clause
+
+        :param condition: column expression for ``WHERE``
+        :param table: table name for ``FROM``
+        :return: the SQL statement
+
+        :raises ValueError: if ``condition`` contains aggregation
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                gen = SQLExpressionGenerator(enable_cast=False)
+
+                # SELECT * FROM tb WHERE a>1 AND b IS NULL
+                gen.where((col("a")>1) & col("b").is_null(), "tb")
+        """
         assert_or_throw(
             not is_agg(condition),
             lambda: ValueError(f"{condition} has aggregation functions"),
@@ -178,6 +270,17 @@ class SQLExpressionGenerator:
         where: Optional[ColumnExpr] = None,
         having: Optional[ColumnExpr] = None,
     ) -> str:
+        """Construct the full ``SELECT`` statement on a single table
+
+        :param columns: columns to select, it may contain aggregations, if
+          so, the group keys are inferred.
+          See :meth:`~fugue.column.sql.SelectColumns.group_keys`
+        :param table: table name to select from
+        :param where: ``WHERE`` condition, defaults to None
+        :param having: ``HAVING`` condition, defaults to None. It is used
+          only when there is aggregation
+        :return: the full ``SELECT`` statement
+        """
         columns.assert_all_with_names()
 
         def _where() -> str:
@@ -224,17 +327,52 @@ class SQLExpressionGenerator:
             return f"SELECT {expr} FROM ({sub})"
 
     def generate(self, expr: ColumnExpr) -> str:
+        """Convert :class:`~fugue.column.expressions.ColumnExpr` to
+        SQL clause
+
+        :param expr: the column expression to convert
+        :return: the SQL clause for this expression
+        """
         return "".join(self._generate(expr)).strip()
 
     def add_func_handler(
         self, name: str, handler: Callable[[_FuncExpr], Iterable[str]]
     ) -> "SQLExpressionGenerator":
+        """Add special function handler.
+
+        :param name: name of the function
+        :param handler: the function to convert the function expression to SQL
+          clause
+        :return: the instance itself
+
+        .. caution::
+
+            Users should not use this directly
+        """
         self._func_handler[name] = handler
         return self
 
     def correct_select_schema(
         self, input_schema: Schema, select: SelectColumns, output_schema: Schema
     ) -> Optional[Schema]:
+        """Do partial schema inference from ``input_schema`` and ``select`` columns,
+        then compare with the SQL output dataframe schema, and return the different
+        part as a new schema, or None if there is no difference
+
+        :param input_schema: input dataframe schema for the select statement
+        :param select: the collection of select columns
+        :param output_schema: schema of the output dataframe after executing the SQL
+        :return: the difference as a new schema or None if no difference
+
+        .. tip::
+
+            This is particularly useful when the SQL engine messed up the schema of the
+            output. For example, ``SELECT *`` should return a dataframe with the same
+            schema of the input. However, for example a column ``a:int`` could become
+            ``a:long`` in the output dataframe because of information loss. This
+            function is designed to make corrections on column types when they can be
+            inferred. This may not be perfect but it can solve major discrepancies.
+        """
         cols = select.replace_wildcard(input_schema).assert_all_with_names()
         fields: List[pa.Field] = []
         for c in cols.all_cols:

@@ -9,6 +9,7 @@ from triad import Schema, to_uuid
 def test_named_col():
     assert "*" == str(col("*"))
     assert col("*").wildcard
+    assert "" == col("*").infer_alias().output_name
     raises(ValueError, lambda: col("*").alias("x"))
     raises(ValueError, lambda: col("*").cast("long"))
 

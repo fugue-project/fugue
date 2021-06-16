@@ -78,3 +78,8 @@ def test_functions():
     assert "COUNT(DISTINCT a)" == str(expr)
     assert expr.infer_type(schema) is None
     assert "COUNT(DISTINCT a) AS a" == str(expr.infer_alias())
+
+    expr = f.count_distinct(col("*"))
+    assert "COUNT(DISTINCT *)" == str(expr)
+    assert expr.infer_type(schema) is None
+    assert "COUNT(DISTINCT *)" == str(expr.infer_alias())

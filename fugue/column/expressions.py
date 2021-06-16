@@ -597,6 +597,10 @@ class _NamedColumnExpr(ColumnExpr):
         return self._name
 
     @property
+    def output_name(self) -> str:
+        return "" if self.wildcard else super().output_name
+
+    @property
     def wildcard(self) -> bool:
         return self.name == "*"
 
@@ -617,7 +621,7 @@ class _NamedColumnExpr(ColumnExpr):
         return other
 
     def infer_alias(self) -> ColumnExpr:
-        if self.as_name == "" and self.as_type is not None:
+        if not self.wildcard and self.as_name == "" and self.as_type is not None:
             return self.alias(self.output_name)
         return self
 
