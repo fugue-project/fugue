@@ -497,7 +497,7 @@ class BuiltInTests(object):
             tmpdir = str(self.tmpdir)
 
             def incr():
-                fs = FileSystem().makedirs(tmpdir, recreate=True)
+                fs = FileSystem(auto_close=False).makedirs(tmpdir, recreate=True)
                 fs.writetext(str(uuid4()) + ".txt", "")
                 return fs.glob("*.txt").count().files
 
@@ -575,7 +575,7 @@ class BuiltInTests(object):
             tmpdir = str(self.tmpdir)
 
             def incr():
-                fs = FileSystem().makedirs(tmpdir, recreate=True)
+                fs = FileSystem(auto_close=False).makedirs(tmpdir, recreate=True)
                 fs.writetext(str(uuid4()) + ".txt", "")
                 return fs.glob("*.txt").count().files
 

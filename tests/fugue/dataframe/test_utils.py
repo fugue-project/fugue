@@ -3,18 +3,22 @@ import os
 from threading import RLock
 
 import numpy as np
-from fs.osfs import OSFS
 from fugue.dataframe import to_local_bounded_df, to_local_df
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.dataframe.utils import (deserialize_df, get_join_schemas, pickle_df,
-                                   serialize_df, unpickle_df)
+from fugue.dataframe.utils import (
+    deserialize_df,
+    get_join_schemas,
+    pickle_df,
+    serialize_df,
+    unpickle_df,
+)
 from pytest import raises
+from triad import FileSystem, assert_or_throw
 from triad.collections.schema import SchemaError
 from triad.exceptions import InvalidOperationError, NoneArgumentError
-from triad.utils.assertion import assert_or_throw
 
 
 def test_to_local_df():
@@ -89,19 +93,11 @@ def test_get_join_schemas():
     assert u == "a:int,b:int,c:int"
     raises(NoneArgumentError, lambda: get_join_schemas(a, b, how=None, on=[]))
     raises(ValueError, lambda: get_join_schemas(a, b, how="x", on=[]))
-    raises(
-        SchemaError, lambda: get_join_schemas(a, b, how="CROSS", on=["a"])
-    )
-    raises(
-        SchemaError, lambda: get_join_schemas(a, c, how="CROSS", on=["a"])
-    )
+    raises(SchemaError, lambda: get_join_schemas(a, b, how="CROSS", on=["a"]))
+    raises(SchemaError, lambda: get_join_schemas(a, c, how="CROSS", on=["a"]))
     raises(SchemaError, lambda: get_join_schemas(a, c, how="CROSS", on=[]))
-    raises(
-        SchemaError, lambda: get_join_schemas(a, b, how="inner", on=["a"])
-    )
-    raises(
-        ValueError, lambda: get_join_schemas(a, c, how="outer", on=["a"])
-    )
+    raises(SchemaError, lambda: get_join_schemas(a, b, how="inner", on=["a"]))
+    raises(ValueError, lambda: get_join_schemas(a, c, how="outer", on=["a"]))
     i, u = get_join_schemas(a, c, how="inner", on=["a"])
     assert i == "a:int"
     assert u == "a:int,b:int,d:str"
@@ -110,9 +106,7 @@ def test_get_join_schemas():
     assert u == "a:int,b:int,d:str"
     a = ArrayDataFrame([], "a:int,b:int,c:int")
     b = ArrayDataFrame([], "c:int,b:int,x:int")
-    raises(
-        SchemaError, lambda: get_join_schemas(a, b, how="inner", on=["a"])
-    )
+    raises(SchemaError, lambda: get_join_schemas(a, b, how="inner", on=["a"]))
     i, u = get_join_schemas(a, b, how="inner", on=["c", "b"])
     assert i == "b:int,c:int"
     assert u == "a:int,b:int,c:int,x:int"
@@ -135,12 +129,14 @@ def test_pickle_df():
     assert_eq(ArrayDataFrame([], "a:int,b:int"))
     assert_eq(ArrayDataFrame([[None, None]], "a:int,b:int"))
     assert_eq(ArrayDataFrame([[None, "abc"]], "a:int,b:str"))
-    assert_eq(ArrayDataFrame([[None, [1, 2], dict(x=1)]],
-                             "a:int,b:[int],c:{x:int}"), raw=True)
-    assert_eq(IterableDataFrame([[None, [1, 2], dict(x=1)]],
-                                "a:int,b:[int],c:{x:int}"),
-              ArrayDataFrame([[None, [1, 2], dict(x=1)]],
-                             "a:int,b:[int],c:{x:int}"), raw=True)
+    assert_eq(
+        ArrayDataFrame([[None, [1, 2], dict(x=1)]], "a:int,b:[int],c:{x:int}"), raw=True
+    )
+    assert_eq(
+        IterableDataFrame([[None, [1, 2], dict(x=1)]], "a:int,b:[int],c:{x:int}"),
+        ArrayDataFrame([[None, [1, 2], dict(x=1)]], "a:int,b:[int],c:{x:int}"),
+        raw=True,
+    )
     assert_eq(PandasDataFrame([[None, None]], "a:int,b:int"))
     assert_eq(PandasDataFrame([[None, "abc"]], "a:int,b:str"))
 
@@ -155,22 +151,26 @@ def test_serialize_df(tmpdir):
         else:
             df_eq(df_expected, df_actual, throw=True)
 
-    fs = OSFS("/")
+    fs = FileSystem()
     assert deserialize_df(serialize_df(None)) is None
     assert_eq(ArrayDataFrame([], "a:int,b:int"))
     assert_eq(ArrayDataFrame([[None, None]], "a:int,b:int"))
     assert_eq(ArrayDataFrame([[None, "abc"]], "a:int,b:str"))
-    assert_eq(ArrayDataFrame([[None, [1, 2], dict(x=1)]],
-                             "a:int,b:[int],c:{x:int}"), raw=True)
-    assert_eq(IterableDataFrame([[None, [1, 2], dict(x=1)]],
-                                "a:int,b:[int],c:{x:int}"),
-              ArrayDataFrame([[None, [1, 2], dict(x=1)]],
-                             "a:int,b:[int],c:{x:int}"), raw=True)
+    assert_eq(
+        ArrayDataFrame([[None, [1, 2], dict(x=1)]], "a:int,b:[int],c:{x:int}"), raw=True
+    )
+    assert_eq(
+        IterableDataFrame([[None, [1, 2], dict(x=1)]], "a:int,b:[int],c:{x:int}"),
+        ArrayDataFrame([[None, [1, 2], dict(x=1)]], "a:int,b:[int],c:{x:int}"),
+        raw=True,
+    )
     assert_eq(PandasDataFrame([[None, None]], "a:int,b:int"))
     assert_eq(PandasDataFrame([[None, "abc"]], "a:int,b:str"))
 
-    raises(InvalidOperationError, lambda: serialize_df(
-        ArrayDataFrame([], "a:int,b:int"), 0))
+    raises(
+        InvalidOperationError,
+        lambda: serialize_df(ArrayDataFrame([], "a:int,b:int"), 0),
+    )
 
     path = os.path.join(tmpdir, "1.pkl")
 
