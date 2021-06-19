@@ -1,16 +1,17 @@
 import os
 import pathlib
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Iterable
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 
+import fs as pfs
 import pandas as pd
+from fs.errors import FileExpected
 from fugue.dataframe import LocalBoundedDataFrame, LocalDataFrame, PandasDataFrame
+from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
-from triad.collections.dict import ParamDict
-from fs.errors import FileExpected
 
 
 class FileParser(object):
@@ -30,7 +31,7 @@ class FileParser(object):
         else:
             self._uri = urlparse(path[:last])
             self._glob_pattern = path[last + 1 :]
-            self._path = os.path.join(self._uri.path, self._glob_pattern)
+            self._path = pfs.path.join(self._uri.path, self._glob_pattern)
 
         if format_hint is None or format_hint == "":
             for k, v in _FORMAT_MAP.items():
@@ -127,7 +128,7 @@ def _get_single_files(
     for f in fp:
         if f.glob_pattern != "":
             files = [
-                FileParser(os.path.join(f.uri, os.path.basename(x.path)))
+                FileParser(pfs.path.join(f.uri, os.path.basename(x.path)))
                 for x in fs.opendir(f.uri).glob(f.glob_pattern)
             ]
             yield from _get_single_files(files, fs)
@@ -166,7 +167,7 @@ def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
         fs = FileSystem()
         return pd.concat(
             [
-                pd.read_csv(os.path.join(path, os.path.basename(x.path)), **kwargs)
+                pd.read_csv(pfs.path.join(path, os.path.basename(x.path)), **kwargs)
                 for x in fs.opendir(path).glob("*.csv")
             ]
         )
@@ -177,6 +178,9 @@ def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
         return load_dir()
     except pd.errors.ParserError:  # pragma: no cover
         # for python < 3.7
+        return load_dir()
+    except PermissionError:  # pragma: no cover
+        # for windows
         return load_dir()
 
 
@@ -226,11 +230,11 @@ def _safe_load_json(path: str, **kwargs: Any) -> pd.DataFrame:
     kw = {"orient": "records", "lines": True, **kwargs}
     try:
         return pd.read_json(path, **kw)
-    except IsADirectoryError:
+    except (IsADirectoryError, PermissionError):
         fs = FileSystem()
         return pd.concat(
             [
-                pd.read_json(os.path.join(path, os.path.basename(x.path)), **kw)
+                pd.read_json(pfs.path.join(path, os.path.basename(x.path)), **kw)
                 for x in fs.opendir(path).glob("*.json")
             ]
         )
@@ -287,12 +291,12 @@ def _load_avro(
     path = p.uri
     try:
         pdf = _load_single_avro(path, **kwargs)
-    except (IsADirectoryError, FileExpected):
+    except (IsADirectoryError, PermissionError, FileExpected):
         fs = FileSystem()
         pdf = pd.concat(
             [
                 _load_single_avro(
-                    os.path.join(path, os.path.basename(x.path)), **kwargs
+                    pfs.path.join(path, os.path.basename(x.path)), **kwargs
                 )
                 for x in fs.opendir(path).glob("*.avro")
             ]
@@ -318,7 +322,8 @@ def _load_single_avro(path: str, **kwargs: Any) -> pd.DataFrame:
         process_record = kw["process_record"]
         del kw["process_record"]
 
-    with FileSystem().openbin(path) as fp:
+    fs = FileSystem()
+    with fs.openbin(path) as fp:
         # Configure Avro reader
         avro_reader = reader(fp)
         # Load records in memory

@@ -89,7 +89,7 @@ def _save_csv(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
 def _safe_load_csv(path: str, **kwargs: Any) -> dd.DataFrame:
     try:
         return dd.read_csv(path, **kwargs)
-    except IsADirectoryError:
+    except (IsADirectoryError, PermissionError):
         return dd.read_csv(os.path.join(path, "*.csv"), **kwargs)
 
 
@@ -134,7 +134,7 @@ def _save_json(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
 def _safe_load_json(path: str, **kwargs: Any) -> dd.DataFrame:
     try:
         return dd.read_json(path, **kwargs)
-    except IsADirectoryError:
+    except (IsADirectoryError, PermissionError):
         x = dd.read_json(os.path.join(path, "*.json"), **kwargs)
         print(x.compute())
         return x
