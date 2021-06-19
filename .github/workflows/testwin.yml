@@ -24,4 +24,4 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
     - name: Test
-      run: python -m pytest tests/fugue_spark
+      run: python -m pytest tests/fugue tests/fugue_sql tests/fugue_dask
