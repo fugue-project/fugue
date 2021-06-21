@@ -33,7 +33,12 @@ from fugue import (
     output_transformer,
     outputter,
     processor,
+    register_creator,
     register_default_sql_engine,
+    register_output_transformer,
+    register_outputter,
+    register_processor,
+    register_transformer,
     transformer,
 )
 from fugue.column import col
@@ -1306,6 +1311,34 @@ class BuiltInTests(object):
 
             with self.dag() as dag:
                 dag.df([[0, 1]], "a:int,b:int").partition(by=["b"]).output(o4)
+
+        def test_extension_registry(self):
+            def my_creator() -> pd.DataFrame:
+                return pd.DataFrame([[0, 1], [1, 2]], columns=["a", "b"])
+
+            def my_processor(df: pd.DataFrame) -> pd.DataFrame:
+                return df
+
+            # schema: *
+            def my_transformer(df: pd.DataFrame) -> pd.DataFrame:
+                return df
+
+            def my_out_transformer(df: pd.DataFrame) -> None:
+                print(df)
+
+            def my_outputter(df: pd.DataFrame) -> None:
+                print(df)
+
+            register_creator("mc", my_creator, overwrite=True)
+            register_processor("mp", my_processor, overwrite=True)
+            register_transformer("mt", my_transformer, overwrite=True)
+            register_output_transformer("mot", my_out_transformer, overwrite=True)
+            register_outputter("mo", my_outputter, overwrite=True)
+
+            with self.dag() as dag:
+                df = dag.create("mc").process("mp").transform("mt")
+                df.out_transform("mot")
+                df.output("mo")
 
         def test_callback(self):  # noqa: C901
             class Callbacks(object):

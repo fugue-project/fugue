@@ -1,8 +1,6 @@
 from typing import Any, Callable, Dict, Iterable, List
 
 import pandas as pd
-from fugue.dataframe import ArrayDataFrame
-from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.transformer import (
     Transformer,
     _to_output_transformer,
@@ -10,8 +8,6 @@ from fugue.extensions.transformer import (
     register_output_transformer,
 )
 from fugue.extensions.transformer.constants import OUTPUT_TRANSFORMER_DUMMY_SCHEMA
-from pytest import raises
-from triad.collections.schema import Schema
 from triad.utils.hash import to_uuid
 
 

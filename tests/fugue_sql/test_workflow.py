@@ -6,7 +6,6 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from fugue.extensions._builtins.outputters import Show
-from fugue.workflow.workflow import WorkflowDataFrame
 from pytest import raises
 
 from fugue_sql import FugueSQLWorkflow, fsql
