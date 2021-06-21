@@ -25,6 +25,15 @@ _OUT_TRANSFORMER_REGISTRY = ExtensionRegistry()
 
 
 def register_transformer(alias: str, obj: Any, overwrite: bool = False):
+    """Assign an alias for a
+
+    :param alias: [description]
+    :type alias: str
+    :param obj: [description]
+    :type obj: Any
+    :param overwrite: [description], defaults to False
+    :type overwrite: bool, optional
+    """
     _TRANSFORMER_REGISTRY.register(alias, obj, overwrite=overwrite)
 
 

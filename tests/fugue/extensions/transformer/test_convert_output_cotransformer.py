@@ -55,8 +55,8 @@ def test__to_output_transformer():
 
 
 def test__register():
-    register_output_transformer("x", MockTransformer)
-    b = _to_output_transformer("x")
+    register_output_transformer("oct_x", MockTransformer)
+    b = _to_output_transformer("oct_x")
     assert isinstance(b, MockTransformer)
 
 

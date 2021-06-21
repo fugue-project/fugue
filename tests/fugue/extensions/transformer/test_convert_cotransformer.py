@@ -60,8 +60,8 @@ def test__to_transformer():
 
 
 def test__register():
-    register_transformer("x", MockTransformer)
-    b = _to_transformer("x")
+    register_transformer("ct_x", MockTransformer)
+    b = _to_transformer("ct_x")
     assert isinstance(b, MockTransformer)
 
 

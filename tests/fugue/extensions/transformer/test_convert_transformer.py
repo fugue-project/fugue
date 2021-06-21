@@ -66,8 +66,8 @@ def test__to_transformer():
 
 
 def test__register():
-    register_transformer("x", MockTransformer)
-    b = _to_transformer("x")
+    register_transformer("t_x", MockTransformer)
+    b = _to_transformer("t_x")
     assert isinstance(b, MockTransformer)
 
     register_transformer("t_t3", t3)
@@ -92,7 +92,7 @@ def test__register():
     # can't overwrite
     raises(
         FugueInterfacelessError,
-        lambda: register_transformer("register_temp", MockTransformer, overwrite=False),
+        lambda: register_transformer("register_temp", MockTransformer),
     )
 
 
