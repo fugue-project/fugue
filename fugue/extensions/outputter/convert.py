@@ -5,12 +5,19 @@ from fugue._utils.interfaceless import FunctionWrapper
 from fugue.dataframe import DataFrames
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions._utils import (
+    ExtensionRegistry,
     parse_validation_rules_from_comment,
     to_validation_rules,
 )
 from fugue.extensions.outputter.outputter import Outputter
 from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 from triad.utils.hash import to_uuid
+
+_OUTPUTTER_REGISTRY = ExtensionRegistry()
+
+
+def register_outputter(alias: str, obj: Any, overwrite: bool = False):
+    _OUTPUTTER_REGISTRY.register(alias, obj, overwrite=overwrite)
 
 
 def outputter(**validation_rules: Any) -> Callable[[Any], "_FuncAsOutputter"]:
@@ -34,6 +41,7 @@ def _to_outputter(
     validation_rules: Optional[Dict[str, Any]] = None,
 ) -> Outputter:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
+    obj = _OUTPUTTER_REGISTRY.get(obj)
     exp: Optional[Exception] = None
     if validation_rules is None:
         validation_rules = {}

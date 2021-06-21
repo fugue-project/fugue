@@ -5,7 +5,7 @@ from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.exceptions import FugueInterfacelessError
 from fugue.execution import ExecutionEngine
-from fugue.extensions.creator import Creator, creator, _to_creator
+from fugue.extensions.creator import Creator, creator, _to_creator, register_creator
 from pytest import raises
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
@@ -15,6 +15,17 @@ from triad.utils.hash import to_uuid
 def test_creator():
     assert isinstance(t1, Creator)
     assert isinstance(t2, Creator)
+
+
+def test_register():
+    register_creator("x", T0)
+    b = _to_creator("x")
+    assert isinstance(b, Creator)
+
+    raises(
+        FugueInterfacelessError,
+        lambda: register_creator("x", Creator, overwrite=False),
+    )
 
 
 def test__to_creator():
@@ -48,6 +59,7 @@ def test__to_creator():
     assert isinstance(_to_creator(t8), Creator)
     assert isinstance(_to_creator(t9), Creator)
     assert isinstance(_to_creator(t10), Creator)
+
 
 def test_run_creator():
     o1 = _to_creator(t3)
@@ -125,6 +137,7 @@ def t8(e: ExecutionEngine, a, b) -> List[List[Any]]:
 
 def t9(e: ExecutionEngine, a, b) -> Iterable[pd.DataFrame]:
     pass
+
 
 def t10(e: ExecutionEngine, a, b, **kwargs) -> Iterable[pd.DataFrame]:
     pass

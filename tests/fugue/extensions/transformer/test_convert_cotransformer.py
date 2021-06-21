@@ -3,7 +3,12 @@ from typing import Any, Dict, Iterable, List
 import pandas as pd
 from fugue.dataframe import ArrayDataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
-from fugue.extensions.transformer import CoTransformer, cotransformer, _to_transformer
+from fugue.extensions.transformer import (
+    CoTransformer,
+    cotransformer,
+    _to_transformer,
+    register_transformer,
+)
 from pytest import raises
 from triad.collections.schema import Schema
 from triad.utils.hash import to_uuid
@@ -52,6 +57,12 @@ def test__to_transformer():
     assert isinstance(g, CoTransformer)
     i = _to_transformer("t7", "a:int,b:int")
     assert isinstance(i, CoTransformer)
+
+
+def test__register():
+    register_transformer("x", MockTransformer)
+    b = _to_transformer("x")
+    assert isinstance(b, MockTransformer)
 
 
 def test__to_transformer_determinism():

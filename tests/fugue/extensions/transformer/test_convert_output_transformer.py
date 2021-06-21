@@ -1,4 +1,4 @@
-from typing import Any, Dict, Iterable, List, Callable
+from typing import Any, Callable, Dict, Iterable, List
 
 import pandas as pd
 from fugue.dataframe import ArrayDataFrame
@@ -7,6 +7,7 @@ from fugue.extensions.transformer import (
     Transformer,
     _to_output_transformer,
     output_transformer,
+    register_output_transformer,
 )
 from fugue.extensions.transformer.constants import OUTPUT_TRANSFORMER_DUMMY_SCHEMA
 from pytest import raises
@@ -50,6 +51,12 @@ def test__to_output_transformer():
     assert isinstance(h, Transformer)
     i = _to_output_transformer("t8")
     assert isinstance(i, Transformer)
+
+
+def test__register():
+    register_output_transformer("x", MockTransformer)
+    b = _to_output_transformer("x")
+    assert isinstance(b, MockTransformer)
 
 
 def test__to_output_transformer_determinism():

@@ -2,19 +2,33 @@ from typing import Any, Dict, Iterable, List
 
 import pandas as pd
 from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
-from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.exceptions import FugueInterfacelessError
 from fugue.execution import ExecutionEngine
-from fugue.extensions.processor import Processor, processor, _to_processor
+from fugue.extensions.processor import (
+    Processor,
+    processor,
+    _to_processor,
+    register_processor,
+)
 from pytest import raises
 from triad.collections.dict import ParamDict
-from triad.collections.schema import Schema
 from triad.utils.hash import to_uuid
 
 
 def test_processor():
     assert isinstance(t1, Processor)
     assert isinstance(t2, Processor)
+
+
+def test_register():
+    register_processor("x", MockProcessor)
+    b = _to_processor("x")
+    assert isinstance(b, MockProcessor)
+
+    raises(
+        FugueInterfacelessError,
+        lambda: register_processor("x", MockProcessor, overwrite=False),
+    )
 
 
 def test__to_processor():
@@ -182,7 +196,9 @@ def t10(e: ExecutionEngine, df1: DataFrame, df2: DataFrame) -> Iterable[pd.DataF
     pass
 
 
-def t11(e: ExecutionEngine, df1: DataFrame, df2: DataFrame, **kwargs) -> Iterable[pd.DataFrame]:
+def t11(
+    e: ExecutionEngine, df1: DataFrame, df2: DataFrame, **kwargs
+) -> Iterable[pd.DataFrame]:
     pass
 
 

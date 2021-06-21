@@ -1,14 +1,21 @@
 import copy
 from typing import Any, Callable, Dict, List, Optional, no_type_check
 
-from fugue.extensions.creator.creator import Creator
+from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
 from fugue.dataframe import DataFrame
 from fugue.exceptions import FugueInterfacelessError
-from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
+from fugue.extensions._utils import ExtensionRegistry
+from fugue.extensions.creator.creator import Creator
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import to_function, to_instance, get_caller_global_local_vars
+from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 from triad.utils.hash import to_uuid
+
+_CREATOR_REGISTRY = ExtensionRegistry()
+
+
+def register_creator(alias: str, obj: Any, overwrite: bool = False):
+    _CREATOR_REGISTRY.register(alias, obj, overwrite=overwrite)
 
 
 def creator(schema: Any = None) -> Callable[[Any], "_FuncAsCreator"]:
@@ -30,6 +37,7 @@ def _to_creator(
     local_vars: Optional[Dict[str, Any]] = None,
 ) -> Creator:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
+    obj = _CREATOR_REGISTRY.get(obj)
     exp: Optional[Exception] = None
     try:
         return copy.copy(
