@@ -1,3 +1,5 @@
+import dask.dataframe as dd
+import pandas as pd
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -59,3 +61,20 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
     def test_default_init(self):
         a = FugueWorkflow().df([[0]], "a:int")
         df_eq(a.compute(DaskExecutionEngine), [[0]], "a:int")
+
+    def test_annotation(self):
+        def m_c(engine: DaskExecutionEngine) -> dd.DataFrame:
+            return dd.from_pandas(
+                pd.DataFrame([[0]], columns=["a"]), npartitions=2
+            )
+
+        def m_p(engine: DaskExecutionEngine, df: dd.DataFrame) -> dd.DataFrame:
+            return df
+
+        def m_o(engine: DaskExecutionEngine, df: dd.DataFrame) -> None:
+            assert 1 == df.compute().shape[0]
+
+        with self.dag() as dag:
+            df = dag.create(m_c).process(m_p)
+            df.assert_eq(dag.df([[0]], "a:long"))
+            df.output(m_o)

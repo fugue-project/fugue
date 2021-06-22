@@ -2,7 +2,7 @@ from typing import Any, Dict, Iterable
 
 from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
-from fugue.execution import ExecutionEngine
+from fugue.execution import ExecutionEngine, NativeExecutionEngine
 from fugue.extensions.outputter import (
     Outputter,
     _to_outputter,
@@ -96,12 +96,12 @@ def test_run_outputter():
     assert 4 == c.value
     c.value = 0
     o1._params = ParamDict([("a", 2), ("b", c)], deep=False)
-    o1._execution_engine = "dummy"
+    o1._execution_engine = NativeExecutionEngine()
     o1.process(dfs)
     assert 4 == c.value
     c.value = 0
     o1._params = ParamDict([("a", 2), ("b", c)], deep=False)
-    o1._execution_engine = "dummy"
+    o1._execution_engine = NativeExecutionEngine()
     o1.process(dfs2)
     assert 4 == c.value
 

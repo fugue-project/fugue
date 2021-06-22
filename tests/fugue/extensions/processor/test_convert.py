@@ -3,11 +3,11 @@ from typing import Any, Dict, Iterable, List
 import pandas as pd
 from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
-from fugue.execution import ExecutionEngine
+from fugue.execution import ExecutionEngine, NativeExecutionEngine
 from fugue.extensions.processor import (
     Processor,
-    processor,
     _to_processor,
+    processor,
     register_processor,
 )
 from pytest import raises
@@ -90,10 +90,10 @@ def test_run_processor():
     assert 4 == o1("dummy", dfs, 2)[0][0]
     assert 4 == o1("dummy", dfs2, 2)[0][0]
     o1._params = ParamDict([("a", 2)], deep=False)
-    o1._execution_engine = "dummy"
+    o1._execution_engine = NativeExecutionEngine()
     assert 4 == o1.process(dfs).as_array()[0][0]
     o1._params = ParamDict([("a", 2)], deep=False)
-    o1._execution_engine = "dummy"
+    o1._execution_engine = NativeExecutionEngine()
     assert 4 == o1.process(dfs2).as_array()[0][0]
 
 

@@ -1,14 +1,12 @@
-from typing import Any, Dict, Iterable, List
+from typing import Any, Iterable, List
 
 import pandas as pd
-from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
-from fugue.dataframe.dataframe import LocalDataFrame
+from fugue.dataframe import ArrayDataFrame, DataFrame
 from fugue.exceptions import FugueInterfacelessError
-from fugue.execution import ExecutionEngine
-from fugue.extensions.creator import Creator, creator, _to_creator, register_creator
+from fugue.execution import ExecutionEngine, NativeExecutionEngine
+from fugue.extensions.creator import Creator, _to_creator, creator, register_creator
 from pytest import raises
 from triad.collections.dict import ParamDict
-from triad.collections.schema import Schema
 from triad.utils.hash import to_uuid
 
 
@@ -72,7 +70,7 @@ def test_run_creator():
     o1 = _to_creator(t5)
     assert 4 == o1("dummy", 4)[0][0]
     o1._params = ParamDict([("a", 2)], deep=False)
-    o1._execution_engine = "dummy"
+    o1._execution_engine = NativeExecutionEngine()
     assert 2 == o1.create().as_array()[0][0]
 
 

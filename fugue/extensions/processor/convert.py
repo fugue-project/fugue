@@ -77,8 +77,8 @@ class _FuncAsProcessor(Processor):
     def process(self, dfs: DataFrames) -> DataFrame:
         args: List[Any] = []
         kwargs: Dict[str, Any] = {}
-        if self._need_engine:
-            args.append(self.execution_engine)
+        if self._engine_param is not None:
+            args.append(self._engine_param.to_input(self.execution_engine))
         if self._use_dfs:
             args.append(dfs)
         else:
@@ -91,6 +91,7 @@ class _FuncAsProcessor(Processor):
             args=args,
             kwargs=kwargs,
             output_schema=self.output_schema if self._need_output_schema else None,
+            ctx=self.execution_engine,
         )
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
@@ -100,7 +101,7 @@ class _FuncAsProcessor(Processor):
     def __uuid__(self) -> str:
         return to_uuid(
             self._wrapper,
-            self._need_engine,
+            self._engine_param,
             self._use_dfs,
             self._need_output_schema,
             str(self._output_schema),
@@ -118,21 +119,25 @@ class _FuncAsProcessor(Processor):
         tr._wrapper = FunctionWrapper(
             func, "^e?(c|[dlspq]+)x*z?$", "^[dlspq]$"
         )  # type: ignore
-        tr._need_engine = tr._wrapper.input_code.startswith("e")
+        tr._engine_param = (
+            tr._wrapper._params.get_value_by_index(0)
+            if tr._wrapper.input_code.startswith("e")
+            else None
+        )
         tr._use_dfs = "c" in tr._wrapper.input_code
-        tr._need_output_schema = "s" == tr._wrapper.output_code
+        tr._need_output_schema = tr._wrapper.need_output_schema
         tr._validation_rules = validation_rules
         tr._output_schema = Schema(schema)
         if len(tr._output_schema) == 0:
             assert_or_throw(
-                not tr._need_output_schema,
+                tr._need_output_schema is None or not tr._need_output_schema,
                 FugueInterfacelessError(
                     f"schema must be provided for return type {tr._wrapper._rt}"
                 ),
             )
         else:
             assert_or_throw(
-                tr._need_output_schema,
+                tr._need_output_schema is None or tr._need_output_schema,
                 FugueInterfacelessError(
                     f"schema must not be provided for return type {tr._wrapper._rt}"
                 ),
