@@ -249,10 +249,6 @@ class FunctionWrapper(object):
         return "".join(x.code for x in self._params.values())
 
     @property
-    def output_code(self) -> str:
-        return self._rt.code
-
-    @property
     def need_output_schema(self) -> Optional[bool]:
         return (
             self._rt.need_schema()
@@ -492,7 +488,7 @@ class _IterableListParam(_DataFrameParamBase):
     def count(self, df: Iterable[List[Any]]) -> int:
         return sum(1 for _ in df)
 
-    def need_schema(self) -> Optional[bool]:
+    def need_schema(self) -> Optional[bool]:  # pragma: no cover
         return True
 
 
@@ -511,7 +507,7 @@ class _EmptyAwareIterableListParam(_DataFrameParamBase):
     def count(self, df: EmptyAwareIterable[List[Any]]) -> int:
         return sum(1 for _ in df)
 
-    def need_schema(self) -> Optional[bool]:
+    def need_schema(self) -> Optional[bool]:  # pragma: no cover
         return True
 
 
@@ -536,7 +532,7 @@ class _ListDictParam(_DataFrameParamBase):
     def count(self, df: List[Dict[str, Any]]) -> int:
         return len(df)
 
-    def need_schema(self) -> Optional[bool]:
+    def need_schema(self) -> Optional[bool]:  # pragma: no cover
         return True
 
 
@@ -561,7 +557,7 @@ class _IterableDictParam(_DataFrameParamBase):
     def count(self, df: Iterable[Dict[str, Any]]) -> int:
         return sum(1 for _ in df)
 
-    def need_schema(self) -> Optional[bool]:
+    def need_schema(self) -> Optional[bool]:  # pragma: no cover
         return True
 
 
@@ -588,7 +584,7 @@ class _EmptyAwareIterableDictParam(_DataFrameParamBase):
     def count(self, df: EmptyAwareIterable[Dict[str, Any]]) -> int:
         return sum(1 for _ in df)
 
-    def need_schema(self) -> Optional[bool]:
+    def need_schema(self) -> Optional[bool]:  # pragma: no cover
         return True
 
 
