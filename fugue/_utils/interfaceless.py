@@ -1,20 +1,31 @@
 import copy
 import inspect
 import re
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, get_type_hints
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    get_type_hints,
+)
 
 import pandas as pd
-from fugue.collections.partition import IndexedOrderedDict
 from fugue.dataframe import (
     ArrayDataFrame,
     DataFrame,
     IterableDataFrame,
     LocalDataFrame,
-    PandasDataFrame,
     LocalDataFrameIterableDataFrame,
+    PandasDataFrame,
 )
 from fugue.dataframe.dataframes import DataFrames
 from fugue.dataframe.utils import to_local_df
+from fugue.exceptions import FugueWorkflowRuntimeError
+from triad import IndexedOrderedDict
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_full_type_path, to_type
@@ -91,6 +102,57 @@ def is_class_method(func: Callable) -> bool:
     return "self" in sig.parameters
 
 
+class AnnotationConverter:
+    def check(self, annotation: Any) -> bool:  # pragma: no cover
+        raise NotImplementedError
+
+    def convert(
+        self, param: Optional[inspect.Parameter]
+    ) -> "_FuncParam":  # pragma: no cover
+        raise NotImplementedError
+
+
+class SimpleAnnotationConverter(AnnotationConverter):
+    def __init__(
+        self,
+        expected_annotation,
+        converter: Callable[[Optional[inspect.Parameter]], "_FuncParam"],
+    ) -> None:
+        self._expected = expected_annotation
+        self._converter = converter
+
+    def check(self, annotation: Any) -> bool:
+        return annotation is self._expected
+
+    def convert(self, param: Optional[inspect.Parameter]) -> "_FuncParam":
+        return self._converter(param)
+
+
+_ANNOTATION_CONVERTERS: List[Tuple[float, AnnotationConverter]] = []
+
+
+def register_annotation_converter(
+    priority: float, converter: AnnotationConverter
+) -> None:
+    """Register a new annotation for Fugue's interfaceless system
+
+    :param priority: priority number, smaller means higher priority for checking
+    :param converter: a new converter
+
+    .. admonition:: New Since
+        :class: hint
+
+        **0.6.0**
+
+    .. note::
+
+        This is not ready for public use yet, the interface is subjected to change
+
+    """
+    _ANNOTATION_CONVERTERS.append((priority, converter))
+    _ANNOTATION_CONVERTERS.sort(key=lambda x: x[0])
+
+
 class FunctionWrapper(object):
     def __init__(
         self,
@@ -117,8 +179,12 @@ class FunctionWrapper(object):
         return "".join(x.code for x in self._params.values())
 
     @property
-    def output_code(self) -> str:
-        return self._rt.code
+    def need_output_schema(self) -> Optional[bool]:
+        return (
+            self._rt.need_schema()
+            if isinstance(self._rt, _DataFrameParamBase)
+            else False
+        )
 
     def run(  # noqa: C901
         self,
@@ -127,6 +193,7 @@ class FunctionWrapper(object):
         ignore_unknown: bool = False,
         output_schema: Any = None,
         output: bool = True,
+        ctx: Any = None,
     ) -> Any:
         p: Dict[str, Any] = {}
         for i in range(len(args)):
@@ -144,7 +211,7 @@ class FunctionWrapper(object):
                         isinstance(p[k], DataFrame),
                         lambda: TypeError(f"{p[k]} is not a DataFrame"),
                     )
-                    rargs[k] = v.to_input_data(p[k])
+                    rargs[k] = v.to_input_data(p[k], ctx=ctx)
                 else:
                     rargs[k] = p[k]  # TODO: should we do auto type conversion?
                 del p[k]
@@ -160,7 +227,7 @@ class FunctionWrapper(object):
                 self._rt.count(rt)
             return
         if isinstance(self._rt, _DataFrameParamBase):
-            return self._rt.to_output_df(rt, output_schema)
+            return self._rt.to_output_df(rt, output_schema, ctx=ctx)
         return rt
 
     def _parse_function(
@@ -182,11 +249,11 @@ class FunctionWrapper(object):
         params_str = "".join(x.code for x in res.values())
         assert_or_throw(
             re.match(params_re, params_str),
-            lambda: TypeError(f"Input types not valid {res}"),
+            lambda: TypeError(f"Input types not valid {res} for {func}"),
         )
         assert_or_throw(
             re.match(return_re, rt.code),
-            lambda: TypeError(f"Return type not valid {rt}"),
+            lambda: TypeError(f"Return type not valid {rt} for {func}"),
         )
         return class_method, res, rt
 
@@ -216,15 +283,18 @@ class FunctionWrapper(object):
             or str(annotation).startswith("typing.Union[typing.Callable")
         ):
             return _OptionalCallableParam(param)
+        for _, c in _ANNOTATION_CONVERTERS:
+            if c.check(annotation):
+                return c.convert(param)
         if annotation is to_type("fugue.execution.ExecutionEngine"):
             # to prevent cyclic import
-            return _ExecutionEngineParam(param)
+            return ExecutionEngineParam(param, "ExecutionEngine", annotation)
         if annotation is DataFrames:
             return _DataFramesParam(param)
         if annotation is LocalDataFrame:
             return _LocalDataFrameParam(param)
         if annotation is DataFrame:
-            return _DataFrameParam(param)
+            return DataFrameParam(param)
         if annotation is pd.DataFrame:
             return _PandasParam(param)
         if annotation is List[List[Any]]:
@@ -272,9 +342,25 @@ class _OptionalCallableParam(_FuncParam):
         super().__init__(param, "Callable", "f")
 
 
-class _ExecutionEngineParam(_FuncParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, "ExecutionEngine", "e")
+class ExecutionEngineParam(_FuncParam):
+    def __init__(
+        self,
+        param: Optional[inspect.Parameter],
+        annotation: str,
+        engine_type: Type,
+    ):
+        super().__init__(param, annotation, "e")
+        self._type = engine_type
+
+    def to_input(self, engine: Any) -> Any:  # pragma: no cover
+        assert_or_throw(
+            isinstance(engine, self._type),
+            FugueWorkflowRuntimeError(f"{engine} is not of type {self._type}"),
+        )
+        return engine
+
+    def __uuid__(self) -> str:
+        return to_uuid(self.code, self.annotation, self._type)
 
 
 class _DataFramesParam(_FuncParam):
@@ -287,31 +373,38 @@ class _DataFrameParamBase(_FuncParam):
         super().__init__(param, annotation, code)
         assert_or_throw(self.required, lambda: TypeError(f"{self} must be required"))
 
-    def to_input_data(self, df: DataFrame) -> Any:  # pragma: no cover
+    def to_input_data(self, df: DataFrame, ctx: Any) -> Any:  # pragma: no cover
         raise NotImplementedError
 
-    def to_output_df(self, df: Any, schema: Any) -> DataFrame:  # pragma: no cover
+    def to_output_df(
+        self, df: Any, schema: Any, ctx: Any
+    ) -> DataFrame:  # pragma: no cover
         raise NotImplementedError
 
     def count(self, df: Any) -> int:  # pragma: no cover
         raise NotImplementedError
 
+    def need_schema(self) -> Optional[bool]:
+        return False
 
-class _DataFrameParam(_DataFrameParamBase):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, "DataFrame", "d")
 
-    def to_input_data(self, df: DataFrame) -> Any:
+class DataFrameParam(_DataFrameParamBase):
+    def __init__(
+        self, param: Optional[inspect.Parameter], annotation: str = "DataFrame"
+    ):
+        super().__init__(param, annotation=annotation, code="d")
+
+    def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         return df
 
-    def to_output_df(self, output: DataFrame, schema: Any) -> DataFrame:
+    def to_output_df(self, output: Any, schema: Any, ctx: Any) -> DataFrame:
         assert_or_throw(
             schema is None or output.schema == schema,
             lambda: f"Output schema mismatch {output.schema} vs {schema}",
         )
         return output
 
-    def count(self, df: DataFrame) -> int:
+    def count(self, df: Any) -> int:
         if df.is_bounded:
             return df.count()
         else:
@@ -322,10 +415,10 @@ class _LocalDataFrameParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "LocalDataFrame", "l")
 
-    def to_input_data(self, df: DataFrame) -> LocalDataFrame:
+    def to_input_data(self, df: DataFrame, ctx: Any) -> LocalDataFrame:
         return to_local_df(df)
 
-    def to_output_df(self, output: LocalDataFrame, schema: Any) -> DataFrame:
+    def to_output_df(self, output: LocalDataFrame, schema: Any, ctx: Any) -> DataFrame:
         assert_or_throw(
             schema is None or output.schema == schema,
             lambda: f"Output schema mismatch {output.schema} vs {schema}",
@@ -343,54 +436,67 @@ class _ListListParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "List[List[Any]]", "s")
 
-    def to_input_data(self, df: DataFrame) -> List[List[Any]]:
+    def to_input_data(self, df: DataFrame, ctx: Any) -> List[List[Any]]:
         return df.as_array(type_safe=True)
 
-    def to_output_df(self, output: List[List[Any]], schema: Any) -> DataFrame:
+    def to_output_df(self, output: List[List[Any]], schema: Any, ctx: Any) -> DataFrame:
         return ArrayDataFrame(output, schema)
 
     def count(self, df: List[List[Any]]) -> int:
         return len(df)
+
+    def need_schema(self) -> Optional[bool]:
+        return True
 
 
 class _IterableListParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "Iterable[List[Any]]", "s")
 
-    def to_input_data(self, df: DataFrame) -> Iterable[List[Any]]:
+    def to_input_data(self, df: DataFrame, ctx: Any) -> Iterable[List[Any]]:
         return df.as_array_iterable(type_safe=True)
 
-    def to_output_df(self, output: Iterable[List[Any]], schema: Any) -> DataFrame:
+    def to_output_df(
+        self, output: Iterable[List[Any]], schema: Any, ctx: Any
+    ) -> DataFrame:
         return IterableDataFrame(output, schema)
 
     def count(self, df: Iterable[List[Any]]) -> int:
         return sum(1 for _ in df)
+
+    def need_schema(self) -> Optional[bool]:  # pragma: no cover
+        return True
 
 
 class _EmptyAwareIterableListParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "EmptyAwareIterable[List[Any]]", "s")
 
-    def to_input_data(self, df: DataFrame) -> EmptyAwareIterable[List[Any]]:
+    def to_input_data(self, df: DataFrame, ctx: Any) -> EmptyAwareIterable[List[Any]]:
         return make_empty_aware(df.as_array_iterable(type_safe=True))
 
     def to_output_df(
-        self, output: EmptyAwareIterable[List[Any]], schema: Any
+        self, output: EmptyAwareIterable[List[Any]], schema: Any, ctx: Any
     ) -> DataFrame:
         return IterableDataFrame(output, schema)
 
     def count(self, df: EmptyAwareIterable[List[Any]]) -> int:
         return sum(1 for _ in df)
 
+    def need_schema(self) -> Optional[bool]:  # pragma: no cover
+        return True
+
 
 class _ListDictParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "List[Dict[str,Any]]", "s")
 
-    def to_input_data(self, df: DataFrame) -> List[Dict[str, Any]]:
+    def to_input_data(self, df: DataFrame, ctx: Any) -> List[Dict[str, Any]]:
         return list(to_local_df(df).as_dict_iterable())
 
-    def to_output_df(self, output: List[Dict[str, Any]], schema: Any) -> DataFrame:
+    def to_output_df(
+        self, output: List[Dict[str, Any]], schema: Any, ctx: Any
+    ) -> DataFrame:
         schema = schema if isinstance(schema, Schema) else Schema(schema)
 
         def get_all() -> Iterable[List[Any]]:
@@ -402,15 +508,20 @@ class _ListDictParam(_DataFrameParamBase):
     def count(self, df: List[Dict[str, Any]]) -> int:
         return len(df)
 
+    def need_schema(self) -> Optional[bool]:  # pragma: no cover
+        return True
+
 
 class _IterableDictParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "Iterable[Dict[str,Any]]", "s")
 
-    def to_input_data(self, df: DataFrame) -> Iterable[Dict[str, Any]]:
+    def to_input_data(self, df: DataFrame, ctx: Any) -> Iterable[Dict[str, Any]]:
         return df.as_dict_iterable()
 
-    def to_output_df(self, output: Iterable[Dict[str, Any]], schema: Any) -> DataFrame:
+    def to_output_df(
+        self, output: Iterable[Dict[str, Any]], schema: Any, ctx: Any
+    ) -> DataFrame:
         schema = schema if isinstance(schema, Schema) else Schema(schema)
 
         def get_all() -> Iterable[List[Any]]:
@@ -422,16 +533,21 @@ class _IterableDictParam(_DataFrameParamBase):
     def count(self, df: Iterable[Dict[str, Any]]) -> int:
         return sum(1 for _ in df)
 
+    def need_schema(self) -> Optional[bool]:  # pragma: no cover
+        return True
+
 
 class _EmptyAwareIterableDictParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "EmptyAwareIterable[Dict[str,Any]]", "s")
 
-    def to_input_data(self, df: DataFrame) -> EmptyAwareIterable[Dict[str, Any]]:
+    def to_input_data(
+        self, df: DataFrame, ctx: Any
+    ) -> EmptyAwareIterable[Dict[str, Any]]:
         return make_empty_aware(df.as_dict_iterable())
 
     def to_output_df(
-        self, output: EmptyAwareIterable[Dict[str, Any]], schema: Any
+        self, output: EmptyAwareIterable[Dict[str, Any]], schema: Any, ctx: Any
     ) -> DataFrame:
         schema = schema if isinstance(schema, Schema) else Schema(schema)
 
@@ -444,15 +560,18 @@ class _EmptyAwareIterableDictParam(_DataFrameParamBase):
     def count(self, df: EmptyAwareIterable[Dict[str, Any]]) -> int:
         return sum(1 for _ in df)
 
+    def need_schema(self) -> Optional[bool]:  # pragma: no cover
+        return True
+
 
 class _PandasParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "pd.DataFrame", "p")
 
-    def to_input_data(self, df: DataFrame) -> pd.DataFrame:
+    def to_input_data(self, df: DataFrame, ctx: Any) -> pd.DataFrame:
         return df.as_pandas()
 
-    def to_output_df(self, output: pd.DataFrame, schema: Any) -> DataFrame:
+    def to_output_df(self, output: pd.DataFrame, schema: Any, ctx: Any) -> DataFrame:
         return PandasDataFrame(output, schema)
 
     def count(self, df: pd.DataFrame) -> int:
@@ -463,14 +582,16 @@ class _IterablePandasParam(_DataFrameParamBase):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "Iterable[pd.DataFrame]", "q")
 
-    def to_input_data(self, df: DataFrame) -> Iterable[pd.DataFrame]:
+    def to_input_data(self, df: DataFrame, ctx: Any) -> Iterable[pd.DataFrame]:
         if not isinstance(df, LocalDataFrameIterableDataFrame):
             yield df.as_pandas()
         else:
             for sub in df.native:
                 yield sub.as_pandas()
 
-    def to_output_df(self, output: Iterable[pd.DataFrame], schema: Any) -> DataFrame:
+    def to_output_df(
+        self, output: Iterable[pd.DataFrame], schema: Any, ctx: Any
+    ) -> DataFrame:
         def dfs():
             for df in output:
                 yield PandasDataFrame(df, schema)

@@ -5,6 +5,8 @@ from fugue.extensions.transformer.convert import (
     cotransformer,
     output_cotransformer,
     output_transformer,
+    register_output_transformer,
+    register_transformer,
     transformer,
 )
 from fugue.extensions.transformer.transformer import (

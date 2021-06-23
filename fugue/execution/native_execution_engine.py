@@ -1,8 +1,14 @@
+import inspect
 import logging
 import os
 from typing import Any, Callable, List, Optional, Union
 
 import pandas as pd
+from fugue._utils.interfaceless import (
+    ExecutionEngineParam,
+    SimpleAnnotationConverter,
+    register_annotation_converter,
+)
 from fugue._utils.io import load_df, save_df
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
@@ -370,3 +376,22 @@ class NativeExecutionEngine(ExecutionEngine):
         self.fs.makedirs(os.path.dirname(path), recreate=True)
         df = self.to_df(df)
         save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
+
+
+class _NativeExecutionEngineParam(ExecutionEngineParam):
+    def __init__(
+        self,
+        param: Optional[inspect.Parameter],
+    ):
+        super().__init__(
+            param, annotation="NativeExecutionEngine", engine_type=NativeExecutionEngine
+        )
+
+
+register_annotation_converter(
+    0.8,
+    SimpleAnnotationConverter(
+        NativeExecutionEngine,
+        lambda param: _NativeExecutionEngineParam(param),
+    ),
+)

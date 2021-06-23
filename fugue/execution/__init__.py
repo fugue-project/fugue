@@ -10,8 +10,8 @@ from fugue.execution.factory import (
 )
 from fugue.execution.native_execution_engine import (
     NativeExecutionEngine,
-    SqliteEngine,
     QPDPandasEngine,
+    SqliteEngine,
 )
 
 register_execution_engine(

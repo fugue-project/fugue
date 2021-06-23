@@ -3,6 +3,8 @@ from typing import Any, List
 import numpy as np
 import pandas as pd
 import pyspark.sql as ps
+import pyspark.rdd as pr
+from pyspark import SparkContext
 import pytest
 from fugue import transform
 from fugue.collections.partition import PartitionSpec
@@ -239,6 +241,57 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
         result = transform(sdf, f1, partition=dict(by=["a"]), engine=self.engine)
         assert isinstance(result, SDataFrame)
         assert result.toPandas().sort_values(["a"]).values.tolist() == [[0, 0], [1, 1]]
+
+    def test_annotation_1(self):
+        def m_c(engine: SparkExecutionEngine) -> ps.DataFrame:
+            return engine.spark_session.createDataFrame([[0]], "a:long")
+
+        def m_p(engine: SparkExecutionEngine, df: ps.DataFrame) -> ps.DataFrame:
+            return df
+
+        def m_o(engine: SparkExecutionEngine, df: ps.DataFrame) -> None:
+            assert 1 == df.toPandas().shape[0]
+
+        with self.dag() as dag:
+            df = dag.create(m_c).process(m_p)
+            df.assert_eq(dag.df([[0]], "a:long"))
+            df.output(m_o)
+
+    def test_annotation_2(self):
+        def m_c(session: SparkSession) -> ps.DataFrame:
+            return session.createDataFrame([[0]], "a:long")
+
+        def m_p(session: SparkSession, df: ps.DataFrame) -> ps.DataFrame:
+            assert isinstance(session, SparkSession)
+            return df
+
+        def m_o(session: SparkSession, df: ps.DataFrame) -> None:
+            assert isinstance(session, SparkSession)
+            assert 1 == df.toPandas().shape[0]
+
+        with self.dag() as dag:
+            df = dag.create(m_c).process(m_p)
+            df.assert_eq(dag.df([[0]], "a:long"))
+            df.output(m_o)
+
+    def test_annotation_3(self):
+        # schema: a:int,b:str
+        def m_c(ctx: SparkContext) -> pr.RDD:
+            return ctx.parallelize([(0, "x")])
+
+        # schema: a:int,b:str
+        def m_p(ctx: SparkContext, data: pr.RDD) -> pr.RDD:
+            assert isinstance(ctx, SparkContext)
+            return data
+
+        def m_o(ctx: SparkContext, data: pr.RDD) -> None:
+            assert isinstance(ctx, SparkContext)
+            assert 1 == len(data.collect())
+
+        with self.dag() as dag:
+            df = dag.create(m_c).process(m_p)
+            df.assert_eq(dag.df([[0, "x"]], "a:int,b:str"))
+            df.output(m_o)
 
 
 class SparkExecutionEnginePandasUDFBuiltInTests(SparkExecutionEngineBuiltInTests):

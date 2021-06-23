@@ -1,10 +1,18 @@
+import inspect
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 from uuid import uuid4
 
 import pandas as pd
 import pyarrow as pa
+import pyspark.rdd as pr
 import pyspark.sql as ps
+from fugue._utils.interfaceless import (
+    DataFrameParam,
+    ExecutionEngineParam,
+    SimpleAnnotationConverter,
+    register_annotation_converter,
+)
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
@@ -13,22 +21,22 @@ from fugue.collections.partition import (
 )
 from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe import (
+    ArrayDataFrame,
+    ArrowDataFrame,
     DataFrame,
     DataFrames,
     IterableDataFrame,
     LocalDataFrame,
     LocalDataFrameIterableDataFrame,
+    PandasDataFrame,
 )
-from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.arrow_dataframe import ArrowDataFrame
-from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
     ExecutionEngine,
     SQLEngine,
 )
-from pyspark import StorageLevel
+from pyspark import SparkContext, StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import broadcast, col, lit, row_number
@@ -713,3 +721,117 @@ class _Mapper(object):  # pragma: no cover
             res = self.map_func(cursor, sub_df)
             for r in res.as_array_iterable(type_safe=True):
                 yield r
+
+
+class _SparkExecutionEngineParam(ExecutionEngineParam):
+    def __init__(
+        self,
+        param: Optional[inspect.Parameter],
+    ):
+        super().__init__(
+            param, annotation="SparkExecutionEngine", engine_type=SparkExecutionEngine
+        )
+
+
+class _SparkSessionParam(ExecutionEngineParam):
+    def __init__(
+        self,
+        param: Optional[inspect.Parameter],
+    ):
+        super().__init__(
+            param, annotation="SparkSession", engine_type=SparkExecutionEngine
+        )
+
+    def to_input(self, engine: ExecutionEngine) -> Any:
+        return super().to_input(engine).spark_session  # type:ignore
+
+
+class _SparkContextParam(ExecutionEngineParam):
+    def __init__(
+        self,
+        param: Optional[inspect.Parameter],
+    ):
+        super().__init__(
+            param, annotation="SparkContext", engine_type=SparkExecutionEngine
+        )
+
+    def to_input(self, engine: ExecutionEngine) -> Any:
+        return super().to_input(engine).spark_session.sparkContext  # type:ignore
+
+
+class _SparkDataFrameParam(DataFrameParam):
+    def __init__(self, param: Optional[inspect.Parameter]):
+        super().__init__(param, annotation="pyspark.sql.DataFrame")
+
+    def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
+        assert isinstance(ctx, SparkExecutionEngine)
+        return ctx.to_df(df).native
+
+    def to_output_df(self, output: Any, schema: Any, ctx: Any) -> DataFrame:
+        assert isinstance(output, ps.DataFrame)
+        assert isinstance(ctx, SparkExecutionEngine)
+        return ctx.to_df(output, schema=schema)
+
+    def count(self, df: Any) -> int:  # pragma: no cover
+        raise NotImplementedError("not allowed")
+
+
+class _RddParam(DataFrameParam):
+    def __init__(self, param: Optional[inspect.Parameter]):
+        super().__init__(param, annotation="pyspark.rdd.RDD")
+
+    def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
+        assert isinstance(ctx, SparkExecutionEngine)
+        return ctx.to_df(df).native.rdd
+
+    def to_output_df(self, output: Any, schema: Any, ctx: Any) -> DataFrame:
+        assert isinstance(output, pr.RDD)
+        assert isinstance(ctx, SparkExecutionEngine)
+        return ctx.to_df(output, schema=schema)
+
+    def count(self, df: Any) -> int:  # pragma: no cover
+        raise NotImplementedError("not allowed")
+
+    def need_schema(self) -> Optional[bool]:
+        return True
+
+
+register_annotation_converter(
+    0.8,
+    SimpleAnnotationConverter(
+        SparkExecutionEngine,
+        lambda param: _SparkExecutionEngineParam(param),
+    ),
+)
+
+register_annotation_converter(
+    0.8,
+    SimpleAnnotationConverter(
+        SparkSession,
+        lambda param: _SparkSessionParam(param),
+    ),
+)
+
+register_annotation_converter(
+    0.8,
+    SimpleAnnotationConverter(
+        SparkContext,
+        lambda param: _SparkContextParam(param),
+    ),
+)
+
+register_annotation_converter(
+    0.8,
+    SimpleAnnotationConverter(
+        ps.DataFrame,
+        lambda param: _SparkDataFrameParam(param),
+    ),
+)
+
+register_annotation_converter(
+    0.8,
+    SimpleAnnotationConverter(
+        pr.RDD,
+        lambda param: _RddParam(param),
+    ),
+)

@@ -16,10 +16,9 @@ from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
 from fugue.exceptions import FugueBug
 from fugue.rpc import RPCServer, make_rpc_server
-from triad.collections import ParamDict, Schema
+from triad import ParamDict, Schema, assert_or_throw
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
-from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_size
 from triad.utils.string import validate_triad_var_name
 

@@ -3,7 +3,12 @@ from typing import Any, Dict, Iterable, List
 import pandas as pd
 from fugue.dataframe import ArrayDataFrame
 from fugue.exceptions import FugueInterfacelessError
-from fugue.extensions.transformer import Transformer, _to_transformer, transformer
+from fugue.extensions.transformer import (
+    Transformer,
+    _to_transformer,
+    transformer,
+    register_transformer,
+)
 from pytest import raises
 from triad.collections.schema import Schema
 from triad.utils.hash import to_uuid
@@ -58,6 +63,37 @@ def test__to_transformer():
     assert isinstance(j, Transformer)
     k = _to_transformer("t10")
     assert isinstance(k, Transformer)
+
+
+def test__register():
+    register_transformer("t_x", MockTransformer)
+    b = _to_transformer("t_x")
+    assert isinstance(b, MockTransformer)
+
+    register_transformer("t_t3", t3)
+    register_transformer("t_t4", t4)
+    register_transformer("t_t5", t5)
+    assert isinstance(_to_transformer("t_t3"), Transformer)
+    assert isinstance(_to_transformer("t_t4", "*,x:int"), Transformer)
+    assert isinstance(_to_transformer("t_t5"), Transformer)
+
+    # schema: *
+    def register_temp(df: pd.DataFrame) -> pd.DataFrame:
+        return df
+
+    t = _to_transformer("register_temp")
+    assert isinstance(t, Transformer)
+    assert not isinstance(t, MockTransformer)
+    # registered alias has the highest priority
+    register_transformer("register_temp", MockTransformer)
+    t = _to_transformer("register_temp")
+    assert isinstance(t, MockTransformer)
+
+    # can't overwrite
+    raises(
+        FugueInterfacelessError,
+        lambda: register_transformer("register_temp", MockTransformer),
+    )
 
 
 def test__to_transformer_determinism():

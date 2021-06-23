@@ -191,13 +191,13 @@ def test_iterable_pandas_dataframe():
     p = _IterablePandasParam(None)
     pdf = pd.DataFrame([[0]], columns=["a"])
     df = PandasDataFrame(pdf)
-    data = list(p.to_input_data(df))
+    data = list(p.to_input_data(df, ctx=None))
     assert 1 == len(data)
     assert data[0] is pdf  # this is to guarantee no copy in any wrapping logic
     assert data[0].values.tolist() == [[0]]
 
     dfs = LocalDataFrameIterableDataFrame([df, df])
-    data = list(p.to_input_data(dfs))
+    data = list(p.to_input_data(dfs, ctx=None))
     assert 2 == len(data)
     assert data[0] is pdf
     assert data[1] is pdf
@@ -207,14 +207,14 @@ def test_iterable_pandas_dataframe():
         yield pdf
 
     # without schema change, there is no copy
-    odf = p.to_output_df(get_pdfs(), df.schema)
+    odf = p.to_output_df(get_pdfs(), df.schema, ctx=None)
     data = list(odf.native)
     assert 2 == len(data)
     assert data[0].native is pdf
     assert data[1].native is pdf
 
     # with schema change, there is copy
-    odf = p.to_output_df(get_pdfs(), "a:double")
+    odf = p.to_output_df(get_pdfs(), "a:double", ctx=None)
     data = list(odf.native)
     assert 2 == len(data)
     assert data[0].native is not pdf

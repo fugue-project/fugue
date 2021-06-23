@@ -1,18 +1,33 @@
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable
 
 from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
-from fugue.execution import ExecutionEngine
-from fugue.extensions.outputter import Outputter, outputter, _to_outputter
+from fugue.execution import ExecutionEngine, NativeExecutionEngine
+from fugue.extensions.outputter import (
+    Outputter,
+    _to_outputter,
+    outputter,
+    register_outputter,
+)
 from pytest import raises
 from triad.collections.dict import ParamDict
-from triad.collections.schema import Schema
 from triad.utils.hash import to_uuid
 
 
 def test_outputter():
     assert isinstance(t1, Outputter)
     assert isinstance(t2, Outputter)
+
+
+def test_register():
+    register_outputter("x", MockOutputter)
+    b = _to_outputter("x")
+    assert isinstance(b, MockOutputter)
+
+    raises(
+        FugueInterfacelessError,
+        lambda: register_outputter("x", MockOutputter, overwrite=False),
+    )
 
 
 def test__to_outputter():
@@ -81,12 +96,12 @@ def test_run_outputter():
     assert 4 == c.value
     c.value = 0
     o1._params = ParamDict([("a", 2), ("b", c)], deep=False)
-    o1._execution_engine = "dummy"
+    o1._execution_engine = NativeExecutionEngine()
     o1.process(dfs)
     assert 4 == c.value
     c.value = 0
     o1._params = ParamDict([("a", 2), ("b", c)], deep=False)
-    o1._execution_engine = "dummy"
+    o1._execution_engine = NativeExecutionEngine()
     o1.process(dfs2)
     assert 4 == c.value
 

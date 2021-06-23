@@ -1,20 +1,29 @@
-from typing import Any, Dict, Iterable, List
+from typing import Any, Iterable, List
 
 import pandas as pd
-from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
-from fugue.dataframe.dataframe import LocalDataFrame
+from fugue.dataframe import ArrayDataFrame, DataFrame
 from fugue.exceptions import FugueInterfacelessError
-from fugue.execution import ExecutionEngine
-from fugue.extensions.creator import Creator, creator, _to_creator
+from fugue.execution import ExecutionEngine, NativeExecutionEngine
+from fugue.extensions.creator import Creator, _to_creator, creator, register_creator
 from pytest import raises
 from triad.collections.dict import ParamDict
-from triad.collections.schema import Schema
 from triad.utils.hash import to_uuid
 
 
 def test_creator():
     assert isinstance(t1, Creator)
     assert isinstance(t2, Creator)
+
+
+def test_register():
+    register_creator("x", T0)
+    b = _to_creator("x")
+    assert isinstance(b, Creator)
+
+    raises(
+        FugueInterfacelessError,
+        lambda: register_creator("x", Creator, overwrite=False),
+    )
 
 
 def test__to_creator():
@@ -49,6 +58,7 @@ def test__to_creator():
     assert isinstance(_to_creator(t9), Creator)
     assert isinstance(_to_creator(t10), Creator)
 
+
 def test_run_creator():
     o1 = _to_creator(t3)
     assert 4 == o1(4).as_array()[0][0]
@@ -60,7 +70,7 @@ def test_run_creator():
     o1 = _to_creator(t5)
     assert 4 == o1("dummy", 4)[0][0]
     o1._params = ParamDict([("a", 2)], deep=False)
-    o1._execution_engine = "dummy"
+    o1._execution_engine = NativeExecutionEngine()
     assert 2 == o1.create().as_array()[0][0]
 
 
@@ -125,6 +135,7 @@ def t8(e: ExecutionEngine, a, b) -> List[List[Any]]:
 
 def t9(e: ExecutionEngine, a, b) -> Iterable[pd.DataFrame]:
     pass
+
 
 def t10(e: ExecutionEngine, a, b, **kwargs) -> Iterable[pd.DataFrame]:
     pass

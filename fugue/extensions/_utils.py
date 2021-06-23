@@ -3,11 +3,29 @@ from typing import Any, Callable, Dict
 from fugue._utils.interfaceless import parse_comment_annotation
 from fugue.collections.partition import PartitionSpec, parse_presort_exp
 from fugue.exceptions import (
+    FugueInterfacelessError,
     FugueWorkflowCompileValidationError,
     FugueWorkflowRuntimeValidationError,
 )
 from triad import Schema
 from triad.utils.assertion import assert_or_throw
+
+
+class ExtensionRegistry:
+    def __init__(self) -> None:
+        self._dict: Dict[str, Any] = {}
+
+    def register(self, name: str, extension: Any, overwrite: bool) -> None:
+        assert_or_throw(
+            overwrite or name not in self._dict,
+            FugueInterfacelessError(f"{name} exists"),
+        )
+        self._dict[name] = extension
+
+    def get(self, obj: Any) -> Any:
+        if isinstance(obj, str) and obj in self._dict:
+            return self._dict[obj]
+        return obj
 
 
 def parse_validation_rules_from_comment(func: Callable) -> Dict[str, Any]:
