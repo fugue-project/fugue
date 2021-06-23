@@ -1,14 +1,8 @@
-import inspect
 import logging
 from abc import ABC, abstractmethod
 from threading import RLock
-from typing import Any, Callable, Dict, Iterable, List, Optional, Type, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
-from fugue._utils.interfaceless import (
-    SimpleAnnotationConverter,
-    _FuncParam,
-    register_annotation_converter,
-)
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
@@ -20,17 +14,12 @@ from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
-from fugue.exceptions import (
-    FugueBug,
-    FugueInterfacelessError,
-    FugueWorkflowRuntimeError,
-)
+from fugue.exceptions import FugueBug
 from fugue.rpc import RPCServer, make_rpc_server
 from triad import ParamDict, Schema, assert_or_throw
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 from triad.utils.convert import to_size
-from triad.utils.hash import to_uuid
 from triad.utils.string import validate_triad_var_name
 
 _DEFAULT_JOIN_KEYS: List[str] = []
@@ -1127,42 +1116,6 @@ class _Comap(object):
                 yield name, df
             else:
                 yield df
-
-
-class ExecutionEngineParam(_FuncParam):
-    def __init__(
-        self,
-        param: Optional[inspect.Parameter],
-        annotation: str,
-        engine_type: Type,
-    ):
-        assert_or_throw(
-            issubclass(engine_type, ExecutionEngine),
-            FugueInterfacelessError(
-                f"{engine_type} is not a sub type of ExecutionEngine"
-            ),
-        )
-        super().__init__(param, annotation, "e")
-        self._type = engine_type
-
-    def to_input(self, engine: ExecutionEngine) -> Any:  # pragma: no cover
-        assert_or_throw(
-            isinstance(engine, self._type),
-            FugueWorkflowRuntimeError(f"{engine} is not of type {self._type}"),
-        )
-        return engine
-
-    def __uuid__(self) -> str:
-        return to_uuid(self.code, self.annotation, self._type)
-
-
-register_annotation_converter(
-    0.9,
-    SimpleAnnotationConverter(
-        ExecutionEngine,
-        lambda param: ExecutionEngineParam(param, "ExecutionEngine", ExecutionEngine),
-    ),
-)
 
 
 def _generate_comap_empty_dfs(schemas: Any, named: bool) -> DataFrames:

@@ -1,23 +1,34 @@
 import copy
 import inspect
 import re
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, get_type_hints
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    get_type_hints,
+)
 
 import pandas as pd
-from fugue.collections.partition import IndexedOrderedDict
 from fugue.dataframe import (
     ArrayDataFrame,
     DataFrame,
     IterableDataFrame,
     LocalDataFrame,
-    PandasDataFrame,
     LocalDataFrameIterableDataFrame,
+    PandasDataFrame,
 )
 from fugue.dataframe.dataframes import DataFrames
 from fugue.dataframe.utils import to_local_df
+from fugue.exceptions import FugueWorkflowRuntimeError
+from triad import IndexedOrderedDict
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import get_full_type_path
+from triad.utils.convert import get_full_type_path, to_type
 from triad.utils.hash import to_uuid
 from triad.utils.iter import EmptyAwareIterable, make_empty_aware
 
@@ -117,87 +128,7 @@ class SimpleAnnotationConverter(AnnotationConverter):
         return self._converter(param)
 
 
-class AnnotationConverters:
-    def __init__(self) -> None:
-        self._converters: List[Tuple[float, AnnotationConverter]] = []
-
-    def add(self, priority: float, converter: AnnotationConverter) -> None:
-        self._converters.append((priority, converter))
-        self._converters.sort(key=lambda x: x[0])
-
-    def try_convert(
-        self, annotation: Any, param: Optional[inspect.Parameter]
-    ) -> Optional["_FuncParam"]:
-        for _, c in self._converters:
-            if c.check(annotation):
-                return c.convert(param)
-        return None
-
-
-def _setup_default_annotation_converters() -> AnnotationConverters:
-    c = AnnotationConverters()
-    c.add(
-        1.0,
-        SimpleAnnotationConverter(DataFrames, lambda param: _DataFramesParam(param)),
-    )
-    c.add(
-        1.1,
-        SimpleAnnotationConverter(
-            LocalDataFrame, lambda param: _LocalDataFrameParam(param)
-        ),
-    )
-    c.add(
-        1.2, SimpleAnnotationConverter(DataFrame, lambda param: DataFrameParam(param))
-    )
-    c.add(
-        1.3, SimpleAnnotationConverter(pd.DataFrame, lambda param: _PandasParam(param))
-    )
-    c.add(
-        1.4,
-        SimpleAnnotationConverter(List[List[Any]], lambda param: _ListListParam(param)),
-    )
-    c.add(
-        1.5,
-        SimpleAnnotationConverter(
-            Iterable[List[Any]], lambda param: _IterableListParam(param)
-        ),
-    )
-    c.add(
-        1.6,
-        SimpleAnnotationConverter(
-            EmptyAwareIterable[List[Any]],
-            lambda param: _EmptyAwareIterableListParam(param),
-        ),
-    )
-    c.add(
-        1.7,
-        SimpleAnnotationConverter(
-            List[Dict[str, Any]], lambda param: _ListDictParam(param)
-        ),
-    )
-    c.add(
-        1.8,
-        SimpleAnnotationConverter(
-            Iterable[Dict[str, Any]], lambda param: _IterableDictParam(param)
-        ),
-    )
-    c.add(
-        1.9,
-        SimpleAnnotationConverter(
-            EmptyAwareIterable[Dict[str, Any]],
-            lambda param: _EmptyAwareIterableDictParam(param),
-        ),
-    )
-    c.add(
-        2.0,
-        SimpleAnnotationConverter(
-            Iterable[pd.DataFrame], lambda param: _IterablePandasParam(param)
-        ),
-    )
-    return c
-
-
-_ANNOTATION_CONVERTERS = _setup_default_annotation_converters()
+_ANNOTATION_CONVERTERS: List[Tuple[float, AnnotationConverter]] = []
 
 
 def register_annotation_converter(
@@ -205,9 +136,7 @@ def register_annotation_converter(
 ) -> None:
     """Register a new annotation for Fugue's interfaceless system
 
-    :param priority:
-    :type priority: priority number, the default annotations have priorities between
-      1.0 and 2.0
+    :param priority: priority number, smaller means higher priority for checking
     :param converter: a new converter
 
     .. admonition:: New Since
@@ -220,7 +149,8 @@ def register_annotation_converter(
         This is not ready for public use yet, the interface is subjected to change
 
     """
-    _ANNOTATION_CONVERTERS.add(priority, converter)
+    _ANNOTATION_CONVERTERS.append((priority, converter))
+    _ANNOTATION_CONVERTERS.sort(key=lambda x: x[0])
 
 
 class FunctionWrapper(object):
@@ -319,11 +249,11 @@ class FunctionWrapper(object):
         params_str = "".join(x.code for x in res.values())
         assert_or_throw(
             re.match(params_re, params_str),
-            lambda: TypeError(f"Input types not valid {res}"),
+            lambda: TypeError(f"Input types not valid {res} for {func}"),
         )
         assert_or_throw(
             re.match(return_re, rt.code),
-            lambda: TypeError(f"Return type not valid {rt}"),
+            lambda: TypeError(f"Return type not valid {rt} for {func}"),
         )
         return class_method, res, rt
 
@@ -353,9 +283,34 @@ class FunctionWrapper(object):
             or str(annotation).startswith("typing.Union[typing.Callable")
         ):
             return _OptionalCallableParam(param)
-        result = _ANNOTATION_CONVERTERS.try_convert(annotation, param)
-        if result is not None:
-            return result
+        for _, c in _ANNOTATION_CONVERTERS:
+            if c.check(annotation):
+                return c.convert(param)
+        if annotation is to_type("fugue.execution.ExecutionEngine"):
+            # to prevent cyclic import
+            return ExecutionEngineParam(param, "ExecutionEngine", annotation)
+        if annotation is DataFrames:
+            return _DataFramesParam(param)
+        if annotation is LocalDataFrame:
+            return _LocalDataFrameParam(param)
+        if annotation is DataFrame:
+            return DataFrameParam(param)
+        if annotation is pd.DataFrame:
+            return _PandasParam(param)
+        if annotation is List[List[Any]]:
+            return _ListListParam(param)
+        if annotation is Iterable[List[Any]]:
+            return _IterableListParam(param)
+        if annotation is EmptyAwareIterable[List[Any]]:
+            return _EmptyAwareIterableListParam(param)
+        if annotation is List[Dict[str, Any]]:
+            return _ListDictParam(param)
+        if annotation is Iterable[Dict[str, Any]]:
+            return _IterableDictParam(param)
+        if annotation is EmptyAwareIterable[Dict[str, Any]]:
+            return _EmptyAwareIterableDictParam(param)
+        if annotation is Iterable[pd.DataFrame]:
+            return _IterablePandasParam(param)
         if param is not None and param.kind == param.VAR_POSITIONAL:
             return _PositionalParam(param)
         if param is not None and param.kind == param.VAR_KEYWORD:
@@ -385,6 +340,27 @@ class _CallableParam(_FuncParam):
 class _OptionalCallableParam(_FuncParam):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param, "Callable", "f")
+
+
+class ExecutionEngineParam(_FuncParam):
+    def __init__(
+        self,
+        param: Optional[inspect.Parameter],
+        annotation: str,
+        engine_type: Type,
+    ):
+        super().__init__(param, annotation, "e")
+        self._type = engine_type
+
+    def to_input(self, engine: Any) -> Any:  # pragma: no cover
+        assert_or_throw(
+            isinstance(engine, self._type),
+            FugueWorkflowRuntimeError(f"{engine} is not of type {self._type}"),
+        )
+        return engine
+
+    def __uuid__(self) -> str:
+        return to_uuid(self.code, self.annotation, self._type)
 
 
 class _DataFramesParam(_FuncParam):

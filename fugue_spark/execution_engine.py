@@ -9,6 +9,7 @@ import pyspark.rdd as pr
 import pyspark.sql as ps
 from fugue._utils.interfaceless import (
     DataFrameParam,
+    ExecutionEngineParam,
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
@@ -33,11 +34,9 @@ from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
     ExecutionEngine,
-    ExecutionEngineParam,
     SQLEngine,
 )
-from pyspark import StorageLevel
-from pyspark import SparkContext
+from pyspark import SparkContext, StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import broadcast, col, lit, row_number

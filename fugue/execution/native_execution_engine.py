@@ -5,6 +5,7 @@ from typing import Any, Callable, List, Optional, Union
 
 import pandas as pd
 from fugue._utils.interfaceless import (
+    ExecutionEngineParam,
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
@@ -27,7 +28,6 @@ from fugue.dataframe.utils import get_join_schemas, to_local_df
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
     ExecutionEngine,
-    ExecutionEngineParam,
     SQLEngine,
 )
 from qpd_pandas import run_sql_on_pandas

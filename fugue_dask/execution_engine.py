@@ -6,6 +6,7 @@ from typing import Any, Callable, List, Optional, Union
 import dask.dataframe as dd
 from fugue._utils.interfaceless import (
     DataFrameParam,
+    ExecutionEngineParam,
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
@@ -21,7 +22,6 @@ from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
     ExecutionEngine,
-    ExecutionEngineParam,
     SQLEngine,
 )
 from fugue.execution.native_execution_engine import NativeExecutionEngine
