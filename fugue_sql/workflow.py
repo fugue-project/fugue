@@ -79,7 +79,9 @@ class FugueSQLWorkflow(FugueWorkflow):
         p: Dict[str, Any] = {}
         dfs: Dict[str, LazyWorkflowDataFrame] = {}
         for k, v in params.items():
-            if isinstance(v, (DataFrame, Yielded)) or is_acceptable_raw_df(v):
+            if isinstance(v, (int, str, float, bool)):
+                p[k] = v
+            elif isinstance(v, (DataFrame, Yielded)) or is_acceptable_raw_df(v):
                 dfs[k] = LazyWorkflowDataFrame(k, v, self)
             else:
                 p[k] = v
