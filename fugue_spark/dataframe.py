@@ -55,7 +55,7 @@ class SparkDataFrame(DataFrame):
                 assert_or_throw(schema is not None, SchemaError("schema is None"))
                 schema = to_schema(schema).assert_not_empty()
                 raise ValueError(f"{df} is incompatible with SparkDataFrame")
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             raise FugueDataFrameInitError from e
 
     @property

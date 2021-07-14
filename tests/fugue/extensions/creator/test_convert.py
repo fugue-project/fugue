@@ -27,6 +27,11 @@ def test_register():
         lambda: register_creator("x", Creator, on_dup="raise"),
     )
 
+    raises(
+        ValueError,
+        lambda: register_creator("x", Creator, on_dup="dummy"),
+    )
+
 
 def test__to_creator():
     a = _to_creator(T0)
