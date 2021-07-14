@@ -31,23 +31,12 @@ from fugue.dataframe import (
     PandasDataFrame,
 )
 from fugue.dataframe.utils import get_join_schemas
+from fugue.exceptions import FugueDataFrameInitError
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
     ExecutionEngine,
     SQLEngine,
 )
-from pyspark import SparkContext, StorageLevel
-from pyspark.rdd import RDD
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import broadcast, col, lit, row_number
-from pyspark.sql.window import Window
-from triad import FileSystem, IndexedOrderedDict, ParamDict, Schema
-from triad.utils.assertion import assert_arg_not_none, assert_or_throw
-from triad.utils.hash import to_uuid
-from triad.utils.iter import EmptyAwareIterable
-from triad.utils.pandas_like import PD_UTILS
-from triad.utils.threading import RunOnce
-
 from fugue_spark._constants import (
     FUGUE_SPARK_CONF_USE_PANDAS_UDF,
     FUGUE_SPARK_DEFAULT_CONF,
@@ -60,6 +49,17 @@ from fugue_spark._utils.partition import (
     rand_repartition,
 )
 from fugue_spark.dataframe import SparkDataFrame
+from pyspark import SparkContext, StorageLevel
+from pyspark.rdd import RDD
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import broadcast, col, lit, row_number
+from pyspark.sql.window import Window
+from triad import FileSystem, IndexedOrderedDict, ParamDict, Schema
+from triad.utils.assertion import assert_arg_not_none, assert_or_throw
+from triad.utils.hash import to_uuid
+from triad.utils.iter import EmptyAwareIterable
+from triad.utils.pandas_like import PD_UTILS
+from triad.utils.threading import RunOnce
 
 _TO_SPARK_JOIN_MAP: Dict[str, str] = {
     "inner": "inner",
@@ -220,6 +220,9 @@ class SparkExecutionEngine(ExecutionEngine):
             return SparkDataFrame(sdf, schema, metadata)
 
         # use arrow dataframe here to handle nulls in int cols
+        assert_or_throw(
+            schema is not None, FugueDataFrameInitError("schema can't be None")
+        )
         adf = ArrowDataFrame(df, to_schema(schema))
         sdf = self.spark_session.createDataFrame(
             adf.as_array(), to_spark_schema(adf.schema)

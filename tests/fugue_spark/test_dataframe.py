@@ -18,6 +18,7 @@ from triad.exceptions import InvalidOperationError
 
 from fugue_spark._utils.convert import to_schema, to_spark_schema
 from fugue_spark.dataframe import SparkDataFrame
+from fugue_spark import SparkExecutionEngine
 
 
 class SparkDataFrameTests(DataFrameTests.Tests):
@@ -25,15 +26,14 @@ class SparkDataFrameTests(DataFrameTests.Tests):
         self, data: Any = None, schema: Any = None, metadata: Any = None
     ) -> SparkDataFrame:
         session = SparkSession.builder.getOrCreate()
+        engine = SparkExecutionEngine(session)
+        return engine.to_df(data, schema=schema, metadata=metadata)
         if data is None:
             df = None
         else:
             if schema is not None:
-                if isinstance(data, list):
-                    df = session.createDataFrame(data, to_spark_schema(schema))
-                else:
-                    pdf = PandasDataFrame(data, to_schema(schema), metadata)
-                    df = session.createDataFrame(pdf.native, to_spark_schema(schema))
+                pdf = PandasDataFrame(data, to_schema(schema), metadata)
+                df = session.createDataFrame(pdf.native)
             else:
                 try:
                     df = session.createDataFrame(data)
