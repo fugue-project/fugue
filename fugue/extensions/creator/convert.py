@@ -14,14 +14,77 @@ from triad.utils.hash import to_uuid
 _CREATOR_REGISTRY = ExtensionRegistry()
 
 
-def register_creator(alias: str, obj: Any, overwrite: bool = False):
-    _CREATOR_REGISTRY.register(alias, obj, overwrite=overwrite)
+def register_creator(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
+    """Register creator with an alias.
+
+    :param alias: alias of the creator
+    :param obj: the object that can be converted to
+        :class:`~fugue.extensions.creator.creator.Creator`
+    :param on_dup: action on duplicated ``alias``. It can be "overwrite", "ignore"
+        (not overwriting) or "throw" (throw exception), defaults to "overwrite".
+
+    .. tip::
+
+        Registering an extension with an alias is particularly useful for projects
+        such as libraries. This is because by using alias, users don't have to
+        import the specific extension, or provide the full path of the extension.
+        It can make user's code less dependent and easy to understand.
+
+    .. admonition:: New Since
+        :class: hint
+
+        **0.6.0**
+
+    .. seealso::
+
+        Please read
+        :ref:`Creator Tutorial <tutorial:/tutorials/extensions/creator.ipynb>`
+
+    .. admonition:: Examples
+
+        Here is an example how you setup your project so your users can
+        benefit from this feature. Assume your project name is ``pn``
+
+        The creator implementation in file ``pn/pn/creators.py``
+
+        .. code-block:: python
+
+            import pandas import pd
+
+            def my_creator() -> pd.DataFrame:
+                return pd.DataFrame()
+
+        Then in ``pn/pn/__init__.py``
+
+        .. code-block:: python
+
+            from .creators import my_creator
+            from fugue import register_creator
+
+            def register_extensions():
+                register_creator("mc", my_creator)
+                # ... register more extensions
+
+            register_extensions()
+
+        In users code:
+
+        .. code-block:: python
+
+            import pn  # register_extensions will be called
+            from fugue import FugueWorkflow
+
+            with FugueWorkflow() as dag:
+                dag.create("mc").show()  # use my_creator by alias
+    """
+    _CREATOR_REGISTRY.register(alias, obj, on_dup=on_dup)
 
 
 def creator(schema: Any = None) -> Callable[[Any], "_FuncAsCreator"]:
     """Decorator for creators
 
-    Please read :ref:`Creator Tutorial <tutorial:/tutorials/creator.ipynb>`
+    Please read
+    :ref:`Creator Tutorial <tutorial:/tutorials/extensions/creator.ipynb>`
     """
 
     def deco(func: Callable) -> "_FuncAsCreator":

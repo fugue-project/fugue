@@ -3,7 +3,6 @@ from typing import Any, Callable, Dict
 from fugue._utils.interfaceless import parse_comment_annotation
 from fugue.collections.partition import PartitionSpec, parse_presort_exp
 from fugue.exceptions import (
-    FugueInterfacelessError,
     FugueWorkflowCompileValidationError,
     FugueWorkflowRuntimeValidationError,
 )
@@ -15,12 +14,17 @@ class ExtensionRegistry:
     def __init__(self) -> None:
         self._dict: Dict[str, Any] = {}
 
-    def register(self, name: str, extension: Any, overwrite: bool) -> None:
-        assert_or_throw(
-            overwrite or name not in self._dict,
-            FugueInterfacelessError(f"{name} exists"),
-        )
-        self._dict[name] = extension
+    def register(self, name: str, extension: Any, on_dup="overwrite") -> None:
+        if name not in self._dict:
+            self._dict[name] = extension
+        if on_dup in ["raise", "throw"]:
+            raise KeyError(f"{name} is already registered")
+        if on_dup == "overwrite":
+            self._dict[name] = extension
+            return
+        if on_dup == "ignore":
+            return
+        raise ValueError(on_dup)
 
     def get(self, obj: Any) -> Any:
         if isinstance(obj, str) and obj in self._dict:

@@ -19,7 +19,8 @@ class Outputter(ExtensionContext, ABC):
     is commonly unnecessary. You can choose the interfaceless approach which may
     decouple your code from Fugue.
 
-    Please read :ref:`Outputter Tutorial <tutorial:/tutorials/outputter.ipynb>`
+    Please read
+    :ref:`Outputter Tutorial <tutorial:/tutorials/extensions/outputter.ipynb>`
     """
 
     @abstractmethod

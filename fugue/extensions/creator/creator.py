@@ -19,7 +19,7 @@ class Creator(ExtensionContext, ABC):
     is commonly unnecessary. You can choose the interfaceless approach which may
     decouple your code from Fugue.
 
-    Please read :ref:`Creator Tutorial <tutorial:/tutorials/creator.ipynb>`
+    Please read :ref:`Creator Tutorial <tutorial:/tutorials/extensions/creator.ipynb>`
     """
 
     @abstractmethod

@@ -26,8 +26,8 @@ def test_register():
     assert isinstance(b, MockProcessor)
 
     raises(
-        FugueInterfacelessError,
-        lambda: register_processor("x", MockProcessor, overwrite=False),
+        KeyError,
+        lambda: register_processor("x", MockProcessor, on_dup="throw"),
     )
 
 
