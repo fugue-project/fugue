@@ -28,18 +28,6 @@ class SparkDataFrameTests(DataFrameTests.Tests):
         session = SparkSession.builder.getOrCreate()
         engine = SparkExecutionEngine(session)
         return engine.to_df(data, schema=schema, metadata=metadata)
-        if data is None:
-            df = None
-        else:
-            if schema is not None:
-                pdf = PandasDataFrame(data, to_schema(schema), metadata)
-                df = session.createDataFrame(pdf.native)
-            else:
-                try:
-                    df = session.createDataFrame(data)
-                except Exception:
-                    raise FugueDataFrameInitError("schema error")
-        return SparkDataFrame(df, schema, metadata)
 
     def test_alter_columns_invalid(self):
         # TODO: Spark will silently cast invalid data to nulls without exceptions
