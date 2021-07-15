@@ -20,9 +20,16 @@ def test_register():
     b = _to_creator("x")
     assert isinstance(b, Creator)
 
+    register_creator("x", Creator, on_dup="ignore")
+
     raises(
-        FugueInterfacelessError,
-        lambda: register_creator("x", Creator, overwrite=False),
+        KeyError,
+        lambda: register_creator("x", Creator, on_dup="raise"),
+    )
+
+    raises(
+        ValueError,
+        lambda: register_creator("x", Creator, on_dup="dummy"),
     )
 
 

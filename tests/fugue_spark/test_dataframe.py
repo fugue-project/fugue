@@ -10,13 +10,15 @@ from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dataframe.utils import to_local_bounded_df
 from fugue.exceptions import FugueDataFrameInitError
-from fugue_spark.dataframe import SparkDataFrame
-from fugue_spark._utils.convert import to_schema, to_spark_schema
 from fugue_test.dataframe_suite import DataFrameTests
 from pyspark.sql import SparkSession
 from pytest import raises
 from triad.collections.schema import Schema, SchemaError
 from triad.exceptions import InvalidOperationError
+
+from fugue_spark._utils.convert import to_schema, to_spark_schema
+from fugue_spark.dataframe import SparkDataFrame
+from fugue_spark import SparkExecutionEngine
 
 
 class SparkDataFrameTests(DataFrameTests.Tests):
@@ -24,18 +26,8 @@ class SparkDataFrameTests(DataFrameTests.Tests):
         self, data: Any = None, schema: Any = None, metadata: Any = None
     ) -> SparkDataFrame:
         session = SparkSession.builder.getOrCreate()
-        if data is None:
-            df = None
-        else:
-            if schema is not None:
-                pdf = PandasDataFrame(data, to_schema(schema), metadata)
-                df = session.createDataFrame(pdf.native, to_spark_schema(schema))
-            else:
-                try:
-                    df = session.createDataFrame(data)
-                except Exception:
-                    raise FugueDataFrameInitError("schema error")
-        return SparkDataFrame(df, schema, metadata)
+        engine = SparkExecutionEngine(session)
+        return engine.to_df(data, schema=schema, metadata=metadata)
 
     def test_alter_columns_invalid(self):
         # TODO: Spark will silently cast invalid data to nulls without exceptions

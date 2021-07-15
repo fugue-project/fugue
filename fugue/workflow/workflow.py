@@ -171,7 +171,8 @@ class WorkflowDataFrame(DataFrame):
         """Run a processor on this dataframe. It's a simple wrapper of
         :meth:`fugue.workflow.workflow.FugueWorkflow.process`
 
-        Please read the :ref:`Processor Tutorial <tutorial:/tutorials/processor.ipynb>`
+        Please read the
+        :ref:`Processor Tutorial <tutorial:/tutorials/extensions/processor.ipynb>`
 
         :param using: processor-like object, if it is a string, then it must be
           the alias of a registered processor
@@ -198,7 +199,8 @@ class WorkflowDataFrame(DataFrame):
         """Run a outputter on this dataframe. It's a simple wrapper of
         :meth:`fugue.workflow.workflow.FugueWorkflow.output`
 
-        Please read the :ref:`Outputter Tutorial <tutorial:/tutorials/outputter.ipynb>`
+        Please read the
+        :ref:`Outputter Tutorial <tutorial:/tutorials/extensions/outputter.ipynb>`
 
         :param using: outputter-like object, if it is a string, then it must be
           the alias of a registered outputter
@@ -497,7 +499,7 @@ class WorkflowDataFrame(DataFrame):
         :meth:`fugue.workflow.workflow.FugueWorkflow.transform`
 
         Please read the
-        :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+        :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
 
         :param using: transformer-like object, if it is a string, then it must be
           the alias of a registered transformer/cotransformer
@@ -547,7 +549,7 @@ class WorkflowDataFrame(DataFrame):
         :meth:`fugue.workflow.workflow.FugueWorkflow.out_transform`
 
         Please read the
-        :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+        :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
 
         :param using: transformer-like object, if it is a string, then it must be
           the alias of a registered output transformer/cotransformer
@@ -1496,7 +1498,8 @@ class FugueWorkflow(object):
     ) -> WorkflowDataFrame:
         """Run a creator to create a dataframe.
 
-        Please read the :ref:`Creator Tutorial <tutorial:/tutorials/creator.ipynb>`
+        Please read the
+        :ref:`Creator Tutorial <tutorial:/tutorials/extensions/creator.ipynb>`
 
         :param using: creator-like object, if it is a string, then it must be
           the alias of a registered creator
@@ -1526,7 +1529,8 @@ class FugueWorkflow(object):
     ) -> WorkflowDataFrame:
         """Run a processor on the dataframes.
 
-        Please read the :ref:`Processor Tutorial <tutorial:/tutorials/processor.ipynb>`
+        Please read the
+        :ref:`Processor Tutorial <tutorial:/tutorials/extensions/processor.ipynb>`
 
         :param dfs: |DataFramesLikeObject|
         :param using: processor-like object, if it is a string, then it must be
@@ -1564,7 +1568,8 @@ class FugueWorkflow(object):
     ) -> None:
         """Run a outputter on dataframes.
 
-        Please read the :ref:`Outputter Tutorial <tutorial:/tutorials/outputter.ipynb>`
+        Please read the
+        :ref:`Outputter Tutorial <tutorial:/tutorials/extensions/outputter.ipynb>`
 
         :param using: outputter-like object, if it is a string, then it must be
           the alias of a registered outputter
@@ -1847,7 +1852,7 @@ class FugueWorkflow(object):
         """Transform dataframes using transformer.
 
         Please read the
-        :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+        :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
 
         :param dfs: |DataFramesLikeObject|
         :param using: transformer-like object, if it is a string, then it must be
@@ -1909,7 +1914,7 @@ class FugueWorkflow(object):
         immediately and returns nothing
 
         Please read the
-        :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+        :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
 
         :param dfs: |DataFramesLikeObject|
         :param using: transformer-like object, if it is a string, then it must be

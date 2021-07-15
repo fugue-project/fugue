@@ -25,8 +25,8 @@ def test_register():
     assert isinstance(b, MockOutputter)
 
     raises(
-        FugueInterfacelessError,
-        lambda: register_outputter("x", MockOutputter, overwrite=False),
+        KeyError,
+        lambda: register_outputter("x", MockOutputter, on_dup="raise"),
     )
 
 

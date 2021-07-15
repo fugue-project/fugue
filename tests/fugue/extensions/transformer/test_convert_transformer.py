@@ -91,8 +91,8 @@ def test__register():
 
     # can't overwrite
     raises(
-        FugueInterfacelessError,
-        lambda: register_transformer("register_temp", MockTransformer),
+        KeyError,
+        lambda: register_transformer("register_temp", MockTransformer, on_dup="raise"),
     )
 
 

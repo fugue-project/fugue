@@ -23,7 +23,7 @@ def transform(
     can be native types only.
 
     Please read the
-    :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+    :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
 
     :param using: transformer-like object, can't be a string expression
     :param schema: |SchemaLikeObject|, defaults to None. The transformer
@@ -86,7 +86,7 @@ def out_transform(
     type only
 
     Please read the
-    :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+    :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
 
     :param using: transformer-like object, can't be a string expression
     :param params: |ParamsLikeObject| to run the processor, defaults to None.

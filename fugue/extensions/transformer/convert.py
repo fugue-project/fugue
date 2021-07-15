@@ -24,21 +24,143 @@ _TRANSFORMER_REGISTRY = ExtensionRegistry()
 _OUT_TRANSFORMER_REGISTRY = ExtensionRegistry()
 
 
-def register_transformer(alias: str, obj: Any, overwrite: bool = False):
-    """Assign an alias for a
+def register_transformer(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
+    """Register transformer with an alias.
 
-    :param alias: [description]
-    :type alias: str
-    :param obj: [description]
-    :type obj: Any
-    :param overwrite: [description], defaults to False
-    :type overwrite: bool, optional
+    :param alias: alias of the transformer
+    :param obj: the object that can be converted to
+        :class:`~fugue.extensions.transformer.transformer.Transformer` or
+        :class:`~fugue.extensions.transformer.transformer.CoTransformer`
+    :param on_dup: action on duplicated ``alias``. It can be "overwrite", "ignore"
+        (not overwriting) or "throw" (throw exception), defaults to "overwrite".
+
+    .. tip::
+
+        Registering an extension with an alias is particularly useful for projects
+        such as libraries. This is because by using alias, users don't have to
+        import the specific extension, or provide the full path of the extension.
+        It can make user's code less dependent and easy to understand.
+
+    .. admonition:: New Since
+        :class: hint
+
+        **0.6.0**
+
+    .. seealso::
+
+        Please read
+        :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+
+    .. admonition:: Examples
+
+        Here is an example how you setup your project so your users can
+        benefit from this feature. Assume your project name is ``pn``
+
+        The transformer implementation in file ``pn/pn/transformers.py``
+
+        .. code-block:: python
+
+            import pandas as pd
+
+            # schema: *
+            def my_transformer(df:pd.DataFrame) -> pd.DataFrame:
+                return df
+
+        Then in ``pn/pn/__init__.py``
+
+        .. code-block:: python
+
+            from .transformers import my_transformer
+            from fugue import register_transformer
+
+            def register_extensions():
+                register_transformer("mt", my_transformer)
+                # ... register more extensions
+
+            register_extensions()
+
+        In users code:
+
+        .. code-block:: python
+
+            import pn  # register_extensions will be called
+            from fugue import FugueWorkflow
+
+            with FugueWorkflow() as dag:
+                # use my_transformer by alias
+                dag.df([[0]],"a:int").transform("mt").show()
     """
-    _TRANSFORMER_REGISTRY.register(alias, obj, overwrite=overwrite)
+    _TRANSFORMER_REGISTRY.register(alias, obj, on_dup=on_dup)
 
 
-def register_output_transformer(alias: str, obj: Any, overwrite: bool = False):
-    _OUT_TRANSFORMER_REGISTRY.register(alias, obj, overwrite=overwrite)
+def register_output_transformer(
+    alias: str, obj: Any, on_dup: str = "overwrite"
+) -> None:
+    """Register output transformer with an alias.
+
+    :param alias: alias of the transformer
+    :param obj: the object that can be converted to
+        :class:`~fugue.extensions.transformer.transformer.OutputTransformer` or
+        :class:`~fugue.extensions.transformer.transformer.OutputCoTransformer`
+    :param on_dup: action on duplicated ``alias``. It can be "overwrite", "ignore"
+        (not overwriting) or "throw" (throw exception), defaults to "overwrite".
+
+    .. tip::
+
+        Registering an extension with an alias is particularly useful for projects
+        such as libraries. This is because by using alias, users don't have to
+        import the specific extension, or provide the full path of the extension.
+        It can make user's code less dependent and easy to understand.
+
+    .. admonition:: New Since
+        :class: hint
+
+        **0.6.0**
+
+    .. seealso::
+
+        Please read
+        :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+
+    .. admonition:: Examples
+
+        Here is an example how you setup your project so your users can
+        benefit from this feature. Assume your project name is ``pn``
+
+        The transformer implementation in file ``pn/pn/transformers.py``
+
+        .. code-block:: python
+
+            import pandas as pd
+
+            def my_transformer(df:pd.DataFrame) -> None:
+                df.to_parquet("<unique_path>")
+
+        Then in ``pn/pn/__init__.py``
+
+        .. code-block:: python
+
+            from .transformers import my_transformer
+            from fugue import register_transformer
+
+            def register_extensions():
+                register_transformer("mt", my_transformer)
+                # ... register more extensions
+
+            register_extensions()
+
+        In users code:
+
+        .. code-block:: python
+
+            import pn  # register_extensions will be called
+            from fugue import FugueWorkflow
+
+            with FugueWorkflow() as dag:
+                # use my_transformer by alias
+                dag.df([[0]],"a:int").out_transform("mt")
+    """
+    _OUT_TRANSFORMER_REGISTRY.register(alias, obj, on_dup=on_dup)
 
 
 def transformer(
@@ -46,7 +168,8 @@ def transformer(
 ) -> Callable[[Any], "_FuncAsTransformer"]:
     """Decorator for transformers
 
-    Please read :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+    Please read
+    :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
     """
 
     def deco(func: Callable) -> "_FuncAsTransformer":
@@ -66,7 +189,8 @@ def output_transformer(
 ) -> Callable[[Any], "_FuncAsTransformer"]:
     """Decorator for transformers
 
-    Please read :ref:`Transformer Tutorial <tutorial:/tutorials/transformer.ipynb>`
+    Please read
+    :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
     """
 
     def deco(func: Callable) -> "_FuncAsOutputTransformer":

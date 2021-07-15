@@ -19,7 +19,8 @@ class Processor(ExtensionContext, ABC):
     is commonly unnecessary. You can choose the interfaceless approach which may
     decouple your code from Fugue.
 
-    Please read :ref:`Processor Tutorial <tutorial:/tutorials/processor.ipynb>`
+    Please read
+    :ref:`Processor Tutorial <tutorial:/tutorials/extensions/processor.ipynb>`
     """
 
     @abstractmethod
