@@ -1,15 +1,8 @@
-import inspect
 import logging
 import os
 from typing import Any, Callable, List, Optional, Union
 
 import dask.dataframe as dd
-from fugue._utils.interfaceless import (
-    DataFrameParam,
-    ExecutionEngineParam,
-    SimpleAnnotationConverter,
-    register_annotation_converter,
-)
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
@@ -465,44 +458,3 @@ class DaskExecutionEngine(ExecutionEngine):
             self.fs.makedirs(os.path.dirname(path), recreate=True)
             df = self.to_df(df)
             save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
-
-
-class _DaskExecutionEngineParam(ExecutionEngineParam):
-    def __init__(
-        self,
-        param: Optional[inspect.Parameter],
-    ):
-        super().__init__(
-            param, annotation="DaskExecutionEngine", engine_type=DaskExecutionEngine
-        )
-
-
-class _DaskDataFrameParam(DataFrameParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, annotation="dask.dataframe.DataFrame")
-
-    def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
-        assert isinstance(ctx, DaskExecutionEngine)
-        return ctx.to_df(df).native
-
-    def to_output_df(self, output: Any, schema: Any, ctx: Any) -> DataFrame:
-        assert isinstance(output, dd.DataFrame)
-        assert isinstance(ctx, DaskExecutionEngine)
-        return ctx.to_df(output, schema=schema)
-
-    def count(self, df: DataFrame) -> int:  # pragma: no cover
-        raise NotImplementedError("not allowed")
-
-
-register_annotation_converter(
-    0.8,
-    SimpleAnnotationConverter(
-        DaskExecutionEngine,
-        lambda param: _DaskExecutionEngineParam(param),
-    ),
-)
-
-register_annotation_converter(
-    0.8,
-    SimpleAnnotationConverter(dd.DataFrame, lambda param: _DaskDataFrameParam(param)),
-)
