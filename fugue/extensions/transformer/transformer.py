@@ -51,7 +51,7 @@ class Transformer(ExtensionContext):
     def on_init(self, df: DataFrame) -> None:  # pragma: no cover
         """Callback for initializing
         :ref:`physical partition that contains one or multiple logical partitions
-        <tutorial:/tutorials/partition.ipynb#physical-vs-logical-partitions>`.
+        <tutorial:/tutorials/advanced/partition.ipynb#physical-vs-logical-partitions>`.
         You may put expensive initialization logic here so you will not have to repeat
         that in :meth:`~.transform`
 
@@ -77,7 +77,7 @@ class Transformer(ExtensionContext):
         .. note::
 
           * This function operates on :ref:`logical partition level
-            <tutorial:/tutorials/partition.ipynb#physical-vs-logical-partitions>`
+            <tutorial:/tutorials/advanced/partition.ipynb#physical-vs-logical-partitions>`
           * This call can be on a random machine (depending on the ExecutionEngine you
             use), you should get the :class:`context
             <fugue.extensions.context.ExtensionContext>` from the properties of this
@@ -106,7 +106,7 @@ class OutputTransformer(Transformer):
 
 class CoTransformer(ExtensionContext):
     """The interface to process logical partitions of a :ref:`zipped dataframe
-    <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`.
+    <tutorial:/tutorials/advanced/execution_engine.ipynb#zip-&-comap>`.
     A dataframe such as SparkDataFrame can be distributed. But this interface is about
     local process, scalability and throughput is not a concern of CoTransformer.
 
@@ -120,10 +120,8 @@ class CoTransformer(ExtensionContext):
       need to implement :meth:`~.on_init`, you can choose the
       interfaceless approach which may decouple your code from Fugue.
 
-      It's important to understand
-      :ref:`zip and comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`, and
-      please also read
-      :ref:`The CoTransformer Tutorial <tutorial:/tutorials/cotransformer.ipynb>`
+      It's important to understand |ZipComap|, and
+      please also read |CoTransformerTutorial|
 
 
       Due to similar issue on spark
@@ -153,7 +151,7 @@ class CoTransformer(ExtensionContext):
     def on_init(self, dfs: DataFrames) -> None:  # pragma: no cover
         """Callback for initializing
         :ref:`physical partition that contains one or multiple logical partitions
-        <tutorial:/tutorials/partition.ipynb#physical-vs-logical-partitions>`.
+        <tutorial:/tutorials/advanced/partition.ipynb#physical-vs-logical-partitions>`.
         You may put expensive initialization logic here so you will not have to repeat
         that in :meth:`~.transform`
 

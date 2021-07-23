@@ -225,7 +225,8 @@ class WorkflowDataFrame(DataFrame):
         best_width: int = 100,
     ) -> None:
         """Show the dataframe.
-        See :ref:`examples <tutorial:/tutorials/dag.ipynb#initialize-a-workflow>`.
+        See
+        :ref:`examples <tutorial:/tutorials/advanced/dag.ipynb#initialize-a-workflow>`.
 
         :param rows: max number of rows, defaults to 10
         :param show_count: whether to show total count, defaults to False
@@ -240,7 +241,7 @@ class WorkflowDataFrame(DataFrame):
             * When ``show_count`` is True, it can trigger expensive calculation for
               a distributed dataframe. So if you call this function directly, you may
               need to :meth:`~.persist` the dataframe. Or you can turn on
-              :ref:`tutorial:/tutorials/useful_config.ipynb#auto-persist`
+              :ref:`tutorial:/tutorials/advanced/useful_config.ipynb#auto-persist`
         """
         # TODO: best_width is not used
         self.workflow.show(self, rows=rows, show_count=show_count, title=title)
@@ -1174,10 +1175,7 @@ class WorkflowDataFrame(DataFrame):
 
         .. seealso::
 
-            Read :ref:`CoTransformer <tutorial:/tutorials/dag.ipynb#cotransformer>`
-            and
-            :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`
-            for details
+            Read |CoTransformer| and |ZipComap| for details
         """
         if partition is None:
             partition = self.partition_spec
@@ -1219,7 +1217,7 @@ class WorkflowDataFrame(DataFrame):
         :param kwargs: parameters to pass to the underlying framework
 
         For more details and examples, read
-        :ref:`Save & Load <tutorial:/tutorials/dag.ipynb#save-&-load>`.
+        :ref:`Save & Load <tutorial:/tutorials/advanced/dag.ipynb#save-&-load>`.
         """
         if partition is None:
             partition = self.partition_spec
@@ -1253,7 +1251,7 @@ class WorkflowDataFrame(DataFrame):
         :param kwargs: parameters to pass to the underlying framework
 
         For more details and examples, read
-        :ref:`Save & Load <tutorial:/tutorials/dag.ipynb#save-&-load>`.
+        :ref:`Save & Load <tutorial:/tutorials/advanced/dag.ipynb#save-&-load>`.
         """
         if partition is None:
             partition = self.partition_spec
@@ -1404,7 +1402,8 @@ class FugueWorkflow(object):
     things you added to the workflow is **description** and they are not executed
     until you call :meth:`~.run`
 
-    Read :ref:`The Tutorial <tutorial:/tutorials/dag.ipynb#initialize-a-workflow>`
+    Read
+    :ref:`this <tutorial:/tutorials/advanced/dag.ipynb#initialize-a-workflow>`
     to learn how to initialize it in different ways and pros and cons.
     """
 
@@ -1452,7 +1451,8 @@ class FugueWorkflow(object):
                 result = dag.run(SparkExecutionEngine)
                 result["x"]  # SparkDataFrame
 
-        Read :ref:`The Tutorial <tutorial:/tutorials/dag.ipynb#initialize-a-workflow>`
+        Read
+        :ref:`this <tutorial:/tutorials/advanced/dag.ipynb#initialize-a-workflow>`
         to learn how to run in different ways and pros and cons.
         """
         with self._lock:
@@ -1679,7 +1679,8 @@ class FugueWorkflow(object):
         self, path: str, fmt: str = "", columns: Any = None, **kwargs: Any
     ) -> WorkflowDataFrame:
         """Load dataframe from persistent storage.
-        Read :ref:`this <tutorial:/tutorials/dag.ipynb#save-&-load>` for details
+        Read :ref:`this <tutorial:/tutorials/advanced/dag.ipynb#save-&-load>`
+        for details.
 
         :param path: file path
         :param fmt: format hint can accept ``parquet``, ``csv``, ``json``,
@@ -1700,7 +1701,8 @@ class FugueWorkflow(object):
         title: Optional[str] = None,
     ) -> None:
         """Show the dataframes.
-        See :ref:`examples <tutorial:/tutorials/dag.ipynb#initialize-a-workflow>`.
+        See
+        :ref:`examples <tutorial:/tutorials/advanced/dag.ipynb#initialize-a-workflow>`.
 
         :param dfs: |DataFramesLikeObject|
         :param rows: max number of rows, defaults to 10
@@ -1716,7 +1718,7 @@ class FugueWorkflow(object):
             * When ``show_count`` is True, it can trigger expensive calculation for
               a distributed dataframe. So if you call this function directly, you may
               need to :meth:`~.WorkflowDataFrame.persist` the dataframe. Or you can
-              turn on :ref:`tutorial:/tutorials/useful_config.ipynb#auto-persist`
+              turn on |AutoPersist|
         """
         self.output(
             *dfs, using=Show, params=dict(rows=rows, show_count=show_count, title=title)
@@ -1831,10 +1833,7 @@ class FugueWorkflow(object):
 
         .. seealso::
 
-            Read :ref:`CoTransformer <tutorial:/tutorials/dag.ipynb#cotransformer>`
-            and
-            :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`
-            for details
+            Read |CoTransformer| and |ZipComap| for details
         """
         return self.process(
             *dfs,
@@ -1995,7 +1994,7 @@ class FugueWorkflow(object):
                     b = dag.df([[0]],a:int)
                     c = dag.select("SELECT a FROM",a,"UNION SELECT * FROM",b)
 
-        Please read :ref:`this <tutorial:/tutorials/dag.ipynb#select-query>`
+        Please read :ref:`this <tutorial:/tutorials/advanced/dag.ipynb#select-query>`
         for more examples
         """
         s_str: List[str] = []

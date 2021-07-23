@@ -27,7 +27,7 @@ _DEFAULT_JOIN_KEYS: List[str] = []
 
 class SQLEngine(ABC):
     """The abstract base class for different SQL execution implementations. Please read
-    :ref:`this <tutorial:/tutorials/execution_engine.ipynb#sqlengine>`
+    :ref:`this <tutorial:/tutorials/advanced/execution_engine.ipynb#sqlengine>`
     to understand the concept
 
     :param execution_engine: the execution engine this sql engine will run on
@@ -69,12 +69,11 @@ class ExecutionEngine(ABC):
     It is the layer that unifies core concepts of distributed computing,
     and separates the underlying computing frameworks from user’s higher level logic.
 
-    Please read
-    :ref:`The ExecutionEngine Tutorial <tutorial:/tutorials/execution_engine.ipynb>`
+    Please read |ExecutionEngineTutorial|
     to understand this most important Fugue concept
 
     :param conf: dict-like config, read
-      :ref:`this <tutorial:/tutorials/useful_config.ipynb>`
+      :ref:`this <tutorial:/tutorials/advanced/useful_config.ipynb>`
       to learn Fugue specific options
     """
 
@@ -241,8 +240,8 @@ class ExecutionEngine(ABC):
         .. note::
 
             Before implementing, you must read
-            :ref:`this <tutorial:/tutorials/execution_engine.ipynb#map>` to understand
-            what map is used for and how it should work.
+            :ref:`this <tutorial:/tutorials/advanced/execution_engine.ipynb#map>`
+            to understand what map is used for and how it should work.
         """
         raise NotImplementedError
 
@@ -785,8 +784,7 @@ class ExecutionEngine(ABC):
 
         .. seealso::
 
-            For more details and examples, read
-            :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`.
+            For more details and examples, read |ZipComap|.
         """
         on = list(partition_spec.partition_by)
         how = how.lower()
@@ -869,8 +867,7 @@ class ExecutionEngine(ABC):
 
         .. seealso::
 
-            For more details and examples, read
-            :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`
+            For more details and examples, read |ZipComap|
         """
         assert_or_throw(len(dfs) > 0, "can't zip 0 dataframes")
         pairs = list(dfs.items())
@@ -922,7 +919,7 @@ class ExecutionEngine(ABC):
         :param map_func: the function to apply on every zipped partition
         :param output_schema: |SchemaLikeObject| that can't be None.
           Please also understand :ref:`why we need this
-          <tutorial:/tutorials/cotransformer.ipynb#why-explicit-on-output-schema?>`
+          <tutorial:/tutorials/extensions/cotransformer.ipynb#why-explicit-on-output-schema?>`
         :param partition_spec: partition specification for processing the zipped
           zipped dataframe.
         :param metadata: dict-like metadata object to add to the dataframe after the
@@ -949,8 +946,7 @@ class ExecutionEngine(ABC):
 
         .. seealso::
 
-            For more details and examples, read
-            :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`
+            For more details and examples, read |ZipComap|
         """
         assert_or_throw(df.metadata["serialized"], ValueError("df is not serilaized"))
         cs = _Comap(df, map_func, on_init)
@@ -977,8 +973,7 @@ class ExecutionEngine(ABC):
         :param kwargs: parameters to pass to the underlying framework
         :return: an engine compatible dataframe
 
-        For more details and examples, read
-        :ref:`Load & Save <tutorial:/tutorials/execution_engine.ipynb#load-&-save>`.
+        For more details and examples, read |ZipComap|.
         """
         raise NotImplementedError
 
@@ -1006,8 +1001,7 @@ class ExecutionEngine(ABC):
         :param force_single: force the output as a single file, defaults to False
         :param kwargs: parameters to pass to the underlying framework
 
-        For more details and examples, read
-        :ref:`Load & Save <tutorial:/tutorials/execution_engine.ipynb#load-&-save>`.
+        For more details and examples, read |LoadSave|.
         """
         raise NotImplementedError
 
