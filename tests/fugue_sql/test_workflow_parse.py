@@ -180,7 +180,7 @@ def test_transform():
         FugueWorkflow()
         .df([[0], [1]], "a:int", data_determiner=to_uuid)
         .partition(by=["a"], presort="b DESC", num="ROWCOUNT/2")
-        .transform(mock_transformer, schema="*", params=dict(n=2))
+        .transform(mock_transformer, schema="*~k+aa:str,bb:int", params=dict(n=2))
     )
     assert_eq(
         """
@@ -188,7 +188,7 @@ def test_transform():
 
     transform
         prepartition ROWCOUNT / 2 by a presort b desc
-        using mock_transformer(n=2) schema *
+        using mock_transformer(n=2) schema * ~ k + aa : str,bb:int
     """,
         w.workflow,
     )

@@ -347,12 +347,17 @@ fugueRenameExpression:
     ;
 
 fugueWildSchema:
-    fugueWildSchemaPair (',' fugueWildSchemaPair)*
+    fugueWildSchemaPair (',' fugueWildSchemaPair)* fugueSchemaOp*
     ;
 
 fugueWildSchemaPair
     : pair=fugueSchemaPair
     | ASTERISK
+    ;
+
+fugueSchemaOp
+    : (MINUS|TILDE) fugueSchemaKey (',' fugueSchemaKey)*
+    | PLUS fugueSchema
     ;
 
 fugueSchema:

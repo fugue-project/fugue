@@ -79,6 +79,11 @@ def test_wild_schema():
     assert_eq("*  ", "*")
     assert_eq("*,a:int32", "*,a:int")
     assert_eq("a:int32, *, \nb:string", "a:int,*,b:str")
+    # transformations
+    assert_eq(
+        "a:int32, *, b:string +x:str, k:int\n-y, z -t~ w , x",
+        "a:int,*,b:str+x:str,k:int-y,z-t~w,x",
+    )
     with raises(FugueSQLSyntaxError):
         assert_eq("*,a:int32, *, \nb:string")
 
