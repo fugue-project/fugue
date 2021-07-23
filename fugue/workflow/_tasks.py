@@ -164,11 +164,12 @@ class FugueTask(TaskSpec, ABC):
 class CreateData(FugueTask):
     """CreateData task.
 
-    :Notice:
+    .. note::
 
-    This task's determinism is not dependent on the input dataframe, but if
-    you want the input dataframe to affect the determinism, then you should
-    provide a function ``data_determiner``, which can compute a unique id from ``df``
+        This task's determinism is not dependent on the input dataframe, but if
+        you want the input dataframe to affect the determinism, then you should
+        provide a function ``data_determiner``, which can compute a unique id
+        from ``df``
     """
 
     @no_type_check

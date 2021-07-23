@@ -23,7 +23,7 @@ class FlaskRPCServer(RPCServer):
 
     :param conf: |FugueConfig|
 
-    :Examples:
+    .. admonition:: Examples
 
         .. code-block:: python
 

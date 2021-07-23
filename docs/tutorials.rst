@@ -9,7 +9,7 @@ To directly read the tutorials without running them:
    Tutorial Homepage <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/index.html>
    For Beginners <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner/index.html>
    For Advanced Users <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/advanced.html>
-   For Fugue-SQL <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/fugue_sql/index.html>
+   For Fugue-SQL <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/fugue_sql/index.md.html>
    
 
 

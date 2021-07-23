@@ -24,17 +24,18 @@ class PandasDataFrame(LocalBoundedDataFrame):
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
-    :Examples:
+    .. admonition:: Examples
 
-    >>> PandasDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
-    >>> PandasDataFrame(schema = "a:int,b:int")  # empty dataframe
-    >>> PandasDataFrame(pd.DataFrame([[0]],columns=["a"]))
-    >>> PandasDataFrame(ArrayDataFrame([[0]],"a:int).as_pandas())
+        >>> PandasDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
+        >>> PandasDataFrame(schema = "a:int,b:int")  # empty dataframe
+        >>> PandasDataFrame(pd.DataFrame([[0]],columns=["a"]))
+        >>> PandasDataFrame(ArrayDataFrame([[0]],"a:int).as_pandas())
 
-    :Notice:
+    .. note::
 
-    If ``pandas_df_wrapper`` is True, then the constructor will not do any type check
-    otherwise, it will enforce type according to the input schema after the construction
+        If ``pandas_df_wrapper`` is True, then the constructor will not do any type
+        check otherwise, it will enforce type according to the input schema after
+        the construction
     """
 
     def __init__(  # noqa: C901

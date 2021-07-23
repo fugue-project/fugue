@@ -212,7 +212,7 @@ def cotransformer(
 ) -> Callable[[Any], "_FuncAsCoTransformer"]:
     """Decorator for cotransformers
 
-    Please read :ref:`CoTransformer Tutorial <tutorial:/tutorials/cotransformer.ipynb>`
+    Please read |CoTransformerTutorial|
     """
 
     def deco(func: Callable) -> "_FuncAsCoTransformer":
@@ -234,7 +234,7 @@ def output_cotransformer(
 ) -> Callable[[Any], "_FuncAsCoTransformer"]:
     """Decorator for cotransformers
 
-    Please read :ref:`CoTransformer Tutorial <tutorial:/tutorials/cotransformer.ipynb>`
+    Please read |CoTransformerTutorial|
     """
 
     def deco(func: Callable) -> "_FuncAsOutputCoTransformer":

@@ -72,10 +72,11 @@ class DaskExecutionEngine(ExecutionEngine):
     :param conf: |ParamsLikeObject| defaults to None, read |FugueConfig| to
       learn Fugue specific options
 
-    :Notice:
+    .. note::
 
-    You should setup Dask single machine or distributed environment in the
-    :doc:`common <dask:setup>` way. Before initializing :class:`~.DaskExecutionEngine`
+        You should setup Dask single machine or distributed environment in the
+        :doc:`common <dask:setup>` way.
+        Before initializing :class:`~.DaskExecutionEngine`
     """
 
     def __init__(self, conf: Any = None):
@@ -116,15 +117,15 @@ class DaskExecutionEngine(ExecutionEngine):
         :param metadata: |ParamsLikeObject|, defaults to None
         :return: engine compatible dataframe
 
-        :Notice:
+        .. note::
 
-        * if the input is already :class:`~fugue_dask.dataframe.DaskDataFrame`,
-          it should return itself
-        * For list or iterable of arrays, ``schema`` must be specified
-        * When ``schema`` is not None, a potential type cast may happen to ensure
-          the dataframe's schema.
-        * all other methods in the engine can take arbitrary dataframes and
-          call this method to convert before doing anything
+            * if the input is already :class:`~fugue_dask.dataframe.DaskDataFrame`,
+              it should return itself
+            * For list or iterable of arrays, ``schema`` must be specified
+            * When ``schema`` is not None, a potential type cast may happen to ensure
+              the dataframe's schema.
+            * all other methods in the engine can take arbitrary dataframes and
+              call this method to convert before doing anything
         """
         default_partitions = self.conf.get_or_throw(
             FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS, int

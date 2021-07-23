@@ -51,9 +51,9 @@ def transform(
       of type :class:`~fugue.dataframe.dataframe.DataFrame`, then the output will
       also be a :class:`~fugue.dataframe.dataframe.DataFrame`
 
-    :Notice:
+    .. note::
 
-    This function may be lazy and return the transformed dataframe.
+      This function may be lazy and return the transformed dataframe.
     """
     dag = FugueWorkflow()
     dag.df(df).transform(
@@ -105,10 +105,10 @@ def out_transform(
       for either of them to use the default one), defaults to None
     :param engine_conf: |ParamsLikeObject|, defaults to None
 
-    :Notice:
+    .. note::
 
-    This transformation is guaranteed to execute immediately (eager)
-    and return nothing
+      This transformation is guaranteed to execute immediately (eager)
+      and return nothing
     """
     dag = FugueWorkflow()
     dag.df(df).out_transform(

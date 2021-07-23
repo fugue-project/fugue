@@ -22,15 +22,15 @@ class IterableDataFrame(LocalUnboundedDataFrame):
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
-    :Examples:
+    .. admonition:: Examples
 
-    >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
-    >>> b = IterableDataFrame(a)
+        >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
+        >>> b = IterableDataFrame(a)
 
-    :Notice:
+    .. note::
 
-    It's ok to peek the dataframe, it will not affect the iteration, but it's
-    invalid operation to count
+        It's ok to peek the dataframe, it will not affect the iteration, but it's
+        invalid operation to count
     """
 
     def __init__(  # noqa: C901

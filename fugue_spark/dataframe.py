@@ -28,12 +28,12 @@ class SparkDataFrame(DataFrame):
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
-    :Notice:
+    .. note::
 
-    * You should use :meth:`fugue_spark.execution_engine.SparkExecutionEngine.to_df`
-      instead of construction it by yourself.
-    * If ``schema`` is set, then there will be type cast on the Spark DataFrame if the
-      schema is different.
+        * You should use :meth:`fugue_spark.execution_engine.SparkExecutionEngine.to_df`
+          instead of construction it by yourself.
+        * If ``schema`` is set, then there will be type cast on the Spark DataFrame if
+          the schema is different.
     """
 
     def __init__(  # noqa: C901
