@@ -229,6 +229,12 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             c = a.partition(num=1).transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[100]))
 
+    def test_session_as_engine(self):
+        dag = FugueWorkflow()
+        a = dag.df([[p, 0] for p in range(100)], "a:int,b:int")
+        a.partition(algo="even", by=["a"]).transform(AssertMaxNTransform).persist()
+        dag.run(self.spark_session)
+
     def test_interfaceless(self):
         sdf = self.spark_session.createDataFrame(
             [[1, 10], [0, 0], [1, 1], [0, 20]], "a int,b int"

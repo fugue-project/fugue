@@ -1,18 +1,10 @@
-import inspect
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 from uuid import uuid4
 
 import pandas as pd
 import pyarrow as pa
-import pyspark.rdd as pr
 import pyspark.sql as ps
-from fugue._utils.interfaceless import (
-    DataFrameParam,
-    ExecutionEngineParam,
-    SimpleAnnotationConverter,
-    register_annotation_converter,
-)
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
@@ -37,6 +29,18 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
+from pyspark import StorageLevel
+from pyspark.rdd import RDD
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import broadcast, col, lit, row_number
+from pyspark.sql.window import Window
+from triad import FileSystem, IndexedOrderedDict, ParamDict, Schema
+from triad.utils.assertion import assert_arg_not_none, assert_or_throw
+from triad.utils.hash import to_uuid
+from triad.utils.iter import EmptyAwareIterable
+from triad.utils.pandas_like import PD_UTILS
+from triad.utils.threading import RunOnce
+
 from fugue_spark._constants import (
     FUGUE_SPARK_CONF_USE_PANDAS_UDF,
     FUGUE_SPARK_DEFAULT_CONF,
@@ -49,17 +53,6 @@ from fugue_spark._utils.partition import (
     rand_repartition,
 )
 from fugue_spark.dataframe import SparkDataFrame
-from pyspark import SparkContext, StorageLevel
-from pyspark.rdd import RDD
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import broadcast, col, lit, row_number
-from pyspark.sql.window import Window
-from triad import FileSystem, IndexedOrderedDict, ParamDict, Schema
-from triad.utils.assertion import assert_arg_not_none, assert_or_throw
-from triad.utils.hash import to_uuid
-from triad.utils.iter import EmptyAwareIterable
-from triad.utils.pandas_like import PD_UTILS
-from triad.utils.threading import RunOnce
 
 _TO_SPARK_JOIN_MAP: Dict[str, str] = {
     "inner": "inner",
@@ -724,117 +717,3 @@ class _Mapper(object):  # pragma: no cover
             res = self.map_func(cursor, sub_df)
             for r in res.as_array_iterable(type_safe=True):
                 yield r
-
-
-class _SparkExecutionEngineParam(ExecutionEngineParam):
-    def __init__(
-        self,
-        param: Optional[inspect.Parameter],
-    ):
-        super().__init__(
-            param, annotation="SparkExecutionEngine", engine_type=SparkExecutionEngine
-        )
-
-
-class _SparkSessionParam(ExecutionEngineParam):
-    def __init__(
-        self,
-        param: Optional[inspect.Parameter],
-    ):
-        super().__init__(
-            param, annotation="SparkSession", engine_type=SparkExecutionEngine
-        )
-
-    def to_input(self, engine: ExecutionEngine) -> Any:
-        return super().to_input(engine).spark_session  # type:ignore
-
-
-class _SparkContextParam(ExecutionEngineParam):
-    def __init__(
-        self,
-        param: Optional[inspect.Parameter],
-    ):
-        super().__init__(
-            param, annotation="SparkContext", engine_type=SparkExecutionEngine
-        )
-
-    def to_input(self, engine: ExecutionEngine) -> Any:
-        return super().to_input(engine).spark_session.sparkContext  # type:ignore
-
-
-class _SparkDataFrameParam(DataFrameParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, annotation="pyspark.sql.DataFrame")
-
-    def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
-        assert isinstance(ctx, SparkExecutionEngine)
-        return ctx.to_df(df).native
-
-    def to_output_df(self, output: Any, schema: Any, ctx: Any) -> DataFrame:
-        assert isinstance(output, ps.DataFrame)
-        assert isinstance(ctx, SparkExecutionEngine)
-        return ctx.to_df(output, schema=schema)
-
-    def count(self, df: Any) -> int:  # pragma: no cover
-        raise NotImplementedError("not allowed")
-
-
-class _RddParam(DataFrameParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, annotation="pyspark.rdd.RDD")
-
-    def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
-        assert isinstance(ctx, SparkExecutionEngine)
-        return ctx.to_df(df).native.rdd
-
-    def to_output_df(self, output: Any, schema: Any, ctx: Any) -> DataFrame:
-        assert isinstance(output, pr.RDD)
-        assert isinstance(ctx, SparkExecutionEngine)
-        return ctx.to_df(output, schema=schema)
-
-    def count(self, df: Any) -> int:  # pragma: no cover
-        raise NotImplementedError("not allowed")
-
-    def need_schema(self) -> Optional[bool]:
-        return True
-
-
-register_annotation_converter(
-    0.8,
-    SimpleAnnotationConverter(
-        SparkExecutionEngine,
-        lambda param: _SparkExecutionEngineParam(param),
-    ),
-)
-
-register_annotation_converter(
-    0.8,
-    SimpleAnnotationConverter(
-        SparkSession,
-        lambda param: _SparkSessionParam(param),
-    ),
-)
-
-register_annotation_converter(
-    0.8,
-    SimpleAnnotationConverter(
-        SparkContext,
-        lambda param: _SparkContextParam(param),
-    ),
-)
-
-register_annotation_converter(
-    0.8,
-    SimpleAnnotationConverter(
-        ps.DataFrame,
-        lambda param: _SparkDataFrameParam(param),
-    ),
-)
-
-register_annotation_converter(
-    0.8,
-    SimpleAnnotationConverter(
-        pr.RDD,
-        lambda param: _RddParam(param),
-    ),
-)
