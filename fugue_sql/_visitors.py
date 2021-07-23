@@ -133,13 +133,17 @@ class _VisitorBase(FugueSQLVisitor):
         schema = ",".join(self.collectChildren(ctx, fp.FugueWildSchemaPairContext))
         if schema.count("*") > 1:
             raise FugueSQLSyntaxError(f"invalid {schema} * can appear at most once")
-        return schema
+        ops = "".join(self.collectChildren(ctx, fp.FugueSchemaOpContext))
+        return schema + ops
 
     def visitFugueWildSchemaPair(self, ctx: fp.FugueWildSchemaPairContext) -> str:
         if ctx.pair is not None:
             return str(Schema([self.visit(ctx.pair)]))
         else:
             return "*"
+
+    def visitFugueSchemaOp(self, ctx: fp.FugueSchemaOpContext) -> str:
+        return self.ctxToStr(ctx, delimit="")
 
     def visitFugueSchema(self, ctx: fp.FugueSchemaContext) -> Schema:
         return Schema(self.collectChildren(ctx, fp.FugueSchemaPairContext))

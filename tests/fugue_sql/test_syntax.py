@@ -103,7 +103,17 @@ def test_select_syntax():
 
 def test_schema_syntax():
     good_syntax(
-        ["*", "a:int", "a:int,*", "*,a:int", "a:int,*,b:int"],
+        [
+            "*",
+            "a:int",
+            "a:int,*",
+            "*,a:int",
+            "a:int,*,b:int",
+            "*-a,b",
+            "*~c",
+            "*+c:str,d:int",
+            "*,k:str+a:str,b:str-c~x",
+        ],
         ignore_case=False,
         rule="fugueWildSchema",
     )
