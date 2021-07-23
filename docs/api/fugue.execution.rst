@@ -21,6 +21,8 @@ fugue.execution
 .. |ZipComap| replace:: :ref:`Zip & Comap <tutorial:/tutorials/advanced/execution_engine.ipynb#zip-&-comap>`
 .. |LoadSave| replace:: :ref:`Load & Save <tutorial:/tutorials/advanced/execution_engine.ipynb#load-&-save>`
 .. |AutoPersist| replace:: :ref:`Auto Persist <tutorial:/tutorials/advanced/useful_config.ipynb#auto-persist>`
+.. |CoTransformer| replace:: :ref:`CoTransformer <tutorial:/tutorials/advanced/dag.ipynb#cotransformer>`
+.. |CoTransformerTutorial| replace:: :ref:`the CoTransformer Tutorial <tutorial:/tutorials/extensions/cotransformer.ipynb>`
 .. |FugueDataTypes| replace:: :ref:`Fugue Data Types <tutorial:/tutorials/appendix/generate_types.ipynb>`
 
 
