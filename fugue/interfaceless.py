@@ -1,5 +1,6 @@
 from typing import Any, List, Optional
 
+from fugue.collections.yielded import Yielded
 from fugue.dataframe import DataFrame
 from fugue.workflow import FugueWorkflow
 
@@ -63,8 +64,8 @@ def transform(
         ignore_errors=ignore_errors or [],
     ).yield_dataframe_as("result")
     result = dag.run(engine, conf=engine_conf)["result"]
-    if isinstance(df, DataFrame):
-        return df
+    if isinstance(df, (DataFrame, Yielded)):
+        return result
     return result.as_pandas() if result.is_local else result.native  # type:ignore
 
 
