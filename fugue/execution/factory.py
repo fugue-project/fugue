@@ -233,15 +233,15 @@ def register_default_sql_engine(func: Callable, on_dup="overwrite") -> None:
 
     :raises KeyError: if ``on_dup`` is ``throw`` and the ``name`` already exists
 
-    :Notice:
+    .. note::
 
-    You should be careful to use this function, because when you set a custom
-    SQL engine as default, all execution engines you create will use this SQL
-    engine unless you are explicit. For example if you set the default SQL engine
-    to be a Spark specific one, then if you start a NativeExecutionEngine, it will
-    try to use it and will throw exceptions.
+        You should be careful to use this function, because when you set a custom
+        SQL engine as default, all execution engines you create will use this SQL
+        engine unless you are explicit. For example if you set the default SQL engine
+        to be a Spark specific one, then if you start a NativeExecutionEngine, it will
+        try to use it and will throw exceptions.
 
-    So it's always a better idea to use ``register_sql_engine`` instead
+        So it's always a better idea to use ``register_sql_engine`` instead
 
     .. admonition:: Examples
 
@@ -336,10 +336,10 @@ def make_sql_engine(
     :return: the :class:`~fugue.execution.execution_engine.SQLEngine`
       instance
 
-    :Notice:
+    .. note::
 
-    For users, you normally don't need to call this function directly.
-    Use ``make_execution_engine`` instead
+        For users, you normally don't need to call this function directly.
+        Use ``make_execution_engine`` instead
 
     .. admonition:: Examples
 

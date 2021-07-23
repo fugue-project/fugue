@@ -140,22 +140,22 @@ class WorkflowDataFrame(DataFrame):
             >>> df.compute().as_pandas()  # pandas dataframe
             >>> df.compute(SparkExecutionEngine).native  # spark dataframe
 
-        :Notice:
+        .. note::
 
-        Consider using :meth:`fugue.workflow.workflow.FugueWorkflow.run` instead.
-        Because this method actually triggers the entire workflow to run, so it may
-        be confusing to use this method because extra time may be taken to compute
-        unrelated dataframes.
+            Consider using :meth:`fugue.workflow.workflow.FugueWorkflow.run` instead.
+            Because this method actually triggers the entire workflow to run, so it may
+            be confusing to use this method because extra time may be taken to compute
+            unrelated dataframes.
 
-        .. code-block:: python
+            .. code-block:: python
 
-            dag = FugueWorkflow()
-            df1 = dag.df([[0]],"a:int").transform(a_transformer)
-            df2 = dag.df([[0]],"b:int")
+                dag = FugueWorkflow()
+                df1 = dag.df([[0]],"a:int").transform(a_transformer)
+                df2 = dag.df([[0]],"b:int")
 
-            dag.run(SparkExecutionEngine)
-            df1.result.show()
-            df2.result.show()
+                dag.run(SparkExecutionEngine)
+                df1.result.show()
+                df2.result.show()
         """
         # TODO: it computes entire graph
         self.workflow.run(*args, **kwargs)
@@ -232,15 +232,15 @@ class WorkflowDataFrame(DataFrame):
         :param title: title to display on top of the dataframe, defaults to None
         :param best_width: max width for the output table, defaults to 100
 
-        :Notice:
+        .. note::
 
-        * When you call this method, it means you want the dataframe to be
-          printed when the workflow executes. So the dataframe won't show until
-          you run the workflow.
-        * When ``show_count`` is True, it can trigger expensive calculation for
-          a distributed dataframe. So if you call this function directly, you may
-          need to :meth:`~.persist` the dataframe. Or you can turn on
-          :ref:`tutorial:/tutorials/useful_config.ipynb#auto-persist`
+            * When you call this method, it means you want the dataframe to be
+            printed when the workflow executes. So the dataframe won't show until
+            you run the workflow.
+            * When ``show_count`` is True, it can trigger expensive calculation for
+            a distributed dataframe. So if you call this function directly, you may
+            need to :meth:`~.persist` the dataframe. Or you can turn on
+            :ref:`tutorial:/tutorials/useful_config.ipynb#auto-persist`
         """
         # TODO: best_width is not used
         self.workflow.show(self, rows=rows, show_count=show_count, title=title)
@@ -518,11 +518,11 @@ class WorkflowDataFrame(DataFrame):
         :return: the transformed dataframe
         :rtype: :class:`~.WorkflowDataFrame`
 
-        :Notice:
+        .. note::
 
-        :meth:`~.transform` can be lazy and will return the transformed dataframe,
-        :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
-        return nothing
+            :meth:`~.transform` can be lazy and will return the transformed dataframe,
+            :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
+            return nothing
         """
         if pre_partition is None:
             pre_partition = self.partition_spec
@@ -563,11 +563,11 @@ class WorkflowDataFrame(DataFrame):
           defaults to empty list
         :param callback: |RPCHandlerLikeObject|, defaults to None
 
-        :Notice:
+        .. note::
 
-        :meth:`~.transform` can be lazy and will return the transformed dataframe,
-        :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
-        return nothing
+            :meth:`~.transform` can be lazy and will return the transformed dataframe,
+            :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
+            return nothing
         """
         if pre_partition is None:
             pre_partition = self.partition_spec
@@ -715,10 +715,10 @@ class WorkflowDataFrame(DataFrame):
           default to True
         :return: unioned dataframe
 
-        :Notice:
+        .. note::
 
-        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
-        exception will be thrown.
+            Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+            exception will be thrown.
         """
         df = self.workflow.union(self, *dfs, distinct=distinct)
         return self._to_self_type(df)
@@ -731,10 +731,10 @@ class WorkflowDataFrame(DataFrame):
           default to True
         :return: subtracted dataframe
 
-        :Notice:
+        .. note::
 
-        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
-        exception will be thrown.
+            Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+            exception will be thrown.
         """
         df = self.workflow.subtract(self, *dfs, distinct=distinct)
         return self._to_self_type(df)
@@ -747,10 +747,10 @@ class WorkflowDataFrame(DataFrame):
           default to True
         :return: intersected dataframe
 
-        :Notice:
+        .. note::
 
-        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
-        exception will be thrown.
+            Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+            exception will be thrown.
         """
         df = self.workflow.intersect(self, *dfs, distinct=distinct)
         return self._to_self_type(df)
@@ -862,14 +862,14 @@ class WorkflowDataFrame(DataFrame):
         :param kwargs: paramteters for the underlying execution engine function
         :return: the cached dataframe
 
-        :Notice:
+        .. note::
 
-        Weak checkpoint in most cases is the best choice for caching a dataframe to
-        avoid duplicated computation. However it does not guarantee to break up the
-        the compute dependency for this dataframe, so when you have very complicated
-        compute, you may encounter issues such as stack overflow. Also, weak checkpoint
-        normally caches the dataframe in memory, if memory is a concern, then you should
-        consider :meth:`~.strong_checkpoint`
+            Weak checkpoint in most cases is the best choice for caching a dataframe to
+            avoid duplicated computation. However it does not guarantee to break up the
+            the compute dependency for this dataframe, so when you have very complicated
+            compute, you may encounter issues such as stack overflow. Also, weak
+            checkpoint normally caches the dataframe in memory, if memory is a concern,
+            then you should consider :meth:`~.strong_checkpoint`
         """
         self._task.set_checkpoint(WeakCheckpoint(lazy=lazy, **kwargs))
         return self
@@ -889,13 +889,13 @@ class WorkflowDataFrame(DataFrame):
         :param kwargs: paramteters for the underlying execution engine function
         :return: the cached dataframe
 
-        :Notice:
+        .. note::
 
-        Strong checkpoint guarantees the output dataframe compute dependency is
-        from the temporary file. Use strong checkpoint only when
-        :meth:`~.weak_checkpoint` can't be used.
+            Strong checkpoint guarantees the output dataframe compute dependency is
+            from the temporary file. Use strong checkpoint only when
+            :meth:`~.weak_checkpoint` can't be used.
 
-        Strong checkpoint file will be removed after the execution of the workflow.
+            Strong checkpoint file will be removed after the execution of the workflow.
         """
         self._task.set_checkpoint(
             FileCheckpoint(
@@ -927,11 +927,11 @@ class WorkflowDataFrame(DataFrame):
         :param namespace: a value to control determinism, defaults to None.
         :return: the cached dataframe
 
-        :Notice:
+        .. note::
 
-        The difference vs :meth:`~.strong_checkpoint` is that this checkpoint is not
-        removed after execution, so it can take effect cross execution if the dependent
-        compute logic is not changed.
+            The difference vs :meth:`~.strong_checkpoint` is that this checkpoint is not
+            removed after execution, so it can take effect cross execution if the
+            dependent compute logic is not changed.
         """
         self._task.set_checkpoint(
             FileCheckpoint(
@@ -952,19 +952,19 @@ class WorkflowDataFrame(DataFrame):
 
         :param name: the name of the yielded dataframe
 
-        :Notice:
+        .. note::
 
-        In only the following cases you can yield file:
+            In only the following cases you can yield file:
 
-        * you have not checkpointed (persisted) the dataframe, for example
-          ``df.yield_file_as("a")``
-        * you have used :meth:`~.deterministic_checkpoint`, for example
-          ``df.deterministic_checkpoint().yield_file_as("a")``
-        * yield is workflow, compile level logic
+            * you have not checkpointed (persisted) the dataframe, for example
+              ``df.yield_file_as("a")``
+            * you have used :meth:`~.deterministic_checkpoint`, for example
+              ``df.deterministic_checkpoint().yield_file_as("a")``
+            * yield is workflow, compile level logic
 
-        For the first case, the yield will also be a strong checkpoint so
-        whenever you yield a dataframe as a file, the dataframe has been saved as a file
-        and loaded back as a new dataframe.
+            For the first case, the yield will also be a strong checkpoint so
+            whenever you yield a dataframe as a file, the dataframe has been saved as a
+            file and loaded back as a new dataframe.
         """
         if not self._task.has_checkpoint:
             # the following == a non determinitic, but permanent checkpoint
@@ -987,16 +987,16 @@ class WorkflowDataFrame(DataFrame):
         :return: the persisted dataframe
         :rtype: :class:`~.WorkflowDataFrame`
 
-        :Notice:
+        .. note::
 
-        ``persist`` can only guarantee the persisted dataframe will be computed
-        for only once. However this doesn't mean the backend really breaks up the
-        execution dependency at the persisting point. Commonly, it doesn't cause
-        any issue, but if your execution graph is long, it may cause expected
-        problems for example, stack overflow.
+            ``persist`` can only guarantee the persisted dataframe will be computed
+            for only once. However this doesn't mean the backend really breaks up the
+            execution dependency at the persisting point. Commonly, it doesn't cause
+            any issue, but if your execution graph is long, it may cause expected
+            problems for example, stack overflow.
 
-        ``persist`` method is considered as weak checkpoint. Sometimes, it may be
-        necessary to use strong checkpint, which is :meth:`~.checkpoint`
+            ``persist`` method is considered as weak checkpoint. Sometimes, it may be
+            necessary to use strong checkpint, which is :meth:`~.checkpoint`
         """
         return self.weak_checkpoint(lazy=False)
 
@@ -1020,10 +1020,10 @@ class WorkflowDataFrame(DataFrame):
         :return: dataframe with the partition hint
         :rtype: :class:`~.WorkflowDataFrame`
 
-        :Notice:
+        .. note::
 
-        Normally this step is fast because it's to add a partition hint
-        for the next step.
+            Normally this step is fast because it's to add a partition hint
+            for the next step.
         """
         return self._to_self_type(
             WorkflowDataFrame(
@@ -1058,10 +1058,10 @@ class WorkflowDataFrame(DataFrame):
         :return: dataframe that is both logically and physically partitioned by ``keys``
         :rtype: :class:`~.WorkflowDataFrame`
 
-        :Notice:
+        .. note::
 
-        This is a hint but not enforced, certain execution engines will not
-        respect this hint.
+            This is a hint but not enforced, certain execution engines will not
+            respect this hint.
         """
         return self.partition_by(*keys, algo="even")
 
@@ -1072,10 +1072,10 @@ class WorkflowDataFrame(DataFrame):
         :return: dataframe that is evenly partitioned by row count
         :rtype: :class:`~.WorkflowDataFrame`
 
-        :Notice:
+        .. note::
 
-        This is a hint but not enforced, certain execution engines will not
-        respect this hint.
+            This is a hint but not enforced, certain execution engines will not
+            respect this hint.
         """
         return self.partition("per_row")
 
@@ -1106,10 +1106,10 @@ class WorkflowDataFrame(DataFrame):
         :return: a new dataframe with the new names
         :rtype: :class:`~.WorkflowDataFrame`
 
-        :Notice:
+        .. note::
 
-        This interface is more flexible than
-        :meth:`fugue.dataframe.dataframe.DataFrame.rename`
+            This interface is more flexible than
+            :meth:`fugue.dataframe.dataframe.DataFrame.rename`
 
         .. admonition:: Examples
 
@@ -1129,9 +1129,9 @@ class WorkflowDataFrame(DataFrame):
         :return: a new dataframe with the new column types
         :rtype: :class:`~.WorkflowDataFrame`
 
-        :Notice:
+        .. note::
 
-        The output dataframe will not change the order of original schema.
+            The output dataframe will not change the order of original schema.
 
         .. admonition:: Examples
 
@@ -1165,16 +1165,19 @@ class WorkflowDataFrame(DataFrame):
         :return: a zipped dataframe
         :rtype: :class:`~.WorkflowDataFrame`
 
-        :Notice:
+        .. note::
 
-        * ``dfs`` must be list like, the zipped dataframe will be list like
-        * ``dfs`` is fine to be empty
-        * If you want dict-like zip, use
-          :meth:`fugue.workflow.workflow.FugueWorkflow.zip`
+            * ``dfs`` must be list like, the zipped dataframe will be list like
+            * ``dfs`` is fine to be empty
+            * If you want dict-like zip, use
+            :meth:`fugue.workflow.workflow.FugueWorkflow.zip`
 
-        Read :ref:`CoTransformer <tutorial:/tutorials/dag.ipynb#cotransformer>`
-        and :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`
-        for details
+        .. seealso::
+
+            Read :ref:`CoTransformer <tutorial:/tutorials/dag.ipynb#cotransformer>`
+            and
+            :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`
+            for details
         """
         if partition is None:
             partition = self.partition_spec
@@ -1610,13 +1613,13 @@ class FugueWorkflow(object):
         :param data_determiner: a function to compute unique id from ``data``
         :return: a dataframe of the current workflow
 
-        :Notice:
+        .. note::
 
-        By default, the input ``data`` does not affect the determinism of the workflow
-        (but ``schema`` and ``etadata`` do), because the amount of compute can be
-        unpredictable. But if you want ``data`` to affect the
-        determinism of the workflow, you can provide the function to compute the unique
-        id of ``data`` using ``data_determiner``
+            By default, the input ``data`` does not affect the determinism of the
+            workflow (but ``schema`` and ``etadata`` do), because the amount of compute
+            can be unpredictable. But if you want ``data`` to affect the
+            determinism of the workflow, you can provide the function to compute the
+            unique id of ``data`` using ``data_determiner``
         """
         if isinstance(data, WorkflowDataFrame):
             assert_or_throw(
@@ -1660,13 +1663,13 @@ class FugueWorkflow(object):
         :param data_determiner: a function to compute unique id from ``data``
         :return: a dataframe of the current workflow
 
-        :Notice:
+        .. note::
 
-        By default, the input ``data`` does not affect the determinism of the workflow
-        (but ``schema`` and ``etadata`` do), because the amount of compute can be
-        unpredictable. But if you want ``data`` to affect the
-        determinism of the workflow, you can provide the function to compute the unique
-        id of ``data`` using ``data_determiner``
+            By default, the input ``data`` does not affect the determinism of the
+            workflow (but ``schema`` and ``etadata`` do), because the amount of
+            compute can be unpredictable. But if you want ``data`` to affect the
+            determinism of the workflow, you can provide the function to compute
+            the unique id of ``data`` using ``data_determiner``
         """
         return self.create_data(
             data=data, schema=schema, metadata=metadata, data_determiner=data_determiner
@@ -1705,15 +1708,15 @@ class FugueWorkflow(object):
         :param title: title to display on top of the dataframe, defaults to None
         :param best_width: max width for the output table, defaults to 100
 
-        :Notice:
+        .. note::
 
-        * When you call this method, it means you want the dataframe to be
-          printed when the workflow executes. So the dataframe won't show until
-          you run the workflow.
-        * When ``show_count`` is True, it can trigger expensive calculation for
-          a distributed dataframe. So if you call this function directly, you may
-          need to :meth:`~.WorkflowDataFrame.persist` the dataframe. Or you can turn on
-          :ref:`tutorial:/tutorials/useful_config.ipynb#auto-persist`
+            * When you call this method, it means you want the dataframe to be
+                printed when the workflow executes. So the dataframe won't show until
+                you run the workflow.
+            * When ``show_count`` is True, it can trigger expensive calculation for
+                a distributed dataframe. So if you call this function directly, you may
+                need to :meth:`~.WorkflowDataFrame.persist` the dataframe. Or you can
+                turn on :ref:`tutorial:/tutorials/useful_config.ipynb#auto-persist`
         """
         self.output(
             *dfs, using=Show, params=dict(rows=rows, show_count=show_count, title=title)
@@ -1745,10 +1748,10 @@ class FugueWorkflow(object):
           default to True
         :return: result dataframe of the set operation
 
-        :Notice:
+        .. note::
 
-        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
-        exception will be thrown.
+            Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+            exception will be thrown.
         """
         return self.process(
             *dfs, using=RunSetOperation, params=dict(how=how, distinct=distinct)
@@ -1762,10 +1765,10 @@ class FugueWorkflow(object):
           default to True
         :return: unioned dataframe
 
-        :Notice:
+        .. note::
 
-        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
-        exception will be thrown.
+            Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+            exception will be thrown.
         """
         return self.set_op("union", *dfs, distinct=distinct)
 
@@ -1777,10 +1780,10 @@ class FugueWorkflow(object):
           default to True
         :return: subtracted dataframe
 
-        :Notice:
+        .. note::
 
-        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
-        exception will be thrown.
+            Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+            exception will be thrown.
         """
         return self.set_op("subtract", *dfs, distinct=distinct)
 
@@ -1792,10 +1795,10 @@ class FugueWorkflow(object):
           default to True
         :return: intersected dataframe
 
-        :Notice:
+        .. note::
 
-        Currently, all dataframes in ``dfs`` must have identical schema, otherwise
-        exception will be thrown.
+            Currently, all dataframes in ``dfs`` must have identical schema, otherwise
+            exception will be thrown.
         """
         return self.set_op("intersect", *dfs, distinct=distinct)
 
@@ -1820,15 +1823,18 @@ class FugueWorkflow(object):
 
         :return: a zipped dataframe
 
-        :Notice:
+        .. note::
 
-        * If ``dfs`` is dict like, the zipped dataframe will be dict like,
-          If ``dfs`` is list like, the zipped dataframe will be list like
-        * It's fine to contain only one dataframe in ``dfs``
+            * If ``dfs`` is dict like, the zipped dataframe will be dict like,
+            If ``dfs`` is list like, the zipped dataframe will be list like
+            * It's fine to contain only one dataframe in ``dfs``
 
-        Read :ref:`CoTransformer <tutorial:/tutorials/dag.ipynb#cotransformer>`
-        and :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`
-        for details
+        .. seealso::
+
+            Read :ref:`CoTransformer <tutorial:/tutorials/dag.ipynb#cotransformer>`
+            and
+            :ref:`Zip & Comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`
+            for details
         """
         return self.process(
             *dfs,
@@ -1871,11 +1877,11 @@ class FugueWorkflow(object):
         :param callback: |RPCHandlerLikeObject|, defaults to None
         :return: the transformed dataframe
 
-        :Notice:
+        .. note::
 
-        :meth:`~.transform` can be lazy and will return the transformed dataframe,
-        :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
-        return nothing
+            :meth:`~.transform` can be lazy and will return the transformed dataframe,
+            :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
+            return nothing
         """
         if isinstance(using, str):
             using = _TRANSFORMER_REGISTRY.get(using)
@@ -1933,11 +1939,11 @@ class FugueWorkflow(object):
           defaults to empty list
         :param callback: |RPCHandlerLikeObject|, defaults to None
 
-        :Notice:
+        .. note::
 
-        :meth:`~.transform` can be lazy and will return the transformed dataframe,
-        :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
-        return nothing
+            :meth:`~.transform` can be lazy and will return the transformed dataframe,
+            :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
+            return nothing
         """
         if isinstance(using, str):
             using = _OUT_TRANSFORMER_REGISTRY.get(using)

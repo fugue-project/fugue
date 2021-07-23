@@ -151,11 +151,11 @@ def to_local_bounded_df(
         >>> assert isinstance(to_local_bounded_df(a), LocalBoundedDataFrame)
         >>> to_local_bounded_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
 
-    :Notice:
+    .. note::
 
-    Compared to :func:`.to_local_df`, this function makes sure the dataframe is also
-    bounded, so :class:`~fugue.dataframe.iterable_dataframe.IterableDataFrame` will be
-    converted although it's local.
+        Compared to :func:`.to_local_df`, this function makes sure the dataframe is also
+        bounded, so :class:`~fugue.dataframe.iterable_dataframe.IterableDataFrame` will
+        be converted although it's local.
     """
     df = to_local_df(df, schema, metadata)
     if isinstance(df, LocalBoundedDataFrame):
@@ -170,10 +170,10 @@ def pickle_df(df: DataFrame) -> bytes:
     :param df: input DataFrame
     :return: pickled binary data
 
-    :Notice:
+    .. note::
 
-    Be careful to use on large dataframes or non-local, un-materialized dataframes,
-    it can be slow. You should always use :func:`.unpickle_df` to deserialize.
+        Be careful to use on large dataframes or non-local, un-materialized dataframes,
+        it can be slow. You should always use :func:`.unpickle_df` to deserialize.
     """
     df = to_local_bounded_df(df)
     o: List[Any] = [df.schema]
@@ -203,10 +203,11 @@ def serialize_df(
     :raises InvalidOperationError: if file is large but ``file_path`` is not provided
     :return: a json string either containing the base64 data or the file path
 
-    :Notice:
+    .. note::
 
-    If fs is not provided but it needs to write to disk, then it will use
-    :meth:`~fs:fs.opener.registry.Registry.open_fs` to try to open the file to write.
+        If fs is not provided but it needs to write to disk, then it will use
+        :meth:`~fs:fs.opener.registry.Registry.open_fs` to try to open the file to
+        write.
     """
     if df is None:
         return json.dumps(dict())
@@ -234,9 +235,9 @@ def unpickle_df(stream: bytes) -> LocalBoundedDataFrame:
     :param stream: binary data
     :return: unpickled dataframe
 
-    :Notice:
+    .. note::
 
-    The data must be serialized by :func:`.pickle_df` to deserialize.
+        The data must be serialized by :func:`.pickle_df` to deserialize.
     """
     o = pickle.loads(stream)
     schema = o[0]
@@ -290,12 +291,12 @@ def get_join_schemas(
       validated agained the inferred keys.
     :return: the pair key schema and schema after join
 
-    :Notice:
+    .. note::
 
-    In Fugue, joined schema can always be inferred because it always uses the
-    input dataframes' common keys as the join keys. So you must make sure to
-    :meth:`~fugue.dataframe.dataframe.DataFrame.rename` to input dataframes so
-    they follow this rule.
+        In Fugue, joined schema can always be inferred because it always uses the
+        input dataframes' common keys as the join keys. So you must make sure to
+        :meth:`~fugue.dataframe.dataframe.DataFrame.rename` to input dataframes so
+        they follow this rule.
     """
     assert_arg_not_none(how, "how")
     how = how.lower()

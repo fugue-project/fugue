@@ -35,18 +35,18 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
             for subdf in df.native:
                 subdf.show()
 
-    :Notice:
+    .. note::
 
-    It's ok to peek the dataframe, it will not affect the iteration, but it's
-    invalid to count.
+        It's ok to peek the dataframe, it will not affect the iteration, but it's
+        invalid to count.
 
-    ``schema`` can be used when the iterable contains no dataframe. But if there
-    is any dataframe, ``schema`` must match the schema of the dataframes.
+        ``schema`` can be used when the iterable contains no dataframe. But if there
+        is any dataframe, ``schema`` must match the schema of the dataframes.
 
-    For the iterable of dataframes, if there is any empty dataframe, they will
-    be skipped and their schema will not matter. However, if all dataframes
-    in the interable are empty, then the last empty dataframe will be used to
-    set the schema.
+        For the iterable of dataframes, if there is any empty dataframe, they will
+        be skipped and their schema will not matter. However, if all dataframes
+        in the interable are empty, then the last empty dataframe will be used to
+        set the schema.
     """
 
     def __init__(  # noqa: C901

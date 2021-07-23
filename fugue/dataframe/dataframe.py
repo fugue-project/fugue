@@ -21,11 +21,11 @@ class DataFrame(ABC):
     :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
 
-    :Notice:
+    .. note::
 
-    This is an abstract class, and normally you don't construct it by yourself
-    unless you are
-    implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
+        This is an abstract class, and normally you don't construct it by yourself
+        unless you are
+        implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
 
     _SHOW_LOCK = RLock()
@@ -151,9 +151,9 @@ class DataFrame(ABC):
           defaults to False
         :return: 2-dimensional native python array
 
-        :Notice:
+        .. note::
 
-        If ``type_safe`` is False, then the returned values are 'raw' values.
+            If ``type_safe`` is False, then the returned values are 'raw' values.
         """
         raise NotImplementedError
 
@@ -168,9 +168,9 @@ class DataFrame(ABC):
           defaults to False
         :return: iterable of native python arrays
 
-        :Notice:
+        .. note::
 
-        If ``type_safe`` is False, then the returned values are 'raw' values.
+            If ``type_safe`` is False, then the returned values are 'raw' values.
         """
 
         raise NotImplementedError
@@ -251,12 +251,12 @@ class DataFrame(ABC):
         :param title: title of the dataframe, defaults to None
         :param best_width: max width of the output table, defaults to 100
 
-        :Notice:
+        .. note::
 
-        When ``show_count`` is True, it can trigger expensive calculation for
-        a distributed dataframe. So if you call this function directly, you may
-        need to :func:`fugue.execution.execution_engine.ExecutionEngine.persist`
-        the dataframe.
+            When ``show_count`` is True, it can trigger expensive calculation for
+            a distributed dataframe. So if you call this function directly, you may
+            need to :func:`fugue.execution.execution_engine.ExecutionEngine.persist`
+            the dataframe.
         """
         self._show(
             head_rows=self.head(rows),
@@ -289,9 +289,9 @@ class DataFrame(ABC):
         :param columns: columns to extract, defaults to None
         :return: iterable of native python dicts
 
-        :Notice:
+        .. note::
 
-        The default implementation enforces ``type_safe`` True
+            The default implementation enforces ``type_safe`` True
         """
         if columns is None:
             columns = self.schema.names
@@ -385,11 +385,11 @@ class LocalDataFrame(DataFrame):
     :param schema: a `schema-like <triad.collections.schema.Schema>`_ object
     :param metadata: dict-like object with string keys, default ``None``
 
-    :Notice:
+    .. note::
 
-    This is an abstract class, and normally you don't construct it by yourself
-    unless you are
-    implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
+        This is an abstract class, and normally you don't construct it by yourself
+        unless you are
+        implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
 
     def __init__(self, schema: Any = None, metadata: Any = None):
@@ -418,11 +418,11 @@ class LocalBoundedDataFrame(LocalDataFrame):
     :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
 
-    :Notice:
+    .. note::
 
-    This is an abstract class, and normally you don't construct it by yourself
-    unless you are
-    implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
+        This is an abstract class, and normally you don't construct it by yourself
+        unless you are
+        implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
 
     def __init__(self, schema: Any = None, metadata: Any = None):
@@ -442,11 +442,11 @@ class LocalUnboundedDataFrame(LocalDataFrame):
     :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
 
-    :Notice:
+    .. note::
 
-    This is an abstract class, and normally you don't construct it by yourself
-    unless you are
-    implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
+        This is an abstract class, and normally you don't construct it by yourself
+        unless you are
+        implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
 
     def __init__(self, schema: Any = None, metadata: Any = None):

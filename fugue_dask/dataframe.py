@@ -32,9 +32,9 @@ class DaskDataFrame(DataFrame):
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
-    :Notice:
+    .. note::
 
-    * For :class:`dask:dask.dataframe.DataFrame`, schema must be None
+        For :class:`dask:dask.dataframe.DataFrame`, schema must be None
     """
 
     def __init__(  # noqa: C901

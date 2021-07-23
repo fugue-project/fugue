@@ -165,16 +165,16 @@ class SparkExecutionEngine(ExecutionEngine):
         :param metadata: |ParamsLikeObject|, defaults to None
         :return: engine compatible dataframe
 
-        :Notice:
+        .. note::
 
-        * if the input is already :class:`~fugue_spark.dataframe.SparkDataFrame`,
-          it should return itself
-        * For :class:`~spark:pyspark.RDD`, list or iterable of arrays,
-          ``schema`` must be specified
-        * When ``schema`` is not None, a potential type cast may happen to ensure
-          the dataframe's schema.
-        * all other methods in the engine can take arbitrary dataframes and
-          call this method to convert before doing anything
+            * if the input is already :class:`~fugue_spark.dataframe.SparkDataFrame`,
+            it should return itself
+            * For :class:`~spark:pyspark.RDD`, list or iterable of arrays,
+            ``schema`` must be specified
+            * When ``schema`` is not None, a potential type cast may happen to ensure
+            the dataframe's schema.
+            * all other methods in the engine can take arbitrary dataframes and
+            call this method to convert before doing anything
         """
         if isinstance(df, DataFrame):
             assert_or_throw(

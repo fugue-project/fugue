@@ -13,35 +13,35 @@ class Transformer(ExtensionContext):
     To implement this class, you should not have ``__init__``, please directly implement
     the interface functions.
 
-    :Notice:
+    .. note::
 
-    Before implementing this class, do you really need to implement this
-    interface? Do you know the interfaceless feature of Fugue? Commonly, if you don't
-    need to implement :meth:`~.on_init`, you can choose the
-    interfaceless approach which may decouple your code from Fugue.
+      Before implementing this class, do you really need to implement this
+      interface? Do you know the interfaceless feature of Fugue? Commonly, if you don't
+      need to implement :meth:`~.on_init`, you can choose the
+      interfaceless approach which may decouple your code from Fugue.
 
-    It's important to understand |PartitionTutorial|, and please
-    also read
-    :ref:`The Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+      It's important to understand |PartitionTutorial|, and please
+      also read
+      :ref:`The Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
 
 
-    Due to similar issue on
-    `spark pickling ABC objects <https://github.com/cloudpipe/cloudpickle/issues/305>`_.
-    This class is not ABC. If you encounter the similar issue, possible solution
-    `here <https://github.com/cloudpipe/cloudpickle/issues/305#issuecomment-529246171>`_
+      Due to similar issue on spark
+      `pickling ABC objects <https://github.com/cloudpipe/cloudpickle/issues/305>`_.
+      This class is not ABC. If you encounter the similar issue, possible solution
+      `at <https://github.com/cloudpipe/cloudpickle/issues/305#issuecomment-529246171>`_
     """
 
     def get_output_schema(self, df: DataFrame) -> Any:  # pragma: no cover
         """Generate the output schema on the driver side.
 
-        :Notice:
+        .. note::
 
-        * This is running on driver
-        * This is the only function in this interface that is facing the entire
-          DataFrame that is not necessarily local, for example a SparkDataFrame
-        * Normally, you should not consume this dataframe in this step, and you s
-          hould only use its schema and metadata
-        * You can access all properties except for :meth:`~.cursor`
+          * This is running on driver
+          * This is the only function in this interface that is facing the entire
+            DataFrame that is not necessarily local, for example a SparkDataFrame
+          * Normally, you should not consume this dataframe in this step, and you s
+            hould only use its schema and metadata
+          * You can access all properties except for :meth:`~.cursor`
 
         :param df: the entire dataframe you are going to transform.
         :return: |SchemaLikeObject|, should not be None or empty
@@ -55,16 +55,17 @@ class Transformer(ExtensionContext):
         You may put expensive initialization logic here so you will not have to repeat
         that in :meth:`~.transform`
 
-        :Notice:
+        .. note::
 
-        * This call can be on a random machine (depending on the ExecutionEngine you
-          use), you should get the context from the properties of this class
-        * You can get physical partition no (if available from the execution egnine)
-          from :meth:`~.cursor`
-        * The input dataframe may be unbounded, but must be empty aware. That means you
-          must not consume the df by any means, and you can not count. However you can
-          safely peek the first row of the dataframe for multiple times.
-        * The input dataframe is never empty. Empty physical partitions are skipped
+          * This call can be on a random machine (depending on the ExecutionEngine you
+            use), you should get the context from the properties of this class
+          * You can get physical partition no (if available from the execution egnine)
+            from :meth:`~.cursor`
+          * The input dataframe may be unbounded, but must be empty aware. That means
+            you must not consume the df by any means, and you can not count.
+            However you can safely peek the first row of the dataframe for multiple
+            times.
+          * The input dataframe is never empty. Empty physical partitions are skipped
 
         :param df: the entire dataframe of this physical partition
         """
@@ -73,16 +74,17 @@ class Transformer(ExtensionContext):
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:  # pragma: no cover
         """The transformation logic from one local dataframe to another local dataframe.
 
-        :Notice:
+        .. note::
 
-        * This function operates on :ref:`logical partition level
-          <tutorial:/tutorials/partition.ipynb#physical-vs-logical-partitions>`
-        * This call can be on a random machine (depending on the ExecutionEngine you
-          use), you should get the :class:`context
-          <fugue.extensions.context.ExtensionContext>` from the properties of this class
-        * The input dataframe may be unbounded, but must be empty aware. It's safe to
-          consume it for ONLY ONCE
-        * The input dataframe is never empty. Empty dataframes are skipped
+          * This function operates on :ref:`logical partition level
+            <tutorial:/tutorials/partition.ipynb#physical-vs-logical-partitions>`
+          * This call can be on a random machine (depending on the ExecutionEngine you
+            use), you should get the :class:`context
+            <fugue.extensions.context.ExtensionContext>` from the properties of this
+            class
+          * The input dataframe may be unbounded, but must be empty aware. It's safe to
+            consume it for ONLY ONCE
+          * The input dataframe is never empty. Empty dataframes are skipped
 
         :param df: one logical partition to transform on
         :return: transformed dataframe
@@ -111,36 +113,36 @@ class CoTransformer(ExtensionContext):
     To implement this class, you should not have ``__init__``, please directly implement
     the interface functions.
 
-    :Notice:
+    .. note::
 
-    Before implementing this class, do you really need to implement this
-    interface? Do you know the interfaceless feature of Fugue? Commonly, if you don't
-    need to implement :meth:`~.on_init`, you can choose the
-    interfaceless approach which may decouple your code from Fugue.
+      Before implementing this class, do you really need to implement this
+      interface? Do you know the interfaceless feature of Fugue? Commonly, if you don't
+      need to implement :meth:`~.on_init`, you can choose the
+      interfaceless approach which may decouple your code from Fugue.
 
-    It's important to understand
-    :ref:`zip and comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`, and
-    please also read
-    :ref:`The CoTransformer Tutorial <tutorial:/tutorials/cotransformer.ipynb>`
+      It's important to understand
+      :ref:`zip and comap <tutorial:/tutorials/execution_engine.ipynb#zip-&-comap>`, and
+      please also read
+      :ref:`The CoTransformer Tutorial <tutorial:/tutorials/cotransformer.ipynb>`
 
 
-    Due to similar issue on
-    `spark pickling ABC objects <https://github.com/cloudpipe/cloudpickle/issues/305>`_.
-    This class is not ABC. If you encounter the similar issue, possible solution
-    `here <https://github.com/cloudpipe/cloudpickle/issues/305#issuecomment-529246171>`_
+      Due to similar issue on spark
+      `pickling ABC objects <https://github.com/cloudpipe/cloudpickle/issues/305>`_.
+      This class is not ABC. If you encounter the similar issue, possible solution
+      `at <https://github.com/cloudpipe/cloudpickle/issues/305#issuecomment-529246171>`_
     """
 
     def get_output_schema(self, dfs: DataFrames) -> Any:  # pragma: no cover
         """Generate the output schema on the driver side.
 
-        :Notice:
+        .. note::
 
-        * This is running on driver
-        * Currently, ``dfs`` is a collection of empty dataframes with the same
-          structure and schemas
-        * Normally, you should not consume this dataframe in this step, and you s
-          hould only use its schema and metadata
-        * You can access all properties except for :meth:`~.cursor`
+          * This is running on driver
+          * Currently, ``dfs`` is a collection of empty dataframes with the same
+            structure and schemas
+          * Normally, you should not consume this dataframe in this step, and you s
+            hould only use its schema and metadata
+          * You can access all properties except for :meth:`~.cursor`
 
         :param dfs: the collection of dataframes you are going to transform. They
           are empty dataframes with the same structure and schemas
@@ -155,14 +157,14 @@ class CoTransformer(ExtensionContext):
         You may put expensive initialization logic here so you will not have to repeat
         that in :meth:`~.transform`
 
-        :Notice:
+        .. note::
 
-        * This call can be on a random machine (depending on the ExecutionEngine you
-          use), you should get the context from the properties of this class
-        * You can get physical partition no (if available from the execution egnine)
-          from :meth:`~.cursor`
-        * Currently, ``dfs`` is a collection of empty dataframes with the same
-          structure and schemas
+          * This call can be on a random machine (depending on the ExecutionEngine you
+            use), you should get the context from the properties of this class
+          * You can get physical partition no (if available from the execution egnine)
+            from :meth:`~.cursor`
+          * Currently, ``dfs`` is a collection of empty dataframes with the same
+            structure and schemas
 
         :param dfs: a collection of empty dataframes with the same structure and schemas
         """
@@ -172,11 +174,12 @@ class CoTransformer(ExtensionContext):
         """The transformation logic from a collection of dataframes (with the same
         partition keys) to a local dataframe.
 
-        :Notice:
+        .. note::
 
-        * This call can be on a random machine (depending on the ExecutionEngine you
-          use), you should get the :class:`context
-          <fugue.extensions.context.ExtensionContext>` from the properties of this class
+          * This call can be on a random machine (depending on the ExecutionEngine you
+            use), you should get the :class:`context
+            <fugue.extensions.context.ExtensionContext>`
+            from the properties of this class
 
         :param dfs:  a collection of dataframes with the same partition keys
         :return: transformed dataframe
