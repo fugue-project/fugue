@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.6.1
+
+-   Make Fugue SQL [accept](https://github.com/fugue-project/fugue/issues/233) `+`, `~`, `-` in schema expression
+-   Fix transform [bug](https://github.com/fugue-project/fugue/issues/232) for Fugue DataFrames
+
 ## 0.6.0
 
 -   Added Select, Aggregate, Filter, Assign [interfaces](https://github.com/fugue-project/fugue/issues/211)
