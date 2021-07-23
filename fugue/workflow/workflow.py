@@ -235,12 +235,12 @@ class WorkflowDataFrame(DataFrame):
         .. note::
 
             * When you call this method, it means you want the dataframe to be
-            printed when the workflow executes. So the dataframe won't show until
-            you run the workflow.
+              printed when the workflow executes. So the dataframe won't show until
+              you run the workflow.
             * When ``show_count`` is True, it can trigger expensive calculation for
-            a distributed dataframe. So if you call this function directly, you may
-            need to :meth:`~.persist` the dataframe. Or you can turn on
-            :ref:`tutorial:/tutorials/useful_config.ipynb#auto-persist`
+              a distributed dataframe. So if you call this function directly, you may
+              need to :meth:`~.persist` the dataframe. Or you can turn on
+              :ref:`tutorial:/tutorials/useful_config.ipynb#auto-persist`
         """
         # TODO: best_width is not used
         self.workflow.show(self, rows=rows, show_count=show_count, title=title)
@@ -1170,7 +1170,7 @@ class WorkflowDataFrame(DataFrame):
             * ``dfs`` must be list like, the zipped dataframe will be list like
             * ``dfs`` is fine to be empty
             * If you want dict-like zip, use
-            :meth:`fugue.workflow.workflow.FugueWorkflow.zip`
+              :meth:`fugue.workflow.workflow.FugueWorkflow.zip`
 
         .. seealso::
 
@@ -1826,7 +1826,7 @@ class FugueWorkflow(object):
         .. note::
 
             * If ``dfs`` is dict like, the zipped dataframe will be dict like,
-            If ``dfs`` is list like, the zipped dataframe will be list like
+              If ``dfs`` is list like, the zipped dataframe will be list like
             * It's fine to contain only one dataframe in ``dfs``
 
         .. seealso::

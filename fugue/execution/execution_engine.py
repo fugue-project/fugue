@@ -864,7 +864,7 @@ class ExecutionEngine(ABC):
 
             * Please also read :meth:`~.zip`
             * If ``dfs`` is dict like, the zipped dataframe will be dict like,
-            If ``dfs`` is list like, the zipped dataframe will be list like
+              If ``dfs`` is list like, the zipped dataframe will be list like
             * It's fine to contain only one dataframe in ``dfs``
 
         .. seealso::
@@ -934,17 +934,16 @@ class ExecutionEngine(ABC):
         .. note::
 
             * The input of this method must be an output of :meth:`~.zip` or
-            :meth:`~.zip_all`
+                :meth:`~.zip_all`
             * The ``partition_spec`` here is NOT related with how you zipped the
-                dataframe
-            and however you set it, will only affect the processing speed, actually the
-            partition keys will be overriden to the zipped dataframe partition keys.
-            You may use it in this way to improve the efficiency:
-            ``PartitionSpec(algo="even", num="ROWCOUNT")``,
-            this tells the execution engine to put each zipped partition into a physical
-            partition so it can achieve the best possible load balance.
+                dataframe and however you set it, will only affect the processing speed,
+                actually the partition keys will be overriden to the zipped dataframe
+                partition keys. You may use it in this way to improve the efficiency:
+                ``PartitionSpec(algo="even", num="ROWCOUNT")``,
+                this tells the execution engine to put each zipped partition into a
+                physical partition so it can achieve the best possible load balance.
             * If input dataframe has keys, the dataframes you get in ``map_func`` and
-            ``on_init`` will have keys, otherwise you will get list-like dataframes
+                ``on_init`` will have keys, otherwise you will get list-like dataframes
             * on_init function will get a DataFrames object that has the same structure,
                 but has all empty dataframes, you can use the schemas but not the data.
 
