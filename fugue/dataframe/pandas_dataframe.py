@@ -24,12 +24,12 @@ class PandasDataFrame(LocalBoundedDataFrame):
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
-    :Examples:
+    .. admonition:: Examples
 
-    >>> PandasDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
-    >>> PandasDataFrame(schema = "a:int,b:int")  # empty dataframe
-    >>> PandasDataFrame(pd.DataFrame([[0]],columns=["a"]))
-    >>> PandasDataFrame(ArrayDataFrame([[0]],"a:int).as_pandas())
+        >>> PandasDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
+        >>> PandasDataFrame(schema = "a:int,b:int")  # empty dataframe
+        >>> PandasDataFrame(pd.DataFrame([[0]],columns=["a"]))
+        >>> PandasDataFrame(ArrayDataFrame([[0]],"a:int).as_pandas())
 
     :Notice:
 

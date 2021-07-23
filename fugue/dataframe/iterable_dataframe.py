@@ -22,10 +22,10 @@ class IterableDataFrame(LocalUnboundedDataFrame):
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
-    :Examples:
+    .. admonition:: Examples
 
-    >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
-    >>> b = IterableDataFrame(a)
+        >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
+        >>> b = IterableDataFrame(a)
 
     :Notice:
 

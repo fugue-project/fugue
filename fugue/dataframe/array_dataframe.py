@@ -21,10 +21,10 @@ class ArrayDataFrame(LocalBoundedDataFrame):
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
-    :Examples:
+    .. admonition:: Examples
 
-    >>> a = ArrayDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
-    >>> b = ArrayDataFrame(a)
+        >>> a = ArrayDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
+        >>> b = ArrayDataFrame(a)
     """
 
     def __init__(  # noqa: C901

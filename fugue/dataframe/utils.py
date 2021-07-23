@@ -106,11 +106,11 @@ def to_local_df(df: Any, schema: Any = None, metadata: Any = None) -> LocalDataF
     :return: the dataframe itself if it's
       :class:`~fugue.dataframe.dataframe.LocalDataFrame` else a converted one
 
-    :Examples:
+    .. admonition:: Examples
 
-    >>> a = to_local_df([[0,'a'],[1,'b']],"a:int,b:str")
-    >>> assert to_local_df(a) is a
-    >>> to_local_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
+        >>> a = to_local_df([[0,'a'],[1,'b']],"a:int,b:str")
+        >>> assert to_local_df(a) is a
+        >>> to_local_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
     """
     assert_arg_not_none(df, "df")
     if isinstance(df, DataFrame):
@@ -145,11 +145,11 @@ def to_local_bounded_df(
     :return: the dataframe itself if it's
       :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame` else a converted one
 
-    :Examples:
+    .. admonition:: Examples
 
-    >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
-    >>> assert isinstance(to_local_bounded_df(a), LocalBoundedDataFrame)
-    >>> to_local_bounded_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
+        >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
+        >>> assert isinstance(to_local_bounded_df(a), LocalBoundedDataFrame)
+        >>> to_local_bounded_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
 
     :Notice:
 

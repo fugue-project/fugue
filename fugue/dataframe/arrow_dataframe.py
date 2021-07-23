@@ -20,12 +20,12 @@ class ArrowDataFrame(LocalBoundedDataFrame):
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
-    :Examples:
+    .. admonition:: Examples
 
-    >>> ArrowDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
-    >>> ArrowDataFrame(schema = "a:int,b:int")  # empty dataframe
-    >>> ArrowDataFrame(pd.DataFrame([[0]],columns=["a"]))
-    >>> ArrowDataFrame(ArrayDataFrame([[0]],"a:int).as_arrow())
+        >>> ArrowDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
+        >>> ArrowDataFrame(schema = "a:int,b:int")  # empty dataframe
+        >>> ArrowDataFrame(pd.DataFrame([[0]],columns=["a"]))
+        >>> ArrowDataFrame(ArrayDataFrame([[0]],"a:int).as_arrow())
     """
 
     def __init__(  # noqa: C901

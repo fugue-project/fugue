@@ -116,16 +116,16 @@ class WorkflowDataFrame(DataFrame):
     def partition_spec(self) -> PartitionSpec:
         """The partition spec set on the dataframe for next steps to use
 
-        :Examples:
+        .. admonition:: Examples
 
-        .. code-block:: python
+            .. code-block:: python
 
-            dag = FugueWorkflow()
-            df = dag.df([[0],[1]], "a:int")
-            assert df.partition_spec.empty
-            df2 = df.partition(by=["a"])
-            assert df.partition_spec.empty
-            assert df2.partition_spec == PartitionSpec(by=["a"])
+                dag = FugueWorkflow()
+                df = dag.df([[0],[1]], "a:int")
+                assert df.partition_spec.empty
+                df2 = df.partition(by=["a"])
+                assert df.partition_spec.empty
+                assert df2.partition_spec == PartitionSpec(by=["a"])
         """
         return self._metadata.get("pre_partition", PartitionSpec())
 
@@ -134,11 +134,11 @@ class WorkflowDataFrame(DataFrame):
         :meth:`~fugue.workflow.workflow.FugueWorkflow.run` and to generate and cache
         the result dataframe this instance represent.
 
-        :Examples:
+        .. admonition:: Examples
 
-        >>> df = FugueWorkflow().df([[0]],"a:int").transform(a_transformer)
-        >>> df.compute().as_pandas()  # pandas dataframe
-        >>> df.compute(SparkExecutionEngine).native  # spark dataframe
+            >>> df = FugueWorkflow().df([[0]],"a:int").transform(a_transformer)
+            >>> df.compute().as_pandas()  # pandas dataframe
+            >>> df.compute(SparkExecutionEngine).native  # spark dataframe
 
         :Notice:
 
@@ -1111,9 +1111,9 @@ class WorkflowDataFrame(DataFrame):
         This interface is more flexible than
         :meth:`fugue.dataframe.dataframe.DataFrame.rename`
 
-        :Examples:
+        .. admonition:: Examples
 
-        >>> df.rename({"a": "b"}, c="d", e="f")
+            >>> df.rename({"a": "b"}, c="d", e="f")
         """
         m: Dict[str, str] = {}
         for a in args:
@@ -1133,9 +1133,9 @@ class WorkflowDataFrame(DataFrame):
 
         The output dataframe will not change the order of original schema.
 
-        :Examples:
+        .. admonition:: Examples
 
-        >>> df.alter_columns("a:int,b;str")
+            >>> df.alter_columns("a:int,b;str")
         """
         df = self.workflow.process(
             self, using=AlterColumns, params=dict(columns=columns)
@@ -1351,7 +1351,7 @@ class WorkflowDataFrames(DataFrames):
     :class:`~fugue.workflow.workflow.WorkflowDataFrame`, and they should all
     come from the same :class:`~fugue.workflow.workflow.FugueWorkflow`.
 
-    :Examples:
+    .. admonition:: Examples
 
         .. code-block:: python
 
@@ -1430,24 +1430,24 @@ class FugueWorkflow(object):
         :class:`~fugue.execution.native_execution_engine.NativeExecutionEngine`
         to run the workflow.
 
-        :Examples:
+        .. admonition:: Examples
 
-        .. code-block:: python
+            .. code-block:: python
 
-            dag = FugueWorkflow()
-            df1 = dag.df([[0]],"a:int").transform(a_transformer)
-            df2 = dag.df([[0]],"b:int")
+                dag = FugueWorkflow()
+                df1 = dag.df([[0]],"a:int").transform(a_transformer)
+                df2 = dag.df([[0]],"b:int")
 
-            dag.run(SparkExecutionEngine)
-            df1.result.show()
-            df2.result.show()
+                dag.run(SparkExecutionEngine)
+                df1.result.show()
+                df2.result.show()
 
-            dag = FugueWorkflow()
-            df1 = dag.df([[0]],"a:int").transform(a_transformer)
-            df1.yield_dataframe_as("x")
+                dag = FugueWorkflow()
+                df1 = dag.df([[0]],"a:int").transform(a_transformer)
+                df1.yield_dataframe_as("x")
 
-            result = dag.run(SparkExecutionEngine)
-            result["x"]  # SparkDataFrame
+                result = dag.run(SparkExecutionEngine)
+                result["x"]  # SparkDataFrame
 
         Read :ref:`The Tutorial <tutorial:/tutorials/dag.ipynb#initialize-a-workflow>`
         to learn how to run in different ways and pros and cons.
@@ -1481,14 +1481,14 @@ class FugueWorkflow(object):
 
         :return: a calculated dataframe
 
-        :Examples:
+        .. admonition:: Examples
 
-        .. code-block:: python
+            .. code-block:: python
 
-            dag = FugueWorkflow()
-            df1 = dag.df([[0]],"a:int")
-            dag.run()
-            dag.get_result(df1).show()
+                dag = FugueWorkflow()
+                df1 = dag.df([[0]],"a:int")
+                dag.run()
+                dag.get_result(df1).show()
         """
         assert_or_throw(self._computed, FugueWorkflowError("not computed"))
         return self._workflow_ctx.get_result(id(df._task))
@@ -1980,14 +1980,14 @@ class FugueWorkflow(object):
           (you can use ``None`` to use the default one), defaults to None
         :return: result of the ``SELECT`` statement
 
-        :Example:
+        .. admonition:: Examples
 
-        .. code-block:: python
+            .. code-block:: python
 
-            with FugueWorkflow() as dag:
-                a = dag.df([[0,"a"]],a:int,b:str)
-                b = dag.df([[0]],a:int)
-                c = dag.select("SELECT a FROM",a,"UNION SELECT * FROM",b)
+                with FugueWorkflow() as dag:
+                    a = dag.df([[0,"a"]],a:int,b:str)
+                    b = dag.df([[0]],a:int)
+                    c = dag.select("SELECT a FROM",a,"UNION SELECT * FROM",b)
 
         Please read :ref:`this <tutorial:/tutorials/dag.ipynb#select-query>`
         for more examples

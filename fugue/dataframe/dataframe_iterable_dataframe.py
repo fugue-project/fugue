@@ -22,7 +22,7 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
 
     :raises FugueDataFrameInitError: if the input is not compatible
 
-    :Examples:
+    .. admonition:: Examples
 
         .. code-block:: python
 

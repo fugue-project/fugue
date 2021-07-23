@@ -49,10 +49,10 @@ class SQLEngine(ABC):
         :param statement: the ``SELECT`` statement using the ``dfs`` keys as tables
         :return: result of the ``SELECT`` statement
 
-        :Example:
+        .. admonition:: Examples
 
-        >>> dfs = DataFrames(a=df1, b=df2)
-        >>> sql_engine.select(dfs, "SELECT * FROM a UNION SELECT * FROM b")
+            >>> dfs = DataFrames(a=df1, b=df2)
+            >>> sql_engine.select(dfs, "SELECT * FROM a UNION SELECT * FROM b")
 
         :Notice:
 

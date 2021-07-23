@@ -63,12 +63,12 @@ class RPCHandler(RPCClient):
     def __enter__(self) -> "RPCHandler":
         """``with`` statement. :meth:`~.start` must be called
 
-        :Examples:
+        .. admonition:: Examples
 
-        .. code-block:: python
+            .. code-block:: python
 
-            with handler.start():
-                handler...
+                with handler.start():
+                    handler...
         """
         with self._rpchandler_lock:
             assert_or_throw(self._running, "use `with <instance>.start():` instead")

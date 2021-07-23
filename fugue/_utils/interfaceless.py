@@ -44,17 +44,17 @@ def parse_comment_annotation(func: Callable, annotation: str) -> Optional[str]:
     :param annotation: the annotation string
     :return: schema hint string
 
-    :Example:
+    .. admonition:: Examples
 
-    .. code-block:: python
+        .. code-block:: python
 
-        # schema: a:int,b:str
-        #schema:a:int,b:int # more comment
-        # some comment
-        def dummy():
-            pass
+            # schema: a:int,b:str
+            #schema:a:int,b:int # more comment
+            # some comment
+            def dummy():
+                pass
 
-        assert "a:int,b:int" == parse_comment_annotation(dummy, "schema:")
+            assert "a:int,b:int" == parse_comment_annotation(dummy, "schema:")
     """
     for orig in reversed((inspect.getcomments(func) or "").splitlines()):
         start = orig.find(":")
@@ -77,17 +77,17 @@ def parse_output_schema_from_comment(func: Callable) -> Optional[str]:
     :param func: the function
     :return: schema hint string
 
-    :Example:
+    .. admonition:: Examples
 
-    .. code-block:: python
+        .. code-block:: python
 
-        # schema: a:int,b:str
-        #schema:a:int,b:int # more comment
-        # some comment
-        def dummy():
-            pass
+            # schema: a:int,b:str
+            #schema:a:int,b:int # more comment
+            # some comment
+            def dummy():
+                pass
 
-        assert "a:int,b:int" == parse_output_schema_from_comment(dummy)
+            assert "a:int,b:int" == parse_output_schema_from_comment(dummy)
     """
     res = parse_comment_annotation(func, _COMMENT_SCHEMA_ANNOTATION)
     if res is None:

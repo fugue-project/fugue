@@ -20,9 +20,9 @@ class ExtensionContext(object):
     def params(self) -> ParamDict:
         """Parameters set for using this extension.
 
-        :Examples:
+        .. admonition:: Examples
 
-        >>> FugueWorkflow().df(...).transform(using=dummy, params={"a": 1})
+            >>> FugueWorkflow().df(...).transform(using=dummy, params={"a": 1})
 
         You will get ``{"a": 1}`` as `params` in the ``dummy`` transformer
         """
@@ -34,10 +34,10 @@ class ExtensionContext(object):
         :class:`~fugue.extensions.transformer.transformer.Transformer` and
         :class:`~fugue.extensions.transformer.transformer.CoTransformer`
 
-        :Examples:
+        .. admonition:: Examples
 
-        >>> dag = FugueWorkflow().df(...).transform(using=dummy)
-        >>> dag.run(NativeExecutionEngine(conf={"b": 10}))
+            >>> dag = FugueWorkflow().df(...).transform(using=dummy)
+            >>> dag.run(NativeExecutionEngine(conf={"b": 10}))
 
         You will get ``{"b": 10}`` as `workflow_conf` in the ``dummy`` transformer
         on both driver and workers.

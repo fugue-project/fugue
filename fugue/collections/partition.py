@@ -20,11 +20,11 @@ def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C
     :return: column and boolean sorting direction of column, order matters.
     :rtype: IndexedOrderedDict[str, bool]
 
-    :Example:
+    .. admonition:: Examples
 
-    >>> parse_presort_exp("b desc, c asc")
-    >>> parse_presort_exp([("b", True), ("c", False))])
-    both return IndexedOrderedDict([("b", True), ("c", False))])
+        >>> parse_presort_exp("b desc, c asc")
+        >>> parse_presort_exp([("b", True), ("c", False))])
+        both return IndexedOrderedDict([("b", True), ("c", False))])
     """
 
     if isinstance(presort, IndexedOrderedDict):
@@ -81,17 +81,17 @@ def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C
 class PartitionSpec(object):
     """Fugue Partition Specification.
 
-    :Examples:
+    .. admonition:: Examples
 
-    >>> PartitionSepc(num=4)
-    >>> PartitionSepc(num="ROWCOUNT/4 + 3")  # It can be an expression
-    >>> PartitionSepc(by=["a","b"])
-    >>> PartitionSpec(by=["a"], presort="b DESC, c ASC")
-    >>> PartitionSpec(algo="even", num=4)
-    >>> p = PartitionSpec(num=4, by=["a"])
-    >>> p_override = PartitionSpec(p, by=["a","b"], algo="even")
-    >>> PartitionSpec(by="a")  # == PartitionSpec(by=["a"])
-    >>> PartitionSpec("per_row")  # == PartitionSpec(num="ROWCOUNT", algo="even")
+        >>> PartitionSepc(num=4)
+        >>> PartitionSepc(num="ROWCOUNT/4 + 3")  # It can be an expression
+        >>> PartitionSepc(by=["a","b"])
+        >>> PartitionSpec(by=["a"], presort="b DESC, c ASC")
+        >>> PartitionSpec(algo="even", num=4)
+        >>> p = PartitionSpec(num=4, by=["a"])
+        >>> p_override = PartitionSpec(p, by=["a","b"], algo="even")
+        >>> PartitionSpec(by="a")  # == PartitionSpec(by=["a"])
+        >>> PartitionSpec("per_row")  # == PartitionSpec(num="ROWCOUNT", algo="even")
 
     It's important to understand this concept, please read |PartitionTutorial|
 
@@ -190,10 +190,10 @@ class PartitionSpec(object):
         :param expr_map_funcs: lambda functions (no parameter) for keywords
         :return: integer value of the partitions
 
-        :Example:
+        .. admonition:: Examples
 
-        >>> p = PartitionSpec(num="ROWCOUNT/2")
-        >>> p.get_num_partitions(ROWCOUNT=lambda: df.count())
+            >>> p = PartitionSpec(num="ROWCOUNT/2")
+            >>> p.get_num_partitions(ROWCOUNT=lambda: df.count())
         """
         expr = self.num_partitions
         for k, v in expr_map_funcs.items():
@@ -216,10 +216,10 @@ class PartitionSpec(object):
     def presort(self) -> IndexedOrderedDict[str, bool]:
         """Get presort pairs of the spec
 
-        :Example:
+        .. admonition:: Examples
 
-        >>> p = PartitionSpec(by=["a"],presort="b,c desc")
-        >>> assert p.presort == {"b":True, "c":False}
+            >>> p = PartitionSpec(by=["a"],presort="b,c desc")
+            >>> assert p.presort == {"b":True, "c":False}
         """
         return self._presort
 
@@ -227,10 +227,10 @@ class PartitionSpec(object):
     def presort_expr(self) -> str:
         """Get normalized presort expression
 
-        :Example:
+        .. admonition:: Examples
 
-        >>> p = PartitionSpec(by=["a"],presort="b , c dESc")
-        >>> assert p.presort_expr == "b ASC,c DESC"
+            >>> p = PartitionSpec(by=["a"],presort="b , c dESc")
+            >>> assert p.presort_expr == "b ASC,c DESC"
         """
         return ",".join(
             k + " " + ("ASC" if v else "DESC") for k, v in self.presort.items()
@@ -261,11 +261,11 @@ class PartitionSpec(object):
         :param schema: the dataframe schema this partition spec to operate on
         :return: an ordered dictionary of key, order pairs
 
-        :Example:
+        .. admonition:: Examples
 
-        >>> p = PartitionSpec(by=["a"],presort="b , c dESc")
-        >>> schema = Schema("a:int,b:int,c:int,d:int"))
-        >>> assert p.get_sorts(schema) == {"a":True, "b":True, "c": False}
+            >>> p = PartitionSpec(by=["a"],presort="b , c dESc")
+            >>> schema = Schema("a:int,b:int,c:int,d:int"))
+            >>> assert p.get_sorts(schema) == {"a":True, "b":True, "c": False}
         """
         d: IndexedOrderedDict[str, bool] = IndexedOrderedDict()
         for p in self.partition_by:
