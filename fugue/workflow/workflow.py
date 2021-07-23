@@ -1711,12 +1711,12 @@ class FugueWorkflow(object):
         .. note::
 
             * When you call this method, it means you want the dataframe to be
-                printed when the workflow executes. So the dataframe won't show until
-                you run the workflow.
+              printed when the workflow executes. So the dataframe won't show until
+              you run the workflow.
             * When ``show_count`` is True, it can trigger expensive calculation for
-                a distributed dataframe. So if you call this function directly, you may
-                need to :meth:`~.WorkflowDataFrame.persist` the dataframe. Or you can
-                turn on :ref:`tutorial:/tutorials/useful_config.ipynb#auto-persist`
+              a distributed dataframe. So if you call this function directly, you may
+              need to :meth:`~.WorkflowDataFrame.persist` the dataframe. Or you can
+              turn on :ref:`tutorial:/tutorials/useful_config.ipynb#auto-persist`
         """
         self.output(
             *dfs, using=Show, params=dict(rows=rows, show_count=show_count, title=title)

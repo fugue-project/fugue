@@ -31,9 +31,9 @@ class SparkDataFrame(DataFrame):
     .. note::
 
         * You should use :meth:`fugue_spark.execution_engine.SparkExecutionEngine.to_df`
-            instead of construction it by yourself.
+          instead of construction it by yourself.
         * If ``schema`` is set, then there will be type cast on the Spark DataFrame if
-            the schema is different.
+          the schema is different.
     """
 
     def __init__(  # noqa: C901
