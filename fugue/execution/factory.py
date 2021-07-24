@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Type, Union
 
 from fugue.execution.execution_engine import ExecutionEngine, SQLEngine
 from fugue.execution.native_execution_engine import NativeExecutionEngine
@@ -9,12 +9,20 @@ from triad import assert_or_throw
 class _ExecutionEngineFactory(object):
     def __init__(self):
         self._funcs: Dict[str, Callable] = {}
+        self._type_funcs: Dict[Type, Callable] = {}
         self._sql_funcs: Dict[str, Callable] = {}
         self.register_default(lambda conf, **kwargs: NativeExecutionEngine(conf=conf))
         self.register_default_sql_engine(lambda engine, **kwargs: engine.sql_engine)
 
-    def register(self, name: str, func: Callable, on_dup="overwrite") -> None:
-        self._register(self._funcs, name=name, func=func, on_dup=on_dup)
+    def register(
+        self, name_or_type: Union[str, Type], func: Callable, on_dup="overwrite"
+    ) -> None:
+        if isinstance(name_or_type, str):
+            self._register(self._funcs, name=name_or_type, func=func, on_dup=on_dup)
+        else:
+            self._register(
+                self._type_funcs, name=name_or_type, func=func, on_dup=on_dup
+            )
 
     def register_default(self, func: Callable, on_dup="overwrite") -> None:
         self.register("", func, on_dup)
@@ -47,6 +55,9 @@ class _ExecutionEngineFactory(object):
             engine = ""
         if isinstance(engine, str) and engine in self._funcs:
             return self._funcs[engine](conf, **kwargs)
+        for k, f in self._type_funcs.items():
+            if isinstance(engine, k):
+                return f(engine, conf, **kwargs)
         if isinstance(engine, ExecutionEngine):
             assert_or_throw(
                 conf is None and len(kwargs) == 0,
@@ -83,8 +94,8 @@ class _ExecutionEngineFactory(object):
 
     def _register(
         self,
-        callables: Dict[str, Callable],
-        name: str,
+        callables: Dict[Any, Callable],
+        name: Any,
         func: Callable,
         on_dup="overwrite",
     ) -> None:
@@ -103,11 +114,14 @@ class _ExecutionEngineFactory(object):
 _EXECUTION_ENGINE_FACTORY = _ExecutionEngineFactory()
 
 
-def register_execution_engine(name: str, func: Callable, on_dup="overwrite") -> None:
+def register_execution_engine(
+    name_or_type: Union[str, Type], func: Callable, on_dup="overwrite"
+) -> None:
     """Register :class:`~fugue.execution.execution_engine.ExecutionEngine` with
     a given name.
 
-    :param name: name of the execution engine
+    :param name_or_type: alias of the execution engine, or type of an object that
+      can be converted to an execution engine
     :param func: a callable taking |ParamsLikeObject| and ``**kwargs`` and returning an
       :class:`~fugue.execution.execution_engine.ExecutionEngine` instance
     :param on_dup: action on duplicated ``name``. It can be "overwrite", "ignore"
@@ -116,6 +130,8 @@ def register_execution_engine(name: str, func: Callable, on_dup="overwrite") -> 
     :raises KeyError: if ``on_dup`` is ``throw`` and the ``name`` already exists
 
     .. admonition:: Examples
+
+        Alias registration examples:
 
         .. code-block:: python
 
@@ -140,8 +156,27 @@ def register_execution_engine(name: str, func: Callable, on_dup="overwrite") -> 
             CREATE [[0]] SCHEMA a:int
             PRINT
             ''').run("my")
+
+        Type registration examples:
+
+        .. code-block:: python
+
+            from pyspark.sql import SparkSession
+            from fugue_spark import SparkExecutionEngine
+            from fugue_sql import fsql
+
+            register_execution_engine(
+                SparkSession,
+                lambda session, conf: SparkExecutionEngine(session, conf))
+
+            spark_session = SparkSession.builder.getOrCreate()
+
+            fsql('''
+            CREATE [[0]] SCHEMA a:int
+            PRINT
+            ''').run(spark_session)
     """
-    _EXECUTION_ENGINE_FACTORY.register(name, func, on_dup)
+    _EXECUTION_ENGINE_FACTORY.register(name_or_type, func, on_dup)
 
 
 def register_default_execution_engine(func: Callable, on_dup="overwrite") -> None:

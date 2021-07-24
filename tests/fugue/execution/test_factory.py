@@ -20,13 +20,28 @@ class _MockExecutionEngine(NativeExecutionEngine):
         self.other = other
 
 
+class Dummy1:
+    pass
+
+
+class Dummy2(Dummy1):
+    pass
+
+
+class _MockExecutionEngine2(NativeExecutionEngine):
+    def __init__(self, obj: Any, conf: Any, other: int = 0):
+        assert isinstance(obj, Dummy2)
+        super().__init__(conf=conf)
+        self.other = other
+
+
 class _MockSQlEngine(SqliteEngine):
     def __init__(self, execution_engine, other: int = 1):
         super().__init__(execution_engine)
         self.other = other
 
 
-def test_execution_engine():
+def test_execution_engine_alias():
     f = _ExecutionEngineFactory()
     assert isinstance(f.make(), NativeExecutionEngine)
 
@@ -75,6 +90,26 @@ def test_execution_engine():
     assert isinstance(c, _MockExecutionEngine)
     assert 3 == c.conf.get_or_throw("a", int)
     assert 4 == c.other
+
+
+def test_execution_engine_type():
+    f = _ExecutionEngineFactory()
+    f.register(
+        Dummy1,
+        lambda engine, conf, **kwargs: _MockExecutionEngine2(engine, conf, **kwargs),
+    )
+    with raises(KeyError):
+        f.register(
+            Dummy1,
+            lambda engine, conf, **kwargs: _MockExecutionEngine2(
+                engine, conf, **kwargs
+            ),
+            on_dup="raise",
+        )
+    e = f.make(Dummy2(), {"b": 1}, other=2)
+    assert isinstance(e, _MockExecutionEngine2)
+    assert 1 == e.conf.get_or_throw("b", int)
+    assert 2 == e.other
 
 
 def test_sql_engine():
@@ -138,7 +173,9 @@ def test_global_funcs():
 
     se = SqliteEngine(make_execution_engine)
     assert make_sql_engine(se) is se
-    assert not isinstance(make_sql_engine(None, make_execution_engine()), _MockSQlEngine)
+    assert not isinstance(
+        make_sql_engine(None, make_execution_engine()), _MockSQlEngine
+    )
     register_sql_engine("x", lambda engine: _MockSQlEngine(engine))
     assert isinstance(make_sql_engine("x", make_execution_engine()), _MockSQlEngine)
     register_default_sql_engine(lambda engine: _MockSQlEngine(engine, other=10))

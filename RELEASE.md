@@ -2,6 +2,7 @@
 
 ## 0.6.1
 
+-   Parse [arbitrary object](https://github.com/fugue-project/fugue/issues/234) into execution engine
 -   Make Fugue SQL [accept](https://github.com/fugue-project/fugue/issues/233) `+`, `~`, `-` in schema expression
 -   Fix transform [bug](https://github.com/fugue-project/fugue/issues/232) for Fugue DataFrames
 

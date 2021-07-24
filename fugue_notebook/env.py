@@ -46,26 +46,16 @@ class NotebookSetup(object):
             lambda conf, **kwargs: NativeExecutionEngine(conf=conf),
             on_dup="ignore",
         )
+
         try:
             import pyspark  # noqa: F401
-            from fugue_spark import SparkExecutionEngine
-
-            register_execution_engine(
-                "spark",
-                lambda conf, **kwargs: SparkExecutionEngine(conf=conf),
-                on_dup="ignore",
-            )
+            import fugue_spark  # noqa: F401
         except ImportError:
             pass
+
         try:
             import dask.dataframe  # noqa: F401
-            from fugue_dask import DaskExecutionEngine
-
-            register_execution_engine(
-                "dask",
-                lambda conf, **kwargs: DaskExecutionEngine(conf=conf),
-                on_dup="ignore",
-            )
+            import fugue_dask  # noqa: F401
         except ImportError:
             pass
 
