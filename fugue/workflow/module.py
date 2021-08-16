@@ -153,10 +153,10 @@ class _ModuleFunctionWrapper(FunctionWrapper):
         if issubclass(annotation, FugueWorkflow):
             # to prevent cyclic import
             return _FugueWorkflowParam(param)
-        elif annotation is WorkflowDataFrame:
+        elif annotation == WorkflowDataFrame:
             # to prevent cyclic import
             return _WorkflowDataFrameParam(param)
-        elif annotation is WorkflowDataFrames:
+        elif annotation == WorkflowDataFrames:
             # to prevent cyclic import
             return _WorkflowDataFramesParam(param)
         else:
