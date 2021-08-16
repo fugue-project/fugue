@@ -122,7 +122,7 @@ class SimpleAnnotationConverter(AnnotationConverter):
         self._converter = converter
 
     def check(self, annotation: Any) -> bool:
-        return annotation is self._expected
+        return annotation == self._expected
 
     def convert(self, param: Optional[inspect.Parameter]) -> "_FuncParam":
         return self._converter(param)
@@ -263,7 +263,7 @@ class FunctionWrapper(object):
         param: Optional[inspect.Parameter],
         none_as_other: bool = True,
     ) -> "_FuncParam":
-        if annotation is type(None):  # noqa: E721
+        if annotation == type(None):  # noqa: E721
             return _NoneParam(param)
         if annotation == inspect.Parameter.empty:
             if param is not None and param.kind == param.VAR_POSITIONAL:
@@ -272,44 +272,44 @@ class FunctionWrapper(object):
                 return _KeywordParam(param)
             return _OtherParam(param) if none_as_other else _NoneParam(param)
         if (
-            annotation is Callable
-            or annotation is callable
+            annotation == Callable
+            or annotation == callable  # pylint: disable=comparison-with-callable
             or str(annotation).startswith("typing.Callable")
         ):
             return _CallableParam(param)
         if (
-            annotation is Optional[Callable]
-            or annotation is Optional[callable]
+            annotation == Optional[Callable]
+            or annotation == Optional[callable]
             or str(annotation).startswith("typing.Union[typing.Callable")
         ):
             return _OptionalCallableParam(param)
         for _, c in _ANNOTATION_CONVERTERS:
             if c.check(annotation):
                 return c.convert(param)
-        if annotation is to_type("fugue.execution.ExecutionEngine"):
+        if annotation == to_type("fugue.execution.ExecutionEngine"):
             # to prevent cyclic import
             return ExecutionEngineParam(param, "ExecutionEngine", annotation)
-        if annotation is DataFrames:
+        if annotation == DataFrames:
             return _DataFramesParam(param)
-        if annotation is LocalDataFrame:
+        if annotation == LocalDataFrame:
             return _LocalDataFrameParam(param)
-        if annotation is DataFrame:
+        if annotation == DataFrame:
             return DataFrameParam(param)
-        if annotation is pd.DataFrame:
+        if annotation == pd.DataFrame:
             return _PandasParam(param)
-        if annotation is List[List[Any]]:
+        if annotation == List[List[Any]]:
             return _ListListParam(param)
-        if annotation is Iterable[List[Any]]:
+        if annotation == Iterable[List[Any]]:
             return _IterableListParam(param)
-        if annotation is EmptyAwareIterable[List[Any]]:
+        if annotation == EmptyAwareIterable[List[Any]]:
             return _EmptyAwareIterableListParam(param)
-        if annotation is List[Dict[str, Any]]:
+        if annotation == List[Dict[str, Any]]:
             return _ListDictParam(param)
-        if annotation is Iterable[Dict[str, Any]]:
+        if annotation == Iterable[Dict[str, Any]]:
             return _IterableDictParam(param)
-        if annotation is EmptyAwareIterable[Dict[str, Any]]:
+        if annotation == EmptyAwareIterable[Dict[str, Any]]:
             return _EmptyAwareIterableDictParam(param)
-        if annotation is Iterable[pd.DataFrame]:
+        if annotation == Iterable[pd.DataFrame]:
             return _IterablePandasParam(param)
         if param is not None and param.kind == param.VAR_POSITIONAL:
             return _PositionalParam(param)
