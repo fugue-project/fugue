@@ -24,7 +24,7 @@ setup(
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
     license="Apache-2.0",
-    author="Fugue Team",
+    author="The Fugue Development Team",
     author_email="hello@fugue.ai",
     keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
