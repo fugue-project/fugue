@@ -9,12 +9,55 @@
 
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ)
 
-Fugue is a pure abstraction layer that makes Python and SQL code portable across differing computing frameworks such as Pandas, Spark and Dask.
+**Fugue is an abstraction layer that helps big data practitioners accelerate development, decrease costs, and simplify maintenance of their projects.**
 
--   **Framework-agnostic code**: Write code once in native Python or SQL. Fugue makes it runnable on Pandas, Dask or Spark with minimal changes. Logic and code is decoupled from frameworks, even from Fugue itself. Fugue makes the user's code adapt to the underlying computing frameworks. Users can use the Spark and Dask engines without learning the specific framework syntax.
--   **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This drastically improves project iteration time and reduce cluster usage.  This lessens the frequency spinning up clusters to test code, and reduces expensive mistakes. It also becomes trivial to transition from Pandas-sized data to bigger datasets.
--   **Friendlier interface for Spark**: Fugue provides a friendlier interface compared to Spark user-defined functions (UDF). Users can get Python/Pandas code running on Spark with less effort. Fugue SQL extends Spark SQL to be a more complete programming language. Lastly, Fugue as some optimizations that make the Spark engine easier to use.
+
+-   **Framework-agnostic code**: Write code once in native Python or SQL, then port it to Pandas, Dask or Spark with minimal changes. Logic and execution are decoupled as Fugue takes care of bringing the code to distributed computing frameworks.
+-   **Rapid iterations for big data projects**: Test code quickly on smaller data, then reliably scale to Dask or Spark when ready. This saves both developer time and hardware expenses.
+-   **Friendlier interface for Spark**: Users can get Python/Pandas code running on Spark with significanly less effort. FugueSQL extends SparkSQL to be a more complete programming language.
 -   **Highly testable code**: Fugue naturally makes logic more testable because the code will be written in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
+
+## Cross-Framework Execution
+
+The simplest way to use Fugue is the `transform` function. This lets users bring a parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_to_food` function takes in a mapping and replaces the values in a column with the mapped value.
+
+```python
+import pandas as pd
+from typing import Dict
+
+df = pd.DataFrame({"id":[0,1,2], "food": (["A", "B", "C"])})
+map_dict = {"A": "Apple", "B": "Banana", "C": "Carrot"}
+
+def map_to_food(df: pd.DataFrame, mapping: Dict) -> pd.DataFrame:
+    df["food"] = df["food"].map(mapping)
+    return df
+```
+
+The `map_to_food` function can now be used on the Spark execution engine. This is done by simply invoking the `transform` function of Fugue and passing the output `schema`, params` and `engine`. The `schema` is needed because it's a requirement on Spark.
+
+```python
+from fugue import transform
+from fugue_spark import SparkExecutionEngine
+
+df = transform(df, 
+               replace_food, 
+               schema="*",
+               params=dict(mapping=map_dict),
+               engine=SparkExecutionEngine
+            )
+df.show()
+```
+```
++---+------+
+| id|  food|
++---+------+
+|  0| Apple|
+|  1|Banana|
+|  2|Carrot|
++---+------+
+```
+
+This syntax is simpler, cleaner, and more maintainable than the Spark equivalent. At the same time, no edits were made to the original pandas-based function to bring it to Spark. Because the Spark execution engine was used, the returned `df` is now a Spark DataFrame. Fugue `transform` also supports `DaskExecutionEngine` and the pandas-based `NativeExecutionEngine`.
 
 ## Getting Started
 
@@ -24,60 +67,6 @@ View our latest presentations and content
 -   [Interoperable Python and SQL blog](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
 -   [Data Science Cross-Framework Library Blog](https://towardsdatascience.com/creating-pandas-and-spark-compatible-functions-with-fugue-8617c0b3d3a8)
 
-## Key Features
-
-Here is an example Fugue code snippet that illustrates some of the key features of the framework. A `fillna` function creates a new column named `filled`, which is the same as the column `value` except that the `None` values are filled. Notice that the `fillna` function written below is purely in native Python. The code will still run without Fugue installed.
-
-```python
-from fugue import FugueWorkflow
-from typing import Iterable, Dict, Any, List
-
-# Creating sample data
-data = [
-    ["A", "2020-01-01", 10],
-    ["A", "2020-01-02", None],
-    ["A", "2020-01-03", 30],
-    ["B", "2020-01-01", 20],
-    ["B", "2020-01-02", None],
-    ["B", "2020-01-03", 40]
-]
-schema = "id:str,date:date,value:double"
-
-# schema: *, filled:double
-def fillna(df:Iterable[Dict[str,Any]], value:float=0) -> Iterable[Dict[str,Any]]:
-    for row in df:
-        row["filled"] = (row["value"] or value)
-        yield row
-
-with FugueWorkflow() as dag:
-    df = dag.df(data, schema).transform(fillna)
-    df.show()
-```
-
-### Cross-platform execution
-
-Fugue lets users write scale-agnostic code in Python or SQL, and then port the logic to Pandas, Spark, or Dask. Users can focus on the logic, rather than on what engine it will be executed. To bring it to Spark, simply pass the `SparkExecutionEngine` into the `FugueWorkflow` as follows.
-
-```python
-from fugue_spark import SparkExecutionEngine
-
-with FugueWorkflow(SparkExecutionEngine) as dag:
-    df = dag.df(data, schema).transform(fillna)
-    df.show()
-```
-
-Similarly for Dask, we can pass the `DaskExecutionEngine` into the `FugueWorkflow` instead. The example above is to illustrate that native Python can be used on top of Spark. In practice, using the Pandas `fillna` will be easier to use in this case. We can run the Pandas `fillna` on Spark or Dask like follows:
-
-```python
-# schema: *, filled:double
-def fillna_pandas(df:pd.DataFrame, value:float=0) -> pd.DataFrame:
-    df["filled"] = df["value"].fillna(value)
-    return df
-
-with FugueWorkflow(SparkExecutionEngine) as dag:
-    df = dag.df(data, schema).transform(fillna_pandas)
-    df.show()
-```
 
 ### Catch errors faster
 
@@ -207,7 +196,3 @@ docker run -p 8888:8888 fugueproject/tutorials:latest
 ## Contributing
 
 Feel free to message us on [Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ). We also have [contributing instructions](CONTRIBUTING.md).
-
-## Partner with Us
-
-The Fugue Project is looking for select companies to partner closely with and implement solutions built on any of the Fugue libraries (Fugue core, Fugue SQL, Tune). As part of the partnership, our team will closely work with you, or give trainings and workshops to your team members. If you're interested, please fill out [this form](https://docs.google.com/forms/d/e/1FAIpQLScsBnQg78ScNn4tXMLSEiNnNOBR2ZVxRyOgGUOohzPk8KFGoA/viewform?usp=sf_link) and we'll reach out to you.
