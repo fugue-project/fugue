@@ -79,7 +79,7 @@ import json
 
 fsql("""
     SELECT id, value FROM df
-    TRANSFORM USING map_letter_to_food (mapping="""+ json.dumps(map_dict) + """)
+    TRANSFORM USING map_letter_to_food(mapping="""+ json.dumps(map_dict) + """) SCHEMA *
     PRINT
     """).run()
 ```
