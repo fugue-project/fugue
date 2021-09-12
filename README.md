@@ -19,7 +19,7 @@
 
 ## Fugue Transform
 
-The simplest way to use Fugue is the `transform` function. This lets users bring a parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_to_food` function takes in a mapping and replaces the values in a column with the mapped value. This is all pandas.
+The simplest way to use Fugue is the `transform` function. This lets users bring a parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_letter_to_food` function takes in a mapping and replaces the values in a column with the mapped value. This is just pandas and Python so far (without Fugue).
 
 ```python
 import pandas as pd
@@ -57,20 +57,11 @@ df.show()
 +---+------+
 ```
 
-This syntax is simpler, cleaner, and more maintainable than the Spark equivalent. At the same time, no edits were made to the original pandas-based function to bring it to Spark. Because the Spark execution engine was used, the returned `df` is now a Spark DataFrame. Fugue `transform` also supports `DaskExecutionEngine` and the pandas-based `NativeExecutionEngine`.
+This syntax is simpler, cleaner, and more maintainable than the Spark equivalent. At the same time, no edits were made to the original pandas-based function to bring it to Spark. It is still usable on pandas DataFrames. Because the Spark execution engine was used, the returned `df` is now a Spark DataFrame. Fugue `transform` also supports `DaskExecutionEngine` and the pandas-based `NativeExecutionEngine`.
 
-## Getting Started
+## [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/fugue_sql/)
 
-View our latest presentations and content
-
--   [Tutorials](https://fugue-tutorials.readthedocs.io/en/latest/)
--   [Interoperable Python and SQL blog](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
--   [Data Science Cross-Framework Library Blog](https://towardsdatascience.com/creating-pandas-and-spark-compatible-functions-with-fugue-8617c0b3d3a8)
-
-
-### [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/fugue_sql/index.md.html)
-
-A SQL-based language capable of expressing end-to-end workflows. The `map_latter_to_food` function above is used in the SQL query below. This is how to use a Python-defined transformer along with the standard SQL `SELECT` statement.
+A SQL-based language capable of expressing end-to-end workflows. The `map_letter_to_food` function above is used in the SQL query below. This is how to use a Python-defined transformer along with the standard SQL `SELECT` statement.
 
 ```python
 fsql("""
@@ -81,6 +72,25 @@ fsql("""
 ```
 
 For Fugue SQL, we can change the engine by passing it to the `run` method: `fsql(query).run("spark")`.
+
+## Jupyter Notebook Extension
+
+There is an accompanying notebook extension for Fugue SQL that lets users use the `%%fsql` cell magic. The extension also provides syntax highlighting for Fugue SQL cells. (Syntax highlighting is not available yet for JupyterLab).
+
+![Fugue SQL gif](https://miro.medium.com/max/700/1*6091-RcrOPyifJTLjo0anA.gif)
+
+**Loading extension in a notebook**
+
+The notebook environment can be setup by using the `setup` function as follows in the first cell of a notebook:
+
+```python
+from fugue_notebook import setup
+setup()
+```
+
+Note that you can automatically load `fugue_notebook` iPython extension at startup,
+read [this](https://ipython.readthedocs.io/en/stable/config/extensions/#using-extensions) to configure your Jupyter environment.
+
 
 ## Installation
 
@@ -103,57 +113,17 @@ For example a common use case is:
 pip install fugue[sql,spark]
 ```
 
-## Jupyter Notebook Extension
-
-There is an accompanying notebook extension for Fugue SQL that lets users use the `%%fsql` cell magic. The extension also provides syntax highlighting for Fugue SQL cells. (Syntax highlighting is not available yet for JupyterLab).
-
-![Fugue SQL gif](https://miro.medium.com/max/700/1*6091-RcrOPyifJTLjo0anA.gif)
-
-### Installating Notebook Extension
-
-To install the notebook extension:
+To install the notebook extension (after installing Fugue):
 
 ```bash
-pip install fugue
 jupyter nbextension install --py fugue_notebook
 jupyter nbextension enable fugue_notebook --py
 ```
 
-### Loading in a notebook
 
-The notebook environment can be setup by using the `setup` function as follows in the first cell of a notebook:
+## Tutorials
 
-```python
-from fugue_notebook import setup
-setup()
-```
-
-Note that you can automatically load `fugue_notebook` iPython extension at startup,
-read [this](https://ipython.readthedocs.io/en/stable/config/extensions/#using-extensions) to configure your Jupyter environment.
-
-### Usage
-
-To use Fugue SQL in a notebook, simply invoke the `%%fsql` cell magic.
-
-```bash
-%%fsql
-CREATE [[0]] SCHEMA a:int
-PRINT
-```
-
-To use Spark or Dask as an execution engine, specify it after `%%fsql`
-
-```bash
-%%fsql dask
-CREATE [[0]] SCHEMA a:int
-PRINT
-```
-
-## Get started
-
-The best way to start is to go through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/index.html). We have the tutorials in an interactive notebook environent.
-
-For the API docs, [click here](https://fugue.readthedocs.org)
+The best way to start is to go through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/). The tutorials can be run in an interactive notebook environment through binder or Docker:
 
 ### Run the tutorial using binder:
 
@@ -171,6 +141,16 @@ Alternatively, you should get decent performance if running its Docker image on 
 docker run -p 8888:8888 fugueproject/tutorials:latest
 ```
 
-## Contributing
+For the API docs, [click here](https://fugue.readthedocs.org)
+
+## Further Resources
+
+View our latest presentations and content
+
+-   [Tutorials](https://fugue-tutorials.readthedocs.io/en/latest/)
+-   [Interoperable Python and SQL blog](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
+-   [Data Science Cross-Framework Library Blog](https://towardsdatascience.com/creating-pandas-and-spark-compatible-functions-with-fugue-8617c0b3d3a8)
+
+## Community and Contributing
 
 Feel free to message us on [Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ). We also have [contributing instructions](CONTRIBUTING.md).
