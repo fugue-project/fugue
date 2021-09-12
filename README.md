@@ -12,35 +12,35 @@
 **Fugue is an abstraction layer that helps big data practitioners accelerate development, decrease costs, and simplify maintenance of their projects.**
 
 
--   **Framework-agnostic code**: Write code once in native Python or SQL, then port it to Pandas, Dask or Spark with minimal changes. Logic and execution are decoupled as Fugue takes care of bringing the code to distributed computing frameworks.
--   **Rapid iterations for big data projects**: Test code quickly on smaller data, then reliably scale to Dask or Spark when ready. This saves both developer time and hardware expenses.
+-   **Framework-agnostic code**: Write code once in native Python or SQL, then port it to Pandas, Dask or Spark with minimal changes. Logic and execution are decoupled through Fugue, enabling users to leverage the Spark and Dask engines without learning the specific framework syntax.
+-   **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This accelerates project iteration time and reduces expensive mistakes.
 -   **Friendlier interface for Spark**: Users can get Python/Pandas code running on Spark with significanly less effort. FugueSQL extends SparkSQL to be a more complete programming language.
 -   **Highly testable code**: Fugue naturally makes logic more testable because the code will be written in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
 
-## Cross-Framework Execution
+## Fugue Transform
 
-The simplest way to use Fugue is the `transform` function. This lets users bring a parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_to_food` function takes in a mapping and replaces the values in a column with the mapped value.
+The simplest way to use Fugue is the `transform` function. This lets users bring a parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_to_food` function takes in a mapping and replaces the values in a column with the mapped value. This is all pandas.
 
 ```python
 import pandas as pd
 from typing import Dict
 
-df = pd.DataFrame({"id":[0,1,2], "food": (["A", "B", "C"])})
+df = pd.DataFrame({"id":[0,1,2], "value": (["A", "B", "C"])})
 map_dict = {"A": "Apple", "B": "Banana", "C": "Carrot"}
 
-def map_to_food(df: pd.DataFrame, mapping: Dict) -> pd.DataFrame:
-    df["food"] = df["food"].map(mapping)
+def map_letter_to_food(df: pd.DataFrame, mapping: Dict[str, str]) -> pd.DataFrame:
+    df["value"] = df["value"].map(mapping)
     return df
 ```
 
-The `map_to_food` function can now be used on the Spark execution engine. This is done by simply invoking the `transform` function of Fugue and passing the output `schema`, params` and `engine`. The `schema` is needed because it's a requirement on Spark.
+Now, the `map_letter_to_food` function is used on the Spark execution engine by simply invoking the `transform` function of Fugue. The output `schema`, params` and `engine` are passed to the `transform` call. The `schema` is needed because it's a requirement on Spark.
 
 ```python
 from fugue import transform
 from fugue_spark import SparkExecutionEngine
 
 df = transform(df, 
-               replace_food, 
+               map_to_food, 
                schema="*",
                params=dict(mapping=map_dict),
                engine=SparkExecutionEngine
@@ -68,39 +68,14 @@ View our latest presentations and content
 -   [Data Science Cross-Framework Library Blog](https://towardsdatascience.com/creating-pandas-and-spark-compatible-functions-with-fugue-8617c0b3d3a8)
 
 
-### Catch errors faster
-
-Fugue builds a [directed acyclic graph (DAG)](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/advanced/dag.html) before running code, allowing users to receive errors faster. This catches more errors before expensive jobs are run on a cluster. For example, mismatches in specified [schema](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/advanced/schema_dataframes.html#Schema) will raise errors. In the code above, the schema hint comment is read and the schema is enforced during execution. Schema is required for Fugue [extensions](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/extensions.html).
-
-### Spark optimizations
-
-Fugue makes Spark easier to use for people starting with distributed computing. For example, Fugue uses the constructed DAG to smartly [auto-persist](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/advanced/useful_config.html#Auto-Persist) dataframes used multiple times. This often speeds up Spark jobs of users.
-
-### Access to framework configuration
-
-Even if Fugue tries to simplify the experience of using distributed computing frameworks, it does not restrict users from editing configuration when needed. For example, the Spark session can be configured with the following:
-
-```python
-from pyspark.sql import SparkSession
-from fugue_spark import SparkExecutionEngine
-
-spark_session = (SparkSession
-                 .builder
-                 .config("spark.executor.cores",4)
-                 .config("fugue.dummy","dummy")
-                 .getOrCreate())
-
-engine = SparkExecutionEngine(spark_session, {"additional_conf":"abc"})
-```
-
 ### [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/fugue_sql/index.md.html)
 
-A SQL-based language capable of expressing end-to-end workflows. The `fillna` function above is used in the SQL query below. This is how to use a Python-defined transformer along with the standard SQL `SELECT` statement.
+A SQL-based language capable of expressing end-to-end workflows. The `map_latter_to_food` function above is used in the SQL query below. This is how to use a Python-defined transformer along with the standard SQL `SELECT` statement.
 
 ```python
 fsql("""
     SELECT id, date, value FROM df
-    TRANSFORM USING fillna (value=10)
+    TRANSFORM USING map_letter_to_food (mapping=map_dict)
     PRINT
     """).run()
 ```
@@ -109,15 +84,18 @@ For Fugue SQL, we can change the engine by passing it to the `run` method: `fsql
 
 ## Installation
 
+Fugue can be installed through pip by using:
+
 ```bash
 pip install fugue
 ```
 
-Fugue has these extras:
+It also has the fullowing extras:
 
 -   **sql**: to support [Fugue SQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/fugue_sql/index.md.html)
 -   **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/advanced/execution_engine.html)
 -   **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/advanced/execution_engine.html)
+-   **all**: install everything above
 
 For example a common use case is:
 
