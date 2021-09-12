@@ -121,19 +121,19 @@ jupyter nbextension enable fugue_notebook --py
 ```
 
 
-## Tutorials
+## [Tutorials](https://fugue-tutorials.readthedocs.io/en/latest/)
 
-The best way to start is to go through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/). The tutorials can be run in an interactive notebook environment through binder or Docker:
+The best way to start is to go through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/). 
 
-### Run the tutorial using binder:
+The tutorials can also be run in an interactive notebook environment through binder or Docker:
+
+**Using binder:**
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/fugue-project/tutorials/master)
 
-**But it runs slow on binder**, the machine on binder isn't powerful enough for
-a distributed framework such as Spark. Parallel executions can become sequential, so some of the
-performance comparison examples will not give you the correct numbers.
+**Note it runs slow on binder** because the machine on binder isn't powerful enough for a distributed framework such as Spark. Parallel executions can become sequential, so some of the performance comparison examples will not give you the correct numbers.
 
-### Run the tutorial using Docker
+**Using Docker**
 
 Alternatively, you should get decent performance if running its Docker image on your own machine:
 
