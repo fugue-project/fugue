@@ -13,19 +13,18 @@
 
 Fugue is meant for:
 
-* Data scientists/analysts that want to **focus on defining logic rather than worrying about execution**
-* SQL-lovers wanting to use **SQL to define end-to-end workflows** in pandas, Spark, and Dask
-* Data scientists using pandas wanting to take advatange of **Spark or Dask** with minimal effort
-* Big data practitioners finding **testing code** to be costly and slow
-* Data teams with big data projects that **struggle maintaining code**
-
+*   Data scientists/analysts that want to **focus on defining logic rather than worrying about execution**
+*   SQL-lovers wanting to use **SQL to define end-to-end workflows** in pandas, Spark, and Dask
+*   Data scientists using pandas wanting to take advatange of **Spark or Dask** with minimal effort
+*   Big data practitioners finding **testing code** to be costly and slow
+*   Data teams with big data projects that **struggle maintaining code**
 
 ## Select Features
 
--   **Cross-framework code**: Write code once in native Python or SQL, then port it to pandas, Dask or Spark with no changes. Logic and execution are decoupled through Fugue, enabling users to leverage the Spark and Dask engines without learning the specific framework syntax.
--   **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This accelerates project iteration time and reduces expensive mistakes.
--   **Friendlier interface for Spark**: Users can get Python/pandas code running on Spark with significanly less effort. FugueSQL extends SparkSQL to be a more complete programming language.
--   **Highly testable code**: Fugue naturally makes logic more testable because the code will be written in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
+*   **Cross-framework code**: Write code once in native Python or SQL, then port it to pandas, Dask or Spark with no changes. Logic and execution are decoupled through Fugue, enabling users to leverage the Spark and Dask engines without learning the specific framework syntax.
+*   **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This accelerates project iteration time and reduces expensive mistakes.
+*   **Friendlier interface for Spark**: Users can get Python/pandas code running on Spark with significanly less effort. FugueSQL extends SparkSQL to be a more complete programming language.
+*   **Highly testable code**: Fugue naturally makes logic more testable because the code will be written in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
 
 ## Fugue Transform
 
@@ -113,10 +112,10 @@ pip install fugue
 
 It also has the following extras:
 
--   **sql**: to support [FugueSQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/fugue_sql/)
--   **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/advanced/execution_engine.html)
--   **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/advanced/execution_engine.html)
--   **all**: install everything above
+*   **sql**: to support [FugueSQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/fugue_sql/)
+*   **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/advanced/execution_engine.html)
+*   **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/advanced/execution_engine.html)
+*   **all**: install everything above
 
 For example a common use case is:
 
@@ -131,20 +130,19 @@ jupyter nbextension install --py fugue_notebook
 jupyter nbextension enable fugue_notebook --py
 ```
 
-
 ## [Tutorials](https://fugue-tutorials.readthedocs.io/en/latest/)
 
 The best way to start is to go through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/).
 
 The tutorials can also be run in an interactive notebook environment through binder or Docker:
 
-**Using binder:**
+### Using binder
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/fugue-project/tutorials/master)
 
 **Note it runs slow on binder** because the machine on binder isn't powerful enough for a distributed framework such as Spark. Parallel executions can become sequential, so some of the performance comparison examples will not give you the correct numbers.
 
-**Using Docker**
+### Using Docker
 
 Alternatively, you should get decent performance if running its Docker image on your own machine:
 
@@ -161,20 +159,20 @@ View some of our latest conferences presentations and content. For more, check t
 ### Blogs
 
 James Le
--   [Fugue: Reducing Spark Developer Friction](https://jameskle.com/writes/fugue)
+*   [Fugue: Reducing Spark Developer Friction](https://jameskle.com/writes/fugue)
 
 Coiled
--   [Data Analysis with FugueSQL on Coiled Dask Clusters](https://coiled.io/blog/data-analysis-with-fuguesql-on-coiled-dask-clusters/)
+*   [Data Analysis with FugueSQL on Coiled Dask Clusters](https://coiled.io/blog/data-analysis-with-fuguesql-on-coiled-dask-clusters/)
 
 Towards Data Science
--   [Interoperable Python and SQL in Jupyter Notebooks](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
--   [Using Pandera on Spark for Data Validation through Fugue](https://towardsdatascience.com/using-pandera-on-spark-for-data-validation-through-fugue-72956f274793)
+*   [Interoperable Python and SQL in Jupyter Notebooks](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
+*   [Using Pandera on Spark for Data Validation through Fugue](https://towardsdatascience.com/using-pandera-on-spark-for-data-validation-through-fugue-72956f274793)
 
 ### Conferences
 
--   [Spark Summit 2020 - Fugue: Unifying Spark and Non-Spark Ecosystems for Big Data Analytics](https://www.youtube.com/watch?v=BBd4b2pMk0c&t=2s)
--   [PyCon US 2021 - Large Scale Data Validation with Spark and Dask](https://www.youtube.com/watch?v=2AdvBgjO_3Q)
--   [Dask Summit 2021 - Dask SQL Query Engines](https://www.youtube.com/watch?v=bQDN41Bc3bw)
+*   [Spark Summit 2020 - Fugue: Unifying Spark and Non-Spark Ecosystems for Big Data Analytics](https://www.youtube.com/watch?v=BBd4b2pMk0c&t=2s)
+*   [PyCon US 2021 - Large Scale Data Validation with Spark and Dask](https://www.youtube.com/watch?v=2AdvBgjO_3Q)
+*   [Dask Summit 2021 - Dask SQL Query Engines](https://www.youtube.com/watch?v=bQDN41Bc3bw)
 
 ## Community and Contributing
 
