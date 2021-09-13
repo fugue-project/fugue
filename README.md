@@ -9,7 +9,7 @@
 
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ)
 
-**Fugue is an abstraction layer that helps big data practitioners accelerate development, decrease costs, and simplify maintenance of their big data projects.** This is done by allowing users to port Python, pandas, and SQL code to Spark and Dask easily, making it easy to leverage distributed computing.
+**Fugue is an abstraction layer that helps big data practitioners accelerate development, decrease costs, and simplify maintenance of their big data projects.** This is done by allowing users to port Python, pandas, and SQL code to Spark and Dask with minimal changes, making it easy to leverage distributed computing.
 
 Fugue is meant for:
 
@@ -42,7 +42,7 @@ def map_letter_to_food(df: pd.DataFrame, mapping: Dict[str, str]) -> pd.DataFram
     return df
 ```
 
-Now, the `map_letter_to_food` function is brought to the Spark execution engine by simply invoking the `transform` function of Fugue. The output `schema`, `params` and `engine` are passed to the `transform` call. The `schema` is needed because it's a requirement on Spark. "*" means all input columns are in the output.
+Now, the `map_letter_to_food` function is brought to the Spark execution engine by simply invoking the `transform` function of Fugue. The output `schema`, `params` and `engine` are passed to the `transform` call. The `schema` is needed because it's a requirement on Spark. A schema of "*" below means all input columns are in the output.
 
 ```python
 from fugue import transform
