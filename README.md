@@ -56,7 +56,7 @@ df = transform(df,
             )
 df.show()
 ```
-```
+```rst
 +---+------+
 | id| value|
 +---+------+
