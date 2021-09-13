@@ -29,7 +29,7 @@ Fugue is meant for:
 
 ## Fugue Transform
 
-The simplest way to use Fugue is the `transform` function. This lets users bring a parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_letter_to_food` function takes in a mapping and applies it on a column. This is just pandas and Python so far (without Fugue).
+The simplest way to use Fugue is the [`transform` function](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner/introduction.html?highlight=transform#Fugue-transform). This lets users bring a parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_letter_to_food` function takes in a mapping and applies it on a column. This is just pandas and Python so far (without Fugue).
 
 ```python
 import pandas as pd
@@ -79,9 +79,9 @@ import json
 
 fsql("""
     SELECT id, value FROM df
-    TRANSFORM USING map_letter_to_food(mapping="""+ json.dumps(map_dict) + """) SCHEMA *
+    TRANSFORM USING map_letter_to_food(mapping={{mapping}}) SCHEMA *
     PRINT
-    """).run()
+    """,mapping=json.dumps(map_dict)).run()
 ```
 
 For FugueSQL, we can change the engine by passing it to the `run` method: `fsql(query).run("spark")`.
