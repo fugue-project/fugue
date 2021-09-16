@@ -9,13 +9,13 @@
 
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ)
 
-**Fugue is an abstraction layer that helps big data practitioners accelerate development, decrease costs, and simplify maintenance of their big data projects.** This is done by allowing users to port Python, pandas, and SQL code to Spark and Dask with minimal changes, making it easy to leverage distributed computing.
+**Fugue is a unified framework for distributed computing that lets users port Python, pandas, and SQL code to Spark and Dask with minimal changes.** 
 
 Fugue is meant for:
 
-*   Data scientists/analysts that want to **focus on defining logic rather than worrying about execution**
+*   Data scientists/analysts who want to **focus on defining logic rather than worrying about execution**
 *   SQL-lovers wanting to use **SQL to define end-to-end workflows** in pandas, Spark, and Dask
-*   Data scientists using pandas wanting to take advatange of **Spark or Dask** with minimal effort
+*   Data scientists using pandas wanting to take advantage of **Spark or Dask** with minimal effort
 *   Big data practitioners finding **testing code** to be costly and slow
 *   Data teams with big data projects that **struggle maintaining code**
 
@@ -24,11 +24,11 @@ Fugue is meant for:
 *   **Cross-framework code**: Write code once in native Python or SQL, then port it to pandas, Dask or Spark with no changes. Logic and execution are decoupled through Fugue, enabling users to leverage the Spark and Dask engines without learning the specific framework syntax.
 *   **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This accelerates project iteration time and reduces expensive mistakes.
 *   **Friendlier interface for Spark**: Users can get Python/pandas code running on Spark with significanly less effort. FugueSQL extends SparkSQL to be a more complete programming language.
-*   **Highly testable code**: Fugue naturally makes logic more testable because the code will be written in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
+*   **Highly testable code**: Fugue makes logic more testable because all code is written in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
 
 ## Fugue Transform
 
-The simplest way to use Fugue is the [`transform` function](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner/introduction.html?highlight=transform#Fugue-transform). This lets users bring a parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_letter_to_food` function takes in a mapping and applies it on a column. This is just pandas and Python so far (without Fugue).
+The simplest way to use Fugue is the [`transform` function](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner/introduction.html?highlight=transform#Fugue-transform). This lets users parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_letter_to_food` function takes in a mapping and applies it on a column. This is just pandas and Python so far (without Fugue).
 
 ```python
 import pandas as pd
@@ -42,7 +42,7 @@ def map_letter_to_food(df: pd.DataFrame, mapping: Dict[str, str]) -> pd.DataFram
     return df
 ```
 
-Now, the `map_letter_to_food` function is brought to the Spark execution engine by simply invoking the `transform` function of Fugue. The output `schema`, `params` and `engine` are passed to the `transform` call. The `schema` is needed because it's a requirement on Spark. A schema of "*" below means all input columns are in the output.
+Now, the `map_letter_to_food` function is brought to the Spark execution engine by invoking the `transform` function of Fugue. The output `schema`, `params` and `engine` are passed to the `transform` call. The `schema` is needed because it's a requirement on Spark. A schema of "*" below means all input columns are in the output.
 
 ```python
 from fugue import transform
@@ -132,7 +132,7 @@ jupyter nbextension enable fugue_notebook --py
 
 ## [Tutorials](https://fugue-tutorials.readthedocs.io/en/latest/)
 
-The best way to start is to go through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/).
+The best way to get started with Fugue is to work through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/).
 
 The tutorials can also be run in an interactive notebook environment through binder or Docker:
 
@@ -144,7 +144,7 @@ The tutorials can also be run in an interactive notebook environment through bin
 
 ### Using Docker
 
-Alternatively, you should get decent performance if running its Docker image on your own machine:
+Alternatively, you should get decent performance by running this Docker image on your own machine:
 
 ```bash
 docker run -p 8888:8888 fugueproject/tutorials:latest
