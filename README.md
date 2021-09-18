@@ -9,9 +9,7 @@
 
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ)
 
-### Fugue is a unified framework for distributed computing that lets users execute Python, pandas, and SQL code on Spark and Dask without rewrites.
-
-Fugue is meant for:
+**Fugue is a unified framework for distributed computing that lets users execute Python, pandas, and SQL code on Spark and Dask without rewrites**. It is meant for: 
 
 *   Data scientists/analysts who want to **focus on defining logic rather than worrying about execution**
 *   SQL-lovers wanting to use **SQL to define end-to-end workflows** in pandas, Spark, and Dask
