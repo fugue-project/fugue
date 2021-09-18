@@ -9,7 +9,7 @@
 
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ)
 
-**Fugue is a unified framework for distributed computing that lets users execute Python, pandas, and SQL code on Spark and Dask without rewrites**. It is meant for:
+**Fugue is a unified interface for distributed computing that lets users execute Python, pandas, and SQL code on Spark and Dask without rewrites**. It is meant for:
 
 *   Data scientists/analysts who want to **focus on defining logic rather than worrying about execution**
 *   SQL-lovers wanting to use **SQL to define end-to-end workflows** in pandas, Spark, and Dask
@@ -40,7 +40,7 @@ def map_letter_to_food(df: pd.DataFrame, mapping: Dict[str, str]) -> pd.DataFram
     return df
 ```
 
-Now, the `map_letter_to_food()` function is brought to the Spark execution engine by invoking the `transform` function of Fugue. The output `schema`, `params` and `engine` are passed to the `transform()` call. The `schema` is needed because it's a requirement on Spark. A schema of "*" below means all input columns are in the output.
+Now, the `map_letter_to_food()` function is brought to the Spark execution engine by invoking the `transform` function of Fugue. The output `schema`, `params` and `engine` are passed to the `transform()` call. The `schema` is needed because it's a requirement on Spark. A schema of `"*"` below means all input columns are in the output.
 
 ```python
 from fugue import transform
@@ -196,7 +196,7 @@ View some of our latest conferences presentations and content. For a more comple
 
 ### Conferences
 
-*   [Fugue: Unifying Spark and Non-Spark Ecosystems for Big Data Analytics (Spark + AI Summit 2020)](https://www.youtube.com/watch?v=BBd4b2pMk0c&t=2s)
+*   [Fugue: Unifying Spark and Non-Spark Ecosystems for Big Data Analytics (Spark + AI Summit 2020)](https://www.youtube.com/watch?v=BBd4b2pMk0c)
 *   [Large Scale Data Validation with Spark and Dask (PyCon US 2021)](https://www.youtube.com/watch?v=2AdvBgjO_3Q)
 *   [Dask SQL Query Engines (Dask Summit 2021)](https://www.youtube.com/watch?v=bQDN41Bc3bw)
 
