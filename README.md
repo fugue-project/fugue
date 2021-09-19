@@ -9,32 +9,30 @@
 
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ)
 
-**Fugue is an abstraction layer that helps big data practitioners accelerate development, decrease costs, and simplify maintenance of their big data projects.** This is done by allowing users to port Python, pandas, and SQL code to Spark and Dask with minimal changes, making it easy to leverage distributed computing.
+**Fugue is a unified interface for distributed computing that lets users execute Python, pandas, and SQL code on Spark and Dask without rewrites**. It is meant for:
 
-Fugue is meant for:
-
-*   Data scientists/analysts that want to **focus on defining logic rather than worrying about execution**
+*   Data scientists/analysts who want to **focus on defining logic rather than worrying about execution**
 *   SQL-lovers wanting to use **SQL to define end-to-end workflows** in pandas, Spark, and Dask
-*   Data scientists using pandas wanting to take advatange of **Spark or Dask** with minimal effort
+*   Data scientists using pandas wanting to take advantage of **Spark or Dask** with minimal effort
 *   Big data practitioners finding **testing code** to be costly and slow
 *   Data teams with big data projects that **struggle maintaining code**
 
 ## Select Features
 
-*   **Cross-framework code**: Write code once in native Python or SQL, then port it to pandas, Dask or Spark with no changes. Logic and execution are decoupled through Fugue, enabling users to leverage the Spark and Dask engines without learning the specific framework syntax.
+*   **Cross-framework code**: Write code once in native Python, SQL, or pandas then execute it on Dask or Spark with no rewrites. Logic and execution are decoupled through Fugue, enabling users to leverage the Spark and Dask engines without learning the specific framework syntax.
 *   **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This accelerates project iteration time and reduces expensive mistakes.
-*   **Friendlier interface for Spark**: Users can get Python/pandas code running on Spark with significanly less effort. FugueSQL extends SparkSQL to be a more complete programming language.
-*   **Highly testable code**: Fugue naturally makes logic more testable because the code will be written in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
+*   **Friendlier interface for Spark**: Users can get Python/pandas code running on Spark with significantly less effort compared to PySpark. FugueSQL extends SparkSQL to be a more complete programming language.
+*   **Highly testable code**: Fugue makes logic more testable because all code is written in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
 
 ## Fugue Transform
 
-The simplest way to use Fugue is the [`transform` function](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner/introduction.html?highlight=transform#Fugue-transform). This lets users bring a parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_letter_to_food` function takes in a mapping and applies it on a column. This is just pandas and Python so far (without Fugue).
+The simplest way to use Fugue is the [`transform()` function](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner/introduction.html?highlight=transform#Fugue-transform). This lets users parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_letter_to_food()` function takes in a mapping and applies it on a column. This is just pandas and Python so far (without Fugue).
 
 ```python
 import pandas as pd
 from typing import Dict
 
-df = pd.DataFrame({"id":[0,1,2], "value": (["A", "B", "C"])})
+input_df = pd.DataFrame({"id":[0,1,2], "value": (["A", "B", "C"])})
 map_dict = {"A": "Apple", "B": "Banana", "C": "Carrot"}
 
 def map_letter_to_food(df: pd.DataFrame, mapping: Dict[str, str]) -> pd.DataFrame:
@@ -42,13 +40,13 @@ def map_letter_to_food(df: pd.DataFrame, mapping: Dict[str, str]) -> pd.DataFram
     return df
 ```
 
-Now, the `map_letter_to_food` function is brought to the Spark execution engine by simply invoking the `transform` function of Fugue. The output `schema`, `params` and `engine` are passed to the `transform` call. The `schema` is needed because it's a requirement on Spark. A schema of "*" below means all input columns are in the output.
+Now, the `map_letter_to_food()` function is brought to the Spark execution engine by invoking the `transform` function of Fugue. The output `schema`, `params` and `engine` are passed to the `transform()` call. The `schema` is needed because it's a requirement on Spark. A schema of `"*"` below means all input columns are in the output.
 
 ```python
 from fugue import transform
 from fugue_spark import SparkExecutionEngine
 
-df = transform(df,
+df = transform(input_df,
                map_letter_to_food,
                schema="*",
                params=dict(mapping=map_dict),
@@ -66,24 +64,57 @@ df.show()
 +---+------+
 ```
 
-This syntax is simpler, cleaner, and more maintainable than the Spark equivalent. At the same time, no edits were made to the original pandas-based function to bring it to Spark. It is still usable on pandas DataFrames. Because the Spark execution engine was used, the returned `df` is now a Spark DataFrame. Fugue `transform` also supports `DaskExecutionEngine` and the pandas-based `NativeExecutionEngine`.
+<details>
+  <summary>PySpark equivalent of Fugue transform</summary>
+
+  ```python
+from typing import Iterator, Union
+from pyspark.sql.types import StructType
+from pyspark.sql import DataFrame, SparkSession
+
+spark_session = SparkSession.builder.getOrCreate()
+
+def mapping_wrapper(dfs: Iterator[pd.DataFrame], mapping):
+    for df in dfs:
+        yield map_letter_to_food(df, mapping)
+
+def run_map_letter_to_food(input_df: Union[DataFrame, pd.DataFrame], mapping):
+    # conversion
+    if isinstance(input_df, pd.DataFrame):
+        sdf = spark_session.createDataFrame(input_df.copy())
+    else:
+        sdf = input_df.copy()
+
+    schema = StructType(list(sdf.schema.fields))
+    return sdf.mapInPandas(lambda dfs: mapping_wrapper(dfs, mapping),
+                            schema=schema)
+
+result = run_map_letter_to_food(input_df, map_dict)
+result.show()
+  ```
+</details>
+
+This syntax is simpler, cleaner, and more maintainable than the PySpark equivalent. At the same time, no edits were made to the original pandas-based function to bring it to Spark. It is still usable on pandas DataFrames. Because the Spark execution engine was used, the returned `df` is now a Spark DataFrame. Fugue `transform()` also supports `DaskExecutionEngine` and the pandas-based `NativeExecutionEngine`.
 
 ## [FugueSQL](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/fugue_sql/)
 
-A SQL-based language capable of expressing end-to-end workflows. The `map_letter_to_food` function above is used in the SQL expression below. This is how to use a Python-defined transformer along with the standard SQL `SELECT` statement.
+A SQL-based language capable of expressing end-to-end workflows. The `map_letter_to_food()` function above is used in the SQL expression below. This is how to use a Python-defined transformer along with the standard SQL `SELECT` statement.
 
 ```python
 from fugue_sql import fsql
 import json
 
-fsql("""
-    SELECT id, value FROM df
+query = """
+    SELECT id, value FROM input_df
     TRANSFORM USING map_letter_to_food(mapping={{mapping}}) SCHEMA *
     PRINT
-    """,mapping=json.dumps(map_dict)).run()
+    """
+map_dict_str = json.dumps(map_dict)
+
+fsql(query,mapping=map_dict_str).run()
 ```
 
-For FugueSQL, we can change the engine by passing it to the `run` method: `fsql(query).run("spark")`.
+For FugueSQL, we can change the engine by passing it to the `run()` method: `fsql(query,mapping=map_dict_str).run("spark")`.
 
 ## Jupyter Notebook Extension
 
@@ -91,7 +122,7 @@ There is an accompanying notebook extension for FugueSQL that lets users use the
 
 ![FugueSQL gif](https://miro.medium.com/max/700/1*6091-RcrOPyifJTLjo0anA.gif)
 
-The notebook environment can be setup by using the `setup` function as follows in the first cell of a notebook:
+The notebook environment can be setup by using the `setup()` function as follows in the first cell of a notebook:
 
 ```python
 from fugue_notebook import setup
@@ -130,9 +161,9 @@ jupyter nbextension install --py fugue_notebook
 jupyter nbextension enable fugue_notebook --py
 ```
 
-## [Tutorials](https://fugue-tutorials.readthedocs.io/en/latest/)
+## [Getting Started](https://fugue-tutorials.readthedocs.io/en/latest/)
 
-The best way to start is to go through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/).
+The best way to get started with Fugue is to work through the [tutorials](https://fugue-tutorials.readthedocs.io/en/latest/).
 
 The tutorials can also be run in an interactive notebook environment through binder or Docker:
 
@@ -144,7 +175,7 @@ The tutorials can also be run in an interactive notebook environment through bin
 
 ### Using Docker
 
-Alternatively, you should get decent performance if running its Docker image on your own machine:
+Alternatively, you should get decent performance by running this Docker image on your own machine:
 
 ```bash
 docker run -p 8888:8888 fugueproject/tutorials:latest
@@ -154,25 +185,20 @@ For the API docs, [click here](https://fugue.readthedocs.org)
 
 ## Further Resources
 
-View some of our latest conferences presentations and content. For more, check the [Resources](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/resources.html) page in the tutorials.
+View some of our latest conferences presentations and content. For a more complete list, check the [Resources](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/resources.html) page in the tutorials.
 
 ### Blogs
 
-James Le
-*   [Fugue: Reducing Spark Developer Friction](https://jameskle.com/writes/fugue)
-
-Coiled
-*   [Data Analysis with FugueSQL on Coiled Dask Clusters](https://coiled.io/blog/data-analysis-with-fuguesql-on-coiled-dask-clusters/)
-
-Towards Data Science
-*   [Interoperable Python and SQL in Jupyter Notebooks](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
-*   [Using Pandera on Spark for Data Validation through Fugue](https://towardsdatascience.com/using-pandera-on-spark-for-data-validation-through-fugue-72956f274793)
+*   [Fugue: Reducing Spark Developer Friction (James Le, Aug 2021)](https://jameskle.com/writes/fugue)
+*   [Data Analysis with FugueSQL on Coiled Dask Clusters (Coiled Blog, May 2021)](https://coiled.io/blog/data-analysis-with-fuguesql-on-coiled-dask-clusters/)
+*   [Interoperable Python and SQL in Jupyter Notebooks (Towards Data Science, Mar 2021)](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
+*   [Using Pandera on Spark for Data Validation through Fugue (Towards Data Science, May 2021)](https://towardsdatascience.com/using-pandera-on-spark-for-data-validation-through-fugue-72956f274793)
 
 ### Conferences
 
-*   [Spark Summit 2020 - Fugue: Unifying Spark and Non-Spark Ecosystems for Big Data Analytics](https://www.youtube.com/watch?v=BBd4b2pMk0c&t=2s)
-*   [PyCon US 2021 - Large Scale Data Validation with Spark and Dask](https://www.youtube.com/watch?v=2AdvBgjO_3Q)
-*   [Dask Summit 2021 - Dask SQL Query Engines](https://www.youtube.com/watch?v=bQDN41Bc3bw)
+*   [Fugue: Unifying Spark and Non-Spark Ecosystems for Big Data Analytics (Spark + AI Summit 2020)](https://www.youtube.com/watch?v=BBd4b2pMk0c)
+*   [Large Scale Data Validation with Spark and Dask (PyCon US 2021)](https://www.youtube.com/watch?v=2AdvBgjO_3Q)
+*   [Dask SQL Query Engines (Dask Summit 2021)](https://www.youtube.com/watch?v=bQDN41Bc3bw)
 
 ## Community and Contributing
 
