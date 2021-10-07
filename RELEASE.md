@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.6.3
+
+-   Change pickle to cloudpickle for [Flask RPC Server](https://github.com/fugue-project/fugue/issues/246)
+-   [Add license](https://github.com/fugue-project/fugue/pull/245) to package
+
 ## 0.6.1
 
 -   Parsed [arbitrary object](https://github.com/fugue-project/fugue/issues/234) into execution engine
