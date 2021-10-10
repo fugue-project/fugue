@@ -6,10 +6,10 @@ To directly read the tutorials without running them:
 
 .. toctree::
 
-   Tutorial Homepage <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/index.html>
-   For Beginners <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/beginner/index.html>
-   For Advanced Users <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/advanced.html>
-   For Fugue-SQL <https://fugue-tutorials.readthedocs.io/en/latest/tutorials/fugue_sql/index.md.html>
+   Tutorial Homepage <https://fugue-project.github.io/tutorials/index.html>
+   For Beginners <https://fugue-project.github.io/tutorials/tutorials/beginner/index.html>
+   For Advanced Users <https://fugue-project.github.io/tutorials/tutorials/advanced/index.html>
+   For Fugue-SQL <https://fugue-project.github.io/tutorials/tutorials/fugue_sql/index.html>
    
 
 
