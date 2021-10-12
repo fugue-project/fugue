@@ -1,5 +1,6 @@
 # <img src="./images/logo.svg" width="200">
 
+[![Doc](https://readthedocs.org/projects/fugue/badge)](https://fugue.readthedocs.org)
 [![Jupyter Book Badge](https://jupyterbook.org/badge.svg)](https://fugue-project.github.io/tutorials/)
 [![PyPI version](https://badge.fury.io/py/fugue.svg)](https://pypi.python.org/pypi/fugue/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/fugue.svg)](https://pypi.python.org/pypi/fugue/)
