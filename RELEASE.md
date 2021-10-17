@@ -2,6 +2,7 @@
 
 ## 0.6.4
 
+-   Create [fsql_ignore_case](https://github.com/fugue-project/fugue/issues/253) for convenience
 -   Make Fugue SQL error more informative about [config issue](https://github.com/fugue-project/fugue/issues/254)
 -   Enable pandas default SQL engine (QPD) to take [lower case SQL](https://github.com/fugue-project/fugue/pull/257)
 

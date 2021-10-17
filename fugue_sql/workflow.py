@@ -106,7 +106,120 @@ class FugueSQLWorkflow(FugueWorkflow):
 
 
 def fsql(sql: str, *args: Any, **kwargs: Any) -> FugueSQLWorkflow:
+    """Fugue SQL functional interface
+
+    :param sql: the Fugue SQL string (can be a jinja template)
+    :param args: variables related to the SQL string
+    :param kwargs: variables related to the SQL string
+    :return: the translated Fugue workflow
+
+    .. code-block:: python
+
+        # Basic case
+        fsql('''
+        CREATE [[0]] SCHEMA a:int
+        PRINT
+        ''').run()
+
+        # With external data sources
+        df = pd.DataFrame([[0],[1]], columns=["a"])
+        fsql('''
+        SELECT * FROM df WHERE a=0
+        PRINT
+        ''').run()
+
+        # With external variables
+        df = pd.DataFrame([[0],[1]], columns=["a"])
+        t = 1
+        fsql('''
+        SELECT * FROM df WHERE a={{t}}
+        PRINT
+        ''').run()
+
+        # The following is the explicit way to specify variables and datafrems
+        # (recommended)
+        df = pd.DataFrame([[0],[1]], columns=["a"])
+        t = 1
+        fsql('''
+        SELECT * FROM df WHERE a={{t}}
+        PRINT
+        ''', df=df, t=t).run()
+
+        # Using extensions
+        def dummy(df:pd.DataFrame) -> pd.DataFrame:
+            return df
+
+        fsql('''
+        CREATE [[0]] SCHEMA a:int
+        TRANSFORM USING dummy SCHEMA *
+        PRINT
+        ''').run()
+
+        # It's recommended to provide full path of the extension inside
+        # Fugue SQL, so the SQL definition and exeuction can be more
+        # independent from the extension definition.
+
+        # Run with different execution engines
+        sql = '''
+        CREATE [[0]] SCHEMA a:int
+        TRANSFORM USING dummy SCHEMA *
+        PRINT
+        '''
+
+        fsql(sql).run(user_defined_spark_session())
+        fsql(sql).run(SparkExecutionEngine, {"spark.executor.instances":10})
+        fsql(sql).run(DaskExecutionEngine)
+
+        # Passing dataframes between fsql calls
+        result = fsql('''
+        CREATE [[0]] SCHEMA a:int
+        YIELD DATAFRAME AS x
+
+        CREATE [[1]] SCHEMA a:int
+        YIELD DATAFRAME AS y
+        ''').run(DaskExecutionEngine)
+
+        fsql('''
+        SELECT * FROM x
+        UNION
+        SELECT * FROM y
+        UNION
+        SELECT * FROM z
+
+        PRINT
+        ''', result, z=pd.DataFrame([[2]], columns=["z"])).run()
+
+        # Get framework native dataframes
+        result["x"].native  # Dask dataframe
+        result["y"].native  # Dask dataframe
+        result["x"].as_pandas()  # Pandas dataframe
+    """
     global_vars, local_vars = get_caller_global_local_vars()
     dag = FugueSQLWorkflow()
+    dag._sql(sql, global_vars, local_vars, *args, **kwargs)
+    return dag
+
+
+def fsql_ignore_case(sql: str, *args: Any, **kwargs: Any) -> FugueSQLWorkflow:
+    """Fugue SQL functional interface that doesn't require upper case keywords
+
+    :param sql: the Fugue SQL string (can be a jinja template)
+    :param args: variables related to the SQL string
+    :param kwargs: variables related to the SQL string
+    :return: the translated Fugue workflow
+
+    .. code-block:: python
+
+        # Basic case
+        fsql_ignore_case('''
+        create [[0]] schema a:int
+        select *
+        print
+        ''').run()
+
+    For more examples, please read :func:`~fsql`.
+    """
+    global_vars, local_vars = get_caller_global_local_vars()
+    dag = FugueSQLWorkflow(None, {FUGUE_CONF_SQL_IGNORE_CASE: True})
     dag._sql(sql, global_vars, local_vars, *args, **kwargs)
     return dag

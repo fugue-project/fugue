@@ -1,4 +1,4 @@
 # flake8: noqa
 from fugue_version import __version__
 
-from fugue_sql.workflow import FugueSQLWorkflow, fsql
+from fugue_sql.workflow import FugueSQLWorkflow, fsql, fsql_ignore_case
