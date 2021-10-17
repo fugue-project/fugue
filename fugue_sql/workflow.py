@@ -1,5 +1,5 @@
 from builtins import isinstance
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, List
 
 from fugue import (
     DataFrame,
@@ -14,6 +14,7 @@ from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars
 
 from fugue_sql._constants import (
+    FUGUE_SQL_COMPILE_TIME_CONF_KEYS,
     FUGUE_SQL_CONF_IGNORE_CASE,
     FUGUE_SQL_CONF_SIMPLE_ASSIGN,
     FUGUE_SQL_DEFAULT_CONF,
@@ -27,9 +28,25 @@ class FugueSQLWorkflow(FugueWorkflow):
     """Fugue workflow that supports Fugue SQL. Please read |FugueSQLTutorial|."""
 
     def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
+        new_args: List[Any] = []
+        compile_conf: Dict[str, Any] = {}
+        for arg in args:
+            if isinstance(arg, dict):
+                x = dict(arg)
+                for k in FUGUE_SQL_COMPILE_TIME_CONF_KEYS:
+                    if k in x:
+                        compile_conf[k] = x[k]
+                        if k != FUGUE_SQL_CONF_IGNORE_CASE:
+                            del x[k]
+                new_args.append(x)
+            else:
+                new_args.append(arg)
+
+        super().__init__(*new_args, **kwargs)
         self._sql_vars: Dict[str, WorkflowDataFrame] = {}
-        self._sql_conf = ParamDict({**FUGUE_SQL_DEFAULT_CONF, **super().conf})
+        self._sql_conf = ParamDict(
+            {**FUGUE_SQL_DEFAULT_CONF, **compile_conf, **super().conf}
+        )
 
     @property
     def conf(self) -> ParamDict:

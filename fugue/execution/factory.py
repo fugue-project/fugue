@@ -59,13 +59,9 @@ class _ExecutionEngineFactory(object):
             if isinstance(engine, k):
                 return f(engine, conf, **kwargs)
         if isinstance(engine, ExecutionEngine):
-            assert_or_throw(
-                conf is None and len(kwargs) == 0,
-                lambda: ValueError(
-                    f"{engine} is an instance, "
-                    f"can't take arguments conf={conf}, kwargs={kwargs}"
-                ),
-            )
+            if conf is not None:
+                engine.update_conf(conf)
+            engine.update_conf(kwargs)
             return engine
         return to_instance(engine, ExecutionEngine, kwargs=dict(conf=conf, **kwargs))
 

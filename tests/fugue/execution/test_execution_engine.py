@@ -1,5 +1,8 @@
 from fugue import NativeExecutionEngine
+from fugue.constants import FUGUE_SQL_CONF_IGNORE_CASE
 from fugue.rpc.base import NativeRPCServer
+from pytest import raises
+from triad.exceptions import InvalidOperationError
 from triad.utils.convert import get_full_type_path
 
 
@@ -46,3 +49,26 @@ def test_start_stop():
     assert 2 == engine._stop
     assert 2 == _MockRPC._start
     assert 2 == _MockRPC._stop
+
+
+def test_update_conf():
+    engine = _MockExecutionEngine()
+    engine.update_conf({FUGUE_SQL_CONF_IGNORE_CASE: True})
+    assert engine.conf.get_or_throw(FUGUE_SQL_CONF_IGNORE_CASE, bool)
+
+    engine = _MockExecutionEngine()
+    raises(
+        InvalidOperationError,
+        lambda: engine.update_conf({FUGUE_SQL_CONF_IGNORE_CASE: True, "dummy": "x"}),
+    )
+
+    engine = _MockExecutionEngine({"dummy": "y"})
+    raises(
+        InvalidOperationError,
+        lambda: engine.update_conf({FUGUE_SQL_CONF_IGNORE_CASE: True, "dummy": "x"}),
+    )
+
+    # existed identical configs will be ignored
+    engine = _MockExecutionEngine({"dummy": "x"})
+    engine.update_conf({FUGUE_SQL_CONF_IGNORE_CASE: True, "dummy": "x"})
+    assert "x" == engine.conf.get_or_throw("dummy", str)

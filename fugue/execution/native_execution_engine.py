@@ -16,6 +16,7 @@ from fugue.collections.partition import (
     PartitionSpec,
     parse_presort_exp,
 )
+from fugue.constants import FUGUE_SQL_CONF_IGNORE_CASE
 from fugue.dataframe import (
     DataFrame,
     DataFrames,
@@ -70,7 +71,13 @@ class QPDPandasEngine(SQLEngine):
             k: self.execution_engine.to_df(v).as_pandas()  # type: ignore
             for k, v in dfs.items()
         }
-        df = run_sql_on_pandas(statement, _dfs)
+        df = run_sql_on_pandas(
+            statement,
+            _dfs,
+            ignore_case=self.execution_engine.conf.get(
+                FUGUE_SQL_CONF_IGNORE_CASE, False
+            ),
+        )
         return self.execution_engine.to_df(df)
 
 
