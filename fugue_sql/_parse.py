@@ -3,7 +3,10 @@ from typing import Iterable, List, Tuple
 from antlr4 import CommonTokenStream, InputStream
 from antlr4.error.ErrorListener import ErrorListener
 from antlr4.tree.Tree import TerminalNode, Token, Tree
+from fugue.constants import FUGUE_CONF_SQL_IGNORE_CASE
+
 from fugue_sql._antlr import FugueSQLLexer, FugueSQLParser
+from fugue_sql._constants import _FUGUE_SQL_CASE_ISSUE_THREHOLD
 from fugue_sql.exceptions import FugueSQLSyntaxError
 
 
@@ -23,14 +26,25 @@ class FugueSQL(object):
                 code, rule, simple_assign=simple_assign, ansi_sql=ansi_sql
             )
         else:
-            self._code = code
-            self._tree = _to_tree(
-                self._code,
-                self._rule,
-                False,
-                simple_assign=simple_assign,
-                ansi_sql=ansi_sql,
-            )
+            try:
+                self._code = code
+                self._tree = _to_tree(
+                    self._code,
+                    self._rule,
+                    False,
+                    simple_assign=simple_assign,
+                    ansi_sql=ansi_sql,
+                )
+            except FugueSQLSyntaxError as e:
+                if _detect_case_issue(code, _FUGUE_SQL_CASE_ISSUE_THREHOLD):
+                    prefix = (
+                        "(Potential issue: you forgot to turn on "
+                        f"{FUGUE_CONF_SQL_IGNORE_CASE})"
+                    )
+                    msg = prefix + "\n" + str(e)
+                    raise FugueSQLSyntaxError(msg) from e
+                else:
+                    raise
 
     @property
     def raw_code(self):  # pragma: no cover
@@ -120,3 +134,16 @@ class _ErrorListener(ErrorListener):
         self, recognizer, dfa, startIndex, stopIndex, prediction, configs
     ):  # pragma: no cover
         pass
+
+
+def _detect_case_issue(text: str, lower_case_percentage: float) -> bool:
+    letters, lower = 0, 0.0
+    for c in text:
+        if "a" <= c <= "z":
+            lower += 1.0
+            letters += 1
+        elif "A" <= c <= "Z":
+            letters += 1
+    if letters == 0:
+        return False
+    return lower / letters >= lower_case_percentage

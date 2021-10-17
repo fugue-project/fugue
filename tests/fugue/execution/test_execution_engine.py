@@ -1,5 +1,5 @@
 from fugue import NativeExecutionEngine
-from fugue.constants import FUGUE_SQL_CONF_IGNORE_CASE
+from fugue.constants import FUGUE_CONF_SQL_IGNORE_CASE
 from fugue.rpc.base import NativeRPCServer
 from pytest import raises
 from triad.exceptions import InvalidOperationError
@@ -53,22 +53,22 @@ def test_start_stop():
 
 def test_update_conf():
     engine = _MockExecutionEngine()
-    engine.update_conf({FUGUE_SQL_CONF_IGNORE_CASE: True})
-    assert engine.conf.get_or_throw(FUGUE_SQL_CONF_IGNORE_CASE, bool)
+    engine.update_conf({FUGUE_CONF_SQL_IGNORE_CASE: True})
+    assert engine.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
 
     engine = _MockExecutionEngine()
     raises(
         InvalidOperationError,
-        lambda: engine.update_conf({FUGUE_SQL_CONF_IGNORE_CASE: True, "dummy": "x"}),
+        lambda: engine.update_conf({FUGUE_CONF_SQL_IGNORE_CASE: True, "dummy": "x"}),
     )
 
     engine = _MockExecutionEngine({"dummy": "y"})
     raises(
         InvalidOperationError,
-        lambda: engine.update_conf({FUGUE_SQL_CONF_IGNORE_CASE: True, "dummy": "x"}),
+        lambda: engine.update_conf({FUGUE_CONF_SQL_IGNORE_CASE: True, "dummy": "x"}),
     )
 
     # existed identical configs will be ignored
     engine = _MockExecutionEngine({"dummy": "x"})
-    engine.update_conf({FUGUE_SQL_CONF_IGNORE_CASE: True, "dummy": "x"})
+    engine.update_conf({FUGUE_CONF_SQL_IGNORE_CASE: True, "dummy": "x"})
     assert "x" == engine.conf.get_or_throw("dummy", str)

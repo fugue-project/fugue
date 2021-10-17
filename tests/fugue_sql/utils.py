@@ -6,32 +6,66 @@ from fugue_sql._parse import FugueSQL
 from pytest import raises
 
 
-def good_single_syntax(*code, ignore_case=True, simple_assign=False,
-                       ansi_sql=False, show=False):
-    good_syntax(*code, rule="fugueSingleStatement",
-                ignore_case=ignore_case, simple_assign=simple_assign, ansi_sql=ansi_sql, show=show)
+def good_single_syntax(
+    *code, ignore_case=True, simple_assign=False, ansi_sql=False, show=False
+):
+    good_syntax(
+        *code,
+        rule="fugueSingleStatement",
+        ignore_case=ignore_case,
+        simple_assign=simple_assign,
+        ansi_sql=ansi_sql,
+        show=show
+    )
 
 
-def good_syntax(*code, rule="fugueLanguage", ignore_case=True,
-                simple_assign=False, ansi_sql=False, show=False):
+def good_syntax(
+    *code,
+    rule="fugueLanguage",
+    ignore_case=True,
+    simple_assign=False,
+    ansi_sql=False,
+    show=False
+):
     for c in _enum_comb(*code):
-        s = FugueSQL(c, rule, ignore_case=ignore_case,
-                     simple_assign=simple_assign, ansi_sql=ansi_sql)
+        s = FugueSQL(
+            c,
+            rule,
+            ignore_case=ignore_case,
+            simple_assign=simple_assign,
+            ansi_sql=ansi_sql,
+        )
         if show:
             _print_tree(s.tree)
 
 
 def bad_single_syntax(*code, ignore_case=True, simple_assign=False, ansi_sql=False):
-    bad_syntax(*code, rule="fugueSingleStatement",
-               ignore_case=ignore_case, simple_assign=simple_assign, ansi_sql=ansi_sql)
+    bad_syntax(
+        *code,
+        rule="fugueSingleStatement",
+        ignore_case=ignore_case,
+        simple_assign=simple_assign,
+        ansi_sql=ansi_sql
+    )
 
 
-def bad_syntax(*code, rule="fugueLanguage", ignore_case=True,
-               simple_assign=False, ansi_sql=False):
+def bad_syntax(
+    *code,
+    rule="fugueLanguage",
+    ignore_case=True,
+    simple_assign=False,
+    ansi_sql=False,
+    match=None
+):
     for c in _enum_comb(*code):
-        with raises(FugueSQLSyntaxError):
-            FugueSQL(c, rule, ignore_case=ignore_case,
-                     simple_assign=simple_assign, ansi_sql=ansi_sql)
+        with raises(FugueSQLSyntaxError, match=match):
+            FugueSQL(
+                c,
+                rule,
+                ignore_case=ignore_case,
+                simple_assign=simple_assign,
+                ansi_sql=ansi_sql,
+            )
 
 
 def _enum_comb(*code):

@@ -9,7 +9,7 @@ from fugue.collections.partition import (
     PartitionSpec,
 )
 from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col, is_agg
-from fugue.constants import FUGUE_DEFAULT_CONF, FUGUE_SQL_CONF_IGNORE_CASE
+from fugue.constants import FUGUE_DEFAULT_CONF, FUGUE_CONF_SQL_IGNORE_CASE
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
@@ -172,7 +172,7 @@ class ExecutionEngine(ABC):
             It's anti-pattern. And even you create a new ExecutionEngine,
             try not to override this method.
         """
-        return key in [FUGUE_SQL_CONF_IGNORE_CASE]
+        return key in [FUGUE_CONF_SQL_IGNORE_CASE]
 
     @property
     def rpc_server(self) -> RPCServer:

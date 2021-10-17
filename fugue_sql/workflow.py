@@ -15,7 +15,7 @@ from triad.utils.convert import get_caller_global_local_vars
 
 from fugue_sql._constants import (
     FUGUE_SQL_COMPILE_TIME_CONF_KEYS,
-    FUGUE_SQL_CONF_IGNORE_CASE,
+    FUGUE_CONF_SQL_IGNORE_CASE,
     FUGUE_SQL_CONF_SIMPLE_ASSIGN,
     FUGUE_SQL_DEFAULT_CONF,
 )
@@ -36,7 +36,7 @@ class FugueSQLWorkflow(FugueWorkflow):
                 for k in FUGUE_SQL_COMPILE_TIME_CONF_KEYS:
                     if k in x:
                         compile_conf[k] = x[k]
-                        if k != FUGUE_SQL_CONF_IGNORE_CASE:
+                        if k != FUGUE_CONF_SQL_IGNORE_CASE:
                             del x[k]
                 new_args.append(x)
             else:
@@ -81,7 +81,7 @@ class FugueSQLWorkflow(FugueWorkflow):
         sql = FugueSQL(
             code,
             "fugueLanguage",
-            ignore_case=self.conf.get_or_throw(FUGUE_SQL_CONF_IGNORE_CASE, bool),
+            ignore_case=self.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool),
             simple_assign=self.conf.get_or_throw(FUGUE_SQL_CONF_SIMPLE_ASSIGN, bool),
         )
         v = _Extensions(

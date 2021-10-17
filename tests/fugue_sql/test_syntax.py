@@ -1,5 +1,5 @@
 from fugue_sql.exceptions import FugueSQLSyntaxError
-from fugue_sql._parse import FugueSQL
+from fugue_sql._parse import FugueSQL, _detect_case_issue
 from pytest import raises
 from tests.fugue_sql.utils import (
     bad_single_syntax,
@@ -7,6 +7,22 @@ from tests.fugue_sql.utils import (
     good_single_syntax,
     good_syntax,
 )
+
+
+def test_detect_case_issue():
+    assert not _detect_case_issue("", 0.9)
+    assert not _detect_case_issue("--*&^^", 0.9)
+    assert _detect_case_issue("abc", 0.9)
+    assert _detect_case_issue("absdfAsdfsdc", 0.9)
+    assert not _detect_case_issue("ABC", 0.9)
+    assert _detect_case_issue("ABCa", 0.1)
+
+
+def test_case_config_error():
+    # with a hint of config issue
+    bad_syntax("a = select a where a==10", ignore_case=False, match=r".*ignore_case.*")
+    # without a hint of config issue
+    bad_syntax("a = SELECT a WHERr a==10", ignore_case=False, match=r"^no viable.*")
 
 
 def test_assign_syntax():
