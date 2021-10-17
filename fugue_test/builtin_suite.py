@@ -82,8 +82,11 @@ class BuiltInTests(object):
         def make_engine(self) -> ExecutionEngine:  # pragma: no cover
             raise NotImplementedError
 
-        def dag(self) -> FugueWorkflow:
-            return FugueWorkflow(self.engine)
+        def dag(self, conf: Optional[Dict[str, Any]] = None) -> FugueWorkflow:
+            if conf is None:
+                return FugueWorkflow(self.engine)
+            else:
+                return FugueWorkflow(self.engine, conf)
 
         def test_workflows(self):
             a = FugueWorkflow().df([[0]], "a:int")
@@ -749,6 +752,11 @@ class BuiltInTests(object):
                 ).show()
 
                 raises(ValueError, lambda: a.select("*", "x"))
+
+            with self.dag({"fugue.sql.compile.ignore_case": True}) as dag:
+                a = dag.df([[0]], "a:long")
+                b = dag.df([[0]], "a:long")
+                dag.select("select * from", a).assert_eq(b)
 
         def test_df_filter(self):
             with self.dag() as dag:

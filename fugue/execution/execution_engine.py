@@ -9,7 +9,7 @@ from fugue.collections.partition import (
     PartitionSpec,
 )
 from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col, is_agg
-from fugue.constants import FUGUE_DEFAULT_CONF
+from fugue.constants import FUGUE_DEFAULT_CONF, FUGUE_SQL_CONF_IGNORE_CASE
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
@@ -130,6 +130,49 @@ class ExecutionEngine(ABC):
             using this property.
         """
         return self._conf
+
+    def update_conf(self, conf: Dict[str, Any]) -> None:
+        """Update configs after the execution engine is constructed.
+
+        :param conf: a dictionary of configs
+
+        .. attention::
+
+            This is generally prohibited, except for
+
+            * certain configs that are enabled by :meth:`~.can_update_conf`.
+            * a certain key value pair already exists, so the update has no effect
+
+            And the only default accepted config is ``fugue.sql.compile.ignore_case``.
+        """
+        for k, v in conf.items():
+            if k in self.conf and self.conf[k] == v:
+                continue
+            assert_or_throw(
+                self.can_update_conf(k, v),
+                InvalidOperationError(
+                    f"{k}:{v} can not be used to update ExecutionEngine configs"
+                    " after construction, you must provide it during the construction"
+                ),
+            )
+            self.conf[k] = v
+
+    def can_update_conf(self, key: str, value: Any) -> bool:
+        """Check if a config can be updated after the ExecutionEngine is constructed.
+        By default only ``fugue.sql.compile.ignore_case`` is allowed.
+
+        :param key: config name
+        :param value: config value
+        :return: whether it is allowed to update after the engine instance is
+            constructed
+
+        .. attention::
+
+            Updating configs after construction is generally prohibited.
+            It's anti-pattern. And even you create a new ExecutionEngine,
+            try not to override this method.
+        """
+        return key in [FUGUE_SQL_CONF_IGNORE_CASE]
 
     @property
     def rpc_server(self) -> RPCServer:

@@ -8,6 +8,7 @@ FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH = "fugue.workflow.checkpoint.path"
 FUGUE_CONF_WORKFLOW_AUTO_PERSIST = "fugue.workflow.auto_persist"
 FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE = "fugue.workflow.auto_persist_value"
 FUGUE_CONF_CACHE_PATH = "fugue.workflow.cache.path"
+FUGUE_SQL_CONF_IGNORE_CASE = "fugue.sql.compile.ignore_case"
 
 FUGUE_DEFAULT_CONF: Dict[str, Any] = {
     FUGUE_CONF_WORKFLOW_CONCURRENCY: 1,

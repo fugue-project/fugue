@@ -42,3 +42,11 @@ fugue\_spark.execution\_engine
    :undoc-members:
    :show-inheritance:
 
+fugue\_spark.registry
+---------------------
+
+.. automodule:: fugue_spark.registry
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
