@@ -2,7 +2,7 @@
 
 ## 0.6.4
 
--   Enable pandas default SQL engine (QPD) to take [lower case SQL]()
+-   Enable pandas default SQL engine (QPD) to take [lower case SQL](https://github.com/fugue-project/fugue/pull/257)
 
 ## 0.6.3
 

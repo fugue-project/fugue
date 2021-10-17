@@ -42,3 +42,11 @@ fugue\_dask.execution\_engine
    :undoc-members:
    :show-inheritance:
 
+fugue\_dask.registry
+--------------------
+
+.. automodule:: fugue_dask.registry
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
