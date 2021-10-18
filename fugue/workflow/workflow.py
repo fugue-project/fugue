@@ -499,8 +499,7 @@ class WorkflowDataFrame(DataFrame):
         """Transform this dataframe using transformer. It's a wrapper of
         :meth:`fugue.workflow.workflow.FugueWorkflow.transform`
 
-        Please read the
-        :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+        Please read |TransformerTutorial|
 
         :param using: transformer-like object, if it is a string, then it must be
           the alias of a registered transformer/cotransformer
@@ -549,8 +548,7 @@ class WorkflowDataFrame(DataFrame):
         """Transform this dataframe using transformer. It's a wrapper of
         :meth:`fugue.workflow.workflow.FugueWorkflow.out_transform`
 
-        Please read the
-        :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+        Please read |TransformerTutorial|
 
         :param using: transformer-like object, if it is a string, then it must be
           the alias of a registered output transformer/cotransformer
@@ -1856,8 +1854,7 @@ class FugueWorkflow(object):
     ) -> WorkflowDataFrame:
         """Transform dataframes using transformer.
 
-        Please read the
-        :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+        Please read |TransformerTutorial|
 
         :param dfs: |DataFramesLikeObject|
         :param using: transformer-like object, if it is a string, then it must be
@@ -1918,8 +1915,7 @@ class FugueWorkflow(object):
         """Transform dataframes using transformer, it materializes the execution
         immediately and returns nothing
 
-        Please read the
-        :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+        Please read |TransformerTutorial|
 
         :param dfs: |DataFramesLikeObject|
         :param using: transformer-like object, if it is a string, then it must be
