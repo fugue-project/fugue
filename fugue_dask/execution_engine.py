@@ -10,7 +10,7 @@ from fugue.collections.partition import (
     parse_presort_exp,
 )
 from fugue.constants import (
-    FUGUE_SQL_CONF_IGNORE_CASE,
+    FUGUE_CONF_SQL_IGNORE_CASE,
     KEYWORD_CORECOUNT,
     KEYWORD_ROWCOUNT,
 )
@@ -61,7 +61,7 @@ class QPDDaskEngine(SQLEngine):
             statement,
             dask_dfs,
             ignore_case=self.execution_engine.conf.get(
-                FUGUE_SQL_CONF_IGNORE_CASE, False
+                FUGUE_CONF_SQL_IGNORE_CASE, False
             ),
         )
         return DaskDataFrame(df)

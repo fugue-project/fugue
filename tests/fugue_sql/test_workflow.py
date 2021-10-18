@@ -353,6 +353,19 @@ def test_fsql():
     ).run()
     assert [[1, 1], [1, 1]] == result["result"].as_array()
 
+    result = fsql(
+        """
+    select * from df where a>{{p}}
+    union all
+    select * from df2 where a>{{p}}
+    transform using t yield dataframe as result
+    """,
+        df2=pd.DataFrame([[0], [1]], columns=["a"]),
+        p=0,
+        fsql_ignore_case=True,
+    ).run()
+    assert [[1, 1], [1, 1]] == result["result"].as_array()
+
 
 def _eq(dag, a):
     dag(
