@@ -40,7 +40,7 @@ setup(
         "sql": ["antlr4-python3-runtime", "jinja2"],
         "spark": ["pyspark"],
         "dask": ["qpd[dask]"],
-        "duckdb": ["duckdb"],
+        "duckdb": ["duckdb", "pyarrow>=5.0.0"],
         "notebook": ["notebook", "jupyterlab", "dash"],
         "all": [
             "antlr4-python3-runtime",

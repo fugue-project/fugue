@@ -18,8 +18,12 @@ class DuckDBEngine(SQLEngine):
         conn = duckdb.connect()
         try:
             for k, v in dfs.items():
-                conn.register(k, v.as_pandas())
-            return PandasDataFrame(conn.execute(statement).fetchdf())
+                conn.register_arrow(k, v.as_arrow())
+            result = conn.execute(statement).arrow()
+            # see this issue to understand why use pandas output
+            # https://github.com/duckdb/duckdb/issues/2446
+            # TODO: switch to ArrowDataFrame when duckdb 0.3.1 is released
+            return PandasDataFrame(result.to_pandas())
         finally:
             conn.close()
 
