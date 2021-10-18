@@ -8,7 +8,7 @@ from fugue.execution.native_execution_engine import NativeExecutionEngine
 from fugue.extensions._builtins.outputters import Show
 from pytest import raises
 
-from fugue_sql import FugueSQLWorkflow, fsql, fsql_ignore_case
+from fugue_sql import FugueSQLWorkflow, fsql
 from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
 
 
@@ -353,7 +353,7 @@ def test_fsql():
     ).run()
     assert [[1, 1], [1, 1]] == result["result"].as_array()
 
-    result = fsql_ignore_case(
+    result = fsql(
         """
     select * from df where a>{{p}}
     union all
@@ -362,6 +362,7 @@ def test_fsql():
     """,
         df2=pd.DataFrame([[0], [1]], columns=["a"]),
         p=0,
+        fsql_ignore_case=True,
     ).run()
     assert [[1, 1], [1, 1]] == result["result"].as_array()
 

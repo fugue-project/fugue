@@ -1,5 +1,5 @@
 from builtins import isinstance
-from typing import Any, Dict, Tuple, List
+from typing import Any, Dict, List, Tuple
 
 from fugue import (
     DataFrame,
@@ -9,19 +9,18 @@ from fugue import (
     Yielded,
 )
 from fugue.workflow import is_acceptable_raw_df
-from triad.collections.dict import ParamDict
-from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import get_caller_global_local_vars
-
 from fugue_sql._constants import (
-    FUGUE_SQL_COMPILE_TIME_CONF_KEYS,
     FUGUE_CONF_SQL_IGNORE_CASE,
+    FUGUE_SQL_COMPILE_TIME_CONF_KEYS,
     FUGUE_SQL_CONF_SIMPLE_ASSIGN,
     FUGUE_SQL_DEFAULT_CONF,
 )
 from fugue_sql._parse import FugueSQL
 from fugue_sql._utils import LazyWorkflowDataFrame, fill_sql_template
 from fugue_sql._visitors import FugueSQLHooks, _Extensions
+from triad.collections.dict import ParamDict
+from triad.utils.assertion import assert_or_throw
+from triad.utils.convert import get_caller_global_local_vars
 
 
 class FugueSQLWorkflow(FugueWorkflow):
@@ -105,11 +104,15 @@ class FugueSQLWorkflow(FugueWorkflow):
         return p, dfs
 
 
-def fsql(sql: str, *args: Any, **kwargs: Any) -> FugueSQLWorkflow:
+def fsql(
+    sql: str, *args: Any, fsql_ignore_case: bool = False, **kwargs: Any
+) -> FugueSQLWorkflow:
     """Fugue SQL functional interface
 
     :param sql: the Fugue SQL string (can be a jinja template)
     :param args: variables related to the SQL string
+    :param fsql_ignore_case: whether to ignore case when parsing the SQL string
+        defaults to False.
     :param kwargs: variables related to the SQL string
     :return: the translated Fugue workflow
 
@@ -193,33 +196,16 @@ def fsql(sql: str, *args: Any, **kwargs: Any) -> FugueSQLWorkflow:
         result["x"].native  # Dask dataframe
         result["y"].native  # Dask dataframe
         result["x"].as_pandas()  # Pandas dataframe
-    """
-    global_vars, local_vars = get_caller_global_local_vars()
-    dag = FugueSQLWorkflow()
-    dag._sql(sql, global_vars, local_vars, *args, **kwargs)
-    return dag
 
-
-def fsql_ignore_case(sql: str, *args: Any, **kwargs: Any) -> FugueSQLWorkflow:
-    """Fugue SQL functional interface that doesn't require upper case keywords
-
-    :param sql: the Fugue SQL string (can be a jinja template)
-    :param args: variables related to the SQL string
-    :param kwargs: variables related to the SQL string
-    :return: the translated Fugue workflow
-
-    .. code-block:: python
-
-        # Basic case
-        fsql_ignore_case('''
-        create [[0]] schema a:int
-        select *
+        # Use lower case fugue sql
+        df = pd.DataFrame([[0],[1]], columns=["a"])
+        t = 1
+        fsql('''
+        select * from df where a={{t}}
         print
-        ''').run()
-
-    For more examples, please read :func:`~fsql`.
+        ''', df=df, t=t, fsql_ignore_case=True).run()
     """
     global_vars, local_vars = get_caller_global_local_vars()
-    dag = FugueSQLWorkflow(None, {FUGUE_CONF_SQL_IGNORE_CASE: True})
+    dag = FugueSQLWorkflow(None, {FUGUE_CONF_SQL_IGNORE_CASE: fsql_ignore_case})
     dag._sql(sql, global_vars, local_vars, *args, **kwargs)
     return dag

@@ -38,8 +38,8 @@ class FugueSQL(object):
             except FugueSQLSyntaxError as e:
                 if _detect_case_issue(code, _FUGUE_SQL_CASE_ISSUE_THREHOLD):
                     prefix = (
-                        "(Potential issue: you forgot to turn on "
-                        f"{FUGUE_CONF_SQL_IGNORE_CASE})"
+                        "(FugueSQL requires uppercase characters by default. "
+                        f"To ignore casing, turn on {FUGUE_CONF_SQL_IGNORE_CASE})"
                     )
                     msg = prefix + "\n" + str(e)
                     raise FugueSQLSyntaxError(msg) from e
