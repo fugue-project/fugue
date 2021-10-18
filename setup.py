@@ -40,6 +40,7 @@ setup(
         "sql": ["antlr4-python3-runtime", "jinja2"],
         "spark": ["pyspark"],
         "dask": ["qpd[dask]"],
+        "duckdb": ["duckdb"],
         "notebook": ["notebook", "jupyterlab", "dash"],
         "all": [
             "antlr4-python3-runtime",
@@ -49,6 +50,7 @@ setup(
             "notebook",
             "jupyterlab",
             "dash",
+            "duckdb",
         ],
     },
     classifiers=[
