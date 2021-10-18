@@ -80,6 +80,9 @@ testspark:
 testdask:
 	python3 -bb -m pytest tests/fugue_dask
 
+testduck:
+	python3 -bb -m pytest tests/fugue_duckdb
+
 testsql:
 	python3 -bb -m pytest tests/fugue_sql
 
