@@ -22,3 +22,5 @@ fastavro
 # publish to pypi
 wheel
 twine
+
+pyspark>=3.2.0
