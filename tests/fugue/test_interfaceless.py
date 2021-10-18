@@ -31,6 +31,15 @@ def test_transform():
     ppdf = PandasDataFrame(pdf)
     assert isinstance(transform(ppdf, f2), DataFrame)
 
+    # schema: *
+    def f3(df: pd.DataFrame, called: callable) -> pd.DataFrame:
+        called()
+        return df
+
+    cb = Callback()
+    result = transform(pdf, f3, callback=cb.called)
+    assert 1 == cb.ct
+
 
 def test_transform_from_yield(tmpdir):
     # schema: *,x:int
@@ -90,3 +99,20 @@ def test_out_transform(tmpdir):
         engine_conf={FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)},
     )
     assert 2 == t.n
+
+    # schema: *
+    def f3(df: pd.DataFrame, called: callable) -> pd.DataFrame:
+        called()
+        return df
+
+    cb = Callback()
+    result = out_transform(pdf, f3, callback=cb.called)
+    assert 1 == cb.ct
+
+
+class Callback:
+    def __init__(self):
+        self.ct = 0
+
+    def called(self) -> None:
+        self.ct += 1

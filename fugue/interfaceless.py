@@ -11,6 +11,7 @@ def transform(
     schema: Any = None,
     params: Any = None,
     partition: Any = None,
+    callback: Any = None,
     ignore_errors: Optional[List[Any]] = None,
     engine: Any = None,
     engine_conf: Any = None,
@@ -23,8 +24,7 @@ def transform(
     :class:`~fugue.dataframe.dataframe.DataFrame`. Both input and output
     can be native types only.
 
-    Please read the
-    :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+    Please read |TransformerTutorial|
 
     :param using: transformer-like object, can't be a string expression
     :param schema: |SchemaLikeObject|, defaults to None. The transformer
@@ -33,7 +33,8 @@ def transform(
     :param params: |ParamsLikeObject| to run the processor, defaults to None.
       The transformer will be able to access this value from
       :meth:`~fugue.extensions.context.ExtensionContext.params`
-    :param partition: |PartitionLikeObject|, defaults to None.
+    :param partition: |PartitionLikeObject|, defaults to None
+    :param callback: |RPCHandlerLikeObject|, defaults to None
     :param ignore_errors: list of exception types the transformer can ignore,
       defaults to None (empty list)
     :param engine: it can be empty string or null (use the default execution
@@ -61,6 +62,7 @@ def transform(
         schema=schema,
         params=params,
         pre_partition=partition,
+        callback=callback,
         ignore_errors=ignore_errors or [],
     ).yield_dataframe_as("result")
     result = dag.run(engine, conf=engine_conf)["result"]
@@ -74,6 +76,7 @@ def out_transform(
     using: Any,
     params: Any = None,
     partition: Any = None,
+    callback: Any = None,
     ignore_errors: Optional[List[Any]] = None,
     engine: Any = None,
     engine_conf: Any = None,
@@ -86,14 +89,14 @@ def out_transform(
     :class:`~fugue.dataframe.dataframe.DataFrame`. The input can be native
     type only
 
-    Please read the
-    :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+    Please read |TransformerTutorial|
 
     :param using: transformer-like object, can't be a string expression
     :param params: |ParamsLikeObject| to run the processor, defaults to None.
       The transformer will be able to access this value from
       :meth:`~fugue.extensions.context.ExtensionContext.params`
     :param partition: |PartitionLikeObject|, defaults to None.
+    :param callback: |RPCHandlerLikeObject|, defaults to None
     :param ignore_errors: list of exception types the transformer can ignore,
       defaults to None (empty list)
     :param engine: it can be empty string or null (use the default execution
@@ -115,6 +118,7 @@ def out_transform(
         using=using,
         params=params,
         pre_partition=partition,
+        callback=callback,
         ignore_errors=ignore_errors or [],
     )
     dag.run(engine, conf=engine_conf)

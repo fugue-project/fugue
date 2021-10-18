@@ -272,7 +272,7 @@ class ExecutionEngine(ABC):
         :param map_func: the function to apply on every logical partition
         :param output_schema: |SchemaLikeObject| that can't be None.
           Please also understand :ref:`why we need this
-          <tutorial:/tutorials/extensions/transformer.ipynb#why-explicit-on-output-schema?>`
+          <tutorial:/tutorials/beginner/interface.ipynb#schema>`
         :param partition_spec: partition specification
         :param metadata: dict-like metadata object to add to the dataframe after the
           map operation, defaults to None
@@ -962,7 +962,7 @@ class ExecutionEngine(ABC):
         :param map_func: the function to apply on every zipped partition
         :param output_schema: |SchemaLikeObject| that can't be None.
           Please also understand :ref:`why we need this
-          <tutorial:/tutorials/extensions/cotransformer.ipynb#why-explicit-on-output-schema?>`
+          <tutorial:/tutorials/beginner/interface.ipynb#schema>`
         :param partition_spec: partition specification for processing the zipped
           zipped dataframe.
         :param metadata: dict-like metadata object to add to the dataframe after the

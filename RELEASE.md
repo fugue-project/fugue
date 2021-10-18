@@ -2,6 +2,7 @@
 
 ## 0.6.4
 
+-   Add [callback](https://github.com/fugue-project/fugue/issues/256) parameter to `transform` and `out_transform`
 -   Support [DuckDB](https://github.com/fugue-project/fugue/issues/259)
 -   Create [fsql_ignore_case](https://github.com/fugue-project/fugue/issues/253) for convenience
 -   Make Fugue SQL error more informative about [case issue](https://github.com/fugue-project/fugue/issues/254)

@@ -21,8 +21,7 @@ class Transformer(ExtensionContext):
       interfaceless approach which may decouple your code from Fugue.
 
       It's important to understand |PartitionTutorial|, and please
-      also read
-      :ref:`The Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+      also read |TransformerTutorial|
 
 
       Due to similar issue on spark

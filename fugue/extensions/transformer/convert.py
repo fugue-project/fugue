@@ -48,8 +48,7 @@ def register_transformer(alias: str, obj: Any, on_dup: str = "overwrite") -> Non
 
     .. seealso::
 
-        Please read
-        :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+        Please read |TransformerTutorial|
 
     .. admonition:: Examples
 
@@ -119,8 +118,7 @@ def register_output_transformer(
 
     .. seealso::
 
-        Please read
-        :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+        Please read |TransformerTutorial|
 
     .. admonition:: Examples
 
@@ -168,8 +166,7 @@ def transformer(
 ) -> Callable[[Any], "_FuncAsTransformer"]:
     """Decorator for transformers
 
-    Please read
-    :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+    Please read |TransformerTutorial|
     """
 
     def deco(func: Callable) -> "_FuncAsTransformer":
@@ -189,8 +186,7 @@ def output_transformer(
 ) -> Callable[[Any], "_FuncAsTransformer"]:
     """Decorator for transformers
 
-    Please read
-    :ref:`Transformer Tutorial <tutorial:/tutorials/extensions/transformer.ipynb>`
+    Please read |TransformerTutorial|
     """
 
     def deco(func: Callable) -> "_FuncAsOutputTransformer":
