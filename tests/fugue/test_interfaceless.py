@@ -27,6 +27,10 @@ def test_transform():
     result = transform(pdf, f2, partition=dict(by=["a"]))
     assert isinstance(result, pd.DataFrame)
     assert sorted(result.values.tolist(), key=lambda x: x[0]) == [[0, 0], [1, 1]]
+    result = transform(
+        pdf, f2, partition=dict(by=["a"]), force_output_fugue_dataframe=True
+    )
+    assert isinstance(result, DataFrame)
 
     ppdf = PandasDataFrame(pdf)
     assert isinstance(transform(ppdf, f2), DataFrame)

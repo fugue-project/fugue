@@ -64,16 +64,23 @@ class NotebookSetup(object):
 class _FugueSQLMagics(Magics):
     """Fugue SQL Magics"""
 
-    def __init__(self, shell, pre_conf, post_conf):
+    def __init__(
+        self,
+        shell: Any,
+        pre_conf: Dict[str, Any],
+        post_conf: Dict[str, Any],
+        fsql_ignore_case: bool = False,
+    ):
         # You must call the parent constructor
         super().__init__(shell)
         self._pre_conf = pre_conf
         self._post_conf = post_conf
+        self._fsql_ignore_case = fsql_ignore_case
 
     @needs_local_scope
     @cell_magic("fsql")
     def fsql(self, line: str, cell: str, local_ns: Any = None) -> None:
-        dag = fugue_sql.fsql(cell, local_ns)
+        dag = fugue_sql.fsql(cell, local_ns, fsql_ignore_case=self._fsql_ignore_case)
         dag.run(self.get_engine(line, {} if local_ns is None else local_ns))
         for k, v in dag.yields.items():
             if isinstance(v, YieldedDataFrame):
@@ -122,9 +129,16 @@ def _default_pretty_print(
     display(*components)
 
 
-def _setup_fugue_notebook(ipython: Any, setup_obj: Any) -> None:
+def _setup_fugue_notebook(
+    ipython: Any, setup_obj: Any, fsql_ignore_case: bool = False
+) -> None:
     s = NotebookSetup() if setup_obj is None else to_instance(setup_obj, NotebookSetup)
-    magics = _FugueSQLMagics(ipython, dict(s.get_pre_conf()), dict(s.get_post_conf()))
+    magics = _FugueSQLMagics(
+        ipython,
+        dict(s.get_pre_conf()),
+        dict(s.get_post_conf()),
+        fsql_ignore_case=fsql_ignore_case,
+    )
     ipython.register_magics(magics)
     s.register_execution_engines()
     Show.set_hook(s.get_pretty_print())

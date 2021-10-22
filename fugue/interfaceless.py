@@ -15,6 +15,7 @@ def transform(
     ignore_errors: Optional[List[Any]] = None,
     engine: Any = None,
     engine_conf: Any = None,
+    force_output_fugue_dataframe: bool = False,
 ) -> Any:
     """Transform this dataframe using transformer. It's a wrapper of
     :meth:`~fugue.workflow.workflow.FugueWorkflow.transform` and
@@ -45,6 +46,10 @@ def transform(
       engine and the second value represents the sql engine (you can use ``None``
       for either of them to use the default one), defaults to None
     :param engine_conf: |ParamsLikeObject|, defaults to None
+    :param force_output_fugue_dataframe: If true, the function will always return
+      a ``FugueDataFrame``, otherwise, if ``df`` is in native dataframe types such
+      as pandas dataframe, then the output will also in its native format. Defaults
+      to False
 
     :return: the transformed dataframe, if ``df`` is a native dataframe (e.g.
       pd.DataFrame, spark dataframe, etc), the output will be a native dataframe,
@@ -66,7 +71,7 @@ def transform(
         ignore_errors=ignore_errors or [],
     ).yield_dataframe_as("result")
     result = dag.run(engine, conf=engine_conf)["result"]
-    if isinstance(df, (DataFrame, Yielded)):
+    if force_output_fugue_dataframe or isinstance(df, (DataFrame, Yielded)):
         return result
     return result.as_pandas() if result.is_local else result.native  # type:ignore
 
