@@ -10,6 +10,7 @@ from fugue import (
     register_execution_engine,
     register_sql_engine,
 )
+from fugue.constants import FUGUE_CONF_SQL_IGNORE_CASE
 from fugue.execution.factory import _ExecutionEngineFactory
 from pytest import raises
 
@@ -183,3 +184,43 @@ def test_global_funcs():
     assert isinstance(e, _MockExecutionEngine)
     assert isinstance(e.sql_engine, _MockSQlEngine)
     assert 10 == e.sql_engine.other
+
+
+def test_make_execution_engine():
+    e = make_execution_engine(None, {FUGUE_CONF_SQL_IGNORE_CASE: True})
+    assert isinstance(e, NativeExecutionEngine)
+    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+
+    e = make_execution_engine(NativeExecutionEngine, {FUGUE_CONF_SQL_IGNORE_CASE: True})
+    assert isinstance(e, NativeExecutionEngine)
+    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+
+    e = make_execution_engine(
+        NativeExecutionEngine({"ab": "c"}), {FUGUE_CONF_SQL_IGNORE_CASE: True}, de="f"
+    )
+    assert isinstance(e, NativeExecutionEngine)
+    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+    assert "c" == e.compile_conf.get_or_throw("ab", str)
+    assert "f" == e.compile_conf.get_or_throw("de", str)
+    assert "c" == e.conf.get_or_throw("ab", str)
+    assert "de" not in e.conf
+
+    e = make_execution_engine("pandas", {FUGUE_CONF_SQL_IGNORE_CASE: True})
+    assert isinstance(e, NativeExecutionEngine)
+    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+
+    e = make_execution_engine(
+        (NativeExecutionEngine, "sqlite"), {FUGUE_CONF_SQL_IGNORE_CASE: True}
+    )
+    assert isinstance(e, NativeExecutionEngine)
+    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+
+    e = make_execution_engine(NativeExecutionEngine({FUGUE_CONF_SQL_IGNORE_CASE: True}))
+    assert isinstance(e, NativeExecutionEngine)
+    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+
+    e = make_execution_engine(
+        (NativeExecutionEngine({FUGUE_CONF_SQL_IGNORE_CASE: True}), "sqlite")
+    )
+    assert isinstance(e, NativeExecutionEngine)
+    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)

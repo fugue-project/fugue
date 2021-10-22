@@ -9,6 +9,11 @@ from fugue import (
     Yielded,
 )
 from fugue.workflow import is_acceptable_raw_df
+from fugue.workflow._workflow_context import FugueWorkflowContext
+from triad.collections.dict import ParamDict
+from triad.utils.assertion import assert_or_throw
+from triad.utils.convert import get_caller_global_local_vars
+
 from fugue_sql._constants import (
     FUGUE_CONF_SQL_IGNORE_CASE,
     FUGUE_SQL_COMPILE_TIME_CONF_KEYS,
@@ -18,9 +23,6 @@ from fugue_sql._constants import (
 from fugue_sql._parse import FugueSQL
 from fugue_sql._utils import LazyWorkflowDataFrame, fill_sql_template
 from fugue_sql._visitors import FugueSQLHooks, _Extensions
-from triad.collections.dict import ParamDict
-from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import get_caller_global_local_vars
 
 
 class FugueSQLWorkflow(FugueWorkflow):
@@ -41,6 +43,7 @@ class FugueSQLWorkflow(FugueWorkflow):
             else:
                 new_args.append(arg)
 
+        self._compile_conf = compile_conf
         super().__init__(*new_args, **kwargs)
         self._sql_vars: Dict[str, WorkflowDataFrame] = {}
         self._sql_conf = ParamDict(
@@ -102,6 +105,11 @@ class FugueSQLWorkflow(FugueWorkflow):
             else:
                 p[k] = v
         return p, dfs
+
+    def _to_ctx(self, *args: Any, **kwargs) -> FugueWorkflowContext:
+        ctx = super()._to_ctx(*args, **kwargs)
+        ctx.execution_engine.compile_conf.update(self._compile_conf)
+        return ctx
 
 
 def fsql(

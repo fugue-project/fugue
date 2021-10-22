@@ -58,14 +58,20 @@ def _jupyter_nbextension_paths():
     ]
 
 
-def setup(notebook_setup: Any = None, is_lab: bool = False) -> None:
+def setup(
+    notebook_setup: Any = None, is_lab: bool = False, fsql_ignore_case: bool = False
+) -> None:
     """Setup the notebook environment inside notebook without
     installing the jupyter extension or loading ipython extension
 
     :param notebook_setup: ``None`` or an instance of
       :class:`~.fugue_notebook.env.NotebookSetup`, defaults to None
+    :param is_lab: whether the environment calling this setup is jupyter lab, defaults to
+      False
+    :param fsql_ignore_case: whether the %%fsql magics should ignore case,
+      defaults to False
     """
     ip = get_ipython()
-    _setup_fugue_notebook(ip, notebook_setup)
+    _setup_fugue_notebook(ip, notebook_setup, fsql_ignore_case=fsql_ignore_case)
     if not is_lab:
         display(Javascript(_HIGHLIGHT_JS))

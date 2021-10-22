@@ -74,7 +74,7 @@ class QPDPandasEngine(SQLEngine):
         df = run_sql_on_pandas(
             statement,
             _dfs,
-            ignore_case=self.execution_engine.conf.get(
+            ignore_case=self.execution_engine.compile_conf.get(
                 FUGUE_CONF_SQL_IGNORE_CASE, False
             ),
         )

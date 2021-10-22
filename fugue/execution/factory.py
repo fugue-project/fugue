@@ -51,19 +51,26 @@ class _ExecutionEngineFactory(object):
     def make_execution_engine(
         self, engine: Any = None, conf: Any = None, **kwargs: Any
     ) -> ExecutionEngine:
-        if engine is None:
-            engine = ""
-        if isinstance(engine, str) and engine in self._funcs:
-            return self._funcs[engine](conf, **kwargs)
-        for k, f in self._type_funcs.items():
-            if isinstance(engine, k):
-                return f(engine, conf, **kwargs)
-        if isinstance(engine, ExecutionEngine):
-            if conf is not None:
-                engine.update_conf(conf)
-            engine.update_conf(kwargs)
-            return engine
-        return to_instance(engine, ExecutionEngine, kwargs=dict(conf=conf, **kwargs))
+        def make_engine(engine: Any) -> ExecutionEngine:
+            if isinstance(engine, str) and engine in self._funcs:
+                return self._funcs[engine](conf, **kwargs)
+            for k, f in self._type_funcs.items():
+                if isinstance(engine, k):
+                    return f(engine, conf, **kwargs)
+            if isinstance(engine, ExecutionEngine):
+                if conf is not None:
+                    engine.compile_conf.update(conf)
+                engine.compile_conf.update(kwargs)
+                return engine
+            return to_instance(
+                engine, ExecutionEngine, kwargs=dict(conf=conf, **kwargs)
+            )
+
+        result = make_engine(engine or "")
+        result.compile_conf.update(result.conf)
+        result.compile_conf.update(conf)
+        result.compile_conf.update(kwargs)
+        return result
 
     def make_sql_engine(
         self,

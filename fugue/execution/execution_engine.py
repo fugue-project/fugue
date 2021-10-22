@@ -9,7 +9,7 @@ from fugue.collections.partition import (
     PartitionSpec,
 )
 from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col, is_agg
-from fugue.constants import FUGUE_DEFAULT_CONF, FUGUE_CONF_SQL_IGNORE_CASE
+from fugue.constants import FUGUE_DEFAULT_CONF
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
@@ -80,6 +80,7 @@ class ExecutionEngine(ABC):
     def __init__(self, conf: Any):
         _conf = ParamDict(conf)
         self._conf = ParamDict({**FUGUE_DEFAULT_CONF, **_conf})
+        self._compile_conf = ParamDict()
         self._rpc_server = make_rpc_server(self.conf)
         self._engine_start_lock = RLock()
         self._engine_start = 0
@@ -124,55 +125,23 @@ class ExecutionEngine(ABC):
 
         .. note::
 
-            it can contain more than you providec, for example
+            It can contain more than you providec, for example
             in :class:`~fugue_spark.execution_engine.SparkExecutionEngine`,
             the Spark session can bring in more config, they are all accessible
             using this property.
         """
         return self._conf
 
-    def update_conf(self, conf: Dict[str, Any]) -> None:
-        """Update configs after the execution engine is constructed.
+    @property
+    def compile_conf(self) -> ParamDict:
+        """Compiled time (workflow level) configurations
 
-        :param conf: a dictionary of configs
+        .. note::
 
-        .. attention::
-
-            This is generally prohibited, except for
-
-            * certain configs that are enabled by :meth:`~.can_update_conf`.
-            * a certain key value pair already exists, so the update has no effect
-
-            And the only default accepted config is ``fugue.sql.compile.ignore_case``.
+            Users normally don't need to use this property. It is for
+            internal use.
         """
-        for k, v in conf.items():
-            if k in self.conf and self.conf[k] == v:
-                continue
-            assert_or_throw(
-                self.can_update_conf(k, v),
-                InvalidOperationError(
-                    f"{k}:{v} can not be used to update ExecutionEngine configs"
-                    " after construction, you must provide it during the construction"
-                ),
-            )
-            self.conf[k] = v
-
-    def can_update_conf(self, key: str, value: Any) -> bool:
-        """Check if a config can be updated after the ExecutionEngine is constructed.
-        By default only ``fugue.sql.compile.ignore_case`` is allowed.
-
-        :param key: config name
-        :param value: config value
-        :return: whether it is allowed to update after the engine instance is
-            constructed
-
-        .. attention::
-
-            Updating configs after construction is generally prohibited.
-            It's anti-pattern. And even you create a new ExecutionEngine,
-            try not to override this method.
-        """
-        return key in [FUGUE_CONF_SQL_IGNORE_CASE]
+        return self._compile_conf
 
     @property
     def rpc_server(self) -> RPCServer:
