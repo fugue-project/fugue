@@ -2,9 +2,10 @@
 
 ## 0.6.4
 
+-   Add an [option](https://github.com/fugue-project/fugue/issues/267) to transform to turn off native dataframe output
 -   Add [callback](https://github.com/fugue-project/fugue/issues/256) parameter to `transform` and `out_transform`
 -   Support [DuckDB](https://github.com/fugue-project/fugue/issues/259)
--   Create [fsql_ignore_case](https://github.com/fugue-project/fugue/issues/253) for convenience
+-   Create [fsql_ignore_case](https://github.com/fugue-project/fugue/issues/253) for convenience, make this an option in notebook [setup](https://github.com/fugue-project/fugue/issues/263)
 -   Make Fugue SQL error more informative about [case issue](https://github.com/fugue-project/fugue/issues/254)
 -   Enable pandas default SQL engine (QPD) to take [lower case SQL](https://github.com/fugue-project/fugue/issues/255)
 
