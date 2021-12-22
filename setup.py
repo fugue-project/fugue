@@ -40,7 +40,8 @@ setup(
         "sql": ["antlr4-python3-runtime", "jinja2"],
         "spark": ["pyspark"],
         "dask": ["qpd[dask]"],
-        "duckdb": ["duckdb", "pyarrow>=5.0.0"],
+        "duckdb": ["duckdb>=0.3.1", "pyarrow>=5.0.0,<6"],
+        "ibis": ["ibis-framework"],
         "notebook": ["notebook", "jupyterlab", "dash"],
         "all": [
             "antlr4-python3-runtime",
@@ -51,6 +52,7 @@ setup(
             "jupyterlab",
             "dash",
             "duckdb",
+            "ibis-framework",
         ],
     },
     classifiers=[

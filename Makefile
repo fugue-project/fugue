@@ -86,6 +86,9 @@ testduck:
 testsql:
 	python3 -bb -m pytest tests/fugue_sql
 
+testibis:
+	python3 -bb -m pytest tests/fugue_ibis
+
 testnotebook:
 	pip install .
 	jupyter nbextension install --user --py fugue_notebook
