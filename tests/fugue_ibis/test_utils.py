@@ -1,8 +1,47 @@
 import ibis
 import pandas as pd
-from fugue_ibis._lazy import LazyIbisObject, materialize
+from fugue_ibis._utils import LazyIbisObject, materialize, to_ibis_schema, to_schema
 from fugue.dataframe.utils import _df_eq
 from fugue import PandasDataFrame
+from triad import Schema
+
+
+def test_schema():
+    a = Schema(
+        "a:bool,b:int8,c:uint8,d:int16,e:uint16,f:int32,g:uint32,h:int64,i:uint64"
+    )
+    b = ibis.schema(
+        [
+            ("a", "boolean"),
+            ("b", "int8"),
+            ("c", "uint8"),
+            ("d", "int16"),
+            ("e", "uint16"),
+            ("f", "int32"),
+            ("g", "uint32"),
+            ("h", "int64"),
+            ("i", "uint64"),
+        ]
+    )
+    assert to_ibis_schema(a) == b
+    assert a == to_schema(b)
+
+    a = Schema("a:float32,b:float64,c:datetime,d:date,e:binary,f:string")
+    b = ibis.schema(
+        [
+            ("a", "float32"),
+            ("b", "float64"),
+            ("c", "timestamp"),
+            ("d", "date"),
+            ("e", "binary"),
+            ("f", "string"),
+        ]
+    )
+    assert to_ibis_schema(a) == b
+    assert a == to_schema(b)
+
+    a = Schema("a:[int],b:[{a:str}],c:{a:str},d:{a:[int]}")
+    assert to_schema(to_ibis_schema(a)) == a
 
 
 def test_materialize():
@@ -38,9 +77,8 @@ def _test_expr(func, **dfs):
     kwargs = {k: con.table(k) for k in dfs.keys()}
     expected = func(**kwargs).execute()
 
-    lkwargs = {k: LazyIbisObject() for k in dfs.keys()}
-    context = {id(lkwargs[k]): kwargs[k] for k in dfs.keys()}
+    lkwargs = {k: LazyIbisObject(k) for k in dfs.keys()}
     expr = func(**lkwargs)
-    actual = materialize(expr, context).execute()
+    actual = materialize(expr, lambda k: kwargs[k]).execute()
 
     _df_eq(PandasDataFrame(actual), PandasDataFrame(expected), throw=True)

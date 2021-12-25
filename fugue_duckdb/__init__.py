@@ -1,5 +1,12 @@
-from fugue_duckdb.execution_engine import DuckExeuctionEngine, DuckDBEngine
+# flake8: noqa
 from fugue import register_execution_engine, register_sql_engine
+
+from fugue_duckdb.execution_engine import DuckDBEngine, DuckExeuctionEngine
+
+try:
+    from fugue_duckdb.ibis_engine import DuckDBIbisEngine
+except Exception:
+    pass
 
 
 def register() -> None:

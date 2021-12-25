@@ -1370,6 +1370,14 @@ class WorkflowDataFrames(DataFrames):
         self._parent: Optional["FugueWorkflow"] = None
         super().__init__(*args, **kwargs)
 
+    @property
+    def workflow(self) -> "FugueWorkflow":
+        """The parent workflow"""
+        assert_or_throw(
+            self._parent is not None, ValueError("parent workflow is unknown")
+        )
+        return self._parent  # type: ignore
+
     def __setitem__(  # type: ignore
         self, key: str, value: WorkflowDataFrame, *args: Any, **kwds: Any
     ) -> None:
