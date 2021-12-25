@@ -155,7 +155,7 @@ def _materialize(obj: Any, context: Dict[int, Any]) -> Any:
     if isinstance(obj, list):
         v: Any = [_materialize(x, context) for x in obj]
     elif isinstance(obj, tuple):
-        v = tuple([_materialize(x, context) for x in obj])
+        v = tuple(_materialize(x, context) for x in obj)
     elif isinstance(obj, dict):
         v = {k: _materialize(v, context) for k, v in obj.items()}
     elif isinstance(obj, LazyIbisFunction):
