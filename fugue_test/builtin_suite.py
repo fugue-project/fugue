@@ -840,8 +840,8 @@ class BuiltInTests(object):
                 ).assert_eq(c)
 
                 # no input
-                dag.select("9223372036854775806 AS a").assert_eq(
-                    dag.df([[9223372036854775806]], "a:long")
+                dag.select("92233720368547 AS a").assert_eq(
+                    dag.df([[92233720368547]], "a:long")
                 )
 
                 # make sure transform -> select works

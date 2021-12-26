@@ -1,7 +1,8 @@
 from abc import abstractmethod
-from typing import Any, Callable, Optional, List, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 import ibis
+import ibis.expr.types as ir
 from fugue import DataFrame, DataFrames, ExecutionEngine
 
 _ENGINE_FUNC: List[
@@ -46,7 +47,7 @@ class IbisEngine:
 
     @abstractmethod
     def select(
-        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], ibis.Expr]
+        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], ir.TableExpr]
     ) -> DataFrame:  # pragma: no cover
         """Execute the ibis select expression.
 
@@ -54,16 +55,8 @@ class IbisEngine:
         :param ibis_func: the ibis compute function
         :return: result of the ibis function
 
-        .. admonition:: Examples
-
-            >>> dfs = DataFrames(a=df1, b=df2)
-            >>> sql_engine.select(dfs, "SELECT * FROM a UNION SELECT * FROM b")
-
         .. note::
 
-            There can be tables that is not in ``dfs``. For example you want to select
-            from hive without input DataFrames:
-
-            >>> sql_engine.select(DataFrames(), "SELECT * FROM hive.a.table")
+            This interface is experimental, so it is subjected to change.
         """
         raise NotImplementedError

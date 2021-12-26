@@ -1,6 +1,7 @@
 from typing import Any, Callable, Optional
 
 import ibis
+import ibis.expr.types as ir
 from fugue import (
     DataFrame,
     DataFrames,
@@ -18,7 +19,7 @@ from ibis.backends.pandas import Backend
 
 class PandasIbisEngine(IbisEngine):
     def select(
-        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], ibis.Expr]
+        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], ir.TableExpr]
     ) -> DataFrame:  # pragma: no cover
         pdfs = {k: v.as_pandas() for k, v in dfs.items()}
         be = _BackendWrapper(pdfs)

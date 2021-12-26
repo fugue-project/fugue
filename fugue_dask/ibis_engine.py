@@ -2,6 +2,7 @@ from typing import Any, Callable, Optional
 
 import dask.dataframe as dd
 import ibis
+import ibis.expr.types as ir
 from fugue import DataFrame, DataFrames, ExecutionEngine
 from fugue_ibis._utils import to_ibis_schema, to_schema
 from fugue_ibis.execution.ibis_engine import IbisEngine, register_ibis_engine
@@ -23,7 +24,7 @@ class DaskIbisEngine(IbisEngine):
         super().__init__(execution_engine)
 
     def select(
-        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], ibis.Expr]
+        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], ir.TableExpr]
     ) -> DataFrame:
         pdfs = {
             k: self.execution_engine.to_df(v).native  # type: ignore

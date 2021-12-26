@@ -18,16 +18,18 @@ def run_ibis(
 ) -> WorkflowDataFrame:
     wdfs = WorkflowDataFrames(**dfs)
     return wdfs.workflow.process(
-        wdfs, using=_IbisProcessor, params=dict(ibis_func=ibis_func)
+        wdfs,
+        using=_IbisProcessor,
+        params=dict(ibis_func=ibis_func, ibis_engine=ibis_engine),
     )
 
 
-def as_ibis(df: WorkflowDataFrame) -> ibis.Expr:
+def as_ibis(df: WorkflowDataFrame) -> ir.TableExpr:
     return LazyIbisObject(df)  # type: ignore
 
 
 def as_fugue(
-    expr: ibis.Expr,
+    expr: ir.TableExpr,
     ibis_engine: Any = None,
 ) -> WorkflowDataFrame:
     """Convert to lazy ibis object to Fugue workflow dataframe
