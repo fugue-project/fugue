@@ -1,5 +1,5 @@
-fugue.column 
-=============
+fugue\_duckdb 
+==============
 
 .. |SchemaLikeObject| replace:: :ref:`Schema like object <tutorial:tutorials/advanced/x-like:schema>`
 .. |ParamsLikeObject| replace:: :ref:`Parameters like object <tutorial:tutorials/advanced/x-like:parameters>`
@@ -27,26 +27,18 @@ fugue.column
 .. |FugueDataTypes| replace:: :doc:`Fugue Data Types <tutorial:tutorials/appendix/generate_types>`
 
 
-fugue.column.expressions
-------------------------
+fugue\_duckdb.execution\_engine
+-------------------------------
 
-.. automodule:: fugue.column.expressions
+.. automodule:: fugue_duckdb.execution_engine
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.column.functions
-----------------------
+fugue\_duckdb.ibis\_engine
+--------------------------
 
-.. automodule:: fugue.column.functions
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-fugue.column.sql
-----------------
-
-.. automodule:: fugue.column.sql
+.. automodule:: fugue_duckdb.ibis_engine
    :members:
    :undoc-members:
    :show-inheritance:

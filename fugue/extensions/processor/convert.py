@@ -42,7 +42,7 @@ def register_processor(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
     .. seealso::
 
         Please read
-        :ref:`Processor Tutorial <tutorial:/tutorials/extensions/processor.ipynb>`
+        :doc:`Processor Tutorial <tutorial:tutorials/extensions/processor>`
 
     .. admonition:: Examples
 
@@ -91,7 +91,7 @@ def processor(
     """Decorator for processors
 
     Please read
-    :ref:`Processor Tutorial <tutorial:/tutorials/extensions/processor.ipynb>`
+    :doc:`Processor Tutorial <tutorial:tutorials/extensions/processor>`
     """
     # TODO: validation of schema if without * should be done at compile time
     def deco(func: Callable) -> "_FuncAsProcessor":

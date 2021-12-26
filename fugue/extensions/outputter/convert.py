@@ -40,7 +40,7 @@ def register_outputter(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
     .. seealso::
 
         Please read
-        :ref:`Outputter Tutorial <tutorial:/tutorials/extensions/outputter.ipynb>`
+        :doc:`Outputter Tutorial <tutorial:tutorials/extensions/outputter>`
 
     .. admonition:: Examples
 
@@ -87,7 +87,7 @@ def outputter(**validation_rules: Any) -> Callable[[Any], "_FuncAsOutputter"]:
     """Decorator for outputters
 
     Please read
-    :ref:`Outputter Tutorial <tutorial:/tutorials/extensions/outputter.ipynb>`
+    :doc:`Outputter Tutorial <tutorial:tutorials/extensions/outputter>`
     """
 
     def deco(func: Callable) -> "_FuncAsOutputter":

@@ -172,7 +172,7 @@ class WorkflowDataFrame(DataFrame):
         :meth:`fugue.workflow.workflow.FugueWorkflow.process`
 
         Please read the
-        :ref:`Processor Tutorial <tutorial:/tutorials/extensions/processor.ipynb>`
+        :doc:`Processor Tutorial <tutorial:tutorials/extensions/processor>`
 
         :param using: processor-like object, if it is a string, then it must be
           the alias of a registered processor
@@ -200,7 +200,7 @@ class WorkflowDataFrame(DataFrame):
         :meth:`fugue.workflow.workflow.FugueWorkflow.output`
 
         Please read the
-        :ref:`Outputter Tutorial <tutorial:/tutorials/extensions/outputter.ipynb>`
+        :doc:`Outputter Tutorial <tutorial:tutorials/extensions/outputter>`
 
         :param using: outputter-like object, if it is a string, then it must be
           the alias of a registered outputter
@@ -226,7 +226,7 @@ class WorkflowDataFrame(DataFrame):
     ) -> None:
         """Show the dataframe.
         See
-        :ref:`examples <tutorial:/tutorials/advanced/dag.ipynb#initialize-a-workflow>`.
+        :ref:`examples <tutorial:tutorials/advanced/dag:initialize a workflow>`.
 
         :param rows: max number of rows, defaults to 10
         :param show_count: whether to show total count, defaults to False
@@ -241,7 +241,7 @@ class WorkflowDataFrame(DataFrame):
             * When ``show_count`` is True, it can trigger expensive calculation for
               a distributed dataframe. So if you call this function directly, you may
               need to :meth:`~.persist` the dataframe. Or you can turn on
-              :ref:`tutorial:/tutorials/advanced/useful_config.ipynb#auto-persist`
+              :ref:`tutorial:tutorials/advanced/useful_config:auto persist`
         """
         # TODO: best_width is not used
         self.workflow.show(self, rows=rows, show_count=show_count, title=title)
@@ -1215,7 +1215,7 @@ class WorkflowDataFrame(DataFrame):
         :param kwargs: parameters to pass to the underlying framework
 
         For more details and examples, read
-        :ref:`Save & Load <tutorial:/tutorials/advanced/dag.ipynb#save-&-load>`.
+        :ref:`Save & Load <tutorial:tutorials/advanced/dag:save & load>`.
         """
         if partition is None:
             partition = self.partition_spec
@@ -1249,7 +1249,7 @@ class WorkflowDataFrame(DataFrame):
         :param kwargs: parameters to pass to the underlying framework
 
         For more details and examples, read
-        :ref:`Save & Load <tutorial:/tutorials/advanced/dag.ipynb#save-&-load>`.
+        :ref:`Save & Load <tutorial:tutorials/advanced/dag:save & load>`.
         """
         if partition is None:
             partition = self.partition_spec
@@ -1409,7 +1409,7 @@ class FugueWorkflow(object):
     until you call :meth:`~.run`
 
     Read
-    :ref:`this <tutorial:/tutorials/advanced/dag.ipynb#initialize-a-workflow>`
+    :ref:`this <tutorial:tutorials/advanced/dag:initialize a workflow>`
     to learn how to initialize it in different ways and pros and cons.
     """
 
@@ -1458,7 +1458,7 @@ class FugueWorkflow(object):
                 result["x"]  # SparkDataFrame
 
         Read
-        :ref:`this <tutorial:/tutorials/advanced/dag.ipynb#initialize-a-workflow>`
+        :ref:`this <tutorial:tutorials/advanced/dag:initialize a workflow>`
         to learn how to run in different ways and pros and cons.
         """
         with self._lock:
@@ -1508,7 +1508,7 @@ class FugueWorkflow(object):
         """Run a creator to create a dataframe.
 
         Please read the
-        :ref:`Creator Tutorial <tutorial:/tutorials/extensions/creator.ipynb>`
+        :doc:`Creator Tutorial <tutorial:tutorials/extensions/creator>`
 
         :param using: creator-like object, if it is a string, then it must be
           the alias of a registered creator
@@ -1539,7 +1539,7 @@ class FugueWorkflow(object):
         """Run a processor on the dataframes.
 
         Please read the
-        :ref:`Processor Tutorial <tutorial:/tutorials/extensions/processor.ipynb>`
+        :doc:`Processor Tutorial <tutorial:tutorials/extensions/processor>`
 
         :param dfs: |DataFramesLikeObject|
         :param using: processor-like object, if it is a string, then it must be
@@ -1578,7 +1578,7 @@ class FugueWorkflow(object):
         """Run a outputter on dataframes.
 
         Please read the
-        :ref:`Outputter Tutorial <tutorial:/tutorials/extensions/outputter.ipynb>`
+        :doc:`Outputter Tutorial <tutorial:tutorials/extensions/outputter>`
 
         :param using: outputter-like object, if it is a string, then it must be
           the alias of a registered outputter
@@ -1685,7 +1685,7 @@ class FugueWorkflow(object):
         self, path: str, fmt: str = "", columns: Any = None, **kwargs: Any
     ) -> WorkflowDataFrame:
         """Load dataframe from persistent storage.
-        Read :ref:`this <tutorial:/tutorials/advanced/dag.ipynb#save-&-load>`
+        Read :ref:`this <tutorial:tutorials/advanced/dag:save & load>`
         for details.
 
         :param path: file path
@@ -1708,7 +1708,7 @@ class FugueWorkflow(object):
     ) -> None:
         """Show the dataframes.
         See
-        :ref:`examples <tutorial:/tutorials/advanced/dag.ipynb#initialize-a-workflow>`.
+        :ref:`examples <tutorial:tutorials/advanced/dag:initialize a workflow>`.
 
         :param dfs: |DataFramesLikeObject|
         :param rows: max number of rows, defaults to 10
@@ -1998,7 +1998,7 @@ class FugueWorkflow(object):
                     b = dag.df([[0]],a:int)
                     c = dag.select("SELECT a FROM",a,"UNION SELECT * FROM",b)
 
-        Please read :ref:`this <tutorial:/tutorials/advanced/dag.ipynb#select-query>`
+        Please read :ref:`this <tutorial:tutorials/advanced/dag:select query>`
         for more examples
         """
         s_str: List[str] = []

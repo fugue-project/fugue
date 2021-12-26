@@ -379,7 +379,7 @@ class DataFrame(ABC):
 
 class LocalDataFrame(DataFrame):
     """Base class of all local dataframes. Please read
-    :ref:`this <tutorial:/tutorials/advanced/schema_dataframes.ipynb#dataframe>`
+    :ref:`this <tutorial:tutorials/advanced/schema_dataframes:dataframe>`
     to understand the concept
 
     :param schema: a `schema-like <triad.collections.schema.Schema>`_ object
@@ -412,7 +412,7 @@ class LocalDataFrame(DataFrame):
 
 class LocalBoundedDataFrame(LocalDataFrame):
     """Base class of all local bounded dataframes. Please read
-    :ref:`this <tutorial:/tutorials/advanced/schema_dataframes.ipynb#dataframe>`
+    :ref:`this <tutorial:tutorials/advanced/schema_dataframes:dataframe>`
     to understand the concept
 
     :param schema: |SchemaLikeObject|

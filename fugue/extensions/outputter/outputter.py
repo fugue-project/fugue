@@ -22,7 +22,7 @@ class Outputter(ExtensionContext, ABC):
     .. seealso::
 
       Please read
-      :ref:`Outputter Tutorial <tutorial:/tutorials/extensions/outputter.ipynb>`
+      :doc:`Outputter Tutorial <tutorial:tutorials/extensions/outputter>`
     """
 
     @abstractmethod
