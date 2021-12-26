@@ -1,9 +1,21 @@
 import pytest
 
 ibis = pytest.importorskip("ibis")
-from fugue import FugueWorkflow
+from fugue import FugueWorkflow, NativeExecutionEngine
 
 from fugue_ibis import as_fugue, as_ibis, run_ibis
+from fugue_ibis.execution.ibis_engine import to_ibis_engine
+from fugue_ibis.execution.pandas_backend import PandasIbisEngine
+from pytest import raises
+
+
+def test_to_ibis_engine():
+    e = NativeExecutionEngine()
+    ie = PandasIbisEngine(e)
+    assert isinstance(to_ibis_engine(e, None), PandasIbisEngine)
+    assert isinstance(to_ibis_engine(e, ie), PandasIbisEngine)
+    with raises(NotImplementedError):
+        to_ibis_engine(e, "dummy")
 
 
 def test_run_ibis():

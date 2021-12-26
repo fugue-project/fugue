@@ -7,7 +7,7 @@ from fugue_dask.registry import register
 
 try:
     from fugue_dask.ibis_engine import DaskIbisEngine
-except Exception:
+except Exception:  # pragma: no cover
     pass
 
 register()

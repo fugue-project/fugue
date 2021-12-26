@@ -23,7 +23,7 @@ class DuckDBIbisEngine(IbisEngine):
         return PandasDataFrame(engine.select(dfs, sql).as_pandas(), schema=schema)
 
 
-def to_duckdb_ibis_engine(
+def _to_duckdb_ibis_engine(
     engine: ExecutionEngine, ibis_engine: Any
 ) -> Optional[IbisEngine]:
     if isinstance(ibis_engine, str) and ibis_engine in ["duck", "duckdb"]:
@@ -42,4 +42,4 @@ class _BackendWrapper(Backend):
         return ibis.table(self._schemas[name], name=name)
 
 
-register_ibis_engine(0, to_duckdb_ibis_engine)
+register_ibis_engine(0, _to_duckdb_ibis_engine)

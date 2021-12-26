@@ -7,7 +7,7 @@ from fugue_spark.registry import register
 
 try:
     from fugue_spark.ibis_engine import SparkIbisEngine
-except Exception:
+except Exception:  # pragma: no cover
     pass
 
 register()

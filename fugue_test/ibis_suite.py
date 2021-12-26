@@ -41,7 +41,7 @@ class IbisTests(object):
         def dag(self, conf: Optional[Dict[str, Any]] = None) -> FugueWorkflow:
             if conf is None:
                 return FugueWorkflow(self.engine)
-            else:
+            else:  # pragma: no cover
                 return FugueWorkflow(self.engine, conf)
 
         def test_run_ibis(self):

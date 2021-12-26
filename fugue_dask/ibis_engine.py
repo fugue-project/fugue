@@ -42,7 +42,7 @@ class DaskIbisEngine(IbisEngine):
         return DaskDataFrame(result, schema=schema)
 
 
-def to_dask_ibis_engine(
+def _to_dask_ibis_engine(
     engine: ExecutionEngine, ibis_engine: Any
 ) -> Optional[IbisEngine]:
     if isinstance(engine, DaskExecutionEngine):
@@ -64,4 +64,4 @@ class _BackendWrapper(Backend):
         )
 
 
-register_ibis_engine(0, to_dask_ibis_engine)
+register_ibis_engine(0, _to_dask_ibis_engine)

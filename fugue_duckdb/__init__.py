@@ -5,7 +5,7 @@ from fugue_duckdb.execution_engine import DuckDBEngine, DuckExeuctionEngine
 
 try:
     from fugue_duckdb.ibis_engine import DuckDBIbisEngine
-except Exception:
+except Exception:  # pragma: no cover
     pass
 
 

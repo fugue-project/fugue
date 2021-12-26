@@ -37,7 +37,7 @@ class SparkIbisEngine(IbisEngine):
         return SparkDataFrame(result, schema=schema)
 
 
-def to_spark_ibis_engine(
+def _to_spark_ibis_engine(
     engine: ExecutionEngine, ibis_engine: Any
 ) -> Optional[IbisEngine]:
     if isinstance(engine, SparkExecutionEngine):
@@ -46,4 +46,4 @@ def to_spark_ibis_engine(
     return None  # pragma: no cover
 
 
-register_ibis_engine(0, to_spark_ibis_engine)
+register_ibis_engine(0, _to_spark_ibis_engine)

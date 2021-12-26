@@ -33,13 +33,13 @@ class PandasIbisEngine(IbisEngine):
         return PandasDataFrame(result, schema=schema)
 
 
-def to_pandas_ibis_engine(
+def _to_pandas_ibis_engine(
     engine: ExecutionEngine, ibis_engine: Any
 ) -> Optional[IbisEngine]:
     if isinstance(engine, NativeExecutionEngine):
         if ibis_engine is None:
             return PandasIbisEngine(engine)
-    return None
+    return None  # pragma: no cover
 
 
 class _BackendWrapper(Backend):
@@ -55,4 +55,4 @@ class _BackendWrapper(Backend):
         )
 
 
-register_ibis_engine(1, to_pandas_ibis_engine)
+register_ibis_engine(1, _to_pandas_ibis_engine)
