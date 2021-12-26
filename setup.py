@@ -52,7 +52,7 @@ setup(
             "jupyterlab",
             "dash",
             "duckdb",
-            "ibis-framework",
+            "ibis-framework; python_version >= '3.7'",
         ],
     },
     classifiers=[
