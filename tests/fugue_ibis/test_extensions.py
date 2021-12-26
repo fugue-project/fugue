@@ -1,4 +1,6 @@
-import ibis
+import pytest
+
+ibis = pytest.importorskip("ibis")
 from fugue import FugueWorkflow
 
 from fugue_ibis import as_fugue, as_ibis, run_ibis

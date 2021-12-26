@@ -16,11 +16,8 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.execution.execution_engine import ExecutionEngine, _get_file_threshold
-from fugue_ibis import IbisEngine
-from fugue_ibis.execution.pandas_backend import PandasIbisEngine
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
-from fugue_test.ibis_suite import IbisTests
 
 
 class ArrowDataFrameParam(DataFrameParam):
@@ -94,16 +91,6 @@ class NativeExecutionEngineBuiltInQPDTests(BuiltInTests.Tests):
         e = NativeExecutionEngine(dict(test=True))
         e.set_sql_engine(QPDPandasEngine(e))
         return e
-
-
-class PandasIbisTests(IbisTests.Tests):
-    def make_engine(self):
-        e = NativeExecutionEngine(dict(test=True))
-        e.set_sql_engine(QPDPandasEngine(e))
-        return e
-
-    def make_ibis_engine(self) -> IbisEngine:
-        return PandasIbisEngine(self.engine)
 
 
 def test_get_file_threshold():

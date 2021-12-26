@@ -1,3 +1,6 @@
+import pytest
+
+ibis = pytest.importorskip("ibis")
 from fugue_ibis import IbisEngine
 from fugue_test.ibis_suite import IbisTests
 

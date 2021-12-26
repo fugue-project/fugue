@@ -1,9 +1,12 @@
-import ibis
+import pytest
+
+ibis = pytest.importorskip("ibis")
 import pandas as pd
-from fugue_ibis._utils import LazyIbisObject, materialize, to_ibis_schema, to_schema
-from fugue.dataframe.utils import _df_eq
 from fugue import PandasDataFrame
+from fugue.dataframe.utils import _df_eq
 from triad import Schema
+
+from fugue_ibis._utils import LazyIbisObject, materialize, to_ibis_schema, to_schema
 
 
 def test_schema():
