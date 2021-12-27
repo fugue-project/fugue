@@ -1,5 +1,3 @@
-git+https://github.com/ibis-project/ibis.git@dbc34bbe7c3506f1f4e881eaabf928890d9477ca#egg=ibis-framework[pandas,dask,postgres]; python_version >= '3.7' and python_version < '3.8'
-
 qpd[dask]
 .[all]
 
