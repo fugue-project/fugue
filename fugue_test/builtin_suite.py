@@ -840,7 +840,7 @@ class BuiltInTests(object):
                 ).assert_eq(c)
 
                 # no input
-                dag.select("9223 AS a").assert_eq(dag.df([[9223]], "a:long"))
+                dag.select("'test' AS a").assert_eq(dag.df([["test"]], "a:str"))
 
                 # make sure transform -> select works
                 b = a.transform(mock_tf1)
