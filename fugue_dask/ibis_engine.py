@@ -30,9 +30,8 @@ class DaskIbisEngine(IbisEngine):
             k: self.execution_engine.to_df(v).native  # type: ignore
             for k, v in dfs.items()
         }
-        be = _BackendWrapper(pdfs)
+        be = _BackendWrapper().connect(pdfs)
         be.set_schemas(dfs)
-        be.reconnect()
         expr = ibis_func(be)
         schema = to_schema(expr.schema())
         result = expr.compile()

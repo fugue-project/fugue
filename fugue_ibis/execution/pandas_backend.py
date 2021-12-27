@@ -22,9 +22,8 @@ class PandasIbisEngine(IbisEngine):
         self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], ir.TableExpr]
     ) -> DataFrame:  # pragma: no cover
         pdfs = {k: v.as_pandas() for k, v in dfs.items()}
-        be = _BackendWrapper(pdfs)
+        be = _BackendWrapper().connect(pdfs)
         be.set_schemas(dfs)
-        be.reconnect()
         expr = ibis_func(be)
         schema = to_schema(expr.schema())
         result = expr.execute()
