@@ -21,6 +21,8 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install Ibis
+      run: pip install git+https://github.com/ibis-project/ibis.git#egg=ibis-framework[pandas,dask,postgres]
     - name: Install dependencies
       run: pip install -r requirements.txt
     - name: Test
