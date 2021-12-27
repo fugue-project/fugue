@@ -19,7 +19,7 @@ def run_ibis(
     """Run an ibis workflow wrapped in ``ibis_func``
 
     :param ibis_func: the function taking in an ibis backend, and returning
-        a :class:`~ibis.expr.types.TableExpr`
+        a :ref:`TableExpr <ibis:/api.rst#table-methods>`
     :param ibis_engine: an object that together with |ExecutionEngine|
         can determine :class:`~fugue_ibis.execution.ibis_engine.IbisEngine`
         , defaults to None

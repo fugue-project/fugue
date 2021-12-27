@@ -840,9 +840,7 @@ class BuiltInTests(object):
                 ).assert_eq(c)
 
                 # no input
-                dag.select("92233720368547 AS a").assert_eq(
-                    dag.df([[92233720368547]], "a:long")
-                )
+                dag.select("9223 AS a").assert_eq(dag.df([[9223]], "a:long"))
 
                 # make sure transform -> select works
                 b = a.transform(mock_tf1)
