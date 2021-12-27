@@ -29,7 +29,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install Ibis
-      run: pip install git+https://github.com/ibis-project/ibis.git@dbc34bbe7c3506f1f4e881eaabf928890d9477ca#egg=ibis-framework[pandas,dask,postgres]
+      run: pip install git+https://github.com/ibis-project/ibis.git#egg=ibis-framework[pandas,dask,postgres]
     - name: Install dependencies
       run: make devenv
     - name: Test
