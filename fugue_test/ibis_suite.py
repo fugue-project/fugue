@@ -89,3 +89,11 @@ class IbisTests(object):
             expected = dag.df([[0, 1, ["x"]]], "a:long,b:long,c:[str]")
             res.assert_eq(expected, check_order=True, check_schema=True)
             dag.run()
+
+        def test_literal(self):
+            dag = self.dag()
+            idf1 = dag.df([[0, 1], [2, 3]], "a:long,b:long").as_ibis()
+            res = idf1.mutate(c=idf1.b + 10).as_fugue()
+            expected = dag.df([[0, 1, 11], [2, 3, 13]], "a:long,b:long,c:long")
+            res.assert_eq(expected, check_order=True, check_schema=True)
+            dag.run()
