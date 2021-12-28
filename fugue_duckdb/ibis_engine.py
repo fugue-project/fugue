@@ -14,12 +14,13 @@ class DuckDBIbisEngine(IbisEngine):
     def select(
         self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], ir.TableExpr]
     ) -> DataFrame:  # pragma: no cover
-        be = _BackendWrapper({})
+        be = _BackendWrapper().connect({})
         be.set_schemas(dfs)
-        be.reconnect()
         expr = ibis_func(be)
         schema = to_schema(expr.schema())
-        sql = str(ibis.postgres.compile(expr))
+        sql = str(
+            ibis.postgres.compile(expr).compile(compile_kwargs={"literal_binds": True})
+        )
         engine = DuckDBEngine(self.execution_engine)
         return PandasDataFrame(engine.select(dfs, sql).as_pandas(), schema=schema)
 

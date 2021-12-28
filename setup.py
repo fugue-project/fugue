@@ -41,7 +41,7 @@ setup(
         "spark": ["pyspark"],
         "dask": ["qpd[dask]"],
         "duckdb": ["duckdb>=0.3.1", "pyarrow>=5.0.0,<6"],
-        "ibis": ["ibis-framework"],
+        "ibis": ["ibis-framework>=2"],
         "notebook": ["notebook", "jupyterlab", "dash"],
         "all": [
             "antlr4-python3-runtime",
@@ -52,7 +52,7 @@ setup(
             "jupyterlab",
             "dash",
             "duckdb",
-            "ibis-framework; python_version >= '3.7'",
+            "ibis-framework>=2; python_version >= '3.7'",
         ],
     },
     classifiers=[
