@@ -46,11 +46,15 @@ docs:
 	rm -rf docs/api_sql
 	rm -rf docs/api_spark
 	rm -rf docs/api_dask
+	rm -rf docs/api_duckdb
+	rm -rf docs/api_ibis
 	rm -rf docs/build
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api fugue/
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_sql fugue_sql/
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_spark fugue_spark/
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_dask fugue_dask/
+	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_duckdb fugue_duckdb/
+	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_ibis fugue_ibis/
 	sphinx-build -b html docs/ docs/build/
 
 lint:
@@ -85,6 +89,9 @@ testduck:
 
 testsql:
 	python3 -bb -m pytest tests/fugue_sql
+
+testibis:
+	python3 -bb -m pytest tests/fugue_ibis
 
 testnotebook:
 	pip install .

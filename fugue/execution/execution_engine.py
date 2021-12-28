@@ -27,7 +27,7 @@ _DEFAULT_JOIN_KEYS: List[str] = []
 
 class SQLEngine(ABC):
     """The abstract base class for different SQL execution implementations. Please read
-    :ref:`this <tutorial:/tutorials/advanced/execution_engine.ipynb#sqlengine>`
+    :ref:`this <tutorial:tutorials/advanced/execution_engine:sqlengine>`
     to understand the concept
 
     :param execution_engine: the execution engine this sql engine will run on
@@ -73,7 +73,7 @@ class ExecutionEngine(ABC):
     to understand this most important Fugue concept
 
     :param conf: dict-like config, read
-      :ref:`this <tutorial:/tutorials/advanced/useful_config.ipynb>`
+      :doc:`this <tutorial:tutorials/advanced/useful_config>`
       to learn Fugue specific options
     """
 
@@ -241,7 +241,7 @@ class ExecutionEngine(ABC):
         :param map_func: the function to apply on every logical partition
         :param output_schema: |SchemaLikeObject| that can't be None.
           Please also understand :ref:`why we need this
-          <tutorial:/tutorials/beginner/interface.ipynb#schema>`
+          <tutorial:tutorials/beginner/interface:schema>`
         :param partition_spec: partition specification
         :param metadata: dict-like metadata object to add to the dataframe after the
           map operation, defaults to None
@@ -252,7 +252,7 @@ class ExecutionEngine(ABC):
         .. note::
 
             Before implementing, you must read
-            :ref:`this <tutorial:/tutorials/advanced/execution_engine.ipynb#map>`
+            :ref:`this <tutorial:tutorials/advanced/execution_engine:map>`
             to understand what map is used for and how it should work.
         """
         raise NotImplementedError
@@ -931,7 +931,7 @@ class ExecutionEngine(ABC):
         :param map_func: the function to apply on every zipped partition
         :param output_schema: |SchemaLikeObject| that can't be None.
           Please also understand :ref:`why we need this
-          <tutorial:/tutorials/beginner/interface.ipynb#schema>`
+          <tutorial:tutorials/beginner/interface:schema>`
         :param partition_spec: partition specification for processing the zipped
           zipped dataframe.
         :param metadata: dict-like metadata object to add to the dataframe after the

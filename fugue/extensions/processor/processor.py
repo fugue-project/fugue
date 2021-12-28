@@ -22,7 +22,7 @@ class Processor(ExtensionContext, ABC):
     .. seealso::
 
       Please read
-      :ref:`Processor Tutorial <tutorial:/tutorials/extensions/processor.ipynb>`
+      :doc:`Processor Tutorial <tutorial:tutorials/extensions/processor>`
     """
 
     @abstractmethod

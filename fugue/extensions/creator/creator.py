@@ -21,7 +21,7 @@ class Creator(ExtensionContext, ABC):
 
     .. seealso::
 
-      Please read :ref:`Creator Tutorial <tutorial:/tutorials/extensions/creator.ipynb>`
+      Please read :doc:`Creator Tutorial <tutorial:tutorials/extensions/creator>`
     """
 
     @abstractmethod

@@ -39,11 +39,11 @@ def _df_eq(
 
     :param df: first data frame
     :param data: :ref:`DataFrame like
-      <tutorial:/tutorials/advanced/x-like.ipynb#dataframe>` object
+      <tutorial:tutorials/advanced/x-like:dataframe>` object
     :param schema: :ref:`Schema like
-      <tutorial:/tutorials/advanced/x-like.ipynb#schema>` object, defaults to None
+      <tutorial:tutorials/advanced/x-like:schema>` object, defaults to None
     :param metadata: :ref:`Parameteres like
-      <tutorial:/tutorials/advanced/x-like.ipynb#parameters>` object, defaults to None
+      <tutorial:tutorials/advanced/x-like:parameters>` object, defaults to None
     :param digits: precision on float number comparison, defaults to 8
     :param check_order: if to compare the row orders, defaults to False
     :param check_schema: if compare schemas, defaults to True

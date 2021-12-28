@@ -12,7 +12,7 @@ from triad.utils.convert import get_caller_global_local_vars, to_function
 def module() -> Callable[[Any], "_ModuleFunctionWrapper"]:
     """Decorator for module
 
-    Please read :ref:`Module Tutorial <tutorial:/tutorials/module.ipynb>`
+    Please read :doc:`Module Tutorial <tutorial:tutorials/module>`
     """
 
     def deco(func: Callable) -> "_ModuleFunctionWrapper":

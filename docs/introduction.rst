@@ -30,7 +30,7 @@ For most cases, in order to integrate with Fugue, you only need to follow the
 general `python type hints <https://docs.python.org/3/library/typing.html>`_ (which is also regarded as
 good practice for writing python code), and your functions can be recognized and used by Fugue. It will
 adapt to your input and output specs, you can write the logic in the most intuitive way (see
-:ref:`examples <tutorial:/tutorials/extensions/interfaceless.ipynb>`)
+:doc:`examples <tutorial:tutorials/extensions/interfaceless>`)
 
 It makes your logic portable
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -107,11 +107,11 @@ On top of different computing frameworks, :class:`~fugue.execution.execution_eng
 to unify the core concepts of distributed computing and adapt to different frameworks. On top of
 ExecutionEngine, we use `Adagio <https://github.com/fugue-project/adagio>`_ to construct and execute
 Fugue DAGs. On top of the DAG framework, we have 
-:ref:`Fugue programming interface <tutorial:/tutorials/advanced/dag.ipynb>` with built-in extensions
+:doc:`Fugue programming interface <tutorial:tutorials/advanced/dag>` with built-in extensions
 such as :meth:`save <fugue.workflow.workflow.WorkflowDataFrame.save>`,
 :meth:`load <fugue.workflow.workflow.FugueWorkflow.save>` and
 :meth:`show <fugue.workflow.workflow.WorkflowDataFrame.show>`. On top of the programming interface,
-we have :ref:`Fugue SQL <tutorial:/tutorials/fugue_sql/index.md>` and will release Fugue ML and Fugue Streaming
+we have :doc:`Fugue SQL <tutorial:tutorials/fugue_sql/index>` and will release Fugue ML and Fugue Streaming
 later in 2020.
 
 
@@ -119,8 +119,8 @@ Extensions
 ^^^^^^^^^^^
 
 Fugue extensions are the logic units you want to use Fugue to glue together. Please make sure you
-understand that :ref:`it's NOT necessary to implement Fugue interfaces <tutorial:/tutorials/extensions/interfaceless.ipynb>`
-to become Fugue extensions. For details, please read :ref:`the Extensions Tutorial <tutorial:/tutorials/extensions/index.md>`
+understand that :doc:`it's NOT necessary to implement Fugue interfaces <tutorial:tutorials/extensions/interfaceless>`
+to become Fugue extensions. For details, please read :doc:`the Extensions Tutorial <tutorial:tutorials/extensions/index>`
 
 .. image:: ../images/extensions.png
   :width: 500
@@ -131,8 +131,8 @@ to become Fugue extensions. For details, please read :ref:`the Extensions Tutori
 Programming Interface & SQL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Users have two ways to use Fugue: :ref:`the programming interface <tutorial:/tutorials/advanced/dag.ipynb>`
-and :ref:`the SQL interface <tutorial:/tutorials/fugue_sql/index.md>`. The two are almost equivalent on
+Users have two ways to use Fugue: :doc:`the programming interface <tutorial:tutorials/advanced/dag>`
+and :doc:`the SQL interface <tutorial:tutorials/fugue_sql/index>`. The two are almost equivalent on
 features, but to adapt to different users and scenarios. The programming way is great
 for pythonic users and the SQL way is preferred by people who love the SQL mindset.
 
@@ -209,11 +209,11 @@ What to read?
 Directly reading the source code or the Fugue API docs is NOT a good idea to start.
 We have created tutorials for different levels of users.
 
-:ref:`For beginners <tutorial:/tutorials/beginner/index.md>`, you can go through the
+:doc:`For beginners <tutorial:tutorials/beginner/index>`, you can go through the
 examples without understanding everything, and you may find answers and more details
 inside deep dives.
 
-:ref:`For advanced users <tutorial:/tutorials/advanced/index.md>`, you can go through
+:doc:`For advanced users <tutorial:tutorials/advanced/index>`, you can go through
 the examples to understand what extra value Fugue can bring to you. And if interested
 you can go through the deep dives to get more insights.
 

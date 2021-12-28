@@ -38,7 +38,7 @@ def register_creator(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
     .. seealso::
 
         Please read
-        :ref:`Creator Tutorial <tutorial:/tutorials/extensions/creator.ipynb>`
+        :doc:`Creator Tutorial <tutorial:tutorials/extensions/creator>`
 
     .. admonition:: Examples
 
@@ -84,7 +84,7 @@ def creator(schema: Any = None) -> Callable[[Any], "_FuncAsCreator"]:
     """Decorator for creators
 
     Please read
-    :ref:`Creator Tutorial <tutorial:/tutorials/extensions/creator.ipynb>`
+    :doc:`Creator Tutorial <tutorial:tutorials/extensions/creator>`
     """
 
     def deco(func: Callable) -> "_FuncAsCreator":
