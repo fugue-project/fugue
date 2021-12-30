@@ -59,13 +59,14 @@ from fugue.rpc.base import EmptyRPCHandler
 from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, CreateData, FugueTask, Output, Process
 from fugue.workflow._workflow_context import FugueWorkflowContext
-from triad import ParamDict, Schema, assert_or_throw
+from triad import ParamDict, Schema, assert_or_throw, extensible_class
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
 TDF = TypeVar("TDF", bound="WorkflowDataFrame")
 
 
+@extensible_class
 class WorkflowDataFrame(DataFrame):
     """It represents the edges in the graph constructed by :class:`~.FugueWorkflow`.
     In Fugue, we use DAG to represent workflows, and the edges are strictly
@@ -1399,7 +1400,12 @@ class WorkflowDataFrames(DataFrames):
     ) -> WorkflowDataFrame:
         return super().__getitem__(key)  # type: ignore
 
+    def __getattr__(self, name: str) -> Any:  # pragma: no cover
+        """The dummy method to avoid PyLint complaint"""
+        raise AttributeError(name)
 
+
+@extensible_class
 class FugueWorkflow(object):
     """Fugue Workflow, also known as the Fugue Programming Interface.
 
@@ -2099,6 +2105,10 @@ class FugueWorkflow(object):
         if len(args) == 1 and isinstance(args[0], FugueWorkflowContext):
             return args[0]
         return FugueWorkflowContext(make_execution_engine(*args, **kwargs))
+
+    def __getattr__(self, name: str) -> Any:  # pragma: no cover
+        """The dummy method to avoid PyLint complaint"""
+        raise AttributeError(name)
 
 
 class _Dependencies(object):

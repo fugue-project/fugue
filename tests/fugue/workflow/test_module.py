@@ -8,7 +8,7 @@ from fugue.exceptions import FugueInterfacelessError
 
 def test_input_module():
     # pylint: disable=no-value-for-parameter
-    @module()
+    @module
     def input1(wf: FugueWorkflow) -> WorkflowDataFrame:
         return wf.df([[0]], "a:int")
 
@@ -16,7 +16,7 @@ def test_input_module():
     def input2(wf: FugueWorkflow, a: int) -> WorkflowDataFrame:
         return wf.df([[a]], "a:int")
 
-    @module()
+    @module(as_method=True)
     def input3(wf: FugueWorkflow, a: int, b: int) -> WorkflowDataFrames:
         return WorkflowDataFrames(a=wf.df([[a]], "a:int"), b=wf.df([[b]], "b:int"))
 
@@ -36,6 +36,9 @@ def test_input_module():
         dfs = input3(dag, 10, 11)
         dfs["a"].assert_eq(dag.df([[10]], "a:int"))
         dfs["b"].assert_eq(dag.df([[11]], "b:int"))
+        dfs = dag.input3(10, 11)
+        dfs["a"].assert_eq(dag.df([[10]], "a:int"))
+        dfs["b"].assert_eq(dag.df([[11]], "b:int"))
 
 
 def test_process_module():
@@ -44,7 +47,7 @@ def test_process_module():
         df["a"] += d
         return df
 
-    @module()
+    @module
     def p1(wf: FugueSQLWorkflow, df: WorkflowDataFrame) -> WorkflowDataFrame:
         return df.process(process)
 
@@ -54,7 +57,7 @@ def test_process_module():
             {k: v.process(process, params={"d": d}) for k, v in dfs.items()}
         )
 
-    @module()
+    @module(as_method=True, name="p4")
     def p3(df: WorkflowDataFrame) -> WorkflowDataFrame:
         return df.process(process)
 
@@ -91,12 +94,13 @@ def test_process_module():
         df = dag.df([[0]], "a:int")
         p3(df).assert_eq(dag.df([[1]], "a:int"))
         p3(df=df).assert_eq(dag.df([[1]], "a:int"))
+        df.p4().assert_eq(dag.df([[1]], "a:int"))
 
 
 def test_output_module():
     # pylint: disable=no-value-for-parameter
 
-    @module()
+    @module
     def o1(wf: FugueWorkflow, df: WorkflowDataFrame) -> None:
         pass
 
@@ -104,7 +108,7 @@ def test_output_module():
     def o2(wf: FugueWorkflow, df: WorkflowDataFrame):
         pass
 
-    @module()
+    @module(as_method=True)
     def o3(df: WorkflowDataFrame):
         pass
 
@@ -120,6 +124,7 @@ def test_output_module():
         o2(df=df)
         o2(df=df, wf=dag)
         o3(df)
+        df.o3()
 
 
 def test_invalid_module():

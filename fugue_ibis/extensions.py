@@ -5,7 +5,7 @@ import ibis.expr.types as ir
 from fugue import DataFrame, DataFrames, Processor, WorkflowDataFrame
 from fugue.exceptions import FugueWorkflowCompileError
 from fugue.workflow.workflow import WorkflowDataFrames
-from triad.utils.assertion import assert_or_throw
+from triad import assert_or_throw, extension_method
 
 from fugue_ibis._utils import LazyIbisObject, _materialize
 from fugue_ibis.execution.ibis_engine import to_ibis_engine
@@ -50,6 +50,7 @@ def run_ibis(
     )
 
 
+@extension_method
 def as_ibis(df: WorkflowDataFrame) -> ir.TableExpr:
     """Convert the Fugue workflow dataframe to an ibis table for ibis
     operations.
@@ -109,11 +110,12 @@ def as_ibis(df: WorkflowDataFrame) -> ir.TableExpr:
     return LazyIbisObject(df)  # type: ignore
 
 
+@extension_method(class_type=LazyIbisObject)
 def as_fugue(
     expr: ir.TableExpr,
     ibis_engine: Any = None,
 ) -> WorkflowDataFrame:
-    """Convert to lazy ibis object to Fugue workflow dataframe
+    """Convert a lazy ibis object to Fugue workflow dataframe
 
     :param expr: the actual instance should be LazyIbisObject
     :return: the Fugue workflow dataframe
@@ -187,15 +189,6 @@ def as_fugue(
     return run_ibis(
         lambda be: _func(be, _lazy_expr, _ctx), ibis_engine=ibis_engine, **_dfs
     )
-
-
-def setup():
-    """Add :func:`~.as_ibis` and :func:`~.as_fugue` to the correspondent
-    classes. This method is automatically called when you import
-    ``fugue_ibis``.
-    """
-    setattr(WorkflowDataFrame, "as_ibis", as_ibis)  # noqa: B010
-    setattr(LazyIbisObject, "as_fugue", as_fugue)  # noqa: B010
 
 
 class _IbisProcessor(Processor):

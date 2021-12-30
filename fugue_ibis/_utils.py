@@ -3,7 +3,7 @@ import ibis
 import ibis.expr.datatypes as dt
 import pyarrow as pa
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
-from triad import Schema
+from triad import Schema, extensible_class
 
 _SPECIAL_METHODS = [
     "__getitem__",
@@ -96,6 +96,7 @@ def materialize(obj: "LazyIbisObject", materialize_func: Callable) -> Any:
     return _materialize(obj, ctx)
 
 
+@extensible_class
 class LazyIbisObject:
     def __init__(self, obj: Any = None):
         self._super_lazy_internal_ctx: Dict[int, Any] = {}

@@ -7,18 +7,24 @@ from fugue.exceptions import FugueInterfacelessError
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function
+from triad import extension_method
 
 
-def module() -> Callable[[Any], "_ModuleFunctionWrapper"]:
+def module(
+    func: Optional[Callable] = None, as_method: bool = False, name: Optional[str] = None
+) -> Any:
     """Decorator for module
 
     Please read :doc:`Module Tutorial <tutorial:tutorials/module>`
     """
 
-    def deco(func: Callable) -> "_ModuleFunctionWrapper":
-        return _ModuleFunctionWrapper(func)
-
-    return deco
+    if func is None:  # @module(...)
+        return lambda func: module(func, as_method=as_method, name=name)
+    # @module
+    res = _ModuleFunctionWrapper(func)
+    if as_method:
+        extension_method(func, name=name)
+    return res
 
 
 def _to_module(
