@@ -1490,7 +1490,7 @@ class FugueWorkflow(object):
             except Exception as ex:
                 if not self._workflow_ctx.execution_engine.conf.get_or_throw(
                     FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE, bool
-                ):
+                ) or sys.version_info < (3, 7):
                     raise
                 conf = self._workflow_ctx.execution_engine.conf.get_or_throw(
                     FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str
@@ -2112,7 +2112,9 @@ class FugueWorkflow(object):
         """This method should not be called directly by users. Use
         :meth:`~.create`, :meth:`~.process`, :meth:`~.output` instead
         """
-        if self.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE, bool):
+        if self.conf.get_or_throw(
+            FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE, bool
+        ) and sys.version_info >= (3, 7):
             dep = self.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT, int)
             if dep > 0:
                 conf = self.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str)

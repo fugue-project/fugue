@@ -9,6 +9,9 @@ from fugue.constants import (
 
 
 def test_runtime_exception():
+    if sys.version_info < (3, 7):
+        return
+
     def tr(df: pd.DataFrame) -> pd.DataFrame:
         raise Exception
 
