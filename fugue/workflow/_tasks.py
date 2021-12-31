@@ -1,8 +1,11 @@
+import sys
 from abc import ABC, abstractmethod
+from types import TracebackType
 from typing import Any, Callable, Iterable, List, Optional, no_type_check
 
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
+from fugue._utils.exception import frames_to_traceback, modify_traceback
 from fugue.collections.partition import PartitionSpec
 from fugue.collections.yielded import YieldedFile
 from fugue.dataframe import DataFrame, DataFrames
@@ -63,6 +66,15 @@ class FugueTask(TaskSpec, ABC):
         self._broadcast = False
         self._dependency_uuid: Any = None
         self._yield_dataframe_handler: Any = None
+        self._traceback: Optional[TracebackType] = None
+
+    def reset_traceback(
+        self, limit: int, should_prune: Optional[Callable[[str], bool]] = None
+    ) -> None:
+        cf = sys._getframe(1)
+        self._traceback = frames_to_traceback(
+            cf, limit=limit, should_prune=should_prune
+        )
 
     def __uuid__(self) -> str:
         # _checkpoint is not part of determinism
@@ -138,12 +150,16 @@ class FugueTask(TaskSpec, ABC):
 
     def _handle_checkpoint(self, df: DataFrame, ctx: TaskContext) -> DataFrame:
         wfctx = self._get_workflow_context(ctx)
-        return self._checkpoint.run(df, wfctx.checkpoint_path)
+        return self._execute_with_modified_traceback(
+            lambda: self._checkpoint.run(df, wfctx.checkpoint_path)
+        )
 
     def _handle_broadcast(self, df: DataFrame, ctx: TaskContext) -> DataFrame:
         if not self._broadcast:
             return df
-        return self._get_execution_engine(ctx).broadcast(df)
+        return self._execute_with_modified_traceback(
+            lambda: self._get_execution_engine(ctx).broadcast(df)
+        )
 
     def _get_dependency_uuid(self) -> Any:
         # TODO: this should be a part of adagio!!
@@ -159,6 +175,20 @@ class FugueTask(TaskSpec, ABC):
             values.append(task.__uuid__())
         self._dependency_uuid = to_uuid(values)
         return self._dependency_uuid
+
+    def _execute_with_modified_traceback(self, func: Callable) -> Any:
+        try:
+            return func()
+        except Exception as ex:
+            if self._traceback is None:  # pragma: no cover
+                raise
+            # add caller traceback
+            ctb = modify_traceback(
+                sys.exc_info()[2].tb_next, None, self._traceback  # type: ignore
+            )
+            if ctb is None:  # pragma: no cover
+                raise
+            raise ex.with_traceback(ctb)
 
 
 class CreateData(FugueTask):
@@ -202,7 +232,9 @@ class CreateData(FugueTask):
     @no_type_check
     def execute(self, ctx: TaskContext) -> None:
         e = self._get_execution_engine(ctx)
-        df = e.to_df(self._data, self._schema, self._metadata)
+        df = self._execute_with_modified_traceback(
+            lambda: e.to_df(self._data, self._schema, self._metadata)
+        )
         df = self.set_result(ctx, df)
         ctx.outputs["_0"] = df
 
@@ -244,7 +276,7 @@ class Create(FugueTask):
     def execute(self, ctx: TaskContext) -> None:
         e = self._get_execution_engine(ctx)
         self._creator._execution_engine = e
-        df = self._creator.create()
+        df = self._execute_with_modified_traceback(lambda: self._creator.create())
         df = self.set_result(ctx, df)
         ctx.outputs["_0"] = df
 
@@ -292,8 +324,12 @@ class Process(FugueTask):
             inputs = DataFrames(ctx.inputs)
         else:
             inputs = DataFrames(ctx.inputs.values())
-        self._processor.validate_on_runtime(inputs)
-        df = self._processor.process(inputs)
+
+        def exe() -> Any:
+            self._processor.validate_on_runtime(inputs)
+            return self._processor.process(inputs)
+
+        df = self._execute_with_modified_traceback(exe)
         df = self.set_result(ctx, df)
         ctx.outputs["_0"] = df
 
@@ -340,7 +376,11 @@ class Output(FugueTask):
             inputs = DataFrames(ctx.inputs)
         else:
             inputs = DataFrames(ctx.inputs.values())
-        self._outputter.validate_on_runtime(inputs)
-        self._outputter.process(inputs)
+
+        def exe():
+            self._outputter.validate_on_runtime(inputs)
+            self._outputter.process(inputs)
+
+        self._execute_with_modified_traceback(exe)
         # TODO: output dummy to force cache to work, should we fix adagio?
         ctx.outputs["_0"] = ArrayDataFrame([], "_0:int")

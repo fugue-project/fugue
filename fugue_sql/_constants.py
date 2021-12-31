@@ -1,17 +1,1 @@
-from typing import Any, Dict, Set
-
-from fugue.constants import FUGUE_CONF_SQL_IGNORE_CASE
-
-FUGUE_SQL_CONF_SIMPLE_ASSIGN = "fugue.sql.compile.simple_assign"
-
-FUGUE_SQL_DEFAULT_CONF: Dict[str, Any] = {
-    FUGUE_CONF_SQL_IGNORE_CASE: False,
-    FUGUE_SQL_CONF_SIMPLE_ASSIGN: True,
-}
-
-FUGUE_SQL_COMPILE_TIME_CONF_KEYS: Set[str] = {
-    FUGUE_CONF_SQL_IGNORE_CASE,
-    FUGUE_SQL_CONF_SIMPLE_ASSIGN,
-}
-
 _FUGUE_SQL_CASE_ISSUE_THREHOLD = 0.8

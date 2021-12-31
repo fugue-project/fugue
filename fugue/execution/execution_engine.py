@@ -134,7 +134,8 @@ class ExecutionEngine(ABC):
 
     @property
     def compile_conf(self) -> ParamDict:
-        """Compiled time (workflow level) configurations
+        """Compiled time (workflow level) configurations, it is always a
+        superset of conf
 
         .. note::
 

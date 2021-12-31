@@ -51,6 +51,10 @@ class _ExecutionEngineFactory(object):
     def make_execution_engine(
         self, engine: Any = None, conf: Any = None, **kwargs: Any
     ) -> ExecutionEngine:
+        # Apply this function to an Execution Engine instance can
+        # make sure the compile conf is a superset of conf
+        # TODO: it's a mess here, can we make the logic more intuitive?
+
         def make_engine(engine: Any) -> ExecutionEngine:
             if isinstance(engine, str) and engine in self._funcs:
                 return self._funcs[engine](conf, **kwargs)
@@ -67,7 +71,9 @@ class _ExecutionEngineFactory(object):
             )
 
         result = make_engine(engine or "")
-        result.compile_conf.update(result.conf)
+        for k, v in result.conf.items():
+            if k not in result.compile_conf:
+                result.compile_conf[k] = v
         result.compile_conf.update(conf)
         result.compile_conf.update(kwargs)
         return result

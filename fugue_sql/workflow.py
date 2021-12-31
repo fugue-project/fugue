@@ -1,5 +1,5 @@
 from builtins import isinstance
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
 from fugue import (
     DataFrame,
@@ -8,18 +8,11 @@ from fugue import (
     WorkflowDataFrames,
     Yielded,
 )
+from fugue.constants import FUGUE_CONF_SQL_IGNORE_CASE
 from fugue.workflow import is_acceptable_raw_df
-from fugue.workflow._workflow_context import FugueWorkflowContext
-from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars
 
-from fugue_sql._constants import (
-    FUGUE_CONF_SQL_IGNORE_CASE,
-    FUGUE_SQL_COMPILE_TIME_CONF_KEYS,
-    FUGUE_SQL_CONF_SIMPLE_ASSIGN,
-    FUGUE_SQL_DEFAULT_CONF,
-)
 from fugue_sql._parse import FugueSQL
 from fugue_sql._utils import LazyWorkflowDataFrame, fill_sql_template
 from fugue_sql._visitors import FugueSQLHooks, _Extensions
@@ -29,30 +22,8 @@ class FugueSQLWorkflow(FugueWorkflow):
     """Fugue workflow that supports Fugue SQL. Please read |FugueSQLTutorial|."""
 
     def __init__(self, *args: Any, **kwargs: Any):
-        new_args: List[Any] = []
-        compile_conf: Dict[str, Any] = {}
-        for arg in args:
-            if isinstance(arg, dict):
-                x = dict(arg)
-                for k in FUGUE_SQL_COMPILE_TIME_CONF_KEYS:
-                    if k in x:
-                        compile_conf[k] = x[k]
-                        if k != FUGUE_CONF_SQL_IGNORE_CASE:
-                            del x[k]
-                new_args.append(x)
-            else:
-                new_args.append(arg)
-
-        self._compile_conf = compile_conf
-        super().__init__(*new_args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._sql_vars: Dict[str, WorkflowDataFrame] = {}
-        self._sql_conf = ParamDict(
-            {**FUGUE_SQL_DEFAULT_CONF, **compile_conf, **super().conf}
-        )
-
-    @property
-    def conf(self) -> ParamDict:
-        return self._sql_conf
 
     @property
     def sql_vars(self) -> Dict[str, WorkflowDataFrame]:
@@ -84,7 +55,7 @@ class FugueSQLWorkflow(FugueWorkflow):
             code,
             "fugueLanguage",
             ignore_case=self.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool),
-            simple_assign=self.conf.get_or_throw(FUGUE_SQL_CONF_SIMPLE_ASSIGN, bool),
+            simple_assign=True,
         )
         v = _Extensions(
             sql, FugueSQLHooks(), self, dfs, local_vars=params  # type: ignore
@@ -105,11 +76,6 @@ class FugueSQLWorkflow(FugueWorkflow):
             else:
                 p[k] = v
         return p, dfs
-
-    def _to_ctx(self, *args: Any, **kwargs) -> FugueWorkflowContext:
-        ctx = super()._to_ctx(*args, **kwargs)
-        ctx.execution_engine.compile_conf.update(self._compile_conf)
-        return ctx
 
 
 def fsql(

@@ -43,7 +43,7 @@ class FugueWorkflowContext(WorkflowContext):
             engine=workflow_engine,
             hooks=hooks,
             logger=ee.log,
-            config=ee.conf,
+            config=ee.compile_conf,
         )
 
     def run(self, spec: WorkflowSpec, conf: Dict[str, Any]) -> None:

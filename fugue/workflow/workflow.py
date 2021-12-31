@@ -1,9 +1,11 @@
+import sys
 from collections import defaultdict
 from threading import RLock
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar, Union
 from uuid import uuid4
 
 from adagio.specs import WorkflowSpec
+from fugue._utils.exception import modify_traceback
 from fugue.collections.partition import PartitionSpec
 from fugue.collections.yielded import Yielded
 from fugue.column import ColumnExpr
@@ -12,6 +14,10 @@ from fugue.column import col, lit
 from fugue.constants import (
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE,
+    FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
+    FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT,
+    FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE,
+    FUGUE_COMPILE_TIME_CONFIGS,
 )
 from fugue.dataframe import DataFrame, YieldedDataFrame
 from fugue.dataframe.dataframes import DataFrames
@@ -1426,13 +1432,18 @@ class FugueWorkflow(object):
         self._computed = False
         self._graph = _Graph()
         self._yields: Dict[str, Yielded] = {}
+        self._compile_conf = {
+            k: v
+            for k, v in self._workflow_ctx.execution_engine.compile_conf.items()
+            if k in FUGUE_COMPILE_TIME_CONFIGS
+        }
 
     @property
     def conf(self) -> ParamDict:
         """All configs of this workflow and underlying
         :class:`~fugue.execution.execution_engine.ExecutionEngine` (if given)
         """
-        return self._workflow_ctx.conf
+        return self._workflow_ctx.execution_engine.compile_conf
 
     def spec_uuid(self) -> str:
         """UUID of the workflow spec (`description`)"""
@@ -1471,7 +1482,31 @@ class FugueWorkflow(object):
             self._computed = False
             if len(args) > 0 or len(kwargs) > 0:
                 self._workflow_ctx = self._to_ctx(*args, **kwargs)
-            self._workflow_ctx.run(self._spec, {})
+                self._workflow_ctx.execution_engine.compile_conf.update(
+                    self._compile_conf
+                )
+            try:
+                self._workflow_ctx.run(self._spec, {})
+            except Exception as ex:
+                if not self._workflow_ctx.execution_engine.conf.get_or_throw(
+                    FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE, bool
+                ):
+                    raise
+                conf = self._workflow_ctx.execution_engine.conf.get_or_throw(
+                    FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str
+                )
+                pre = [p for p in conf.split(",") if p != ""]
+                if len(pre) == 0:
+                    raise
+
+                # prune by prefix
+                ctb = modify_traceback(
+                    sys.exc_info()[2],
+                    lambda x: any(x.lower().startswith(xx) for xx in pre),
+                )
+                if ctb is None:  # pragma: no cover
+                    raise
+                raise ex.with_traceback(ctb)
             self._computed = True
         return DataFrames(
             {
@@ -2077,6 +2112,15 @@ class FugueWorkflow(object):
         """This method should not be called directly by users. Use
         :meth:`~.create`, :meth:`~.process`, :meth:`~.output` instead
         """
+        if self.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE, bool):
+            dep = self.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT, int)
+            if dep > 0:
+                conf = self.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str)
+                pre = [p for p in conf.split(",") if p != ""]
+                task.reset_traceback(
+                    limit=dep,
+                    should_prune=lambda x: any(x.lower().startswith(xx) for xx in pre),
+                )
         assert_or_throw(task._node_spec is None, lambda: f"can't reuse {task}")
         dep = _Dependencies(self, task, {}, *args, **kwargs)
         name = "_" + str(len(self._spec.tasks))
@@ -2096,6 +2140,7 @@ class FugueWorkflow(object):
                         ),
                     )
                 )
+
         return WorkflowDataFrame(self, wt)
 
     def _to_dfs(self, *args: Any, **kwargs: Any) -> DataFrames:

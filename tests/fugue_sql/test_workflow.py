@@ -13,22 +13,20 @@ from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
 
 
 def test_workflow_conf():
-    dag = FugueSQLWorkflow(
-        NativeExecutionEngine({"x": 10, "fugue.sql.compile.simple_assign": "false"})
-    )
+    dag = FugueSQLWorkflow(NativeExecutionEngine({"x": 10}))
     assert 10 == dag.conf.get_or_throw("x", int)
-    assert not dag.conf.get_or_throw("fugue.sql.compile.simple_assign", bool)
     assert not dag.conf.get_or_throw("fugue.sql.compile.ignore_case", bool)
 
     dag = FugueSQLWorkflow(
-        NativeExecutionEngine({"x": 10}),
-        {
-            "fugue.sql.compile.ignore_case": "true",
-            "fugue.sql.compile.simple_assign": "false",
-        },
+        NativeExecutionEngine({"x": 10, "fugue.sql.compile.ignore_case": True})
     )
     assert 10 == dag.conf.get_or_throw("x", int)
-    assert not dag.conf.get_or_throw("fugue.sql.compile.simple_assign", bool)
+    assert dag.conf.get_or_throw("fugue.sql.compile.ignore_case", bool)
+
+    dag = FugueSQLWorkflow(
+        NativeExecutionEngine({"x": 10}), {"fugue.sql.compile.ignore_case": "true"}
+    )
+    assert 10 == dag.conf.get_or_throw("x", int)
     assert dag.conf.get_or_throw("fugue.sql.compile.ignore_case", bool)
 
 
