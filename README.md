@@ -191,16 +191,16 @@ View some of our latest conferences presentations and content. For a more comple
 
 ### Blogs
 
-*   [Fugue: Reducing Spark Developer Friction (James Le, Aug 2021)](https://jameskle.com/writes/fugue)
-*   [Data Analysis with FugueSQL on Coiled Dask Clusters (Coiled Blog, May 2021)](https://coiled.io/blog/data-analysis-with-fuguesql-on-coiled-dask-clusters/)
-*   [Interoperable Python and SQL in Jupyter Notebooks (Towards Data Science, Mar 2021)](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
-*   [Using Pandera on Spark for Data Validation through Fugue (Towards Data Science, May 2021)](https://towardsdatascience.com/using-pandera-on-spark-for-data-validation-through-fugue-72956f274793)
+*   [Fugue: Reducing Spark Developer Friction (James Le)](https://jameskle.com/writes/fugue)
+*   [Introducing FugueSQL — SQL for Pandas, Spark, and Dask DataFrames (Towards Data Science by Khuyen Tran)](https://towardsdatascience.com/introducing-fuguesql-sql-for-pandas-spark-and-dask-dataframes-63d461a16b27)
+*   [Interoperable Python and SQL in Jupyter Notebooks (Towards Data Science)](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
+*   [Using Pandera on Spark for Data Validation through Fugue (Towards Data Science)](https://towardsdatascience.com/using-pandera-on-spark-for-data-validation-through-fugue-72956f274793)
 
 ### Conferences
 
-*   [Fugue: Unifying Spark and Non-Spark Ecosystems for Big Data Analytics (Spark + AI Summit 2020)](https://www.youtube.com/watch?v=BBd4b2pMk0c)
 *   [Large Scale Data Validation with Spark and Dask (PyCon US 2021)](https://www.youtube.com/watch?v=2AdvBgjO_3Q)
 *   [Dask SQL Query Engines (Dask Summit 2021)](https://www.youtube.com/watch?v=bQDN41Bc3bw)
+*   [Scaling Machine Learning Workflows to Big Data with Fugue (KubeCon 2021)](https://www.youtube.com/watch?v=fDIRMiwc0aA)
 
 ## Community and Contributing
 
