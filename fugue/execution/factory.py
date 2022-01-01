@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, Optional, Type, Union
 from fugue.execution.execution_engine import ExecutionEngine, SQLEngine
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from triad.utils.convert import to_instance
-from triad import assert_or_throw
+from triad import assert_or_throw, ParamDict
 
 
 class _ExecutionEngineFactory(object):
@@ -71,11 +71,9 @@ class _ExecutionEngineFactory(object):
             )
 
         result = make_engine(engine or "")
-        for k, v in result.conf.items():
-            if k not in result.compile_conf:
-                result.compile_conf[k] = v
-        result.compile_conf.update(conf)
-        result.compile_conf.update(kwargs)
+        result.compile_conf.update(result.conf, on_dup=ParamDict.IGNORE)
+        result.compile_conf.update(conf, on_dup=ParamDict.OVERWRITE)
+        result.compile_conf.update(kwargs, on_dup=ParamDict.OVERWRITE)
         return result
 
     def make_sql_engine(

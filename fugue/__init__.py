@@ -5,6 +5,7 @@ from triad.collections.fs import FileSystem
 
 from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.collections.yielded import Yielded, YieldedFile
+from fugue.constants import register_global_conf
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.arrow_dataframe import ArrowDataFrame
 from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, LocalDataFrame

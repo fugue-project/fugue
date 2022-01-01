@@ -11,7 +11,10 @@ from triad import extension_method
 
 
 def module(
-    func: Optional[Callable] = None, as_method: bool = False, name: Optional[str] = None
+    func: Optional[Callable] = None,
+    as_method: bool = False,
+    name: Optional[str] = None,
+    on_dup: str = "overwrite",
 ) -> Any:
     """Decorator for module
 
@@ -19,11 +22,11 @@ def module(
     """
 
     if func is None:  # @module(...)
-        return lambda func: module(func, as_method=as_method, name=name)
+        return lambda func: module(func, as_method=as_method, name=name, on_dup=on_dup)
     # @module
     res = _ModuleFunctionWrapper(func)
     if as_method:
-        extension_method(func, name=name)
+        extension_method(func, name=name, on_dup=on_dup)
     return res
 
 
