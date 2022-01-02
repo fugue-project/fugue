@@ -11,6 +11,7 @@ from typing import (
     Union,
     no_type_check,
 )
+from antlr4 import ParserRuleContext
 
 import pyarrow as pa
 from antlr4.Token import CommonToken
@@ -43,7 +44,11 @@ from fugue_sql._antlr import FugueSQLParser as fp
 from fugue_sql._antlr import FugueSQLVisitor
 from fugue_sql._parse import FugueSQL, _to_tokens
 from fugue_sql._utils import LazyWorkflowDataFrame
-from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
+from fugue_sql.exceptions import (
+    FugueSQLError,
+    FugueSQLRuntimeError,
+    FugueSQLSyntaxError,
+)
 
 
 class FugueSQLHooks(object):
@@ -79,6 +84,11 @@ class _VisitorBase(FugueSQLVisitor):
         else:
             tokens = _to_tokens(node)
         return delimit.join([self.sql.raw_code[t.start : t.stop + 1] for t in tokens])
+
+    def to_runtime_error(self, ctx: ParserRuleContext) -> Exception:
+        interval = ctx.getSourceInterval()
+        msg = "\n" + self.sql.get_raw_lines(interval[0], interval[1], add_lineno=True)
+        return FugueSQLRuntimeError(msg)
 
     @no_type_check
     def to_kv(self, ctx: Tree) -> Tuple[Any, Any]:
@@ -430,7 +440,8 @@ class _Extensions(_VisitorBase):
             global_vars=self.global_vars,
             local_vars=self.local_vars,
         )
-        # ignore errors is not implemented
+        __modified_exception__ = self.to_runtime_error(ctx)  # noqa
+        # TODO: ignore errors is not implemented
         return self.workflow.transform(
             data["dfs"],
             using=using,
@@ -452,7 +463,8 @@ class _Extensions(_VisitorBase):
             global_vars=self.global_vars,
             local_vars=self.local_vars,
         )
-        # ignore errors is not implemented
+        __modified_exception__ = self.to_runtime_error(ctx)  # noqa
+        # TODO: ignore errors is not implemented
         self.workflow.out_transform(
             data["dfs"],
             using=using,
@@ -476,6 +488,7 @@ class _Extensions(_VisitorBase):
             global_vars=self.global_vars,
             local_vars=self.local_vars,
         )
+        __modified_exception__ = self.to_runtime_error(ctx)  # noqa
         return self.workflow.process(
             data["dfs"],
             using=using,
@@ -492,12 +505,14 @@ class _Extensions(_VisitorBase):
             global_vars=self.global_vars,
             local_vars=self.local_vars,
         )
+        __modified_exception__ = self.to_runtime_error(ctx)  # noqa
         return self.workflow.create(using=using, params=p.get("params"))
 
     def visitFugueCreateDataTask(
         self, ctx: fp.FugueCreateDataTaskContext
     ) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "data", "schema")
+        __modified_exception__ = self.to_runtime_error(ctx)  # noqa
         return self.workflow.df(
             data["data"], schema=data["schema"], data_determiner=to_uuid
         )
@@ -505,6 +520,7 @@ class _Extensions(_VisitorBase):
     def visitFugueZipTask(self, ctx: fp.FugueZipTaskContext) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "dfs", "how")
         partition_spec = PartitionSpec(**self.get_dict(ctx, "by", "presort"))
+        __modified_exception__ = self.to_runtime_error(ctx)  # noqa
         # TODO: currently SQL does not support cache to file on ZIP
         return self.workflow.zip(
             data["dfs"], how=data.get("how", "inner"), partition=partition_spec
@@ -519,6 +535,7 @@ class _Extensions(_VisitorBase):
             global_vars=self.global_vars,
             local_vars=self.local_vars,
         )
+        __modified_exception__ = self.to_runtime_error(ctx)  # noqa
         self.workflow.output(
             data["dfs"],
             using=using,
@@ -537,6 +554,7 @@ class _Extensions(_VisitorBase):
             params["show_count"] = True
         if ctx.title is not None:
             params["title"] = eval(self.ctxToStr(ctx.title))
+        __modified_exception__ = self.to_runtime_error(ctx)  # noqa
         self.workflow.show(data["dfs"], **params)
 
     def visitFugueSaveTask(self, ctx: fp.FugueSaveTaskContext):
@@ -658,6 +676,7 @@ class _Extensions(_VisitorBase):
 
     def visitFugueLoadTask(self, ctx: fp.FugueLoadTaskContext) -> WorkflowDataFrame:
         data = self.get_dict(ctx, "fmt", "path", "params", "columns")
+        __modified_exception__ = self.to_runtime_error(ctx)  # noqa
         return self.workflow.load(
             path=data["path"],
             fmt=data.get("fmt", ""),
@@ -671,6 +690,7 @@ class _Extensions(_VisitorBase):
         if len(statements) == 1 and isinstance(statements[0], WorkflowDataFrame):
             df: Any = statements[0]
         else:
+            __modified_exception__ = self.to_runtime_error(ctx)  # noqa
             df = self.workflow.select(*statements)
         self._process_assignable(df, ctx)
 
@@ -732,12 +752,14 @@ class _Extensions(_VisitorBase):
 
         if ctx.fugueSqlEngine() is not None:
             engine, engine_params = self.visitFugueSqlEngine(ctx.fugueSqlEngine())
+            __modified_exception__ = self.to_runtime_error(ctx)  # noqa
             yield self.workflow.select(
                 get_sql(), sql_engine=engine, sql_engine_params=engine_params
             )
         elif ctx.ctes() is None:
             yield from self._get_query_elements(ctx)
         else:
+            __modified_exception__ = self.to_runtime_error(ctx)  # noqa
             yield self.workflow.select(get_sql())
 
     def visitOptionalFromClause(

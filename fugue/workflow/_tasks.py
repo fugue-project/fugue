@@ -5,7 +5,11 @@ from typing import Any, Callable, Iterable, List, Optional, no_type_check
 
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
-from fugue._utils.exception import frames_to_traceback, modify_traceback
+from fugue._utils.exception import (
+    frames_to_traceback,
+    modify_traceback,
+    _MODIFIED_EXCEPTION_VAR_NAME,
+)
 from fugue.collections.partition import PartitionSpec
 from fugue.collections.yielded import YieldedFile
 from fugue.dataframe import DataFrame, DataFrames
@@ -182,6 +186,12 @@ class FugueTask(TaskSpec, ABC):
         except Exception as ex:
             if self._traceback is None:  # pragma: no cover
                 raise
+
+            if _MODIFIED_EXCEPTION_VAR_NAME in self._traceback.tb_frame.f_locals:
+                raise ex from self._traceback.tb_frame.f_locals[
+                    _MODIFIED_EXCEPTION_VAR_NAME
+                ]
+
             # add caller traceback
             ctb = modify_traceback(
                 sys.exc_info()[2].tb_next, None, self._traceback  # type: ignore

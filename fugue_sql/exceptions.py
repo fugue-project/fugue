@@ -1,4 +1,4 @@
-from fugue.exceptions import FugueWorkflowCompileError
+from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowRuntimeError
 
 
 class FugueSQLError(FugueWorkflowCompileError):
@@ -7,3 +7,7 @@ class FugueSQLError(FugueWorkflowCompileError):
 
 class FugueSQLSyntaxError(FugueSQLError):
     """Fugue SQL syntax error"""
+
+
+class FugueSQLRuntimeError(FugueWorkflowRuntimeError):
+    """Fugue SQL runtime error"""

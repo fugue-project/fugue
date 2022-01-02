@@ -10,12 +10,12 @@ from fugue import (
 )
 from fugue.constants import FUGUE_CONF_SQL_IGNORE_CASE
 from fugue.workflow import is_acceptable_raw_df
-from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import get_caller_global_local_vars
-
 from fugue_sql._parse import FugueSQL
 from fugue_sql._utils import LazyWorkflowDataFrame, fill_sql_template
 from fugue_sql._visitors import FugueSQLHooks, _Extensions
+from fugue_sql.exceptions import FugueSQLSyntaxError
+from triad.utils.assertion import assert_or_throw
+from triad.utils.convert import get_caller_global_local_vars
 
 
 class FugueSQLWorkflow(FugueWorkflow):
@@ -181,5 +181,8 @@ def fsql(
     """
     global_vars, local_vars = get_caller_global_local_vars()
     dag = FugueSQLWorkflow(None, {FUGUE_CONF_SQL_IGNORE_CASE: fsql_ignore_case})
-    dag._sql(sql, global_vars, local_vars, *args, **kwargs)
+    try:
+        dag._sql(sql, global_vars, local_vars, *args, **kwargs)
+    except FugueSQLSyntaxError as ex:
+        raise FugueSQLSyntaxError(str(ex)).with_traceback(None) from None
     return dag

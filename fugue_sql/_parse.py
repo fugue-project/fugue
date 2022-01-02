@@ -21,14 +21,15 @@ class FugueSQL(object):
     ):
         self._rule = rule
         self._raw_code = code
+        self._raw_lines = code.splitlines()
         if ignore_case:
-            self._code, self._tree = _to_cased_code(
+            self._code, self._tree, self._stream = _to_cased_code(
                 code, rule, simple_assign=simple_assign, ansi_sql=ansi_sql
             )
         else:
             try:
                 self._code = code
-                self._tree = _to_tree(
+                self._tree, self._stream = _to_tree(
                     self._code,
                     self._rule,
                     False,
@@ -42,26 +43,42 @@ class FugueSQL(object):
                         f"To ignore casing, turn on {FUGUE_CONF_SQL_IGNORE_CASE})"
                     )
                     msg = prefix + "\n" + str(e)
-                    raise FugueSQLSyntaxError(msg) from e
+                    raise FugueSQLSyntaxError(msg).with_traceback(None) from None
                 else:
-                    raise
+                    raise FugueSQLSyntaxError(str(e)) from None
 
     @property
-    def raw_code(self):  # pragma: no cover
+    def raw_code(self) -> str:  # pragma: no cover
         return self._raw_code
 
     @property
-    def code(self):  # pragma: no cover
+    def code(self) -> str:  # pragma: no cover
         return self._code
 
     @property
     def tree(self) -> Tree:  # pragma: no cover
         return self._tree
 
+    @property
+    def stream(self) -> CommonTokenStream:  # pragma: no cover
+        return self._stream
+
+    def get_raw_lines(
+        self, token_start: int, token_stop: int, add_lineno: bool = True
+    ) -> str:
+        start = self.stream.get(token_start).line
+        end = self.stream.get(token_stop).line
+        lines: List[str] = []
+        while start <= end:
+            prefix = "" if not add_lineno else f"{start}:\t"
+            lines.append(prefix + self._raw_lines[start - 1])
+            start += 1
+        return "\n".join(lines)
+
 
 def _to_tree(
     code: str, rule: str, all_upper_case: bool, simple_assign: bool, ansi_sql: bool
-) -> Tree:
+) -> Tuple[Tree, CommonTokenStream]:
     input_stream = InputStream(code)
     lexer = FugueSQLLexer(input_stream)
     lexer._all_upper_case = all_upper_case
@@ -73,13 +90,13 @@ def _to_tree(
     parser._simple_assign = simple_assign
     parser._ansi_sql = ansi_sql
     parser.addErrorListener(_ErrorListener(code.splitlines()))
-    return getattr(parser, rule)()  # validate syntax
+    return getattr(parser, rule)(), stream  # validate syntax
 
 
 def _to_cased_code(
     code: str, rule: str, simple_assign: bool, ansi_sql: bool
-) -> Tuple[str, Tree]:
-    tree = _to_tree(
+) -> Tuple[str, Tree, CommonTokenStream]:
+    tree, stream = _to_tree(
         code.upper(), rule, True, simple_assign=simple_assign, ansi_sql=ansi_sql
     )
     tokens = [t for t in _to_tokens(tree) if _is_keyword(t)]
@@ -92,7 +109,7 @@ def _to_cased_code(
         start = t.stop + 1
     if start < len(code):
         cased_code.append(code[start:])
-    return "".join(cased_code), tree
+    return "".join(cased_code), tree, stream
 
 
 def _to_tokens(node: Tree) -> Iterable[Token]:
