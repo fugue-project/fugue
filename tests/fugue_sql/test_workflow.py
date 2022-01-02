@@ -365,6 +365,11 @@ def test_fsql():
     assert [[1, 1], [1, 1]] == result["result"].as_array()
 
 
+def test_fsql_syntax_error():
+    with raises(FugueSQLSyntaxError):
+        fsql("""CREATEE [[0]] SCHEMA a:int""")
+
+
 def _eq(dag, a):
     dag(
         """

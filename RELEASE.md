@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.6.5
+
+-   Make Fugue exceptions [short and useful](https://github.com/fugue-project/fugue/issues/277)
+-   Ibis [integration](https://github.com/fugue-project/fugue/issues/272) (experimental)
+-   Get rid of [simple assignment](https://github.com/fugue-project/fugue/issues/276) (not used at all)
+
 ## 0.6.4
 
 -   Add an [option](https://github.com/fugue-project/fugue/issues/267) to transform to turn off native dataframe output
