@@ -1,9 +1,11 @@
+import sys
 from collections import defaultdict
 from threading import RLock
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar, Union
 from uuid import uuid4
 
 from adagio.specs import WorkflowSpec
+from fugue._utils.exception import modify_traceback
 from fugue.collections.partition import PartitionSpec
 from fugue.collections.yielded import Yielded
 from fugue.column import ColumnExpr
@@ -12,6 +14,10 @@ from fugue.column import col, lit
 from fugue.constants import (
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE,
+    FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
+    FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT,
+    FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE,
+    FUGUE_COMPILE_TIME_CONFIGS,
 )
 from fugue.dataframe import DataFrame, YieldedDataFrame
 from fugue.dataframe.dataframes import DataFrames
@@ -59,13 +65,14 @@ from fugue.rpc.base import EmptyRPCHandler
 from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, CreateData, FugueTask, Output, Process
 from fugue.workflow._workflow_context import FugueWorkflowContext
-from triad import ParamDict, Schema, assert_or_throw
+from triad import ParamDict, Schema, assert_or_throw, extensible_class
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
 TDF = TypeVar("TDF", bound="WorkflowDataFrame")
 
 
+@extensible_class
 class WorkflowDataFrame(DataFrame):
     """It represents the edges in the graph constructed by :class:`~.FugueWorkflow`.
     In Fugue, we use DAG to represent workflows, and the edges are strictly
@@ -1399,7 +1406,12 @@ class WorkflowDataFrames(DataFrames):
     ) -> WorkflowDataFrame:
         return super().__getitem__(key)  # type: ignore
 
+    def __getattr__(self, name: str) -> Any:  # pragma: no cover
+        """The dummy method to avoid PyLint complaint"""
+        raise AttributeError(name)
 
+
+@extensible_class
 class FugueWorkflow(object):
     """Fugue Workflow, also known as the Fugue Programming Interface.
 
@@ -1420,13 +1432,18 @@ class FugueWorkflow(object):
         self._computed = False
         self._graph = _Graph()
         self._yields: Dict[str, Yielded] = {}
+        self._compile_conf = {
+            k: v
+            for k, v in self._workflow_ctx.execution_engine.compile_conf.items()
+            if k in FUGUE_COMPILE_TIME_CONFIGS
+        }
 
     @property
     def conf(self) -> ParamDict:
         """All configs of this workflow and underlying
         :class:`~fugue.execution.execution_engine.ExecutionEngine` (if given)
         """
-        return self._workflow_ctx.conf
+        return self._workflow_ctx.execution_engine.compile_conf
 
     def spec_uuid(self) -> str:
         """UUID of the workflow spec (`description`)"""
@@ -1465,7 +1482,31 @@ class FugueWorkflow(object):
             self._computed = False
             if len(args) > 0 or len(kwargs) > 0:
                 self._workflow_ctx = self._to_ctx(*args, **kwargs)
-            self._workflow_ctx.run(self._spec, {})
+                self._workflow_ctx.execution_engine.compile_conf.update(
+                    self._compile_conf
+                )
+            try:
+                self._workflow_ctx.run(self._spec, {})
+            except Exception as ex:
+                if not self._workflow_ctx.execution_engine.conf.get_or_throw(
+                    FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE, bool
+                ) or sys.version_info < (3, 7):
+                    raise
+                conf = self._workflow_ctx.execution_engine.conf.get_or_throw(
+                    FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str
+                )
+                pre = [p for p in conf.split(",") if p != ""]
+                if len(pre) == 0:
+                    raise
+
+                # prune by prefix
+                ctb = modify_traceback(
+                    sys.exc_info()[2],
+                    lambda x: any(x.lower().startswith(xx) for xx in pre),
+                )
+                if ctb is None:  # pragma: no cover
+                    raise
+                raise ex.with_traceback(ctb)
             self._computed = True
         return DataFrames(
             {
@@ -2071,6 +2112,17 @@ class FugueWorkflow(object):
         """This method should not be called directly by users. Use
         :meth:`~.create`, :meth:`~.process`, :meth:`~.output` instead
         """
+        if self.conf.get_or_throw(
+            FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE, bool
+        ) and sys.version_info >= (3, 7):
+            dep = self.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT, int)
+            if dep > 0:
+                conf = self.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str)
+                pre = [p for p in conf.split(",") if p != ""]
+                task.reset_traceback(
+                    limit=dep,
+                    should_prune=lambda x: any(x.lower().startswith(xx) for xx in pre),
+                )
         assert_or_throw(task._node_spec is None, lambda: f"can't reuse {task}")
         dep = _Dependencies(self, task, {}, *args, **kwargs)
         name = "_" + str(len(self._spec.tasks))
@@ -2090,6 +2142,7 @@ class FugueWorkflow(object):
                         ),
                     )
                 )
+
         return WorkflowDataFrame(self, wt)
 
     def _to_dfs(self, *args: Any, **kwargs: Any) -> DataFrames:
@@ -2099,6 +2152,10 @@ class FugueWorkflow(object):
         if len(args) == 1 and isinstance(args[0], FugueWorkflowContext):
             return args[0]
         return FugueWorkflowContext(make_execution_engine(*args, **kwargs))
+
+    def __getattr__(self, name: str) -> Any:  # pragma: no cover
+        """The dummy method to avoid PyLint complaint"""
+        raise AttributeError(name)
 
 
 class _Dependencies(object):

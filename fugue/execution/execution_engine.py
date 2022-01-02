@@ -9,7 +9,7 @@ from fugue.collections.partition import (
     PartitionSpec,
 )
 from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col, is_agg
-from fugue.constants import FUGUE_DEFAULT_CONF
+from fugue.constants import _FUGUE_GLOBAL_CONF
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
@@ -67,7 +67,7 @@ class SQLEngine(ABC):
 class ExecutionEngine(ABC):
     """The abstract base class for execution engines.
     It is the layer that unifies core concepts of distributed computing,
-    and separates the underlying computing frameworks from user’s higher level logic.
+    and separates the underlying computing frameworks from user's higher level logic.
 
     Please read |ExecutionEngineTutorial|
     to understand this most important Fugue concept
@@ -79,7 +79,7 @@ class ExecutionEngine(ABC):
 
     def __init__(self, conf: Any):
         _conf = ParamDict(conf)
-        self._conf = ParamDict({**FUGUE_DEFAULT_CONF, **_conf})
+        self._conf = ParamDict({**_FUGUE_GLOBAL_CONF, **_conf})
         self._compile_conf = ParamDict()
         self._rpc_server = make_rpc_server(self.conf)
         self._engine_start_lock = RLock()
@@ -134,7 +134,8 @@ class ExecutionEngine(ABC):
 
     @property
     def compile_conf(self) -> ParamDict:
-        """Compiled time (workflow level) configurations
+        """Compiled time (workflow level) configurations, it is always a
+        superset of conf
 
         .. note::
 

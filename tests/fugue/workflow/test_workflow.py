@@ -1,22 +1,28 @@
 import copy
-from random import randint, seed
+from random import randint
 from typing import Any, Dict, Iterable, List
 
 import pandas as pd
-from adagio.instances import WorkflowContext, WorkflowResultCache
+from adagio.instances import WorkflowResultCache
+from fugue import (
+    ArrayDataFrame,
+    DataFrame,
+    ExecutionEngine,
+    FugueWorkflow,
+    WorkflowDataFrames,
+)
 from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import DataFrame
-from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue.constants import (
+    FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH,
+    FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
+)
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
+from fugue.exceptions import FugueWorkflowCompileError
 from fugue.execution import NativeExecutionEngine
 from fugue.extensions.transformer.convert import transformer
 from fugue.workflow._workflow_context import FugueWorkflowContext
-from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrames
 from pytest import raises
-from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
-from fugue.constants import FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH
 
 
 def test_worflow_dataframes():
@@ -40,11 +46,20 @@ def test_worflow_dataframes():
         WorkflowDataFrames(a=df1, b=ArrayDataFrame([[0]], "a:int"))
 
     dag = FugueWorkflow()
-    df = dag.df([[0], [1]], "a:int")
+    df = dag.df([[0, 1], [1, 1]], "a:int,b:int")
     assert df.partition_spec.empty
     df2 = df.partition(by=["a"])
     assert df.partition_spec.empty
     assert df2.partition_spec == PartitionSpec(by=["a"])
+    df3 = df.partition_by("a", "b")
+    assert df.partition_spec.empty
+    assert df3.partition_spec == PartitionSpec(by=["a", "b"])
+    df4 = df.per_partition_by("a", "b")
+    assert df.partition_spec.empty
+    assert df4.partition_spec == PartitionSpec(by=["a", "b"], algo="even")
+    df4 = df.per_row()
+    assert df.partition_spec.empty
+    assert df4.partition_spec == PartitionSpec("per_row")
 
 
 def test_workflow():
@@ -103,6 +118,33 @@ def test_yield(tmpdir):
     dag3.df(dag2.yields["y"]).transform(t).yield_dataframe_as("z")
     result = dag3.run()["z"]
     assert [[0, 3]] == result.as_array()
+
+
+def test_compile_conf():
+    def assert_conf(e: ExecutionEngine, **kwargs) -> pd.DataFrame:
+        for k, v in kwargs.items():
+            assert e.compile_conf[k] == v
+        return pd.DataFrame([[0]], columns=["a"])
+
+    dag = FugueWorkflow(conf={"a": 1})
+    dag.create(assert_conf, params=dict(a=1))
+
+    dag.run()
+
+    with raises(KeyError):  # non-compile time param doesn't keep in new engine
+        dag.run(NativeExecutionEngine())
+
+    dag = FugueWorkflow(conf={FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE: "abc"})
+    dag.create(assert_conf, params=dict({FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE: "abc"}))
+
+    dag.run()
+
+    # non-compile time param is kepts
+    dag.run(NativeExecutionEngine())
+
+    # non-compile time param can't be changed by new engines
+    # new engine compile conf will be overwritten
+    dag.run(NativeExecutionEngine({FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE: "def"}))
 
 
 class MockCache(WorkflowResultCache):

@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, Optional, Type, Union
 from fugue.execution.execution_engine import ExecutionEngine, SQLEngine
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from triad.utils.convert import to_instance
-from triad import assert_or_throw
+from triad import assert_or_throw, ParamDict
 
 
 class _ExecutionEngineFactory(object):
@@ -51,6 +51,10 @@ class _ExecutionEngineFactory(object):
     def make_execution_engine(
         self, engine: Any = None, conf: Any = None, **kwargs: Any
     ) -> ExecutionEngine:
+        # Apply this function to an Execution Engine instance can
+        # make sure the compile conf is a superset of conf
+        # TODO: it's a mess here, can we make the logic more intuitive?
+
         def make_engine(engine: Any) -> ExecutionEngine:
             if isinstance(engine, str) and engine in self._funcs:
                 return self._funcs[engine](conf, **kwargs)
@@ -67,9 +71,9 @@ class _ExecutionEngineFactory(object):
             )
 
         result = make_engine(engine or "")
-        result.compile_conf.update(result.conf)
-        result.compile_conf.update(conf)
-        result.compile_conf.update(kwargs)
+        result.compile_conf.update(result.conf, on_dup=ParamDict.IGNORE)
+        result.compile_conf.update(conf, on_dup=ParamDict.OVERWRITE)
+        result.compile_conf.update(kwargs, on_dup=ParamDict.OVERWRITE)
         return result
 
     def make_sql_engine(

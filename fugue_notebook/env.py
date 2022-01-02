@@ -13,6 +13,7 @@ from fugue import (
 )
 from fugue.dataframe import YieldedDataFrame
 from fugue.extensions._builtins.outputters import Show
+from fugue_sql.exceptions import FugueSQLSyntaxError
 from IPython.core.magic import Magics, cell_magic, magics_class, needs_local_scope
 from IPython.display import HTML, display
 from triad import ParamDict, Schema
@@ -80,7 +81,12 @@ class _FugueSQLMagics(Magics):
     @needs_local_scope
     @cell_magic("fsql")
     def fsql(self, line: str, cell: str, local_ns: Any = None) -> None:
-        dag = fugue_sql.fsql(cell, local_ns, fsql_ignore_case=self._fsql_ignore_case)
+        try:
+            dag = fugue_sql.fsql(
+                "\n" + cell, local_ns, fsql_ignore_case=self._fsql_ignore_case
+            )
+        except FugueSQLSyntaxError as ex:
+            raise FugueSQLSyntaxError(str(ex)).with_traceback(None) from None
         dag.run(self.get_engine(line, {} if local_ns is None else local_ns))
         for k, v in dag.yields.items():
             if isinstance(v, YieldedDataFrame):

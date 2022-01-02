@@ -1,6 +1,7 @@
 from typing import Any, List, Optional
 
 from fugue.collections.yielded import Yielded
+from fugue.constants import FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT
 from fugue.dataframe import DataFrame
 from fugue.workflow import FugueWorkflow
 
@@ -61,7 +62,7 @@ def transform(
 
       This function may be lazy and return the transformed dataframe.
     """
-    dag = FugueWorkflow()
+    dag = FugueWorkflow(conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
     dag.df(df).transform(
         using=using,
         schema=schema,
@@ -118,7 +119,7 @@ def out_transform(
       This transformation is guaranteed to execute immediately (eager)
       and return nothing
     """
-    dag = FugueWorkflow()
+    dag = FugueWorkflow(conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
     dag.df(df).out_transform(
         using=using,
         params=params,

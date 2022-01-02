@@ -9,7 +9,7 @@ from adagio.instances import (
     WorkflowHooks,
 )
 from adagio.specs import WorkflowSpec
-from fugue.constants import FUGUE_CONF_WORKFLOW_CONCURRENCY, FUGUE_DEFAULT_CONF
+from fugue.constants import FUGUE_CONF_WORKFLOW_CONCURRENCY
 from fugue.dataframe import DataFrame
 from fugue.execution.execution_engine import ExecutionEngine
 from fugue.execution.factory import make_execution_engine
@@ -32,9 +32,8 @@ class FugueWorkflowContext(WorkflowContext):
         self._checkpoint_path = CheckpointPath(self.execution_engine)
         if workflow_engine is None:
             workflow_engine = ParallelExecutionEngine(
-                self.execution_engine.conf.get(
-                    FUGUE_CONF_WORKFLOW_CONCURRENCY,
-                    FUGUE_DEFAULT_CONF[FUGUE_CONF_WORKFLOW_CONCURRENCY],
+                self.execution_engine.conf.get_or_throw(
+                    FUGUE_CONF_WORKFLOW_CONCURRENCY, int
                 ),
                 self,
             )
@@ -43,7 +42,7 @@ class FugueWorkflowContext(WorkflowContext):
             engine=workflow_engine,
             hooks=hooks,
             logger=ee.log,
-            config=ee.conf,
+            config=ee.compile_conf,
         )
 
     def run(self, spec: WorkflowSpec, conf: Dict[str, Any]) -> None:
