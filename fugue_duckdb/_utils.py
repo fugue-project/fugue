@@ -66,9 +66,7 @@ def to_pa_type(duck_type: str) -> pa.DataType:
             return _DUCK_TYPES_TO_PA[duck_type]
         raise Exception
     except Exception:
-        raise ValueError(  # pylint: disable=raise-missing-from
-            f"{duck_type} is not supported"
-        )
+        raise ValueError(f"{duck_type} is not supported")
 
 
 def _split_comma(expr: str) -> Iterable[Tuple[str, str]]:
