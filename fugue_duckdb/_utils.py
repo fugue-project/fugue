@@ -36,9 +36,7 @@ def to_duck_type(tp: pa.DataType) -> str:
             return f"DECIMAL({tp.precision}, {tp.scale})"
         return _PA_TYPES_TO_DUCK[tp]
     except Exception:
-        raise ValueError(  # pylint: disable=raise-missing-from
-            f"can't convert {tp} to DuckDB data type"
-        )
+        raise ValueError(f"can't convert {tp} to DuckDB data type")
 
 
 def to_pa_type(duck_type: str) -> pa.DataType:
