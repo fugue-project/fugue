@@ -5,12 +5,12 @@ from fugue import FugueWorkflow, NativeExecutionEngine
 from fugue_ibis import IbisEngine, run_ibis
 from fugue_test.ibis_suite import IbisTests
 
-from fugue_duckdb import DuckDBIbisEngine, DuckExeuctionEngine
+from fugue_duckdb import DuckDBIbisEngine, DuckExecutionEngine
 
 
 class DuckDBIbisTests(IbisTests.Tests):
     def make_engine(self):
-        e = DuckExeuctionEngine(dict(test=True))
+        e = DuckExecutionEngine(dict(test=True))
         return e
 
     def make_ibis_engine(self) -> IbisEngine:

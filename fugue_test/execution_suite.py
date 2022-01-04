@@ -471,7 +471,7 @@ class ExecutionEngineTests(object):
             e = self.engine
 
             a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
-            b = e.to_df([["6", 1], ["2", 7]], "c:int,a:int")
+            b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
             c = e.join(a, b, how="left_OUTER", on=["a"], metadata=dict(a=1))
             df_eq(
                 c,

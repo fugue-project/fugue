@@ -26,6 +26,11 @@ def test_init():
     assert df.schema == "a:str,b:int"
     assert df.is_bounded
 
+    df = ArrowDataFrame(pd.DataFrame([], columns=["a", "b"]), schema="a:str,b:int")
+    assert df.empty
+    assert df.schema == "a:str,b:int"
+    assert df.is_bounded
+
     data = [["a", "1"], ["b", "2"]]
     df = ArrowDataFrame(data, "a:str,b:str")
     assert [["a", "1"], ["b", "2"]] == df.as_array(type_safe=True)
