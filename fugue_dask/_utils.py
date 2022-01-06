@@ -31,12 +31,9 @@ class DaskUtils(DaskUtilsBase):
         :param df: dask dataframe
         :return: if it is compatible
         """
-        return (
-            isinstance(
-                df.index,
-                (pandas.RangeIndex, pandas.Int64Index, pandas.UInt64Index, pd.Index),
-            )
-            or self.empty(df)
+        return isinstance(
+            df.index,
+            (pandas.RangeIndex, pandas.Int64Index, pandas.UInt64Index, pd.Index),
         )
 
     # TODO: merge this back to base class
@@ -56,8 +53,6 @@ class DaskUtils(DaskUtilsBase):
         no longer be `int64`
         This method does not enforce struct and list types
         """
-        if self.empty(df):
-            return df
         if not null_safe:
             return df.astype(dtype=to_pandas_dtype(schema))
         for v in schema:
