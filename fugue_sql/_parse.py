@@ -89,6 +89,7 @@ def _to_tree(
     parser._all_upper_case = all_upper_case
     parser._simple_assign = simple_assign
     parser._ansi_sql = ansi_sql
+    parser.removeErrorListeners()
     parser.addErrorListener(_ErrorListener(code.splitlines()))
     return getattr(parser, rule)(), stream  # validate syntax
 
