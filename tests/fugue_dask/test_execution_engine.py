@@ -114,8 +114,6 @@ def test_transform():
     assert 5 == res.count()
     assert 5 == cb.n
 
-    cb = CB()
-
     res = transform(
         pdf,
         tr,
@@ -125,3 +123,18 @@ def test_transform():
     )
     assert not res.is_local
     assert 5 == res.count()
+
+    cb = CB()
+
+    res = transform(
+        pdf,
+        tr,
+        schema="b:binary",
+        callback=cb.add,
+        force_output_fugue_dataframe=True,
+        engine="dask",
+        persist=True,  # when you have a persist, you can use callback
+    )
+    assert not res.is_local
+    assert 5 == res.count()
+    assert 5 == cb.n

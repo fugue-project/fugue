@@ -17,6 +17,7 @@ def transform(
     engine: Any = None,
     engine_conf: Any = None,
     force_output_fugue_dataframe: bool = False,
+    persist: bool = False,
     as_local: bool = False,
 ) -> Any:
     """Transform this dataframe using transformer. It's a wrapper of
@@ -52,6 +53,7 @@ def transform(
       a ``FugueDataFrame``, otherwise, if ``df`` is in native dataframe types such
       as pandas dataframe, then the output will also in its native format. Defaults
       to False
+    :param persist: Whether to persist(materialize) the dataframe before returning
     :param as_local: If true, the result will be converted to a ``LocalDataFrame``
 
     :return: the transformed dataframe, if ``df`` is a native dataframe (e.g.
@@ -63,16 +65,27 @@ def transform(
     .. note::
 
       This function may be lazy and return the transformed dataframe.
+
+    .. note::
+
+      When you use callback in this function, you must be careful that the output
+      dataframe must be materialized. Otherwise, if the real compute happens out of
+      the function call, the callback receiver is already shut down. To do that you
+      can either use ``persist`` or ``as_local``, both will materialize the dataframe
+      before the callback receiver shuts down.
     """
     dag = FugueWorkflow(conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
-    dag.df(df).transform(
+    tdf = dag.df(df).transform(
         using=using,
         schema=schema,
         params=params,
         pre_partition=partition,
         callback=callback,
         ignore_errors=ignore_errors or [],
-    ).yield_dataframe_as("result", as_local=as_local)
+    )
+    if persist:
+        tdf = tdf.persist()
+    tdf.yield_dataframe_as("result", as_local=as_local)
     result = dag.run(engine, conf=engine_conf)["result"]
     if force_output_fugue_dataframe or isinstance(df, (DataFrame, Yielded)):
         return result
