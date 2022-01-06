@@ -186,17 +186,17 @@ class DaskDataFrame(DataFrame):
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:
-        return list(self.as_array_iterable(columns, type_safe=type_safe))
+        df: DataFrame = self
+        if columns is not None:
+            df = df[columns]
+        return PandasDataFrame(df.as_pandas(), schema=df.schema).as_array(
+            type_safe=type_safe
+        )
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
-        return DASK_UTILS.as_array_iterable(
-            self.native,
-            schema=self.schema.pa_schema,
-            columns=columns,
-            type_safe=type_safe,
-        )
+        yield from self.as_array(columns=columns, type_safe=type_safe)
 
     def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
         """Get first n rows of the dataframe as 2-dimensional array
