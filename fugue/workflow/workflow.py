@@ -977,15 +977,24 @@ class WorkflowDataFrame(DataFrame):
             self.deterministic_checkpoint(namespace=str(uuid4()))
         self.workflow._yields[name] = self._task.yielded_file
 
-    def yield_dataframe_as(self: TDF, name: str) -> None:
+    def yield_dataframe_as(self: TDF, name: str, as_local: bool = False) -> None:
         """Yield a dataframe that can be accessed without
         the current execution engine
 
         :param name: the name of the yielded dataframe
+        :param as_local: yield the local version of the dataframe
+
+        .. note::
+
+            When ``as_local`` is True, it can trigger an additional compute
+            to do the conversion. To avoid recompute, you should add
+            ``persist`` before yielding.
         """
         yielded = YieldedDataFrame(self._task.__uuid__())
         self.workflow._yields[name] = yielded
-        self._task.set_yield_dataframe_handler(lambda df: yielded.set_value(df))
+        self._task.set_yield_dataframe_handler(
+            lambda df: yielded.set_value(df.as_local() if as_local else df)
+        )
 
     def persist(self: TDF) -> TDF:
         """Persist the current dataframe
