@@ -1,6 +1,6 @@
 import pickle
 from threading import RLock
-from typing import Any, List
+from typing import Any, List, Optional
 
 import dask.dataframe as dd
 import pandas as pd
@@ -95,8 +95,9 @@ def test_transform():
 
     cb = CB()
 
-    def tr(df: List[List[Any]], add: callable) -> List[List[Any]]:
-        add(len(df))
+    def tr(df: List[List[Any]], add: Optional[callable]) -> List[List[Any]]:
+        if add is not None:
+            add(len(df))
         return [[pickle.dumps(x[0])] for x in df]
 
     pdf = pd.DataFrame(dict(a=list(range(5))))
@@ -112,3 +113,15 @@ def test_transform():
     assert res.is_local
     assert 5 == res.count()
     assert 5 == cb.n
+
+    cb = CB()
+
+    res = transform(
+        pdf,
+        tr,
+        schema="b:binary",
+        force_output_fugue_dataframe=True,
+        engine="dask",
+    )
+    assert not res.is_local
+    assert 5 == res.count()
