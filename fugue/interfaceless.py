@@ -17,6 +17,7 @@ def transform(
     engine: Any = None,
     engine_conf: Any = None,
     force_output_fugue_dataframe: bool = False,
+    as_local: bool = False,
 ) -> Any:
     """Transform this dataframe using transformer. It's a wrapper of
     :meth:`~fugue.workflow.workflow.FugueWorkflow.transform` and
@@ -51,6 +52,7 @@ def transform(
       a ``FugueDataFrame``, otherwise, if ``df`` is in native dataframe types such
       as pandas dataframe, then the output will also in its native format. Defaults
       to False
+    :param as_local: If true, the result will be converted to a ``LocalDataFrame``
 
     :return: the transformed dataframe, if ``df`` is a native dataframe (e.g.
       pd.DataFrame, spark dataframe, etc), the output will be a native dataframe,
@@ -70,7 +72,7 @@ def transform(
         pre_partition=partition,
         callback=callback,
         ignore_errors=ignore_errors or [],
-    ).yield_dataframe_as("result")
+    ).yield_dataframe_as("result", as_local=as_local)
     result = dag.run(engine, conf=engine_conf)["result"]
     if force_output_fugue_dataframe or isinstance(df, (DataFrame, Yielded)):
         return result

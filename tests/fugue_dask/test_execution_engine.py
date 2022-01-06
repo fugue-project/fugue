@@ -1,5 +1,10 @@
+import pickle
+from threading import RLock
+from typing import Any, List
+
 import dask.dataframe as dd
 import pandas as pd
+from fugue import transform
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -64,9 +69,7 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
 
     def test_annotation(self):
         def m_c(engine: DaskExecutionEngine) -> dd.DataFrame:
-            return dd.from_pandas(
-                pd.DataFrame([[0]], columns=["a"]), npartitions=2
-            )
+            return dd.from_pandas(pd.DataFrame([[0]], columns=["a"]), npartitions=2)
 
         def m_p(engine: DaskExecutionEngine, df: dd.DataFrame) -> dd.DataFrame:
             return df
@@ -78,3 +81,34 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
             df = dag.create(m_c).process(m_p)
             df.assert_eq(dag.df([[0]], "a:long"))
             df.output(m_o)
+
+
+def test_transform():
+    class CB:
+        def __init__(self):
+            self._lock = RLock()
+            self.n = 0
+
+        def add(self, n):
+            with self._lock:
+                self.n += n
+
+    cb = CB()
+
+    def tr(df: List[List[Any]], add: callable) -> List[List[Any]]:
+        add(len(df))
+        return [[pickle.dumps(x[0])] for x in df]
+
+    pdf = pd.DataFrame(dict(a=list(range(5))))
+    res = transform(
+        pdf,
+        tr,
+        schema="b:binary",
+        callback=cb.add,
+        as_local=True,
+        force_output_fugue_dataframe=True,
+        engine="dask",
+    )
+    assert res.is_local
+    assert 5 == res.count()
+    assert 5 == cb.n
