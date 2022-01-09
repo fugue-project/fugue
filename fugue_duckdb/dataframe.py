@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 import pyarrow as pa
 from duckdb import DuckDBPyRelation
-from fugue import DataFrame, LocalBoundedDataFrame
+from fugue import ArrowDataFrame, DataFrame, LocalBoundedDataFrame
 from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
 from triad import Schema
 
@@ -42,9 +42,6 @@ class DuckDataFrame(LocalBoundedDataFrame):
     def count(self) -> int:
         return self._rel.aggregate("count(1) AS ct").fetchone()[0]
 
-    def as_pandas(self) -> pd.DataFrame:
-        return self._rel.to_df()
-
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         schema = self.schema.exclude(cols)
         rel = self._rel.project(",".join(n for n in schema.names))
@@ -80,6 +77,12 @@ class DuckDataFrame(LocalBoundedDataFrame):
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
         return self._rel.arrow()
+
+    def as_pandas(self) -> pd.DataFrame:
+        if any(pa.types.is_nested(f.type) for f in self.schema.fields):
+            # Duckdb has issue to directly convert nested types to pandas
+            return ArrowDataFrame(self.as_arrow()).as_pandas()
+        return self._rel.to_df()
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False

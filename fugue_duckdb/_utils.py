@@ -35,7 +35,7 @@ def to_duck_type(tp: pa.DataType) -> str:
         if pa.types.is_decimal(tp):
             return f"DECIMAL({tp.precision}, {tp.scale})"
         return _PA_TYPES_TO_DUCK[tp]
-    except Exception:
+    except Exception:  # pragma: no cover
         raise ValueError(f"can't convert {tp} to DuckDB data type")
 
 

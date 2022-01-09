@@ -45,9 +45,19 @@ class DuckDataFrameTests(DataFrameTests.Tests):
 
             # DuckDB disallows nan and inf
             # see https://github.com/duckdb/duckdb/pull/541
-            
+
             # df = self.df([[float("inf"), 1]], "a:double,b:int")
             # assert [[float("inf"), 1]] == func(df)
+
+    def test_as_pandas_duck(self):
+        df = self.df([[2.1, 1]], "a:double,b:int")
+        assert df.as_pandas().values.tolist() == [[2.1, 1]]
+        df = self.df([[2.1, [1]]], "a:double,b:[int]")
+        assert df.as_pandas().values.tolist() == [[2.1, [1]]]
+        df = self.df([[2.1, ["a"]]], "a:double,b:[str]")
+        assert df.as_pandas().values.tolist() == [[2.1, ["a"]]]
+        df = self.df([[2.1, {"a":1}]], "a:double,b:{a:int}")
+        assert df.as_pandas().values.tolist() == [[2.1, {"a":1}]]
 
     def test_init(self):
         df = self.df([], "a:int,b:str", metadata={"a": "b"})

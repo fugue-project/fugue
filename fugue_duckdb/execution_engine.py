@@ -42,6 +42,11 @@ class DuckDBEngine(SQLEngine):
         self._cache: Dict[str, int] = {}
 
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:
+        if isinstance(self.execution_engine, DuckExecutionEngine):
+            return self._duck_select(dfs, statement)
+        return self._other_select(dfs, statement)
+
+    def _duck_select(self, dfs: DataFrames, statement: str) -> DataFrame:
         for k, v in dfs.items():
             tdf: Any = self.execution_engine.to_df(v)
             if k not in self._cache or self._cache[k] != id(tdf.native):
@@ -49,6 +54,15 @@ class DuckDBEngine(SQLEngine):
                 self._cache[k] = id(tdf.native)
         result = self.execution_engine.connection.query(statement)  # type: ignore
         return DuckDataFrame(result)
+
+    def _other_select(self, dfs: DataFrames, statement: str) -> DataFrame:
+        conn = duckdb.connect()
+        try:
+            for k, v in dfs.items():
+                conn.register_arrow(k, v.as_arrow())
+            return ArrowDataFrame(conn.execute(statement).arrow())
+        finally:
+            conn.close()
 
 
 class DuckExecutionEngine(ExecutionEngine):
