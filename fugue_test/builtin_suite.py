@@ -278,8 +278,12 @@ class BuiltInTests(object):
             df1 = dag.df([[1]], "a:int")
             df2 = dag.df([[1]], "a:int")
             df1.union(df2, distinct=False).yield_dataframe_as("x")
+            df1.union(df2, distinct=False).yield_dataframe_as("y", as_local=True)
             result = dag.run()["x"]
             assert [[1], [1]] == result.as_array()
+            result = dag.run()["y"]
+            assert [[1], [1]] == result.as_array()
+            assert result.is_local
 
         def test_create_process_output(self):
             with self.dag() as dag:
@@ -1455,6 +1459,20 @@ class BuiltInTests(object):
                 )  # for t3, callback must be provided
 
             assert 9 == cb2.n
+
+            def t5(df: pd.DataFrame, c: Callable) -> List[List[Any]]:
+                c(df.shape[0])
+                return [[pickle.dumps(123)]]
+
+            cb3 = Callbacks()
+
+            with self.dag() as dag:
+                df = dag.df([[0], [1], [2], [3]], "a:int")
+                df = df.transform(t5, schema="a:binary", callback=cb3.call)
+                df.persist().yield_dataframe_as("x", as_local=True)
+            assert dag.yields["x"].result.is_local
+
+            assert 4 == cb3.n
 
 
 def mock_creator(p: int) -> DataFrame:
