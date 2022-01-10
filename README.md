@@ -98,7 +98,7 @@ result.show()
 
 This syntax is simpler, cleaner, and more maintainable than the PySpark equivalent. At the same time, no edits were made to the original pandas-based function to bring it to Spark. It is still usable on pandas DataFrames. Because the Spark execution engine was used, the returned `df` is now a Spark DataFrame. Fugue `transform()` also supports `DaskExecutionEngine` and the pandas-based `NativeExecutionEngine`.
 
-## [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/advanced/execution_engine.html)
+## [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/fugue_sql/index.html)
 
 A SQL-based language capable of expressing end-to-end workflows. The `map_letter_to_food()` function above is used in the SQL expression below. This is how to use a Python-defined transformer along with the standard SQL `SELECT` statement.
 
