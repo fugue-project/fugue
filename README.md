@@ -8,7 +8,7 @@
 
 | Documentation | Tutorials | Chat with us on slack! |
 | --- | --- | --- |
-| [![Doc](https://readthedocs.org/projects/fugue/badge)](https://fugue.readthedocs.org) | [![Jupyter Book Badge](https://jupyterbook.org/badge.svg)](https://fugue-project.github.io/tutorials/) | [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ) |
+| [![Doc](https://readthedocs.org/projects/fugue/badge)](https://fugue.readthedocs.org) | [![Jupyter Book Badge](https://jupyterbook.org/badge.svg)](https://fugue-tutorials.readthedocs.io/) | [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ) |
 
 
 **Fugue is a unified interface for distributed computing that lets users execute Python, pandas, and SQL code on Spark and Dask without rewrites**. It is meant for:
@@ -28,7 +28,7 @@
 
 ## Fugue Transform
 
-The simplest way to use Fugue is the [`transform()` function](https://fugue-project.github.io/tutorials/tutorials/beginner/introduction.html#fugue-transform). This lets users parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_letter_to_food()` function takes in a mapping and applies it on a column. This is just pandas and Python so far (without Fugue).
+The simplest way to use Fugue is the [`transform()` function](https://fugue-tutorials.readthedocs.io/tutorials/beginner/introduction.html#fugue-transform). This lets users parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_letter_to_food()` function takes in a mapping and applies it on a column. This is just pandas and Python so far (without Fugue).
 
 ```python
 import pandas as pd
@@ -98,7 +98,7 @@ result.show()
 
 This syntax is simpler, cleaner, and more maintainable than the PySpark equivalent. At the same time, no edits were made to the original pandas-based function to bring it to Spark. It is still usable on pandas DataFrames. Because the Spark execution engine was used, the returned `df` is now a Spark DataFrame. Fugue `transform()` also supports `DaskExecutionEngine` and the pandas-based `NativeExecutionEngine`.
 
-## [FugueSQL](https://fugue-project.github.io/tutorials/tutorials/fugue_sql/index.html)
+## [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/fugue_sql/index.html)
 
 A SQL-based language capable of expressing end-to-end workflows. The `map_letter_to_food()` function above is used in the SQL expression below. This is how to use a Python-defined transformer along with the standard SQL `SELECT` statement.
 
@@ -145,9 +145,9 @@ pip install fugue
 
 It also has the following extras:
 
-*   **sql**: to support [FugueSQL](https://fugue-project.github.io/tutorials/tutorials/fugue_sql/index.html)
-*   **spark**: to support Spark as the [ExecutionEngine](https://fugue-project.github.io/tutorials/tutorials/advanced/execution_engine.html)
-*   **dask**: to support Dask as the [ExecutionEngine](https://fugue-project.github.io/tutorials/tutorials/advanced/execution_engine.html)
+*   **sql**: to support [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/fugue_sql/index.html)
+*   **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/tutorials/advanced/execution_engine.html)
+*   **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/tutorials/advanced/execution_engine.html)
 *   **all**: install everything above
 
 For example a common use case is:
@@ -163,9 +163,9 @@ jupyter nbextension install --py fugue_notebook
 jupyter nbextension enable fugue_notebook --py
 ```
 
-## [Getting Started](https://fugue-project.github.io/tutorials/index.html)
+## [Getting Started](https://fugue-tutorials.readthedocs.io/)
 
-The best way to get started with Fugue is to work through the [tutorials](https://fugue-project.github.io/tutorials/index.html).
+The best way to get started with Fugue is to work through the [tutorials](https://fugue-tutorials.readthedocs.io/).
 
 The tutorials can also be run in an interactive notebook environment through binder or Docker:
 
