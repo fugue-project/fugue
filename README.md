@@ -145,7 +145,7 @@ pip install fugue
 
 It also has the following extras:
 
-*   **sql**: to support [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/advanced/execution_engine.html)
+*   **sql**: to support [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/fugue_sql/index.html)
 *   **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/tutorials/advanced/execution_engine.html)
 *   **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/tutorials/advanced/execution_engine.html)
 *   **all**: install everything above
