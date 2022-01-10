@@ -18,6 +18,7 @@ class FileParser(object):
     def __init__(self, path: str, format_hint: Optional[str] = None):
         last = len(path)
         has_glob = False
+        self._orig_format_hint = format_hint
         for i in range(len(path)):
             if path[i] in ["/", "\\"]:
                 last = i
@@ -50,6 +51,12 @@ class FileParser(object):
         assert_or_throw(self.glob_pattern == "", f"{self.path} has glob pattern")
         return self
 
+    def with_glob(self, glob: str, format_hint: Optional[str] = None) -> "FileParser":
+        uri = self.uri
+        if glob != "":
+            uri = os.path.join(uri, glob)
+        return FileParser(uri, format_hint or self._orig_format_hint)
+
     @property
     def glob_pattern(self) -> str:
         return self._glob_pattern
@@ -57,6 +64,17 @@ class FileParser(object):
     @property
     def uri(self) -> str:
         return self._uri.geturl()
+
+    @property
+    def uri_with_glob(self) -> str:
+        if self.glob_pattern == "":
+            return self.uri
+        return os.path.join(self.uri, self.glob_pattern)
+
+    @property
+    def parent(self) -> str:
+        dn = os.path.dirname(self.uri)
+        return dn if dn != "" else "."
 
     @property
     def scheme(self) -> str:

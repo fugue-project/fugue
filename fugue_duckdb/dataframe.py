@@ -71,8 +71,6 @@ class DuckDataFrame(LocalBoundedDataFrame):
             else:
                 tp = to_duck_type(f2.type)
                 fields.append(f"CAST({f1.name} AS {tp}) AS {f1.name}")
-        print(self.schema)
-        print(fields)
         return DuckDataFrame(self._rel.project(", ".join(fields)))
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:

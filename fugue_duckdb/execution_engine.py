@@ -1,7 +1,6 @@
 import logging
 from threading import RLock
 from typing import Any, Callable, Dict, List, Optional, Union
-from uuid import uuid4
 
 import duckdb
 import pyarrow as pa
@@ -28,7 +27,9 @@ from fugue.execution.execution_engine import (
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 
+from fugue_duckdb._utils import get_temp_df_name
 from fugue_duckdb.dataframe import DuckDataFrame
+from fugue_duckdb._io import DuckDBIO
 
 
 class DuckDBEngine(SQLEngine):
@@ -59,7 +60,7 @@ class DuckDBEngine(SQLEngine):
         conn = duckdb.connect()
         try:
             for k, v in dfs.items():
-                conn.register_arrow(k, v.as_arrow())
+                conn.from_arrow_table(v.as_arrow()).create_view(k)
             return ArrowDataFrame(conn.execute(statement).arrow())
         finally:
             conn.close()
@@ -165,9 +166,6 @@ class DuckExecutionEngine(ExecutionEngine):
             return ArrowDataFrame(df.native.arrow(), metadata=df.metadata)
         return self.to_df(df)
 
-    def _get_temp_df_name(self) -> str:
-        return "_" + str(uuid4())[:5]
-
     def join(
         self,
         df1: DataFrame,
@@ -178,9 +176,9 @@ class DuckExecutionEngine(ExecutionEngine):
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         t1, t2, t3 = (
-            self._get_temp_df_name(),
-            self._get_temp_df_name(),
-            self._get_temp_df_name(),
+            get_temp_df_name(),
+            get_temp_df_name(),
+            get_temp_df_name(),
         )
         on_fields = " AND ".join(f"{t1}.{k}={t2}.{k}" for k in key_schema)
         join_type = self._how_to_join(how)
@@ -241,7 +239,7 @@ class DuckExecutionEngine(ExecutionEngine):
             df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
         )
         if distinct:
-            t1, t2 = self._get_temp_df_name(), self._get_temp_df_name()
+            t1, t2 = get_temp_df_name(), get_temp_df_name()
             sql = f"SELECT * FROM {t1} UNION SELECT * FROM {t2}"
             return self._sql(sql, {t1: df1, t2: df2}, metadata=metadata)
         return DuckDataFrame(
@@ -256,7 +254,7 @@ class DuckExecutionEngine(ExecutionEngine):
         metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
         if distinct:
-            t1, t2 = self._get_temp_df_name(), self._get_temp_df_name()
+            t1, t2 = get_temp_df_name(), get_temp_df_name()
             sql = f"SELECT * FROM {t1} EXCEPT SELECT * FROM {t2}"
             return self._sql(sql, {t1: df1, t2: df2}, metadata=metadata)
         return DuckDataFrame(
@@ -271,7 +269,7 @@ class DuckExecutionEngine(ExecutionEngine):
         metadata: Any = None,
     ) -> DataFrame:
         if distinct:
-            t1, t2 = self._get_temp_df_name(), self._get_temp_df_name()
+            t1, t2 = get_temp_df_name(), get_temp_df_name()
             sql = f"SELECT * FROM {t1} INTERSECT SELECT * FROM {t2}"
             return self._sql(sql, {t1: df1, t2: df2}, metadata=metadata)
         return DuckDataFrame(
@@ -336,7 +334,8 @@ class DuckExecutionEngine(ExecutionEngine):
         columns: Any = None,
         **kwargs: Any,
     ) -> LocalBoundedDataFrame:
-        return self._native_engine.load_df(path, format_hint, columns, **kwargs)
+        dio = DuckDBIO(self.fs, self.connection)
+        return dio.load_df(path, format_hint, columns, **kwargs)
 
     def save_df(
         self,
@@ -348,9 +347,8 @@ class DuckExecutionEngine(ExecutionEngine):
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
-        return self._native_engine.save_df(
-            df, path, format_hint, mode, partition_spec, force_single, **kwargs
-        )
+        dio = DuckDBIO(self.fs, self.connection)
+        dio.save_df(self.to_df(df), path, format_hint, mode, **kwargs)
 
     def _sql(
         self, sql: str, dfs: Dict[str, DataFrame], metadata: Any = None

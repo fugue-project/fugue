@@ -1,6 +1,7 @@
 import pyarrow as pa
 from typing import Dict, Iterable, Tuple
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
+from uuid import uuid4
 
 _DUCK_TYPES_TO_PA: Dict[str, pa.DataType] = {
     "BIGINT": pa.int64(),
@@ -22,6 +23,10 @@ _DUCK_TYPES_TO_PA: Dict[str, pa.DataType] = {
 }
 
 _PA_TYPES_TO_DUCK: Dict[pa.DataType, str] = {v: k for k, v in _DUCK_TYPES_TO_PA.items()}
+
+
+def get_temp_df_name() -> str:
+    return "_" + str(uuid4())[:5]
 
 
 def to_duck_type(tp: pa.DataType) -> str:
