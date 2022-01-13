@@ -41,7 +41,7 @@ setup(
         "spark": ["pyspark"],
         "dask": ["qpd[dask]"],
         "duckdb": ["duckdb>=0.3.1", "pyarrow>=5.0.0,<6"],
-        "ibis": ["ibis-framework>=2"],
+        "ibis": ["ibis-framework>=2.1.1"],
         "notebook": ["notebook", "jupyterlab", "dash"],
         "all": [
             "antlr4-python3-runtime",
