@@ -62,6 +62,11 @@ def test_init():
     raises(FugueDataFrameInitError, lambda: PandasDataFrame(123))
 
 
+def test_init_raises_error_on_invalid_column_name():
+    pdf = pd.DataFrame({"valid": [0], "invalid( )": [1]})
+    raises(SchemaError, lambda: PandasDataFrame(pdf))
+
+
 def test_simple_methods():
     df = PandasDataFrame([], "a:str,b:int")
     assert df.as_pandas() is df.native

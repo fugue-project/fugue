@@ -9,6 +9,7 @@ from fugue.dataframe.dataframe import (
 )
 from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
 from triad.collections.schema import Schema
+from triad.collections.schema import SchemaError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
 
@@ -75,6 +76,8 @@ class PandasDataFrame(LocalBoundedDataFrame):
                 pdf, schema = self._apply_schema(pdf, schema)
             super().__init__(schema, metadata)
             self._native = pdf
+        except SchemaError as e:
+            raise e
         except Exception as e:
             raise FugueDataFrameInitError from e
 
