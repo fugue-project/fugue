@@ -5,7 +5,7 @@ from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue._utils.io import FileParser, load_df, save_df, _FORMAT_MAP
 from fugue.exceptions import FugueDataFrameOperationError
-from pytest import raises, mark
+from pytest import raises
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 

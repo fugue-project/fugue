@@ -1,4 +1,3 @@
-import os
 import pathlib
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 from urllib.parse import urlparse
@@ -32,7 +31,7 @@ class FileParser(object):
         else:
             self._uri = urlparse(path[:last])
             self._glob_pattern = path[last + 1 :]
-            self._path = pfs.path.join(self._uri.path, self._glob_pattern)
+            self._path = pfs.path.combine(self._uri.path, self._glob_pattern)
 
         if format_hint is None or format_hint == "":
             for k, v in _FORMAT_MAP.items():
@@ -54,7 +53,7 @@ class FileParser(object):
     def with_glob(self, glob: str, format_hint: Optional[str] = None) -> "FileParser":
         uri = self.uri
         if glob != "":
-            uri = os.path.join(uri, glob)
+            uri = pfs.path.combine(uri, glob)
         return FileParser(uri, format_hint or self._orig_format_hint)
 
     @property
@@ -69,11 +68,11 @@ class FileParser(object):
     def uri_with_glob(self) -> str:
         if self.glob_pattern == "":
             return self.uri
-        return os.path.join(self.uri, self.glob_pattern)
+        return pfs.path.combine(self.uri, self.glob_pattern)
 
     @property
     def parent(self) -> str:
-        dn = os.path.dirname(self.uri)
+        dn = pfs.path.dirname(self.uri)
         return dn if dn != "" else "."
 
     @property
@@ -146,7 +145,7 @@ def _get_single_files(
     for f in fp:
         if f.glob_pattern != "":
             files = [
-                FileParser(pfs.path.join(f.uri, os.path.basename(x.path)))
+                FileParser(pfs.path.combine(f.uri, pfs.path.basename(x.path)))
                 for x in fs.opendir(f.uri).glob(f.glob_pattern)
             ]
             yield from _get_single_files(files, fs)
@@ -185,7 +184,7 @@ def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
         fs = FileSystem()
         return pd.concat(
             [
-                pd.read_csv(pfs.path.join(path, os.path.basename(x.path)), **kwargs)
+                pd.read_csv(pfs.path.combine(path, pfs.path.basename(x.path)), **kwargs)
                 for x in fs.opendir(path).glob("*.csv")
             ]
         )
@@ -254,7 +253,7 @@ def _safe_load_json(path: str, **kwargs: Any) -> pd.DataFrame:
         fs = FileSystem()
         return pd.concat(
             [
-                pd.read_json(pfs.path.join(path, os.path.basename(x.path)), **kw)
+                pd.read_json(pfs.path.combine(path, pfs.path.basename(x.path)), **kw)
                 for x in fs.opendir(path).glob("*.json")
             ]
         )
@@ -316,7 +315,7 @@ def _load_avro(
         pdf = pd.concat(
             [
                 _load_single_avro(
-                    pfs.path.join(path, os.path.basename(x.path)), **kwargs
+                    pfs.path.combine(path, pfs.path.basename(x.path)), **kwargs
                 )
                 for x in fs.opendir(path).glob("*.avro")
             ]

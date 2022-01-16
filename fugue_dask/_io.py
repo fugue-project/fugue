@@ -1,10 +1,10 @@
-import os
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import fs as pfs
 from dask import dataframe as dd
-from fugue._utils.io import FileParser
+from fugue._utils.io import FileParser, _get_single_files
 from fugue._utils.io import _load_avro as _pd_load_avro
-from fugue._utils.io import _save_avro, _get_single_files
+from fugue._utils.io import _save_avro
 from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
@@ -82,7 +82,7 @@ def _load_parquet(
 
 def _save_csv(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
     df.native.to_csv(
-        os.path.join(p.uri, "*.csv"), **{"index": False, "header": False, **kwargs}
+        pfs.path.combine(p.uri, "*.csv"), **{"index": False, "header": False, **kwargs}
     )
 
 
@@ -90,7 +90,7 @@ def _safe_load_csv(path: str, **kwargs: Any) -> dd.DataFrame:
     try:
         return dd.read_csv(path, **kwargs)
     except (IsADirectoryError, PermissionError):
-        return dd.read_csv(os.path.join(path, "*.csv"), **kwargs)
+        return dd.read_csv(pfs.path.combine(path, "*.csv"), **kwargs)
 
 
 def _load_csv(  # noqa: C901
@@ -130,14 +130,14 @@ def _load_csv(  # noqa: C901
 
 
 def _save_json(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
-    df.native.to_json(os.path.join(p.uri, "*.json"), **kwargs)
+    df.native.to_json(pfs.path.combine(p.uri, "*.json"), **kwargs)
 
 
 def _safe_load_json(path: str, **kwargs: Any) -> dd.DataFrame:
     try:
         return dd.read_json(path, **kwargs)
     except (IsADirectoryError, PermissionError):
-        x = dd.read_json(os.path.join(path, "*.json"), **kwargs)
+        x = dd.read_json(pfs.path.combine(path, "*.json"), **kwargs)
         print(x.compute())
         return x
 
