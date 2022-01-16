@@ -1048,6 +1048,19 @@ class ExecutionEngineTests(object):
             c = e.load_df(path, format_hint="parquet", columns=["a", "c"])
             df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:int", throw=True)
 
+        def test_load_parquet_files(self):
+            e = self.engine
+            native = NativeExecutionEngine()
+            a = ArrayDataFrame([[6, 1]], "c:int,a:long")
+            b = ArrayDataFrame([[2, 7], [4, 8]], "c:int,a:long")
+            path = os.path.join(self.tmpdir, "a", "b")
+            f1 = os.path.join(path, "a.parquet")
+            f2 = os.path.join(path, "b.parquet")
+            native.save_df(a, f1)
+            native.save_df(b, f2)
+            c = e.load_df([f1, f2], format_hint="parquet", columns=["a", "c"])
+            df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:int", throw=True)
+
         @skip_spark2
         def test_save_single_and_load_avro(self):
             # TODO: switch to c:int,a:long when we can preserve schema to avro
@@ -1099,6 +1112,31 @@ class ExecutionEngineTests(object):
             # over write folder with single file
             e.save_df(b, path, format_hint="csv", header=True, force_single=True)
             assert e.fs.isfile(path)
+            c = e.load_df(
+                path,
+                format_hint="csv",
+                header=True,
+                infer_schema=False,
+            )
+            df_eq(c, [["6.1", "1.1"], ["2.1", "7.1"]], "c:str,a:str", throw=True)
+
+            c = e.load_df(
+                path,
+                format_hint="csv",
+                header=True,
+                infer_schema=True,
+            )
+            df_eq(c, [[6.1, 1.1], [2.1, 7.1]], "c:double,a:double", throw=True)
+
+            with raises(ValueError):
+                c = e.load_df(
+                    path,
+                    format_hint="csv",
+                    header=True,
+                    infer_schema=True,
+                    columns="c:str,a:str",  # invalid to set schema when infer schema
+                )
+
             c = e.load_df(
                 path,
                 format_hint="csv",

@@ -167,8 +167,12 @@ class DuckDBIO:
             cols = ", ".join(columns)
         else:
             cols = "*"
-        for k, v in kw.items():
-            params.append(f"{k}=" + self._encode_value(v))
+        assert_or_throw(
+            len(kw) == 0,
+            NotImplementedError("can't take extra parameters for loading parquet"),
+        )
+        # for k, v in kw.items():
+        #    params.append(f"{k}=" + self._encode_value(v))
         pm = ", ".join(params)
         query = f"SELECT {cols} FROM parquet_scan({pm})"
         res = DuckDataFrame(self._con.from_query(query))

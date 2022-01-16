@@ -93,11 +93,13 @@ def _safe_load_csv(path: str, **kwargs: Any) -> dd.DataFrame:
         return dd.read_csv(os.path.join(path, "*.csv"), **kwargs)
 
 
-def _load_csv(
+def _load_csv(  # noqa: C901
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[dd.DataFrame, Any]:
     kw = ParamDict(kwargs)
     infer_schema = kw.get("infer_schema", False)
+    if infer_schema and columns is not None and not isinstance(columns, list):
+        raise ValueError("can't set columns as a schema when infer schema is true")
     if not infer_schema:
         kw["dtype"] = object
     if "infer_schema" in kw:
