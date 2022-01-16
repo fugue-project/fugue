@@ -45,7 +45,7 @@ def encode_value_to_expr(value: Any) -> str:  # noqa: C901
     if isinstance(value, np.generic):
         value = value.item()
     if isinstance(value, str):
-        return repr(value)
+        return "E" + repr(value)
     if isinstance(value, bytes):
         return repr(value)[1:] + "::BLOB"
     if isinstance(value, bool):

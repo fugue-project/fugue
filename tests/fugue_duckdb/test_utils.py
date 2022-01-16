@@ -14,8 +14,8 @@ def test_encode_value_to_expr():
     assert "1" == encode_value_to_expr(np.int32(1))
     assert "FALSE" == encode_value_to_expr(False)
     assert "TRUE" == encode_value_to_expr(np.bool(1))
-    assert "'abc'" == encode_value_to_expr("abc")
-    assert "'abc\\n;def'" == encode_value_to_expr("abc\n;def")
+    assert "E'abc'" == encode_value_to_expr("abc")
+    assert "E'abc\\n;def'" == encode_value_to_expr("abc\n;def")
     assert "'\\xcaABC'::BLOB" == encode_value_to_expr(b"\xCAABC")
     assert "NULL" == encode_value_to_expr(None)
     assert "NULL" == encode_value_to_expr(float("nan"))
@@ -26,10 +26,10 @@ def test_encode_value_to_expr():
     assert "DATE '2021-01-02'" == encode_value_to_expr(
         pd.to_datetime("2021-01-02 14:15:16").date()
     )
-    assert "['abc', 1, TIMESTAMP '2021-01-02 14:15:16']" == encode_value_to_expr(
+    assert "[E'abc', 1, TIMESTAMP '2021-01-02 14:15:16']" == encode_value_to_expr(
         ["abc", 1, pd.to_datetime("2021-01-02 14:15:16")]
     )
-    assert "{'a\\n': 'abc', 'b': 1}" == encode_value_to_expr({"a\n": "abc", "b": 1})
+    assert "{E'a\\n': E'abc', E'b': 1}" == encode_value_to_expr({"a\n": "abc", "b": 1})
 
     class D:
         pass
