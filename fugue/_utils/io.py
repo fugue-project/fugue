@@ -1,3 +1,4 @@
+import os
 import pathlib
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 from urllib.parse import urlparse
@@ -72,7 +73,7 @@ class FileParser(object):
 
     @property
     def parent(self) -> str:
-        dn = pfs.path.dirname(self.uri)
+        dn = os.path.dirname(self.uri)
         return dn if dn != "" else "."
 
     @property
