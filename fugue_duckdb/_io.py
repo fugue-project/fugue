@@ -36,6 +36,8 @@ class DuckDBIO:
         columns: Any = None,
         **kwargs: Any,
     ) -> LocalBoundedDataFrame:
+        for k in kwargs.keys():
+            assert_or_throw(k.isidentifier(), ValueError(f"{k} is invalid"))
         if isinstance(uri, str):
             fp = [FileParser(uri, format_hint)]
         else:
@@ -61,6 +63,8 @@ class DuckDBIO:
         mode: str = "overwrite",
         **kwargs: Any,
     ) -> None:
+        for k in kwargs.keys():
+            assert_or_throw(k.isidentifier(), ValueError(f"{k} is invalid"))
         assert_or_throw(
             mode in ["overwrite", "error"],
             NotImplementedError(f"{mode} is not supported"),
