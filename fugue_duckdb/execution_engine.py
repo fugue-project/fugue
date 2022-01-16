@@ -10,6 +10,7 @@ from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
+    parse_presort_exp,
 )
 from fugue.dataframe import (
     DataFrame,
@@ -27,9 +28,9 @@ from fugue.execution.execution_engine import (
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 
-from fugue_duckdb._utils import get_temp_df_name
-from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb._io import DuckDBIO
+from fugue_duckdb._utils import encode_value_to_expr, get_temp_df_name
+from fugue_duckdb.dataframe import DuckDataFrame
 
 
 class DuckDBEngine(SQLEngine):
@@ -292,7 +293,18 @@ class DuckExecutionEngine(ExecutionEngine):
         subset: List[str] = None,
         metadata: Any = None,
     ) -> DataFrame:
-        return self._native_engine.dropna(df, how, thresh, subset, metadata)
+        schema = df.schema
+        if subset is not None:
+            schema = schema.extract(subset)
+        if how == "all":
+            thr = 0
+        elif how == "any":
+            thr = thresh or len(schema)
+        else:  # pragma: no cover
+            raise ValueError(f"{how} is not one of any and all")
+        cw = [f"CASE WHEN {f} IS NULL THEN 0 ELSE 1 END" for f in schema.names]
+        expr = " + ".join(cw) + f" >= {thr}"
+        return DuckDataFrame(self.to_df(df).native.filter(expr), metadata=metadata)
 
     def fillna(
         self,
@@ -301,7 +313,31 @@ class DuckExecutionEngine(ExecutionEngine):
         subset: List[str] = None,
         metadata: Any = None,
     ) -> DataFrame:
-        return self._native_engine.fillna(df, value, subset, metadata)
+        def _build_value_dict(names: List[str]) -> Dict[str, str]:
+            if not isinstance(value, dict):
+                v = encode_value_to_expr(value)
+                return {n: v for n in names}
+            else:
+                return {n: encode_value_to_expr(value[n]) for n in names}
+
+        names = list(df.schema.names)
+        if isinstance(value, dict):
+            # subset should be ignored
+            names = list(value.keys())
+        elif subset is not None:
+            names = list(df.schema.extract(subset).names)
+        vd = _build_value_dict(names)
+        assert_or_throw(
+            all(v != "NULL" for v in vd.values()),
+            ValueError("fillna value can not be None or contain None"),
+        )
+        cols = [
+            f"COALESCE({f}, {vd[f]}) AS {f}" if f in names else f
+            for f in df.schema.names
+        ]
+        return DuckDataFrame(
+            self.to_df(df).native.project(", ".join(cols)), metadata=metadata
+        )
 
     def sample(
         self,
@@ -312,7 +348,21 @@ class DuckExecutionEngine(ExecutionEngine):
         seed: Optional[int] = None,
         metadata: Any = None,
     ) -> DataFrame:
-        return self._native_engine.sample(df, n, frac, replace, seed, metadata)
+        assert_or_throw(
+            (n is None and frac is not None and frac >= 0.0)
+            or (frac is None and n is not None and n >= 0),
+            ValueError(
+                f"one and only one of n and frac should be non-negative, {n}, {frac}"
+            ),
+        )
+        tb = get_temp_df_name()
+        if frac is not None:
+            sql = f"SELECT * FROM {tb} USING SAMPLE bernoulli({frac*100} PERCENT)"
+        else:
+            sql = f"SELECT * FROM {tb} USING SAMPLE reservoir({n} ROWS)"
+        if seed is not None:
+            sql += f" REPEATABLE ({seed})"
+        return self._sql(sql, {tb: df}, metadata=metadata)
 
     def take(
         self,
@@ -323,9 +373,50 @@ class DuckExecutionEngine(ExecutionEngine):
         partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
         metadata: Any = None,
     ) -> DataFrame:
-        return self._native_engine.take(
-            df, n, presort, na_position, partition_spec, metadata
+        assert_or_throw(
+            isinstance(n, int),
+            ValueError("n needs to be an integer"),
         )
+
+        if presort is not None and presort != "":
+            _presort = parse_presort_exp(presort)
+        else:
+            _presort = partition_spec.presort
+        tb = get_temp_df_name()
+
+        if len(_presort) == 0:
+            if len(partition_spec.partition_by) == 0:
+                return DuckDataFrame(self.to_df(df).native.limit(n), metadata=metadata)
+            cols = ", ".join(df.schema.names)
+            pcols = ", ".join(partition_spec.partition_by)
+            sql = (
+                f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {pcols}) "
+                f"AS __fugue_take_param FROM {tb}"
+            )
+            sql = f"SELECT {cols} FROM ({sql}) WHERE __fugue_take_param<={n}"
+            return self._sql(sql, {tb: df}, metadata=metadata)
+
+        sorts: List[str] = []
+        for k, v in _presort.items():
+            s = k
+            if not v:
+                s += " DESC"
+            s += " NULLS FIRST" if na_position == "first" else " NULLS LAST"
+            sorts.append(s)
+        sort_expr = "ORDER BY " + ", ".join(sorts)
+
+        if len(partition_spec.partition_by) == 0:
+            sql = f"SELECT * FROM {tb} {sort_expr} LIMIT {n}"
+            return self._sql(sql, {tb: df}, metadata=metadata)
+
+        cols = ", ".join(df.schema.names)
+        pcols = ", ".join(partition_spec.partition_by)
+        sql = (
+            f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {pcols} {sort_expr}) "
+            f"AS __fugue_take_param FROM {tb}"
+        )
+        sql = f"SELECT {cols} FROM ({sql}) WHERE __fugue_take_param<={n}"
+        return self._sql(sql, {tb: df}, metadata=metadata)
 
     def load_df(
         self,

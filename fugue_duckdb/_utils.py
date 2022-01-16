@@ -1,7 +1,10 @@
+from datetime import datetime, date
 import pyarrow as pa
-from typing import Dict, Iterable, Tuple
+from typing import Any, Dict, Iterable, Tuple
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
 from uuid import uuid4
+import pandas as pd
+import numpy as np
 
 _DUCK_TYPES_TO_PA: Dict[str, pa.DataType] = {
     "BIGINT": pa.int64(),
@@ -23,6 +26,38 @@ _DUCK_TYPES_TO_PA: Dict[str, pa.DataType] = {
 }
 
 _PA_TYPES_TO_DUCK: Dict[pa.DataType, str] = {v: k for k, v in _DUCK_TYPES_TO_PA.items()}
+
+
+def encode_value_to_expr(value: Any) -> str:  # noqa: C901
+    if isinstance(value, list):
+        return "[" + ", ".join(encode_value_to_expr(x) for x in value) + "]"
+    if isinstance(value, dict):
+        return (
+            "{"
+            + ", ".join(
+                encode_value_to_expr(k) + ": " + encode_value_to_expr(v)
+                for k, v in value.items()
+            )
+            + "}"
+        )
+    if pd.isna(value):
+        return "NULL"
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, str):
+        return repr(value)
+    if isinstance(value, bytes):
+        return repr(value)[1:] + "::BLOB"
+    if isinstance(value, bool):
+        return "TRUE" if value else "FALSE"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, datetime):
+        return "TIMESTAMP '" + value.strftime("%Y-%m-%d %H:%M:%S") + "'"
+    if isinstance(value, date):
+        return "DATE '" + value.strftime("%Y-%m-%d") + "'"
+
+    raise NotImplementedError(value)
 
 
 def get_temp_df_name() -> str:

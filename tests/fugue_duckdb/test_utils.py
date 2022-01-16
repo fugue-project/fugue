@@ -1,8 +1,40 @@
-from fugue_duckdb._utils import to_pa_type, to_duck_type
+from fugue_duckdb._utils import to_pa_type, to_duck_type, encode_value_to_expr
 import pyarrow as pa
 import duckdb
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
 from pytest import raises
+import pandas as pd
+import numpy as np
+
+
+def test_encode_value_to_expr():
+    assert "1.1" == encode_value_to_expr(1.1)
+    assert "1.1" == encode_value_to_expr(np.float64(1.1))
+    assert "1" == encode_value_to_expr(1)
+    assert "1" == encode_value_to_expr(np.int32(1))
+    assert "FALSE" == encode_value_to_expr(False)
+    assert "TRUE" == encode_value_to_expr(np.bool(1))
+    assert "'abc'" == encode_value_to_expr("abc")
+    assert "'abc\\n;def'" == encode_value_to_expr("abc\n;def")
+    assert "'\\xcaABC'::BLOB" == encode_value_to_expr(b"\xCAABC")
+    assert "NULL" == encode_value_to_expr(None)
+    assert "NULL" == encode_value_to_expr(float("nan"))
+    assert "NULL" == encode_value_to_expr(pd.NA)
+    assert "TIMESTAMP '2021-01-02 14:15:16'" == encode_value_to_expr(
+        pd.to_datetime("2021-01-02 14:15:16")
+    )
+    assert "DATE '2021-01-02'" == encode_value_to_expr(
+        pd.to_datetime("2021-01-02 14:15:16").date()
+    )
+    assert "['abc', 1, TIMESTAMP '2021-01-02 14:15:16']" == encode_value_to_expr(
+        ["abc", 1, pd.to_datetime("2021-01-02 14:15:16")]
+    )
+    assert "{'a\\n': 'abc', 'b': 1}" == encode_value_to_expr({"a\n": "abc", "b": 1})
+
+    class D:
+        pass
+
+    raises(NotImplementedError, lambda: encode_value_to_expr(D()))
 
 
 def test_type_conversion():
