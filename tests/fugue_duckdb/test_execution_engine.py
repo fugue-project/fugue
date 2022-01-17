@@ -113,7 +113,7 @@ def test_configs():
 
     with raises(ValueError):
         # invalid config format
-        dag.run("duckdb", {"fugue.duckdb.pragma.threads xx": 2})
+        dag.run("duckdb", {"fugue.duckdb.pragma.threads;xx": 2})
 
     with raises(Exception):
         # non-existent config
