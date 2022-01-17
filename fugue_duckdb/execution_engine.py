@@ -52,7 +52,11 @@ class DuckDBEngine(SQLEngine):
         for k, v in dfs.items():
             tdf: Any = self.execution_engine.to_df(v)
             if k not in self._cache or self._cache[k] != id(tdf.native):
-                tdf.native.create_view(k, replace=True)
+                # tdf.native.create_view(k, replace=True)
+                kk = k + get_temp_df_name()
+                tdf.native.query(  # TODO: a hack to avoid DuckDB stability issue
+                    kk, f"CREATE OR REPLACE TEMP VIEW {k} AS SELECT * FROM {kk}"
+                )
                 self._cache[k] = id(tdf.native)
         result = self.execution_engine.connection.query(statement)  # type: ignore
         return DuckDataFrame(result)
@@ -162,6 +166,7 @@ class DuckExecutionEngine(ExecutionEngine):
         lazy: bool = False,
         **kwargs: Any,
     ) -> DataFrame:
+        # TODO: we should create DuckDB table, but it has bugs, so can't use by 0.3.1
         if isinstance(df, DuckDataFrame):
             # materialize
             return ArrowDataFrame(df.native.arrow(), metadata=df.metadata)
