@@ -73,7 +73,7 @@ jupyter:
 	jupyter notebook --port=8888 --ip=0.0.0.0 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*'
 
 test:
-	python3 -bb -m pytest tests/
+	python3 -bb -m pytest --reruns 2 --only-rerun 'Overflow in cast' tests/
 
 testcore:
 	python3 -bb -m pytest tests/fugue
@@ -85,7 +85,7 @@ testdask:
 	python3 -bb -m pytest tests/fugue_dask
 
 testduck:
-	python3 -bb -m pytest tests/fugue_duckdb
+	python3 -bb -m pytest --reruns 2 --only-rerun 'Overflow in cast' tests/fugue_duckdb
 
 testsql:
 	python3 -bb -m pytest tests/fugue_sql
