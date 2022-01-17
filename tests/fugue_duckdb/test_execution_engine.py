@@ -8,6 +8,7 @@ from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 
 from fugue_duckdb import DuckExecutionEngine
+from pytest import raises
 
 
 class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -109,3 +110,11 @@ def test_configs():
             "fugue.duckdb.pragma.default_null_order": "NULLS LAST",
         },
     )
+
+    with raises(ValueError):
+        # invalid config format
+        dag.run("duckdb", {"fugue.duckdb.pragma.threads xx": 2})
+
+    with raises(Exception):
+        # non-existent config
+        dag.run("duckdb", {"fugue.duckdb.pragma.threads_xx": 2})
