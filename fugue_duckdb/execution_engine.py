@@ -1,6 +1,6 @@
 import logging
 from threading import RLock
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union, Iterable
 
 import duckdb
 import pyarrow as pa
@@ -31,6 +31,9 @@ from triad.utils.assertion import assert_or_throw
 from fugue_duckdb._io import DuckDBIO
 from fugue_duckdb._utils import encode_value_to_expr, get_temp_df_name
 from fugue_duckdb.dataframe import DuckDataFrame
+
+
+_FUGUE_DUCKDB_PRAGMA_CONFIG_PREFIX = "fugue.duckdb.pragma."
 
 
 class DuckDBEngine(SQLEngine):
@@ -85,6 +88,23 @@ class DuckExecutionEngine(ExecutionEngine):
         self._con = connection or duckdb.connect()
         self._external_con = connection is not None
         self._context_lock = RLock()
+
+        try:
+            for pg in list(self._get_pragmas()):  # transactional
+                self._con.execute(pg)
+        except Exception:
+            self.stop()
+            raise
+
+    def _get_pragmas(self) -> Iterable[str]:
+        for k, v in self.conf.items():
+            if k.startswith(_FUGUE_DUCKDB_PRAGMA_CONFIG_PREFIX):
+                name = k[len(_FUGUE_DUCKDB_PRAGMA_CONFIG_PREFIX) :]
+                assert_or_throw(
+                    name.isidentifier(), ValueError(f"{name} is not a valid pragma key")
+                )
+                value = encode_value_to_expr(v)
+                yield f"PRAGMA {name}={value};"
 
     def stop(self) -> None:
         if not self._external_con:

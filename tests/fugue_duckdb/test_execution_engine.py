@@ -21,7 +21,9 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
         cls._con.close()
 
     def make_engine(self):
-        e = DuckExecutionEngine(dict(test=True), self._con)
+        e = DuckExecutionEngine(
+            {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
+        )
         return e
 
     def test_intersect_all(self):
@@ -51,7 +53,9 @@ class DuckBuiltInTests(BuiltInTests.Tests):
         cls._con.close()
 
     def make_engine(self):
-        e = DuckExecutionEngine(dict(test=True), self._con)
+        e = DuckExecutionEngine(
+            {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
+        )
         return e
 
     def test_special_types(self):
@@ -77,3 +81,31 @@ def test_builtin_connection():
 
     dag.run("duckdb")
     dag.run(("native", "duck"))
+
+
+def test_configs():
+    dag = FugueWorkflow()
+    df = dag.df([[None], [1]], "a:double")
+    df = dag.select("SELECT * FROM ", df, "ORDER BY a LIMIT 1")
+    df.assert_eq(dag.df([[None]], "a:double"))
+
+    dag.run(
+        "duckdb",
+        {
+            "fugue.duckdb.pragma.threads": 2,
+            "fugue.duckdb.pragma.default_null_order": "NULLS FIRST",
+        },
+    )
+
+    dag = FugueWorkflow()
+    df = dag.df([[None], [1]], "a:double")
+    df = dag.select("SELECT * FROM ", df, "ORDER BY a LIMIT 1")
+    df.assert_eq(dag.df([[1]], "a:double"))
+
+    dag.run(
+        "duckdb",
+        {
+            "fugue.duckdb.pragma.threads": 2,
+            "fugue.duckdb.pragma.default_null_order": "NULLS LAST",
+        },
+    )
