@@ -24,4 +24,4 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
     - name: Test
-      run: python -m pytest tests/fugue tests/fugue_sql tests/fugue_dask tests/fugue_ibis tests/fugue_duckdb
+      run: python -m pytest --reruns 2 --only-rerun 'Overflow in cast' tests/fugue tests/fugue_sql tests/fugue_dask tests/fugue_ibis tests/fugue_duckdb
