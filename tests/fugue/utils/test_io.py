@@ -5,19 +5,31 @@ from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue._utils.io import FileParser, load_df, save_df, _FORMAT_MAP
 from fugue.exceptions import FugueDataFrameOperationError
-from pytest import raises, mark
+from pytest import raises
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 
 
 def test_file_parser():
+    f = FileParser("c.parquet")
+    assert "c.parquet" == f.uri
+    assert "c.parquet" == f.uri_with_glob
+    assert "" == f.scheme
+    assert "c.parquet" == f.path
+    assert ".parquet" == f.suffix
+    assert "parquet" == f.file_format
+    assert "" == f.glob_pattern
+    assert "." == f.parent
+
     f = FileParser("/a/b/c.parquet")
     assert "/a/b/c.parquet" == f.uri
+    assert "/a/b/c.parquet" == f.uri_with_glob
     assert "" == f.scheme
     assert "/a/b/c.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "" == f.glob_pattern
+    assert "/a/b" == f.parent
 
     for k, v in _FORMAT_MAP.items():
         f = FileParser(f"s3://a/b/c{k}")
@@ -26,6 +38,7 @@ def test_file_parser():
         assert f"/b/c{k}" == f.path
         assert k == f.suffix
         assert v == f.file_format
+        assert "s3://a/b" == f.parent
 
     f = FileParser("s3://a/b/c.test.parquet")
     assert "s3://a/b/c.test.parquet" == f.uri
@@ -33,6 +46,7 @@ def test_file_parser():
     assert "/b/c.test.parquet" == f.path
     assert ".test.parquet" == f.suffix
     assert "parquet" == f.file_format
+    assert "s3://a/b" == f.parent
 
     f = FileParser("s3://a/b/c.ppp.gz", "csv")
     assert "s3://a/b/c.ppp.gz" == f.uri
@@ -61,6 +75,7 @@ def test_file_parser_glob():
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "*.parquet" == f.glob_pattern
+    assert "/a/b/*.parquet" == f.uri_with_glob
 
     f = FileParser("s3://a/b/*.parquet")
     assert "s3://a/b" == f.uri
@@ -69,6 +84,23 @@ def test_file_parser_glob():
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "*.parquet" == f.glob_pattern
+    assert "s3://a/b/*.parquet" == f.uri_with_glob
+
+    ff = FileParser("s3://a/b", "parquet").with_glob("*.csv", "csv")
+    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    assert "csv" == ff.file_format
+    ff = FileParser("s3://a/b/", "csv").with_glob("*.csv")
+    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    assert "csv" == ff.file_format
+    ff = FileParser("s3://a/b/*.parquet").with_glob("*.csv")
+    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    assert "csv" == ff.file_format
+    ff = FileParser("s3://a/b/*.parquet", "parquet").with_glob("*.csv")
+    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    assert "parquet" == ff.file_format
+    ff = FileParser("s3://a/b/*.parquet", "parquet").with_glob("*.csv", "csv")
+    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    assert "csv" == ff.file_format
 
 
 def test_parquet_io(tmpdir):
@@ -197,18 +229,20 @@ def test_avro_io(tmpdir):
     actual = load_df(path1, columns="a:str,b:int,c:long")
     df_eq(actual, [["1", 2, 3]], "a:str,b:int,c:long")
 
-    actual = load_df(path1, columns="a:str,b:int,c:long", infer_schema=True) # TODO raise error when both provided?
+    actual = load_df(
+        path1, columns="a:str,b:int,c:long", infer_schema=True
+    )  # TODO raise error when both provided?
     df_eq(actual, [["1", 2, 3]], "a:str,b:int,c:long")
 
-    actual = load_df(path1, columns=["b", "c"], infer_schema=True) 
+    actual = load_df(path1, columns=["b", "c"], infer_schema=True)
     df_eq(actual, [[2, 3]], "b:long,c:long")
 
     # save in append mode
     path3 = os.path.join(tmpdir, "append.avro")
     save_df(df1, path3)
-    save_df(df2, path3 ,append=True)
+    save_df(df2, path3, append=True)
     actual = load_df(path1, columns="a:str,b:int,c:long")
-    df_eq(actual, [['1', 2, 3],['hello', 2, 3]], "a:str,b:int,c:long")
+    df_eq(actual, [["1", 2, 3], ["hello", 2, 3]], "a:str,b:int,c:long")
 
     # save times_as_micros =False (i.e milliseconds instead)
     df4 = PandasDataFrame([["2021-05-04", 2, 3]], "a:datetime,b:int,c:long")
@@ -222,17 +256,17 @@ def test_avro_io(tmpdir):
 
     # provide avro schema
     schema = {
-    'type': 'record',
-    'name': 'Root',
-    'fields': [
-        {'name': 'a', 'type': 'string'},
-        {'name': 'b', 'type': 'int'},
-        {'name': 'c', 'type': 'long'},
-    ],
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "a", "type": "string"},
+            {"name": "b", "type": "int"},
+            {"name": "c", "type": "long"},
+        ],
     }
     save_df(df1, path1, schema=schema)
     actual = load_df(path1, columns="a:str,b:int,c:long")
-    df_eq(actual, [['1', 2, 3]], "a:str,b:int,c:long")
+    df_eq(actual, [["1", 2, 3]], "a:str,b:int,c:long")
 
     # provide wrong types in columns arg
     save_df(df2, path2, schema=schema)
@@ -242,18 +276,21 @@ def test_avro_io(tmpdir):
     )
 
     # load with process_record function
-    actual = load_df(path2, columns="a:str,b:int,c:long", process_record=lambda s: {'a' :str.upper(s['a']), 'b': s['b'], 'c': s['c']})
-    df_eq(actual, [['HELLO', 2, 3]], "a:str,b:int,c:long")
-
+    actual = load_df(
+        path2,
+        columns="a:str,b:int,c:long",
+        process_record=lambda s: {"a": str.upper(s["a"]), "b": s["b"], "c": s["c"]},
+    )
+    df_eq(actual, [["HELLO", 2, 3]], "a:str,b:int,c:long")
 
     # provide wrong type in avro schema
     schema = {
-    'type': 'record',
-    'name': 'Root',
-    'fields': [
-        {'name': 'a', 'type': 'int'},
-        {'name': 'b', 'type': 'int'},
-        {'name': 'c', 'type': 'long'},
-    ],
+        "type": "record",
+        "name": "Root",
+        "fields": [
+            {"name": "a", "type": "int"},
+            {"name": "b", "type": "int"},
+            {"name": "c", "type": "long"},
+        ],
     }
     raises(TypeError, lambda: save_df(df2, path2, schema=schema))

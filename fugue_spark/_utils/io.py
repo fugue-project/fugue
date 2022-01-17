@@ -88,9 +88,13 @@ class SparkIO(object):
         schema = Schema(columns)
         return SparkDataFrame(sdf[schema.names], schema)
 
-    def _load_csv(self, p: List[str], columns: Any = None, **kwargs: Any) -> DataFrame:
+    def _load_csv(  # noqa: C901
+        self, p: List[str], columns: Any = None, **kwargs: Any
+    ) -> DataFrame:
         kw = ParamDict(kwargs)
         infer_schema = kw.get("infer_schema", False)
+        if infer_schema and columns is not None and not isinstance(columns, list):
+            raise ValueError("can't set columns as a schema when infer schema is true")
         if infer_schema:
             kw["inferSchema"] = True
         if "infer_schema" in kw:

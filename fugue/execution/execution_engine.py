@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from threading import RLock
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
+from uuid import uuid4
 
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
@@ -586,8 +587,9 @@ class ExecutionEngine(ABC):
                 )
         """
         gen = SQLExpressionGenerator(enable_cast=False)
-        sql = gen.select(cols, "df", where=where, having=having)
-        res = self.sql_engine.select(DataFrames(df=self.to_df(df)), sql)
+        df_name = _get_temp_df_name()
+        sql = gen.select(cols, df_name, where=where, having=having)
+        res = self.sql_engine.select(DataFrames({df_name: self.to_df(df)}), sql)
         diff = gen.correct_select_schema(df.schema, cols, res.schema)
         return res if diff is None else res.alter_columns(diff)
 
@@ -1136,3 +1138,7 @@ def _generate_comap_empty_dfs(schemas: Any, named: bool) -> DataFrames:
         return DataFrames({k: ArrayDataFrame([], v) for k, v in schemas.items()})
     else:
         return DataFrames([ArrayDataFrame([], v) for v in schemas.values()])
+
+
+def _get_temp_df_name() -> str:
+    return "_" + str(uuid4())[:5]

@@ -1,6 +1,6 @@
-import os
 from typing import Any
 
+import fs as pfs
 from fugue.collections.partition import PartitionSpec
 from fugue.collections.yielded import YieldedFile
 from fugue.constants import FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH
@@ -135,7 +135,7 @@ class CheckpointPath(object):
         if self._path == "":
             self._temp_path = ""
             return ""
-        self._temp_path = os.path.join(self._path, execution_id)
+        self._temp_path = pfs.path.combine(self._path, execution_id)
         self._fs.makedirs(self._temp_path, recreate=True)
         return self._temp_path
 
@@ -154,7 +154,7 @@ class CheckpointPath(object):
                 f"{FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH} is not set"
             ),
         )
-        return os.path.join(path, file_id + ".parquet")
+        return pfs.path.combine(path, file_id + ".parquet")
 
     def temp_file_exists(self, path: str) -> bool:
         try:

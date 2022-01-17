@@ -23,7 +23,7 @@ import sphinx_rtd_theme
 
 project = "Fugue"
 version = __version__
-copyright = "2021, Han Wang"  # noqa: A001
+copyright = "2022, Fugue Development Team"  # noqa: A001
 author = "Han Wang"
 
 

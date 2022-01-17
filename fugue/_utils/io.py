@@ -18,6 +18,7 @@ class FileParser(object):
     def __init__(self, path: str, format_hint: Optional[str] = None):
         last = len(path)
         has_glob = False
+        self._orig_format_hint = format_hint
         for i in range(len(path)):
             if path[i] in ["/", "\\"]:
                 last = i
@@ -31,7 +32,7 @@ class FileParser(object):
         else:
             self._uri = urlparse(path[:last])
             self._glob_pattern = path[last + 1 :]
-            self._path = pfs.path.join(self._uri.path, self._glob_pattern)
+            self._path = pfs.path.combine(self._uri.path, self._glob_pattern)
 
         if format_hint is None or format_hint == "":
             for k, v in _FORMAT_MAP.items():
@@ -50,6 +51,12 @@ class FileParser(object):
         assert_or_throw(self.glob_pattern == "", f"{self.path} has glob pattern")
         return self
 
+    def with_glob(self, glob: str, format_hint: Optional[str] = None) -> "FileParser":
+        uri = self.uri
+        if glob != "":
+            uri = pfs.path.combine(uri, glob)
+        return FileParser(uri, format_hint or self._orig_format_hint)
+
     @property
     def glob_pattern(self) -> str:
         return self._glob_pattern
@@ -57,6 +64,17 @@ class FileParser(object):
     @property
     def uri(self) -> str:
         return self._uri.geturl()
+
+    @property
+    def uri_with_glob(self) -> str:
+        if self.glob_pattern == "":
+            return self.uri
+        return pfs.path.combine(self.uri, self.glob_pattern)
+
+    @property
+    def parent(self) -> str:
+        dn = os.path.dirname(self.uri)
+        return dn if dn != "" else "."
 
     @property
     def scheme(self) -> str:
@@ -128,7 +146,7 @@ def _get_single_files(
     for f in fp:
         if f.glob_pattern != "":
             files = [
-                FileParser(pfs.path.join(f.uri, os.path.basename(x.path)))
+                FileParser(pfs.path.combine(f.uri, pfs.path.basename(x.path)))
                 for x in fs.opendir(f.uri).glob(f.glob_pattern)
             ]
             yield from _get_single_files(files, fs)
@@ -167,7 +185,7 @@ def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
         fs = FileSystem()
         return pd.concat(
             [
-                pd.read_csv(pfs.path.join(path, os.path.basename(x.path)), **kwargs)
+                pd.read_csv(pfs.path.combine(path, pfs.path.basename(x.path)), **kwargs)
                 for x in fs.opendir(path).glob("*.csv")
             ]
         )
@@ -184,11 +202,13 @@ def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
         return load_dir()
 
 
-def _load_csv(
+def _load_csv(  # noqa: C901
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[pd.DataFrame, Any]:
     kw = ParamDict(kwargs)
     infer_schema = kw.get("infer_schema", False)
+    if infer_schema and columns is not None and not isinstance(columns, list):
+        raise ValueError("can't set columns as a schema when infer schema is true")
     if not infer_schema:
         kw["dtype"] = object
     if "infer_schema" in kw:
@@ -234,7 +254,7 @@ def _safe_load_json(path: str, **kwargs: Any) -> pd.DataFrame:
         fs = FileSystem()
         return pd.concat(
             [
-                pd.read_json(pfs.path.join(path, os.path.basename(x.path)), **kw)
+                pd.read_json(pfs.path.combine(path, pfs.path.basename(x.path)), **kw)
                 for x in fs.opendir(path).glob("*.json")
             ]
         )
@@ -296,7 +316,7 @@ def _load_avro(
         pdf = pd.concat(
             [
                 _load_single_avro(
-                    pfs.path.join(path, os.path.basename(x.path)), **kwargs
+                    pfs.path.combine(path, pfs.path.basename(x.path)), **kwargs
                 )
                 for x in fs.opendir(path).glob("*.avro")
             ]

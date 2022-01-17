@@ -115,7 +115,7 @@ class SparkExecutionEngine(ExecutionEngine):
         )
         self._persist_func = RunOnce(self._persist, lambda *args, **kwargs: id(args[0]))
         self._register_func = RunOnce(
-            self._register, lambda *args, **kwargs: id(args[0])
+            self._register, lambda *args, **kwargs: (id(args[0]), id(args[1]))
         )
         self._io = SparkIO(self.spark_session, self.fs)
 

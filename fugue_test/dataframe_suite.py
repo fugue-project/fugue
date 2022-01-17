@@ -144,7 +144,15 @@ class DataFrameTests(object):
                     assert isinstance(d[0][0], float)
                     assert isinstance(d[0][1], int)
 
-                # special values
+        def test_as_array_special_values(self):
+            for func in [
+                lambda df, *args, **kwargs: df.as_array(
+                    *args, **kwargs, type_safe=True
+                ),
+                lambda df, *args, **kwargs: list(
+                    df.as_array_iterable(*args, **kwargs, type_safe=True)
+                ),
+            ]:
                 df = self.df([[pd.Timestamp("2020-01-01"), 1]], "a:datetime,b:int")
                 data = func(df)
                 assert [[datetime(2020, 1, 1), 1]] == data
