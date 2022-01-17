@@ -1,15 +1,15 @@
+import os
 from typing import Any, Iterable, List, Optional, Union
 
 import fs as pfs
 from duckdb import DuckDBPyConnection
 from fugue._utils.io import FileParser, load_df, save_df
 from fugue.dataframe import ArrowDataFrame, LocalBoundedDataFrame
+from fugue_duckdb._utils import encode_value_to_expr, get_temp_df_name
+from fugue_duckdb.dataframe import DuckDataFrame
 from triad import ParamDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
-
-from fugue_duckdb._utils import encode_value_to_expr, get_temp_df_name
-from fugue_duckdb.dataframe import DuckDataFrame
 
 
 def _get_single_files(
@@ -71,7 +71,7 @@ class DuckDBIO:
         )
         p = FileParser(uri, format_hint).assert_no_glob()
         if p.file_format not in self._format_save:
-            self._fs.makedirs(pfs.path.dirname(uri), recreate=True)
+            self._fs.makedirs(os.path.dirname(uri), recreate=True)
             ldf = ArrowDataFrame(df.native.arrow())
             return save_df(
                 ldf, uri=uri, format_hint=format_hint, mode=mode, fs=self._fs, **kwargs
