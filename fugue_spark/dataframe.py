@@ -11,7 +11,7 @@ from fugue.dataframe import (
     LocalDataFrame,
     PandasDataFrame,
 )
-from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDataFrameOperationError
 from fugue_spark._utils.convert import to_cast_expression, to_schema, to_type_safe_input
 from triad.collections.schema import SchemaError
 from triad.utils.assertion import assert_or_throw
@@ -26,8 +26,6 @@ class SparkDataFrame(DataFrame):
       defaults to None.
     :param metadata: |ParamsLikeObject|, defaults to None
 
-    :raises FugueDataFrameInitError: if the input is not compatible
-
     .. note::
 
         * You should use :meth:`fugue_spark.execution_engine.SparkExecutionEngine.to_df`
@@ -40,23 +38,20 @@ class SparkDataFrame(DataFrame):
         self, df: Any = None, schema: Any = None, metadata: Any = None
     ):
         self._lock = RLock()
-        try:
-            if isinstance(df, ps.DataFrame):
-                if schema is not None:
-                    schema = to_schema(schema).assert_not_empty()
-                    has_cast, expr = to_cast_expression(df, schema, True)
-                    if has_cast:
-                        df = df.selectExpr(*expr)
-                else:
-                    schema = to_schema(df).assert_not_empty()
-                self._native = df
-                super().__init__(schema, metadata)
-            else:  # pragma: no cover
-                assert_or_throw(schema is not None, SchemaError("schema is None"))
+        if isinstance(df, ps.DataFrame):
+            if schema is not None:
                 schema = to_schema(schema).assert_not_empty()
-                raise ValueError(f"{df} is incompatible with SparkDataFrame")
-        except Exception as e:  # pragma: no cover
-            raise FugueDataFrameInitError from e
+                has_cast, expr = to_cast_expression(df, schema, True)
+                if has_cast:
+                    df = df.selectExpr(*expr)
+            else:
+                schema = to_schema(df).assert_not_empty()
+            self._native = df
+            super().__init__(schema, metadata)
+        else:  # pragma: no cover
+            assert_or_throw(schema is not None, SchemaError("schema is None"))
+            schema = to_schema(schema).assert_not_empty()
+            raise ValueError(f"{df} is incompatible with SparkDataFrame")
 
     @property
     def native(self) -> ps.DataFrame:

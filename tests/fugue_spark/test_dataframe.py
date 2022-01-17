@@ -9,7 +9,6 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dataframe.utils import to_local_bounded_df
-from fugue.exceptions import FugueDataFrameInitError
 from fugue_test.dataframe_suite import DataFrameTests
 from pyspark.sql import SparkSession
 from pytest import raises

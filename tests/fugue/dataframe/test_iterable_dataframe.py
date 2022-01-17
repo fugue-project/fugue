@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 from fugue.dataframe import IterableDataFrame, PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueDataFrameInitError
 from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 from triad.collections.schema import Schema, SchemaError
@@ -65,7 +64,7 @@ def test_init():
     assert df.empty
     assert df.is_local
 
-    raises(FugueDataFrameInitError, lambda: IterableDataFrame(123))
+    raises(Exception, lambda: IterableDataFrame(123))
 
 
 def test_simple_methods():

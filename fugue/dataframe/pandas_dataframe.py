@@ -7,7 +7,7 @@ from fugue.dataframe.dataframe import (
     LocalBoundedDataFrame,
     _input_schema,
 )
-from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
@@ -21,8 +21,6 @@ class PandasDataFrame(LocalBoundedDataFrame):
     :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
     :param pandas_df_wrapper: if this is a simple wrapper, default False
-
-    :raises FugueDataFrameInitError: if the input is not compatible
 
     .. admonition:: Examples
 
@@ -45,38 +43,35 @@ class PandasDataFrame(LocalBoundedDataFrame):
         metadata: Any = None,
         pandas_df_wrapper: bool = False,
     ):
-        try:
-            apply_schema = True
-            if df is None:
-                schema = _input_schema(schema).assert_not_empty()
-                df = []
-            if isinstance(df, PandasDataFrame):
-                # TODO: This is useless if in this way and wrong
-                pdf = df.native
-                schema = None
-            elif isinstance(df, (pd.DataFrame, pd.Series)):
-                if isinstance(df, pd.Series):
-                    df = df.to_frame()
-                pdf = df
-                schema = None if schema is None else _input_schema(schema)
-                if pandas_df_wrapper and schema is not None:
-                    apply_schema = False
-            elif isinstance(df, Iterable):
-                schema = _input_schema(schema).assert_not_empty()
-                pdf = pd.DataFrame(df, columns=schema.names)
-                pdf = PD_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True)
-                if PD_UTILS.empty(pdf):
-                    for k, v in schema.items():
-                        pdf[k] = pdf[k].astype(v.type.to_pandas_dtype())
+        apply_schema = True
+        if df is None:
+            schema = _input_schema(schema).assert_not_empty()
+            df = []
+        if isinstance(df, PandasDataFrame):
+            # TODO: This is useless if in this way and wrong
+            pdf = df.native
+            schema = None
+        elif isinstance(df, (pd.DataFrame, pd.Series)):
+            if isinstance(df, pd.Series):
+                df = df.to_frame()
+            pdf = df
+            schema = None if schema is None else _input_schema(schema)
+            if pandas_df_wrapper and schema is not None:
                 apply_schema = False
-            else:
-                raise ValueError(f"{df} is incompatible with PandasDataFrame")
-            if apply_schema:
-                pdf, schema = self._apply_schema(pdf, schema)
-            super().__init__(schema, metadata)
-            self._native = pdf
-        except Exception as e:
-            raise FugueDataFrameInitError from e
+        elif isinstance(df, Iterable):
+            schema = _input_schema(schema).assert_not_empty()
+            pdf = pd.DataFrame(df, columns=schema.names)
+            pdf = PD_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True)
+            if PD_UTILS.empty(pdf):
+                for k, v in schema.items():
+                    pdf[k] = pdf[k].astype(v.type.to_pandas_dtype())
+            apply_schema = False
+        else:
+            raise ValueError(f"{df} is incompatible with PandasDataFrame")
+        if apply_schema:
+            pdf, schema = self._apply_schema(pdf, schema)
+        super().__init__(schema, metadata)
+        self._native = pdf
 
     @property
     def native(self) -> pd.DataFrame:

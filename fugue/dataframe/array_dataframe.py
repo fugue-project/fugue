@@ -5,7 +5,7 @@ from fugue.dataframe.dataframe import (
     LocalBoundedDataFrame,
     _get_schema_change,
 )
-from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDataFrameOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pyarrow import apply_schema
 
@@ -19,8 +19,6 @@ class ArrayDataFrame(LocalBoundedDataFrame):
     :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
 
-    :raises FugueDataFrameInitError: if the input is not compatible
-
     .. admonition:: Examples
 
         >>> a = ArrayDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
@@ -30,25 +28,22 @@ class ArrayDataFrame(LocalBoundedDataFrame):
     def __init__(  # noqa: C901
         self, df: Any = None, schema: Any = None, metadata: Any = None
     ):
-        try:
-            if df is None:
-                super().__init__(schema, metadata)
-                self._native = []
-            elif isinstance(df, DataFrame):
-                if schema is None:
-                    super().__init__(df.schema, metadata)
-                    self._native = df.as_array(type_safe=False)
-                else:
-                    schema, _ = _get_schema_change(df.schema, schema)
-                    super().__init__(schema, metadata)
-                    self._native = df.as_array(schema.names, type_safe=False)
-            elif isinstance(df, Iterable):
-                super().__init__(schema, metadata)
-                self._native = df if isinstance(df, List) else list(df)
+        if df is None:
+            super().__init__(schema, metadata)
+            self._native = []
+        elif isinstance(df, DataFrame):
+            if schema is None:
+                super().__init__(df.schema, metadata)
+                self._native = df.as_array(type_safe=False)
             else:
-                raise ValueError(f"{df} is incompatible with ArrayDataFrame")
-        except Exception as e:
-            raise FugueDataFrameInitError from e
+                schema, _ = _get_schema_change(df.schema, schema)
+                super().__init__(schema, metadata)
+                self._native = df.as_array(schema.names, type_safe=False)
+        elif isinstance(df, Iterable):
+            super().__init__(schema, metadata)
+            self._native = df if isinstance(df, List) else list(df)
+        else:
+            raise ValueError(f"{df} is incompatible with ArrayDataFrame")
 
     @property
     def native(self) -> List[Any]:

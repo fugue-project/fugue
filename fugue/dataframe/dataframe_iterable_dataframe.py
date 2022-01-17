@@ -4,7 +4,7 @@ import pandas as pd
 import pyarrow as pa
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import DataFrame, LocalDataFrame, LocalUnboundedDataFrame
-from fugue.exceptions import FugueDataFrameError, FugueDataFrameInitError
+from fugue.exceptions import FugueDataFrameInitError
 from triad import Schema, assert_or_throw
 from triad.utils.iter import EmptyAwareIterable, make_empty_aware
 
@@ -19,8 +19,6 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
     :param schema: |SchemaLikeObject|, if it is provided, it must match the schema
       of the dataframes
     :param metadata: dict-like object with string keys, default ``None``
-
-    :raises FugueDataFrameInitError: if the input is not compatible
 
     .. admonition:: Examples
 
@@ -52,35 +50,30 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
     def __init__(  # noqa: C901
         self, df: Any = None, schema: Any = None, metadata: Any = None
     ):
-        try:
-            if isinstance(df, Iterable):
-                self._native = make_empty_aware(self._dfs_wrapper(df))
-                orig_schema: Optional[Schema] = None
-                if not self._native.empty:
-                    orig_schema = self._native.peek().schema
-            else:
-                raise ValueError(
-                    f"{df} is incompatible with LocalDataFrameIterableDataFrame"
-                )
-            if orig_schema is None and schema is None:
-                raise FugueDataFrameInitError(
-                    "schema is not provided and the input is empty"
-                )
-            elif orig_schema is None and schema is not None:
-                pass
-            elif orig_schema is not None and schema is None:
-                schema = orig_schema
-            else:
-                schema = Schema(schema) if not isinstance(schema, Schema) else schema
-                assert_or_throw(
-                    orig_schema == schema,
-                    lambda: f"iterable schema {orig_schema} is different from {schema}",
-                )
-            super().__init__(schema, metadata)
-        except FugueDataFrameError:
-            raise
-        except Exception as e:
-            raise FugueDataFrameInitError from e
+        if isinstance(df, Iterable):
+            self._native = make_empty_aware(self._dfs_wrapper(df))
+            orig_schema: Optional[Schema] = None
+            if not self._native.empty:
+                orig_schema = self._native.peek().schema
+        else:
+            raise ValueError(
+                f"{df} is incompatible with LocalDataFrameIterableDataFrame"
+            )
+        if orig_schema is None and schema is None:
+            raise FugueDataFrameInitError(
+                "schema is not provided and the input is empty"
+            )
+        elif orig_schema is None and schema is not None:
+            pass
+        elif orig_schema is not None and schema is None:
+            schema = orig_schema
+        else:
+            schema = Schema(schema) if not isinstance(schema, Schema) else schema
+            assert_or_throw(
+                orig_schema == schema,
+                lambda: f"iterable schema {orig_schema} is different from {schema}",
+            )
+        super().__init__(schema, metadata)
 
     def _dfs_wrapper(self, dfs: Iterable[DataFrame]) -> Iterable[LocalDataFrame]:
         last_empty: Any = None

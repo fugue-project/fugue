@@ -6,11 +6,9 @@ import numpy as np
 import pandas as pd
 from fugue.dataframe import ArrayDataFrame, PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueDataFrameInitError
 from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
-from triad.collections.schema import Schema, SchemaError
-from triad.exceptions import InvalidOperationError
+from triad.collections.schema import Schema
 
 
 class ArrayDataFrameTests(DataFrameTests.Tests):
@@ -62,7 +60,7 @@ def test_init():
     df = ArrayDataFrame([], "x:str,y:double")
     assert df.empty
 
-    raises(FugueDataFrameInitError, lambda: ArrayDataFrame(123))
+    raises(Exception, lambda: ArrayDataFrame(123))
 
 
 def test_simple_methods():

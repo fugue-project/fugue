@@ -8,11 +8,7 @@ import numpy as np
 import pandas as pd
 from fugue.dataframe import ArrowDataFrame, DataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import (
-    FugueDataFrameEmptyError,
-    FugueDataFrameInitError,
-    FugueDataFrameOperationError,
-)
+from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
 from pytest import raises
 from triad.collections.schema import Schema
 
@@ -37,10 +33,10 @@ class DataFrameTests(object):
             raise NotImplementedError
 
         def test_init_basic(self):
-            raises(FugueDataFrameInitError, lambda: self.df())
-            raises(FugueDataFrameInitError, lambda: self.df([]))
-            raises(FugueDataFrameInitError, lambda: self.df([[]], Schema()))
-            raises(FugueDataFrameInitError, lambda: self.df([[1]], Schema()))
+            raises(Exception, lambda: self.df())
+            raises(Exception, lambda: self.df([]))
+            raises(Exception, lambda: self.df([[]], Schema()))
+            raises(Exception, lambda: self.df([[1]], Schema()))
             # raises(SchemaError, lambda: self.df([[1]]))  # schema can be inferred
 
             df = self.df([], "a:str,b:int")

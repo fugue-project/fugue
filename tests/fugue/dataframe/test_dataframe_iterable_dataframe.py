@@ -11,7 +11,6 @@ from fugue.dataframe import (
     LocalDataFrameIterableDataFrame,
 )
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueDataFrameInitError
 from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 from triad.collections.schema import Schema, SchemaError
@@ -36,7 +35,7 @@ class LocalDataFrameIterableDataFrameTests(DataFrameTests.Tests):
 
 
 def test_init():
-    raises(FugueDataFrameInitError, lambda: LocalDataFrameIterableDataFrame(1))
+    raises(Exception, lambda: LocalDataFrameIterableDataFrame(1))
 
     def get_dfs(seq):
         for x in seq:
@@ -47,10 +46,10 @@ def test_init():
             if x == "o":  # bad schema but empty dataframe doesn't matter
                 yield ArrayDataFrame([], "a:int,b:str")
 
-    with raises(FugueDataFrameInitError):
+    with raises(Exception):
         LocalDataFrameIterableDataFrame(get_dfs(""))
 
-    with raises(FugueDataFrameInitError):  # schema mismatch
+    with raises(Exception):  # schema mismatch
         LocalDataFrameIterableDataFrame(get_dfs("v"), "a:int,b:str")
 
     df = LocalDataFrameIterableDataFrame(get_dfs(""), "a:str")

@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 from fugue import ArrowDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueDataFrameInitError
 from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 

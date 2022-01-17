@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 import pyarrow as pa
 from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
-from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
@@ -17,8 +17,6 @@ class ArrowDataFrame(LocalBoundedDataFrame):
       :func:`pyarrow.Table <pa:pyarrow.table>` or pandas DataFrame
     :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
-
-    :raises FugueDataFrameInitError: if the input is not compatible
 
     .. admonition:: Examples
 
@@ -35,74 +33,71 @@ class ArrowDataFrame(LocalBoundedDataFrame):
         metadata: Any = None,
         pandas_df_wrapper: bool = False,
     ):
-        try:
-            if df is None:
-                schema = _input_schema(schema).assert_not_empty()
-                arr = [pa.array([])] * len(schema)
-                self._native = pa.Table.from_arrays(arr, schema=schema.pa_schema)
-                super().__init__(schema, metadata)
-                return
-            elif isinstance(df, pa.Table):
-                assert_or_throw(
-                    schema is None,
-                    InvalidOperationError("can't reset schema for pa.Table"),
+        if df is None:
+            schema = _input_schema(schema).assert_not_empty()
+            arr = [pa.array([])] * len(schema)
+            self._native = pa.Table.from_arrays(arr, schema=schema.pa_schema)
+            super().__init__(schema, metadata)
+            return
+        elif isinstance(df, pa.Table):
+            assert_or_throw(
+                schema is None,
+                InvalidOperationError("can't reset schema for pa.Table"),
+            )
+            self._native = df
+            super().__init__(Schema(df.schema), metadata)
+            return
+        elif isinstance(df, (pd.DataFrame, pd.Series)):
+            if isinstance(df, pd.Series):
+                df = df.to_frame()
+            pdf = df
+            if schema is None:
+                self._native = pa.Table.from_pandas(
+                    pdf,
+                    schema=Schema(pdf).pa_schema,
+                    preserve_index=False,
+                    safe=True,
                 )
-                self._native = df
-                super().__init__(Schema(df.schema), metadata)
-                return
-            elif isinstance(df, (pd.DataFrame, pd.Series)):
-                if isinstance(df, pd.Series):
-                    df = df.to_frame()
-                pdf = df
-                if schema is None:
-                    self._native = pa.Table.from_pandas(
-                        pdf,
-                        schema=Schema(pdf).pa_schema,
-                        preserve_index=False,
-                        safe=True,
-                    )
-                    schema = Schema(self._native.schema)
-                else:
-                    schema = _input_schema(schema).assert_not_empty()
-                    if pdf.shape[0] == 0:
-                        self._native = _build_empty_arrow(schema)
-                    else:
-                        self._native = pa.Table.from_pandas(
-                            pdf,
-                            schema=schema.pa_schema,
-                            preserve_index=False,
-                            safe=True,
-                        )
-                super().__init__(schema, metadata)
-                return
-            elif isinstance(df, Iterable):
+                schema = Schema(self._native.schema)
+            else:
                 schema = _input_schema(schema).assert_not_empty()
-                # n = len(schema)
-                # arr = []
-                # for i in range(n):
-                #     arr.append([])
-                # for row in df:
-                #     for i in range(n):
-                #         arr[i].append(row[i])
-                # cols = [pa.array(arr[i], type=schema.types[i]) for i in range(n)]
-                # self._native = pa.Table.from_arrays(cols, schema=schema.pa_schema)
-                pdf = pd.DataFrame(df, columns=schema.names)
                 if pdf.shape[0] == 0:
                     self._native = _build_empty_arrow(schema)
                 else:
-                    for f in schema.fields:
-                        if pa.types.is_timestamp(f.type) or pa.types.is_date(f.type):
-                            pdf[f.name] = pd.to_datetime(pdf[f.name])
-                    schema = _input_schema(schema).assert_not_empty()
                     self._native = pa.Table.from_pandas(
-                        pdf, schema=schema.pa_schema, preserve_index=False, safe=True
+                        pdf,
+                        schema=schema.pa_schema,
+                        preserve_index=False,
+                        safe=True,
                     )
-                super().__init__(schema, metadata)
-                return
+            super().__init__(schema, metadata)
+            return
+        elif isinstance(df, Iterable):
+            schema = _input_schema(schema).assert_not_empty()
+            # n = len(schema)
+            # arr = []
+            # for i in range(n):
+            #     arr.append([])
+            # for row in df:
+            #     for i in range(n):
+            #         arr[i].append(row[i])
+            # cols = [pa.array(arr[i], type=schema.types[i]) for i in range(n)]
+            # self._native = pa.Table.from_arrays(cols, schema=schema.pa_schema)
+            pdf = pd.DataFrame(df, columns=schema.names)
+            if pdf.shape[0] == 0:
+                self._native = _build_empty_arrow(schema)
             else:
-                raise ValueError(f"{df} is incompatible with ArrowDataFrame")
-        except Exception as e:
-            raise FugueDataFrameInitError from e
+                for f in schema.fields:
+                    if pa.types.is_timestamp(f.type) or pa.types.is_date(f.type):
+                        pdf[f.name] = pd.to_datetime(pdf[f.name])
+                schema = _input_schema(schema).assert_not_empty()
+                self._native = pa.Table.from_pandas(
+                    pdf, schema=schema.pa_schema, preserve_index=False, safe=True
+                )
+            super().__init__(schema, metadata)
+            return
+        else:
+            raise ValueError(f"{df} is incompatible with ArrowDataFrame")
 
     @property
     def native(self) -> pa.Table:
