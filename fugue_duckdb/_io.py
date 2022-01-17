@@ -1,7 +1,6 @@
 import os
 from typing import Any, Iterable, List, Optional, Union
 
-import fs as pfs
 from duckdb import DuckDBPyConnection
 from fugue._utils.io import FileParser, load_df, save_df
 from fugue.dataframe import ArrowDataFrame, LocalBoundedDataFrame
