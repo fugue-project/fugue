@@ -5,7 +5,7 @@ from fugue.dataframe.dataframe import (
     LocalUnboundedDataFrame,
     _get_schema_change,
 )
-from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.utils.iter import EmptyAwareIterable, make_empty_aware
 from triad.utils.pyarrow import apply_schema
@@ -19,8 +19,6 @@ class IterableDataFrame(LocalUnboundedDataFrame):
       :class:`~fugue.dataframe.dataframe.DataFrame`
     :param schema: |SchemaLikeObject|
     :param metadata: dict-like object with string keys, default ``None``
-
-    :raises FugueDataFrameInitError: if the input is not compatible
 
     .. admonition:: Examples
 
@@ -36,27 +34,24 @@ class IterableDataFrame(LocalUnboundedDataFrame):
     def __init__(  # noqa: C901
         self, df: Any = None, schema: Any = None, metadata: Any = None
     ):
-        try:
-            if df is None:
-                idf: Iterable[Any] = []
-                orig_schema: Optional[Schema] = None
-            elif isinstance(df, IterableDataFrame):
-                idf = df.native
-                orig_schema = df.schema
-            elif isinstance(df, DataFrame):
-                idf = df.as_array_iterable(type_safe=False)
-                orig_schema = df.schema
-            elif isinstance(df, Iterable):
-                idf = df
-                orig_schema = None
-            else:
-                raise ValueError(f"{df} is incompatible with IterableDataFrame")
-            schema, pos = _get_schema_change(orig_schema, schema)
-            super().__init__(schema, metadata)
-            self._pos = pos
-            self._native = make_empty_aware(self._preprocess(idf))
-        except Exception as e:
-            raise FugueDataFrameInitError from e
+        if df is None:
+            idf: Iterable[Any] = []
+            orig_schema: Optional[Schema] = None
+        elif isinstance(df, IterableDataFrame):
+            idf = df.native
+            orig_schema = df.schema
+        elif isinstance(df, DataFrame):
+            idf = df.as_array_iterable(type_safe=False)
+            orig_schema = df.schema
+        elif isinstance(df, Iterable):
+            idf = df
+            orig_schema = None
+        else:
+            raise ValueError(f"{df} is incompatible with IterableDataFrame")
+        schema, pos = _get_schema_change(orig_schema, schema)
+        super().__init__(schema, metadata)
+        self._pos = pos
+        self._native = make_empty_aware(self._preprocess(idf))
 
     @property
     def native(self) -> EmptyAwareIterable[Any]:

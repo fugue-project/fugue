@@ -9,7 +9,6 @@ import pandas
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueDataFrameInitError
 from fugue_dask.dataframe import DaskDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
@@ -30,7 +29,7 @@ def test_init():
     assert df.schema == "a:str,b:int"
 
     pdf = pandas.DataFrame([["a", 1], ["b", 2]])
-    raises(FugueDataFrameInitError, lambda: DaskDataFrame(pdf))
+    raises(Exception, lambda: DaskDataFrame(pdf))
     df = DaskDataFrame(pdf, "a:str,b:str")
     assert [["a", "1"], ["b", "2"]] == df.as_pandas().values.tolist()
     df = DaskDataFrame(pdf, "a:str,b:int")
@@ -60,7 +59,7 @@ def test_init():
     df = DaskDataFrame([], "x:str,y:double")
     assert [] == df.as_pandas().values.tolist()
 
-    raises(FugueDataFrameInitError, lambda: DaskDataFrame(123))
+    raises(Exception, lambda: DaskDataFrame(123))
 
 
 def test_simple_methods():

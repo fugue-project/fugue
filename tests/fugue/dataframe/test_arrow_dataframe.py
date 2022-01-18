@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 from fugue.dataframe import ArrowDataFrame, PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueDataFrameInitError
 from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 from triad.collections.schema import Schema, SchemaError
@@ -53,4 +52,4 @@ def test_init():
     assert df.is_local
     assert df.is_bounded
 
-    raises(FugueDataFrameInitError, lambda: ArrowDataFrame(123))
+    raises(Exception, lambda: ArrowDataFrame(123))

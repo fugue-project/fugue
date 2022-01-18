@@ -3,7 +3,6 @@ import os
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueDataFrameInitError
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark._utils.convert import to_schema, to_spark_schema
 from fugue_spark._utils.io import SparkIO

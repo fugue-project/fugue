@@ -5,7 +5,7 @@ import pandas
 import pyarrow as pa
 from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.dataframe import _input_schema
-from fugue.exceptions import FugueDataFrameInitError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.pyarrow import to_pandas_dtype
@@ -30,8 +30,6 @@ class DaskDataFrame(DataFrame):
       defaults to 0 to get the value from `fugue.dask.dataframe.default.partitions`
     :param type_safe: whether to cast input data to ensure type safe, defaults to True
 
-    :raises FugueDataFrameInitError: if the input is not compatible
-
     .. note::
 
         For :class:`dask:dask.dataframe.DataFrame`, schema must be None
@@ -45,42 +43,37 @@ class DaskDataFrame(DataFrame):
         num_partitions: int = 0,
         type_safe=True,
     ):
-        try:
-            if num_partitions <= 0:
-                num_partitions = FUGUE_DASK_DEFAULT_CONF[
-                    FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS
-                ]
-            if df is None:
-                schema = _input_schema(schema).assert_not_empty()
-                df = []
-            if isinstance(df, DaskDataFrame):
-                super().__init__(
-                    df.schema, df.metadata if metadata is None else metadata
-                )
-                self._native: pd.DataFrame = df._native
-                return
-            elif isinstance(df, (pd.DataFrame, pd.Series)):
-                if isinstance(df, pd.Series):
-                    df = df.to_frame()
-                pdf = df
-                schema = None if schema is None else _input_schema(schema)
-            elif isinstance(df, (pandas.DataFrame, pandas.Series)):
-                if isinstance(df, pandas.Series):
-                    df = df.to_frame()
-                pdf = pd.from_pandas(df, npartitions=num_partitions, sort=False)
-                schema = None if schema is None else _input_schema(schema)
-            elif isinstance(df, Iterable):
-                schema = _input_schema(schema).assert_not_empty()
-                t = PandasDataFrame(df, schema)
-                pdf = pd.from_pandas(t.native, npartitions=num_partitions, sort=False)
-                type_safe = False
-            else:
-                raise ValueError(f"{df} is incompatible with DaskDataFrame")
-            pdf, schema = self._apply_schema(pdf, schema, type_safe)
-            super().__init__(schema, metadata)
-            self._native = pdf
-        except Exception as e:
-            raise FugueDataFrameInitError from e
+        if num_partitions <= 0:
+            num_partitions = FUGUE_DASK_DEFAULT_CONF[
+                FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS
+            ]
+        if df is None:
+            schema = _input_schema(schema).assert_not_empty()
+            df = []
+        if isinstance(df, DaskDataFrame):
+            super().__init__(df.schema, df.metadata if metadata is None else metadata)
+            self._native: pd.DataFrame = df._native
+            return
+        elif isinstance(df, (pd.DataFrame, pd.Series)):
+            if isinstance(df, pd.Series):
+                df = df.to_frame()
+            pdf = df
+            schema = None if schema is None else _input_schema(schema)
+        elif isinstance(df, (pandas.DataFrame, pandas.Series)):
+            if isinstance(df, pandas.Series):
+                df = df.to_frame()
+            pdf = pd.from_pandas(df, npartitions=num_partitions, sort=False)
+            schema = None if schema is None else _input_schema(schema)
+        elif isinstance(df, Iterable):
+            schema = _input_schema(schema).assert_not_empty()
+            t = PandasDataFrame(df, schema)
+            pdf = pd.from_pandas(t.native, npartitions=num_partitions, sort=False)
+            type_safe = False
+        else:
+            raise ValueError(f"{df} is incompatible with DaskDataFrame")
+        pdf, schema = self._apply_schema(pdf, schema, type_safe)
+        super().__init__(schema, metadata)
+        self._native = pdf
 
     @property
     def native(self) -> pd.DataFrame:

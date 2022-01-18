@@ -8,7 +8,6 @@ import pandas as pd
 from fugue.dataframe import PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueDataFrameInitError
 from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 from triad.collections.schema import Schema, SchemaError
@@ -29,7 +28,7 @@ def test_init():
     assert Schema(df.native) == "a:str,b:int"
 
     pdf = pd.DataFrame([["a", 1], ["b", 2]])
-    raises(FugueDataFrameInitError, lambda: PandasDataFrame(pdf))
+    raises(Exception, lambda: PandasDataFrame(pdf))
     df = PandasDataFrame(pdf, "a:str,b:str")
     assert [["a", "1"], ["b", "2"]] == df.native.values.tolist()
     df = PandasDataFrame(pdf, "a:str,b:int")
@@ -59,7 +58,7 @@ def test_init():
     df = PandasDataFrame([], "x:str,y:double")
     assert [] == df.native.values.tolist()
 
-    raises(FugueDataFrameInitError, lambda: PandasDataFrame(123))
+    raises(Exception, lambda: PandasDataFrame(123))
 
 
 def test_simple_methods():
