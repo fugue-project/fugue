@@ -15,7 +15,7 @@ def _get_single_files(
     fp: Iterable[FileParser], fs: FileSystem, fmt: str
 ) -> Iterable[FileParser]:
     for f in fp:
-        if fs.isdir(f.uri):
+        if f.glob_pattern == "" and fs.isdir(f.uri):
             yield f.with_glob("*." + fmt, fmt)
         else:
             yield f

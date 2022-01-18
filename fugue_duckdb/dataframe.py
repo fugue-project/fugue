@@ -96,3 +96,8 @@ class DuckDataFrame(LocalBoundedDataFrame):
             yield from self[columns].as_array_iterable(type_safe=type_safe)
         else:
             yield from [list(x) for x in self._rel.fetchall()]
+
+    def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
+        if columns is not None:
+            return self[columns].head(n)
+        return [list(x) for x in self._rel.limit(n).fetchall()]

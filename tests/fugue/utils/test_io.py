@@ -77,6 +77,15 @@ def test_file_parser_glob():
     assert "*.parquet" == f.glob_pattern
     assert "/a/b/*.parquet" == f.uri_with_glob
 
+    f = FileParser("/a/b/*123.parquet")
+    assert "/a/b" == f.uri
+    assert "" == f.scheme
+    assert "/a/b/*123.parquet" == f.path
+    assert ".parquet" == f.suffix
+    assert "parquet" == f.file_format
+    assert "*123.parquet" == f.glob_pattern
+    assert "/a/b/*123.parquet" == f.uri_with_glob
+
     f = FileParser("s3://a/b/*.parquet")
     assert "s3://a/b" == f.uri
     assert "s3" == f.scheme
