@@ -31,7 +31,7 @@ setup(
     install_requires=[
         "triad>=0.6.0",
         "adagio>=0.2.3",
-        "qpd>=0.2.4",
+        "qpd>=0.2.6",
         "sqlalchemy",
         "pyarrow>=0.15.1",
         "pandas>=1.0.2",
