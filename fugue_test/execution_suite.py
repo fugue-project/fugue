@@ -1184,7 +1184,6 @@ class ExecutionEngineTests(object):
                     infer_schema=False,
                     # when header is False, must set columns
                 )
-                df_eq(c, [["6.1", "1.1"], ["2.1", "7.1"]], "c:str,a:str", throw=True)
 
             c = e.load_df(
                 path,
@@ -1212,7 +1211,6 @@ class ExecutionEngineTests(object):
                     infer_schema=True,
                     columns="c:double,a:double",
                 )
-                df_eq(c, [[6.1, 1.1], [2.1, 7.1]], "c:double,a:double", throw=True)
 
             c = e.load_df(
                 path,
