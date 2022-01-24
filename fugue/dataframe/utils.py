@@ -5,6 +5,7 @@ import pickle
 from typing import Any, Iterable, List, Optional, Tuple
 
 import pandas as pd
+import pyarrow as pa
 from fs import open_fs
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, LocalDataFrame
@@ -16,6 +17,22 @@ from triad.collections.schema import SchemaError
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.assertion import assert_or_throw as aot
+
+
+def _pa_type_eq(t1: pa.DataType, t2: pa.DataType) -> bool:
+    # should ignore the name difference of list
+    # e.g. list<item: string> == list<l: string>
+    if pa.types.is_list(t1) and pa.types.is_list(t2):
+        return _pa_type_eq(t1.value_type, t2.value_type)
+    return t1 == t2
+
+
+def _schema_eq(s1: Schema, s2: Schema) -> bool:
+    if s1 == s2:
+        return True
+    return s1.names == s2.names and all(
+        _pa_type_eq(f1.type, f2.type) for f1, f2 in zip(s1.fields, s2.fields)
+    )
 
 
 def _df_eq(
@@ -61,8 +78,8 @@ def _df_eq(
         assert (
             df1.count() == df2.count()
         ), f"count mismatch {df1.count()}, {df2.count()}"
-        assert (
-            not check_schema or df.schema == df2.schema
+        assert not check_schema or _schema_eq(
+            df.schema, df2.schema
         ), f"schema mismatch {df.schema.pa_schema}, {df2.schema.pa_schema}"
         assert (
             not check_metadata or df.metadata == df2.metadata

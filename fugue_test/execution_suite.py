@@ -1146,6 +1146,15 @@ class ExecutionEngineTests(object):
             )
             df_eq(c, [["1.1", "6.1"], ["7.1", "2.1"]], "a:str,c:str", throw=True)
 
+            c = e.load_df(
+                path,
+                format_hint="csv",
+                header=True,
+                infer_schema=False,
+                columns="a:double,c:double",
+            )
+            df_eq(c, [[1.1, 6.1], [7.1, 2.1]], "a:double,c:double", throw=True)
+
             # overwirte single with folder (if applicable)
             b = ArrayDataFrame([[60.1, 1.1], [20.1, 7.1]], "c:double,a:double")
             e.save_df(b, path, format_hint="csv", header=True, mode="overwrite")
@@ -1157,6 +1166,62 @@ class ExecutionEngineTests(object):
                 columns=["a", "c"],
             )
             df_eq(c, [["1.1", "60.1"], ["7.1", "20.1"]], "a:str,c:str", throw=True)
+
+        def test_save_single_and_load_csv_no_header(self):
+            e = self.engine
+            b = ArrayDataFrame([[6.1, 1.1], [2.1, 7.1]], "c:double,a:double")
+            path = os.path.join(self.tmpdir, "a", "b")
+            e.fs.makedirs(path, recreate=True)
+            # over write folder with single file
+            e.save_df(b, path, format_hint="csv", header=False, force_single=True)
+            assert e.fs.isfile(path)
+
+            with raises(ValueError):
+                c = e.load_df(
+                    path,
+                    format_hint="csv",
+                    header=False,
+                    infer_schema=False,
+                    # when header is False, must set columns
+                )
+                df_eq(c, [["6.1", "1.1"], ["2.1", "7.1"]], "c:str,a:str", throw=True)
+
+            c = e.load_df(
+                path,
+                format_hint="csv",
+                header=False,
+                infer_schema=False,
+                columns=["c", "a"],
+            )
+            df_eq(c, [["6.1", "1.1"], ["2.1", "7.1"]], "c:str,a:str", throw=True)
+
+            c = e.load_df(
+                path,
+                format_hint="csv",
+                header=False,
+                infer_schema=True,
+                columns=["c", "a"],
+            )
+            df_eq(c, [[6.1, 1.1], [2.1, 7.1]], "c:double,a:double", throw=True)
+
+            with raises(ValueError):
+                c = e.load_df(
+                    path,
+                    format_hint="csv",
+                    header=False,
+                    infer_schema=True,
+                    columns="c:double,a:double",
+                )
+                df_eq(c, [[6.1, 1.1], [2.1, 7.1]], "c:double,a:double", throw=True)
+
+            c = e.load_df(
+                path,
+                format_hint="csv",
+                header=False,
+                infer_schema=False,
+                columns="c:double,a:str",
+            )
+            df_eq(c, [[6.1, "1.1"], [2.1, "7.1"]], "c:double,a:str", throw=True)
 
         def test_save_and_load_csv(self):
             e = self.engine

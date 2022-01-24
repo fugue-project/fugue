@@ -76,13 +76,12 @@ def test_parquet_io(tmpdir):
 
 
 def test_csv_io(tmpdir):
-    fs = FileSystem()
     df1 = DaskDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
     path = os.path.join(tmpdir, "a.csv")
     # without header
     save_df(df1, path)
     # assert fs.readtext(path).startswith("1,2,3")
-    raises(InvalidOperationError, lambda: load_df(path, header=False))
+    raises(ValueError, lambda: load_df(path, header=False))
     actual = load_df(path, columns=["a", "b", "c"], header=False, infer_schema=True)
     assert [[1, 2, 3]] == actual.as_array()
     assert actual.schema == "a:long,b:long,c:long"
