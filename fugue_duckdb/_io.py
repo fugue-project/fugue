@@ -4,11 +4,12 @@ from typing import Any, Iterable, List, Optional, Union
 from duckdb import DuckDBPyConnection
 from fugue._utils.io import FileParser, load_df, save_df
 from fugue.dataframe import ArrowDataFrame, LocalBoundedDataFrame
-from fugue_duckdb._utils import encode_value_to_expr, get_temp_df_name
-from fugue_duckdb.dataframe import DuckDataFrame
-from triad import ParamDict
+from triad import ParamDict, Schema
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
+
+from fugue_duckdb._utils import encode_value_to_expr, get_temp_df_name, to_duck_type
+from fugue_duckdb.dataframe import DuckDataFrame
 
 
 def _get_single_files(
@@ -101,46 +102,78 @@ class DuckDBIO:
         query = f"COPY {dn} TO {encode_value_to_expr(p.uri)} WITH ({pm})"
         self._con.execute(query)
 
-    def _load_csv(
+    def _load_csv(  # noqa: C901
         self, p: FileParser, columns: Any = None, **kwargs: Any
     ) -> DuckDataFrame:
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
         infer_schema = kw.pop("infer_schema", False)
         header = kw.pop("header", False)
+        assert_or_throw(
+            not (columns is None and not header),
+            ValueError("when csv has no header, columns must be specified"),
+        )
         kw.pop("auto_detect", None)
         params: List[str] = [encode_value_to_expr(p.uri_with_glob)]
+        kw["header"] = 1 if header else 0
+        kw["auto_detect"] = 1 if infer_schema else 0
         if infer_schema:
-            if columns is None:
-                cols = "*"
-            elif isinstance(columns, list):
-                cols = ", ".join(columns)
-            else:
-                raise ValueError(columns)
-            kw["header"] = 1 if header else 0
-            kw["auto_detect"] = 1
             for k, v in kw.items():
                 params.append(f"{k}=" + encode_value_to_expr(v))
             pm = ", ".join(params)
-            query = f"SELECT {cols} FROM read_csv_auto({pm})"
-            return DuckDataFrame(self._con.from_query(query))
+            if header:
+                if columns is None:
+                    cols = "*"
+                elif isinstance(columns, list):
+                    cols = ", ".join(columns)
+                else:
+                    raise ValueError(
+                        "columns can't be schema when infer_schema is true"
+                    )
+                query = f"SELECT {cols} FROM read_csv_auto({pm})"
+                return DuckDataFrame(self._con.from_query(query))
+            else:
+                if isinstance(columns, list):
+                    pass
+                else:
+                    raise ValueError(
+                        "columns can't be schema when infer_schema is true"
+                    )
+                query = f"SELECT * FROM read_csv_auto({pm})"
+                tdf = DuckDataFrame(self._con.from_query(query))
+                rn = dict(zip(tdf.schema.names, columns))
+                return tdf.rename(rn)  # type: ignore
         else:
-            kw["ALL_VARCHAR"] = 1
-            kw["header"] = 1 if header else 0
-            kw["auto_detect"] = 0
-            if columns is None:
-                cols = "*"
+            if header:
+                kw["ALL_VARCHAR"] = 1
+                if columns is None:
+                    cols = "*"
+                elif isinstance(columns, list):
+                    cols = ", ".join(columns)
+                else:
+                    cols = "*"
+                for k, v in kw.items():
+                    params.append(f"{k}=" + encode_value_to_expr(v))
+                pm = ", ".join(params)
+                query = f"SELECT {cols} FROM read_csv_auto({pm})"
+                res = DuckDataFrame(self._con.from_query(query))
+                if isinstance(columns, list):
+                    res = res[columns]  # type: ignore
+                elif columns is not None:
+                    res = res[Schema(columns).names].alter_columns(  # type: ignore
+                        columns
+                    )
+                return res
             else:
-                cols = ", ".join(columns) if isinstance(columns, list) else "*"
-            for k, v in kw.items():
-                params.append(f"{k}=" + encode_value_to_expr(v))
-            pm = ", ".join(params)
-            query = f"SELECT {cols} FROM read_csv_auto({pm})"
-            res = DuckDataFrame(self._con.from_query(query))
-            return (
-                res  # type: ignore
-                if isinstance(columns, list) or columns is None
-                else res.alter_columns(columns)
-            )
+                if isinstance(columns, list):
+                    schema = Schema([(x, str) for x in columns])
+                else:
+                    schema = Schema(columns)
+                kw["columns"] = {f.name: to_duck_type(f.type) for f in schema.fields}
+                for k, v in kw.items():
+                    params.append(f"{k}=" + encode_value_to_expr(v))
+                pm = ", ".join(params)
+                query = f"SELECT * FROM read_csv({pm})"
+                return DuckDataFrame(self._con.from_query(query))
 
     def _save_parquet(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
         dn = get_temp_df_name()

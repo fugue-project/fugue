@@ -67,7 +67,7 @@ def test_csv_io(tmpdir, spark_session):
     path = os.path.join(tmpdir, "a.csv")
     # without header
     si.save_df(df1, path)
-    raises(InvalidOperationError, lambda: si.load_df(path, header=False))
+    raises(ValueError, lambda: si.load_df(path, header=False))
     actual = si.load_df(path, columns=["a", "b", "c"], header=False)
     assert [["1", "2", "3"]] == actual.as_array()
     assert actual.schema == "a:str,b:str,c:str"

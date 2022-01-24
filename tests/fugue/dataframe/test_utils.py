@@ -3,12 +3,14 @@ import os
 from threading import RLock
 
 import numpy as np
+import pyarrow as pa
 from fugue.dataframe import to_local_bounded_df, to_local_df
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dataframe.utils import (
+    _schema_eq,
     deserialize_df,
     get_join_schemas,
     pickle_df,
@@ -16,7 +18,7 @@ from fugue.dataframe.utils import (
     unpickle_df,
 )
 from pytest import raises
-from triad import FileSystem, assert_or_throw
+from triad import FileSystem, Schema
 from triad.collections.schema import SchemaError
 from triad.exceptions import InvalidOperationError, NoneArgumentError
 
@@ -49,6 +51,23 @@ def test_to_local_bounded_df():
     assert r.as_array() == [[0, 1]]
     assert r.schema == "a:int,b:int"
     assert r.metadata == dict(a=1)
+
+
+def test_schema_eq():
+    assert not _schema_eq(Schema("a:int"), Schema("a:int8"))
+    assert not _schema_eq(Schema("a:int"), Schema("b:int"))
+    assert not _schema_eq(Schema("a:int,b:int"), Schema("a:int"))
+
+    f1 = pa.field("a", pa.list_(pa.field("x", pa.string())))
+    f2 = pa.field("a", pa.list_(pa.field("y", pa.string())))
+    s1 = Schema([f1, pa.field("b", pa.int64())])
+    s2 = Schema([f2, pa.field("b", pa.int64())])
+    assert _schema_eq(s1, s2)
+
+    # nested
+    s1 = Schema([pa.field("a", pa.list_(f1)), pa.field("b", pa.int64())])
+    s2 = Schema([pa.field("a", pa.list_(f2)), pa.field("b", pa.int64())])
+    assert _schema_eq(s1, s2)
 
 
 def test_df_eq():

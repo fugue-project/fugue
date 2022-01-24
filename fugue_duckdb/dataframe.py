@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 import pyarrow as pa
 from duckdb import DuckDBPyRelation
-from fugue import ArrowDataFrame, DataFrame, LocalBoundedDataFrame
+from fugue import ArrowDataFrame, DataFrame, LocalBoundedDataFrame, LocalDataFrame
 from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
 from triad import Schema
 
@@ -81,6 +81,9 @@ class DuckDataFrame(LocalBoundedDataFrame):
             # Duckdb has issue to directly convert nested types to pandas
             return ArrowDataFrame(self.as_arrow()).as_pandas()
         return self._rel.to_df()
+
+    def as_local(self) -> LocalDataFrame:
+        return ArrowDataFrame(self.as_arrow(), metadata=self.metadata)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False

@@ -10,7 +10,6 @@ from fugue.dataframe import LocalBoundedDataFrame, LocalDataFrame, PandasDataFra
 from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
-from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 
 
@@ -227,7 +226,7 @@ def _load_csv(  # noqa: C901
         return pdf[schema.names], schema
     if header is None or str(header) == "False":
         if columns is None:
-            raise InvalidOperationError("columns must be set if without header")
+            raise ValueError("columns must be set if without header")
         if isinstance(columns, list):  # column names
             pdf = _safe_load_csv(
                 p.uri, **{"index_col": False, "header": None, "names": columns, **kw}

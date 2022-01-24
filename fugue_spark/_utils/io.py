@@ -9,7 +9,6 @@ from fugue_spark._utils.convert import to_schema, to_spark_schema
 from pyspark.sql import SparkSession
 from triad.collections import Schema
 from triad.collections.fs import FileSystem
-from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.collections.dict import ParamDict
 
@@ -115,7 +114,7 @@ class SparkIO(object):
         if header in ["false", "none"]:
             reader.option("header", "false")
             if columns is None:
-                raise InvalidOperationError("columns must be set if without header")
+                raise ValueError("columns must be set if without header")
             if isinstance(columns, list):  # column names
                 sdf = reader.load(p)
                 inferred = to_schema(sdf)
