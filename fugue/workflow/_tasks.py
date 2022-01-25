@@ -70,6 +70,7 @@ class FugueTask(TaskSpec, ABC):
         self._broadcast = False
         self._dependency_uuid: Any = None
         self._yield_dataframe_handler: Any = None
+        self._yield_local_dataframe = False
         self._traceback: Optional[TracebackType] = None
 
     def reset_traceback(
@@ -132,14 +133,17 @@ class FugueTask(TaskSpec, ABC):
         self._broadcast = True
         return self
 
-    def set_yield_dataframe_handler(self, handler: Callable) -> None:
+    def set_yield_dataframe_handler(self, handler: Callable, as_local: bool) -> None:
         self._yield_dataframe_handler = handler
+        self._yield_local_dataframe = as_local
 
     def set_result(self, ctx: TaskContext, df: DataFrame) -> DataFrame:
         df = self._handle_checkpoint(df, ctx)
         df = self._handle_broadcast(df, ctx)
         if self._yield_dataframe_handler is not None:
-            out_df = self._get_execution_engine(ctx).convert_yield_dataframe(df)
+            out_df = self._get_execution_engine(ctx).convert_yield_dataframe(
+                df, as_local=self._yield_local_dataframe
+            )
             self._yield_dataframe_handler(out_df)
         self._get_workflow_context(ctx).set_result(id(self), df)
         return df
