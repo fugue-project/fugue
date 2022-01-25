@@ -12,7 +12,7 @@ from fugue.dataframe import ArrowDataFrame, DataFrame
 from fugue.workflow import register_raw_df_type
 
 
-def register() -> None:
+def _register_extra() -> None:
     """Register Fugue core additional types
 
     .. note::
