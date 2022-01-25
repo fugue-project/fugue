@@ -55,8 +55,8 @@ class DuckDataFrameTests(DataFrameTests.Tests):
         assert df.as_pandas().values.tolist() == [[2.1, [1]]]
         df = self.df([[2.1, ["a"]]], "a:double,b:[str]")
         assert df.as_pandas().values.tolist() == [[2.1, ["a"]]]
-        df = self.df([[2.1, {"a":1}]], "a:double,b:{a:int}")
-        assert df.as_pandas().values.tolist() == [[2.1, {"a":1}]]
+        df = self.df([[2.1, {"a": 1}]], "a:double,b:{a:int}")
+        assert df.as_pandas().values.tolist() == [[2.1, {"a": 1}]]
 
     def test_init(self):
         df = self.df([], "a:int,b:str", metadata={"a": "b"})
@@ -66,3 +66,7 @@ class DuckDataFrameTests(DataFrameTests.Tests):
         assert isinstance(df.native, duckdb.DuckDBPyRelation)
         assert df.is_bounded
         assert df.is_local
+
+    def test_duck_as_locak(self):
+        df = self.df([[2.1, 1]], "a:double,b:int")
+        assert isinstance(df.as_local(), ArrowDataFrame)

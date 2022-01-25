@@ -2,12 +2,14 @@ import pickle
 
 import duckdb
 import pandas as pd
-from fugue import DataFrame, FugueWorkflow
+import pyarrow as pa
+from fugue import DataFrame, FugueWorkflow, ArrowDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
+from fugue_duckdb import DuckExecutionEngine
+from fugue_duckdb.dataframe import DuckDataFrame
+from fugue_sql import fsql
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
-
-from fugue_duckdb import DuckExecutionEngine
 from pytest import raises
 
 
@@ -118,3 +120,52 @@ def test_configs():
     with raises(Exception):
         # non-existent config
         dag.run("duckdb", {"fugue.duckdb.pragma.threads_xx": 2})
+
+
+def test_annotations():
+    con = duckdb.connect()
+
+    def cr(c: duckdb.DuckDBPyConnection) -> duckdb.DuckDBPyRelation:
+        return c.query("SELECT 1 AS a")
+
+    def pr(df: duckdb.DuckDBPyRelation) -> pa.Table:
+        return df.arrow()
+
+    def ot(df: duckdb.DuckDBPyRelation) -> None:
+        assert 1 == df.df().shape[0]
+
+    dag = FugueWorkflow()
+    dag.create(cr).process(pr).output(ot)
+
+    dag.run(con)
+
+
+def test_sql_yield():
+    con = duckdb.connect()
+
+    res = fsql(
+        """
+    CREATE [[0]] SCHEMA a:int
+    YIELD DATAFRAME AS a
+    CREATE [[0]] SCHEMA b:int
+    YIELD LOCAL DATAFRAME AS b
+    """
+    ).run(con)
+
+    assert isinstance(res["a"], DuckDataFrame)
+    assert isinstance(res["b"], ArrowDataFrame)
+
+    con.close()
+
+    # ephemeral
+    res = fsql(
+        """
+    CREATE [[0]] SCHEMA a:int
+    YIELD DATAFRAME AS a
+    CREATE [[0]] SCHEMA b:int
+    YIELD LOCAL DATAFRAME AS b
+    """
+    ).run("duck")
+
+    assert isinstance(res["a"], ArrowDataFrame)
+    assert isinstance(res["b"], ArrowDataFrame)

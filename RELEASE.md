@@ -6,6 +6,7 @@
 -   Ibis [integration](https://github.com/fugue-project/fugue/issues/272) (experimental)
 -   Get rid of [simple assignment](https://github.com/fugue-project/fugue/issues/276) (not used at all)
 -   [Improve DuckDB](https://github.com/fugue-project/fugue/pull/289) engine to use a real DuckDB ExecutionEngine
+-   YIELD [LOCAL](https://github.com/fugue-project/fugue/issues/284) DATAFRAME
 
 ## 0.6.4
 

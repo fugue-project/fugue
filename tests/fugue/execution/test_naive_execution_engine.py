@@ -6,6 +6,7 @@ import pyarrow as pa
 from fugue import (
     ArrowDataFrame,
     DataFrame,
+    FugueWorkflow,
     NativeExecutionEngine,
     QPDPandasEngine,
     SqliteEngine,
@@ -97,3 +98,19 @@ def test_get_file_threshold():
     assert -1 == _get_file_threshold(None)
     assert -2 == _get_file_threshold(-2)
     assert 1024 == _get_file_threshold("1k")
+
+
+def test_annotations():
+    def cr() -> pa.Table:
+        return pa.Table.from_pandas(pd.DataFrame([[0]], columns=["a"]))
+
+    def pr(df: pa.Table) -> pd.DataFrame:
+        return df.to_pandas()
+
+    def ot(df: pa.Table) -> None:
+        assert 1 == df.to_pandas().shape[0]
+
+    dag = FugueWorkflow()
+    dag.create(cr).process(pr).output(ot)
+
+    dag.run()

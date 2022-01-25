@@ -12,12 +12,12 @@ from fugue.column import ColumnExpr
 from fugue.column import SelectColumns as ColumnsSelect
 from fugue.column import col, lit
 from fugue.constants import (
+    FUGUE_COMPILE_TIME_CONFIGS,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE,
     FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
     FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT,
     FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE,
-    FUGUE_COMPILE_TIME_CONFIGS,
 )
 from fugue.dataframe import DataFrame, YieldedDataFrame
 from fugue.dataframe.dataframes import DataFrames
@@ -993,7 +993,7 @@ class WorkflowDataFrame(DataFrame):
         yielded = YieldedDataFrame(self._task.__uuid__())
         self.workflow._yields[name] = yielded
         self._task.set_yield_dataframe_handler(
-            lambda df: yielded.set_value(df.as_local() if as_local else df)
+            lambda df: yielded.set_value(df), as_local=as_local
         )
 
     def persist(self: TDF) -> TDF:
@@ -1421,7 +1421,7 @@ class WorkflowDataFrames(DataFrames):
 
 
 @extensible_class
-class FugueWorkflow(object):
+class FugueWorkflow:
     """Fugue Workflow, also known as the Fugue Programming Interface.
 
     In Fugue, we use DAG to represent workflows, DAG construction and execution
@@ -2167,7 +2167,7 @@ class FugueWorkflow(object):
         raise AttributeError(name)
 
 
-class _Dependencies(object):
+class _Dependencies:
     def __init__(
         self,
         workflow: "FugueWorkflow",
@@ -2208,7 +2208,7 @@ class _Dependencies(object):
 
 
 # TODO: this should not exist, dependency libraries should do the job
-class _Graph(object):
+class _Graph:
     def __init__(self):
         self.down: Dict[str, Set[str]] = defaultdict(set)
         self.up: Dict[str, Set[str]] = defaultdict(set)

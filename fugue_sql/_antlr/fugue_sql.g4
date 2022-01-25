@@ -240,7 +240,8 @@ fugueCheckpointNamespace
     ;
 
 fugueYield
-    : YIELD (DATAFRAME|FILE) (AS name=fugueIdentifier)?
+    : YIELD FILE (AS name=fugueIdentifier)?
+    | YIELD LOCAL? DATAFRAME (AS name=fugueIdentifier)?
     ;
 
 fugueBroadcast:
@@ -1928,7 +1929,7 @@ BY: 'BY';
 CACHE: 'CACHE';
 CASCADE: 'CASCADE';
 CASE: 'CASE';
-CAST: 'CAST';
+CAST: 'CAST' | 'TRY_CAST';
 CHANGE: 'CHANGE';
 CHECK: 'CHECK';
 CLEAR: 'CLEAR';

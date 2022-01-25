@@ -298,7 +298,7 @@ class _VisitorBase(FugueSQLVisitor):
             if ctx.DATAFRAME() is None:
                 x.yield_file_as(yield_name)
             else:
-                x.yield_dataframe_as(yield_name)
+                x.yield_dataframe_as(yield_name, as_local=ctx.LOCAL() is not None)
             return x
 
         return _func

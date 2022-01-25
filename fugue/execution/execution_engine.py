@@ -738,11 +738,12 @@ class ExecutionEngine(ABC):
         cols = SelectColumns(*keys, *agg_cols)
         return self.select(df, cols=cols, metadata=metadata)
 
-    def convert_yield_dataframe(self, df: DataFrame) -> DataFrame:
+    def convert_yield_dataframe(self, df: DataFrame, as_local: bool) -> DataFrame:
         """Convert a yield dataframe to a dataframe that can be used after this
         execution engine stops.
 
         :param df: DataFrame
+        :param as_local: whether yield a local dataframe
         :return: another DataFrame that can be used after this execution engine stops
 
         .. note::
@@ -756,7 +757,7 @@ class ExecutionEngine(ABC):
             then the spark dataframe will be invalid. So you may consider converting
             it to a local dataframe so it can still exist after the engine stops.
         """
-        return df
+        return df.as_local() if as_local else df
 
     def zip(
         self,

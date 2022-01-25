@@ -466,6 +466,9 @@ class DuckExecutionEngine(ExecutionEngine):
         dio = DuckDBIO(self.fs, self.connection)
         dio.save_df(self.to_df(df), path, format_hint, mode, **kwargs)
 
+    def convert_yield_dataframe(self, df: DataFrame, as_local: bool) -> DataFrame:
+        return df.as_local() if not self._external_con or as_local else df
+
     def _sql(
         self, sql: str, dfs: Dict[str, DataFrame], metadata: Any = None
     ) -> DuckDataFrame:
