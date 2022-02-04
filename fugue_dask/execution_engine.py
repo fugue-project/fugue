@@ -213,16 +213,14 @@ class DaskExecutionEngine(ExecutionEngine):
             return output_df.as_pandas()
 
         df = self.to_df(df)
+        meta = self.pl_utils.safe_to_pandas_dtype(output_schema.pa_schema)
         if len(partition_spec.partition_by) == 0:
             pdf = self.repartition(df, partition_spec)
-            result = pdf.native.map_partitions(_map, meta=output_schema.pandas_dtype)
+            result = pdf.native.map_partitions(_map, meta=meta)
         else:
             df = self.repartition(df, PartitionSpec(num=partition_spec.num_partitions))
             result = self.pl_utils.safe_groupby_apply(
-                df.native,
-                partition_spec.partition_by,
-                _map,
-                meta=output_schema.pandas_dtype,
+                df.native, partition_spec.partition_by, _map, meta=meta
             )
         return DaskDataFrame(result, output_schema, metadata)
 

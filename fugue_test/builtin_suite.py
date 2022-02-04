@@ -382,7 +382,7 @@ class BuiltInTests(object):
         def test_transform_binary(self):
             with self.dag() as dag:
                 a = dag.df([[1, pickle.dumps([0, "a"])]], "a:int,b:bytes")
-                c = a.transform(mock_tf3)
+                c = a.transform(mock_tf3).persist()
                 b = dag.df([[1, pickle.dumps([1, "ax"])]], "a:int,b:bytes")
                 b.assert_eq(c, check_order=True)
 
@@ -684,6 +684,7 @@ class BuiltInTests(object):
                 b = dag.df([[2, 200], [3, 300]], "a:int,c:int")
                 c = dag.df([[2, 2000], [4, 4000]], "a:int,d:int")
                 d = a.left_outer_join(b, c)
+                d.show()
                 dag.df(
                     [[1, 10, None, None], [2, 20, 200, 2000], [3, 30, 300, None]],
                     "a:int,b:int,c:int,d:int",

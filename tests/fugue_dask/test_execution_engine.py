@@ -23,10 +23,6 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
     def test__join_outer_pandas_incompatible(self):
         return
 
-    def test_map_with_dict_col(self):
-        # TODO: add back
-        return
-
     def test_to_df(self):
         e = self.engine
         a = e.to_df([[1, 2], [3, 4]], "a:int,b:int", dict(a=1))

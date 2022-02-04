@@ -42,7 +42,7 @@ setup(
         "dask": ["qpd[dask]"],
         "duckdb": ["duckdb>=0.3.1", "pyarrow>=5.0.0"],
         "ibis": ["ibis-framework>=2.1.1"],
-        "notebook": ["notebook", "jupyterlab", "dash"],
+        "notebook": ["notebook", "jupyterlab", "dash", "ipython>=7.10.0"],
         "all": [
             "antlr4-python3-runtime",
             "jinja2",
@@ -50,6 +50,7 @@ setup(
             "qpd[dask]",
             "notebook",
             "jupyterlab",
+            "ipython>=7.10.0",
             "dash",
             "duckdb>=0.3.1",
             "pyarrow>=5.0.0",
