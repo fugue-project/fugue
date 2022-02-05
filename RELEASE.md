@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.6.6
+
+-   Create a hybrid [engine](https://github.com/fugue-project/fugue/issues/300) of DuckDB and Dask
+-   Enable DaskExecutionEngine to transform dataframes with [nested](https://github.com/fugue-project/fugue/issues/299) columns
+
 ## 0.6.5
 
 -   Make Fugue exceptions [short and useful](https://github.com/fugue-project/fugue/issues/277)

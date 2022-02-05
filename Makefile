@@ -79,7 +79,7 @@ testcore:
 	python3 -bb -m pytest tests/fugue
 
 testspark:
-	python3 -bb -m pytest tests/fugue_spark
+	python3 -bb -m pytest --reruns 2 --only-rerun 'Table or view not found' tests/fugue_spark
 
 testdask:
 	python3 -bb -m pytest tests/fugue_dask
