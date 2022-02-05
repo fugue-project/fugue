@@ -19,10 +19,10 @@ def run_ibis(
     """Run an ibis workflow wrapped in ``ibis_func``
 
     :param ibis_func: the function taking in an ibis backend, and returning
-        a :ref:`TableExpr <ibis:/api.rst#table-methods>`
+      an Ibis TableExpr
     :param ibis_engine: an object that together with |ExecutionEngine|
-        can determine :class:`~fugue_ibis.execution.ibis_engine.IbisEngine`
-        , defaults to None
+      can determine :class:`~fugue_ibis.execution.ibis_engine.IbisEngine`
+      , defaults to None
     :param dfs: dataframes in the same workflow
     :return: the output workflow dataframe
 
