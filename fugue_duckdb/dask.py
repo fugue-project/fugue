@@ -22,7 +22,7 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
     def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DuckDataFrame:
         if isinstance(df, (dd.DataFrame, DaskDataFrame)):
             ddf = self._to_dask_df(df, schema, metadata)
-            if all(not pa.types.is_nested(f.type) for f in df.schema.fields):
+            if all(not pa.types.is_nested(f.type) for f in ddf.schema.fields):
                 return DuckDataFrame(
                     self.connection.df(ddf.as_pandas()), metadata=dict(ddf.metadata)
                 )
