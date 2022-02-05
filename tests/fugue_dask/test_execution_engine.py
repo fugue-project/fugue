@@ -49,6 +49,29 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
         b = e.repartition(a, PartitionSpec(by=["a"], num=3))
         assert a.num_partitions == b.num_partitions
 
+        b = e.repartition(a, PartitionSpec(num=5, algo="even"))
+        assert 5 == b.num_partitions
+        for i in range(b.num_partitions):
+            assert len(b.native.partitions[i]) == 1
+
+        b = e.repartition(a, PartitionSpec(num="ROWCOUNT", algo="even"))
+        assert 5 == b.num_partitions
+        for i in range(b.num_partitions):
+            assert len(b.native.partitions[i]) == 1
+
+        b = e.repartition(a, PartitionSpec(num="ROWCOUNT*2", algo="even"))
+        assert 5 == b.num_partitions
+        for i in range(b.num_partitions):
+            assert len(b.native.partitions[i]) == 1
+
+        b = e.repartition(a, PartitionSpec(num="ROWCOUNT-4", algo="even"))
+        assert 1 == b.num_partitions
+        for i in range(b.num_partitions):
+            assert len(b.native.partitions[i]) == 5
+
+        b = e.repartition(a, PartitionSpec(num="ROWCOUNT-ROWCOUNT", algo="even"))
+        assert a is b
+
     def test_sample_n(self):
         # TODO: dask does not support sample by number of rows
         pass

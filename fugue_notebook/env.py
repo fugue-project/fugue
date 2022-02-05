@@ -60,6 +60,11 @@ class NotebookSetup(object):
         except ImportError:
             pass
 
+        try:
+            import fugue_duckdb  # noqa: F401
+        except ImportError:
+            pass
+
 
 @magics_class
 class _FugueSQLMagics(Magics):

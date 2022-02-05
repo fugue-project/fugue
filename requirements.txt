@@ -19,6 +19,7 @@ sphinx-autodoc-typehints
 flask
 pandavro
 fastavro
+psutil
 
 # publish to pypi
 wheel

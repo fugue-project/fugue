@@ -13,6 +13,15 @@ import pyarrow as pa
 
 
 class DuckDaskExecutionEngine(DuckExecutionEngine):
+    """A hybrid engine of DuckDB and Dask. Most operations will be done by
+    DuckDB, but for ``map``, it will use Dask to fully utilize local CPUs.
+    The engine can be used with a real Dask cluster, but practically, this
+    is more useful for local process.
+
+    :param conf: |ParamsLikeObject|, read |FugueConfig| to learn Fugue specific options
+    :param connection: DuckDB connection
+    """
+
     def __init__(
         self, conf: Any = None, connection: Optional[DuckDBPyConnection] = None
     ):
