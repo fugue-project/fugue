@@ -31,7 +31,7 @@ from triad.utils.hash import to_uuid
 from triad.utils.threading import RunOnce
 
 from fugue_dask._constants import (
-    _CPU_COUNT,
+    CPU_COUNT,
     FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS,
     FUGUE_DASK_DEFAULT_CONF,
 )
@@ -164,7 +164,7 @@ class DaskExecutionEngine(ExecutionEngine):
         p = partition_spec.get_num_partitions(
             **{
                 KEYWORD_ROWCOUNT: lambda: df.persist().count(),  # type: ignore
-                KEYWORD_CORECOUNT: lambda: _CPU_COUNT,
+                KEYWORD_CORECOUNT: lambda: CPU_COUNT,
             }
         )
         if p > 0:
