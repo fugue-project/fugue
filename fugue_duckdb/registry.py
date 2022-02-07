@@ -66,7 +66,7 @@ def _register_engines() -> None:
             lambda conf, **kwargs: DuckDaskExecutionEngine(conf=conf),
             on_dup="ignore",
         )
-    except Exception:
+    except Exception:  # pragma: no cover
         pass
     register_execution_engine(
         DuckDBPyConnection,
