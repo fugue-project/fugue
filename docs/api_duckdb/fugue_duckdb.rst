@@ -27,6 +27,22 @@ fugue\_duckdb
 .. |FugueDataTypes| replace:: :doc:`Fugue Data Types <tutorial:tutorials/appendix/generate_types>`
 
 
+fugue\_duckdb.dask
+------------------
+
+.. automodule:: fugue_duckdb.dask
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+fugue\_duckdb.dataframe
+-----------------------
+
+.. automodule:: fugue_duckdb.dataframe
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue\_duckdb.execution\_engine
 -------------------------------
 
@@ -39,6 +55,14 @@ fugue\_duckdb.ibis\_engine
 --------------------------
 
 .. automodule:: fugue_duckdb.ibis_engine
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+fugue\_duckdb.registry
+----------------------
+
+.. automodule:: fugue_duckdb.registry
    :members:
    :undoc-members:
    :show-inheritance:

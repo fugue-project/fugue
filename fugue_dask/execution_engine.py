@@ -31,6 +31,7 @@ from triad.utils.hash import to_uuid
 from triad.utils.threading import RunOnce
 
 from fugue_dask._constants import (
+    CPU_COUNT,
     FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS,
     FUGUE_DASK_DEFAULT_CONF,
 )
@@ -163,15 +164,17 @@ class DaskExecutionEngine(ExecutionEngine):
         p = partition_spec.get_num_partitions(
             **{
                 KEYWORD_ROWCOUNT: lambda: df.persist().count(),  # type: ignore
-                KEYWORD_CORECOUNT: lambda: 2,  # TODO: remove this hard code
+                KEYWORD_CORECOUNT: lambda: CPU_COUNT,
             }
         )
         if p > 0:
+            if partition_spec.algo == "even":
+                pdf = df.as_pandas()
+                ddf = dd.from_pandas(pdf, npartitions=p, sort=False)
+            else:
+                ddf = df.native.repartition(npartitions=p)
             return DaskDataFrame(
-                df.native.repartition(npartitions=p),
-                schema=df.schema,
-                metadata=df.metadata,
-                type_safe=False,
+                ddf, schema=df.schema, metadata=df.metadata, type_safe=False
             )
         return df
 
@@ -213,16 +216,14 @@ class DaskExecutionEngine(ExecutionEngine):
             return output_df.as_pandas()
 
         df = self.to_df(df)
+        meta = self.pl_utils.safe_to_pandas_dtype(output_schema.pa_schema)
         if len(partition_spec.partition_by) == 0:
             pdf = self.repartition(df, partition_spec)
-            result = pdf.native.map_partitions(_map, meta=output_schema.pandas_dtype)
+            result = pdf.native.map_partitions(_map, meta=meta)
         else:
             df = self.repartition(df, PartitionSpec(num=partition_spec.num_partitions))
             result = self.pl_utils.safe_groupby_apply(
-                df.native,
-                partition_spec.partition_by,
-                _map,
-                meta=output_schema.pandas_dtype,
+                df.native, partition_spec.partition_by, _map, meta=meta
             )
         return DaskDataFrame(result, output_schema, metadata)
 

@@ -77,7 +77,9 @@ class DuckDBEngine(SQLEngine):
 class DuckExecutionEngine(ExecutionEngine):
     """The execution engine using DuckDB.
     Please read |ExecutionEngineTutorial| to understand this important Fugue concept
+
     :param conf: |ParamsLikeObject|, read |FugueConfig| to learn Fugue specific options
+    :param connection: DuckDB connection
     """
 
     def __init__(

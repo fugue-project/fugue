@@ -62,3 +62,11 @@ fugue.interfaceless
    :undoc-members:
    :show-inheritance:
 
+fugue.registry
+--------------
+
+.. automodule:: fugue.registry
+   :members:
+   :undoc-members:
+   :show-inheritance:
+

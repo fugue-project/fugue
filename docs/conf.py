@@ -86,5 +86,5 @@ intersphinx_mapping = {
     "fs": ("https://docs.pyfilesystem.org/en/latest", None),
     "spark": ("https://spark.apache.org/docs/latest/api/python", None),
     "dask": ("https://docs.dask.org/en/latest", None),
-    "ibis": ("https://ibis-project.org/docs", None),
+    "ibis": ("https://ibis-project.org", None),
 }

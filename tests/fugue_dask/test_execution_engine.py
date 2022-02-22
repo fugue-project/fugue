@@ -23,10 +23,6 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
     def test__join_outer_pandas_incompatible(self):
         return
 
-    def test_map_with_dict_col(self):
-        # TODO: add back
-        return
-
     def test_to_df(self):
         e = self.engine
         a = e.to_df([[1, 2], [3, 4]], "a:int,b:int", dict(a=1))
@@ -52,6 +48,29 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
         assert a is b
         b = e.repartition(a, PartitionSpec(by=["a"], num=3))
         assert a.num_partitions == b.num_partitions
+
+        b = e.repartition(a, PartitionSpec(num=5, algo="even"))
+        assert 5 == b.num_partitions
+        for i in range(b.num_partitions):
+            assert len(b.native.partitions[i]) == 1
+
+        b = e.repartition(a, PartitionSpec(num="ROWCOUNT", algo="even"))
+        assert 5 == b.num_partitions
+        for i in range(b.num_partitions):
+            assert len(b.native.partitions[i]) == 1
+
+        b = e.repartition(a, PartitionSpec(num="ROWCOUNT*2", algo="even"))
+        assert 5 == b.num_partitions
+        for i in range(b.num_partitions):
+            assert len(b.native.partitions[i]) == 1
+
+        b = e.repartition(a, PartitionSpec(num="ROWCOUNT-4", algo="even"))
+        assert 1 == b.num_partitions
+        for i in range(b.num_partitions):
+            assert len(b.native.partitions[i]) == 5
+
+        b = e.repartition(a, PartitionSpec(num="ROWCOUNT-ROWCOUNT", algo="even"))
+        assert a is b
 
     def test_sample_n(self):
         # TODO: dask does not support sample by number of rows

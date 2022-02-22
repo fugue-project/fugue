@@ -2,7 +2,9 @@ import dask.dataframe as pd
 import pandas
 import pyarrow as pa
 from qpd_dask.engine import DaskUtils as DaskUtilsBase
-from triad.utils.pyarrow import to_pandas_dtype
+from triad.utils.pyarrow import to_pandas_dtype, to_single_pandas_dtype
+from typing import Dict
+import numpy as np
 
 
 class DaskUtils(DaskUtilsBase):
@@ -17,6 +19,26 @@ class DaskUtils(DaskUtilsBase):
             df.index,
             (pandas.RangeIndex, pandas.Int64Index, pandas.UInt64Index, pd.Index),
         )
+
+    def safe_to_pandas_dtype(self, schema: pa.Schema) -> Dict[str, np.dtype]:
+        """Safely convert pyarrow types to pandas types. It will convert nested types
+        to numpy object type. And this does not convert to pandas extension types.
+
+        :param schema: the input pyarrow schema
+        :return: the dictionary of numpy types
+
+        .. note::
+
+            This is a temporary solution, it will be removed when we use the Slide
+            package. Do not use this function directly.
+        """
+        res: Dict[str, np.dtype] = {}
+        for f in schema:
+            if pa.types.is_nested(f.type):
+                res[f.name] = np.dtype(object)
+            else:
+                res[f.name] = to_single_pandas_dtype(f.type, use_extension_types=False)
+        return res
 
     # TODO: merge this back to base class
     def enforce_type(  # noqa: C901

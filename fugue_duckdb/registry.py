@@ -48,6 +48,26 @@ def _register_engines() -> None:
         lambda conf, **kwargs: DuckExecutionEngine(conf=conf),
         on_dup="ignore",
     )
+    try:
+        from fugue_duckdb.dask import DuckDaskExecutionEngine
+
+        register_execution_engine(
+            "duckdask",
+            lambda conf, **kwargs: DuckDaskExecutionEngine(conf=conf),
+            on_dup="ignore",
+        )
+        register_execution_engine(
+            "duckdbdask",
+            lambda conf, **kwargs: DuckDaskExecutionEngine(conf=conf),
+            on_dup="ignore",
+        )
+        register_execution_engine(
+            "dd",
+            lambda conf, **kwargs: DuckDaskExecutionEngine(conf=conf),
+            on_dup="ignore",
+        )
+    except Exception:  # pragma: no cover
+        pass
     register_execution_engine(
         DuckDBPyConnection,
         lambda con, conf, **kwargs: DuckExecutionEngine(conf=conf, connection=con),
