@@ -459,6 +459,7 @@ class DaskExecutionEngine(ExecutionEngine):
                 format_hint=format_hint,
                 mode=mode,
                 partition_spec=partition_spec,
+                force_single=force_single,
                 **kwargs,
             )
         else:

@@ -1175,6 +1175,7 @@ class BuiltInTests(object):
         def test_io(self):
             path = os.path.join(self.tmpdir, "a")
             path2 = os.path.join(self.tmpdir, "b.test.csv")
+            path3 = os.path.join(self.tmpdir, "c.partition")
             with self.dag() as dag:
                 b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
                 b.partition(num=3).save(path, fmt="parquet", single=True)
@@ -1185,6 +1186,19 @@ class BuiltInTests(object):
                 a.assert_eq(dag.df([[1, 6], [7, 2]], "a:long,c:int"))
                 a = dag.load(path2, header=True, columns="c:int,a:long")
                 a.assert_eq(dag.df([[6, 1], [2, 7]], "c:int,a:long"))
+            with self.dag() as dag:
+                b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
+                b.partition(by='c').save(path3, fmt="parquet", single=False)
+                b.save(path2, header=True)
+            assert FileSystem().isdir(path3)
+            assert FileSystem().isdir(os.path.join(path3, 'c=6'))
+            assert FileSystem().isdir(os.path.join(path3, 'c=2'))
+            # TODO: in test below, once issue #288 is fixed, use dag.load instead of pd.read_parquet
+            pd.testing.assert_frame_equal(
+                pd.read_parquet(path3).sort_values('a').reset_index(drop=True),
+                pd.DataFrame({'c': pd.Categorical([6, 2]), 'a': [1, 7]}).reset_index(drop=True),
+                check_like=True
+            )
 
         def test_save_and_use(self):
             path = os.path.join(self.tmpdir, "a")
