@@ -376,10 +376,8 @@ class NativeExecutionEngine(ExecutionEngine):
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
-        if not partition_spec.empty:
-            self.log.warning(  # pragma: no cover
-                "partition_spec is not respected in %s.save_df", self
-            )
+        if not force_single and not partition_spec.empty:
+            kwargs['partition_cols'] = partition_spec.partition_by
         self.fs.makedirs(os.path.dirname(path), recreate=True)
         df = self.to_df(df)
         save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
