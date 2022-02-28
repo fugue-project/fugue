@@ -464,9 +464,7 @@ class DaskExecutionEngine(ExecutionEngine):
             )
         else:
             if not partition_spec.empty:
-                self.log.warning(  # pragma: no cover
-                    "partition_spec is not respected in %s.save_df", self
-                )
+                kwargs['partition_on'] = partition_spec.partition_by
             self.fs.makedirs(os.path.dirname(path), recreate=True)
             df = self.to_df(df)
             save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
