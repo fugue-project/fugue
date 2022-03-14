@@ -6,6 +6,7 @@
 -   Enable DaskExecutionEngine to transform dataframes with [nested](https://github.com/fugue-project/fugue/issues/299) columns
 -   A [smarter](https://github.com/fugue-project/fugue/issues/304) way to determine default npartitions in Dask
 -   Support [even partitioning](https://github.com/fugue-project/fugue/issues/303) on Dask
+-   Add handling of [nested ArrayType](https://github.com/fugue-project/fugue/issues/308) on Spark
 
 ## 0.6.5
 
