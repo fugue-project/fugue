@@ -9,7 +9,7 @@ def test_schema_conversion(spark_session):
 
     test("a:int,b:long,c:[int],d:datetime,e:date,f:decimal(3,4),g:str")
     test("a:{a:[int],b:[str]}")
-    # test("a:[{a:int}]") TODO: this is not supported by spark, should we support?
+    test("a:[{a:int}]")
     s = to_spark_schema(to_spark_schema("a:int"))
     assert to_spark_schema(s) is s
 
@@ -17,6 +17,12 @@ def test_schema_conversion(spark_session):
     assert to_schema(to_spark_schema(df)) == "a:int"
     assert to_schema(df) == "a:int"
     assert to_schema(dict(a=str)) == "a:str"
+
+    from pyspark.sql.types import StructType,StructField, StringType, IntegerType, ArrayType
+    schema = StructType([StructField("name", ArrayType(StructType([StructField("nest_name", StringType(), True), StructField("nest_value", IntegerType(), True)]), True), True)])
+    df = spark_session.createDataFrame([[[("a", 1), ("b", 2)]]], schema)
+    assert to_schema(df) == "name:[{nest_name:str,nest_value:int}]"
+    assert to_spark_schema("name:[{nest_name:str,nest_value:int}]") == schema
 
 
 def test_to_cast_expression():
