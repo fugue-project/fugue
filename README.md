@@ -19,6 +19,8 @@
 *   Big data practitioners finding **testing code** to be costly and slow
 *   Data teams with big data projects that **struggle maintaining code**
 
+For a more comprehensive overview of Fugue, read [this](https://towardsdatascience.com/introducing-fugue-reducing-pyspark-developer-friction-a702230455de) article.
+
 ## Select Features
 
 *   **Cross-framework code**: Write code once in native Python, SQL, or pandas then execute it on Dask or Spark with no rewrites. Logic and execution are decoupled through Fugue, enabling users to leverage the Spark and Dask engines without learning the specific framework syntax.
@@ -46,13 +48,13 @@ Now, the `map_letter_to_food()` function is brought to the Spark execution engin
 
 ```python
 from fugue import transform
-from fugue_spark import SparkExecutionEngine
+import fugue_spark
 
 df = transform(input_df,
                map_letter_to_food,
                schema="*",
                params=dict(mapping=map_dict),
-               engine=SparkExecutionEngine
+               engine="spark"
             )
 df.show()
 ```
@@ -185,22 +187,40 @@ docker run -p 8888:8888 fugueproject/tutorials:latest
 
 For the API docs, [click here](https://fugue.readthedocs.org)
 
+## Ecosystem
+
+By being an abstraction layer, Fugue can be used with a lot of other open-source projects seamlessly.
+
+Fugue can use the following projects as backends:
+
+*   [Spark](https://github.com/apache/spark)
+*   [Dask](https://github.com/dask/dask)
+*   [Duckdb](https://github.com/duckdb/duckdb) - in-process SQL OLAP database management
+*   [Ibis](https://github.com/ibis-project/ibis/) - pandas-like interface for SQL engines
+*   [blazing-sql](https://github.com/BlazingDB/blazingsql) - GPU accelerated SQL engine based on cuDF
+*   [dask-sql](https://github.com/dask-contrib/dask-sql) - SQL interface for Dask
+
+Fugue is available as a backend or can integrate with the following projects:
+
+*   [PyCaret](https://github.com/pycaret/pycaret) - low code machine learning
+*   [Pandera](https://github.com/pandera-dev/pandera) - data validation
+
+
 ## Further Resources
 
 View some of our latest conferences presentations and content. For a more complete list, check the [Resources](https://fugue-tutorials.readthedocs.io/en/latest/tutorials/resources.html) page in the tutorials.
 
 ### Blogs
 
-*   [Fugue: Reducing Spark Developer Friction (James Le)](https://jameskle.com/writes/fugue)
 *   [Introducing FugueSQL — SQL for Pandas, Spark, and Dask DataFrames (Towards Data Science by Khuyen Tran)](https://towardsdatascience.com/introducing-fuguesql-sql-for-pandas-spark-and-dask-dataframes-63d461a16b27)
 *   [Interoperable Python and SQL in Jupyter Notebooks (Towards Data Science)](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
 *   [Using Pandera on Spark for Data Validation through Fugue (Towards Data Science)](https://towardsdatascience.com/using-pandera-on-spark-for-data-validation-through-fugue-72956f274793)
 
 ### Conferences
 
-*   [Large Scale Data Validation with Spark and Dask (PyCon US 2021)](https://www.youtube.com/watch?v=2AdvBgjO_3Q)
-*   [Dask SQL Query Engines (Dask Summit 2021)](https://www.youtube.com/watch?v=bQDN41Bc3bw)
-*   [Scaling Machine Learning Workflows to Big Data with Fugue (KubeCon 2021)](https://www.youtube.com/watch?v=fDIRMiwc0aA)
+*   [Large Scale Data Validation with Spark and Dask (PyCon US)](https://www.youtube.com/watch?v=2AdvBgjO_3Q)
+*   [FugueSQL - The Enhanced SQL Interface for Pandas, Spark, and Dask DataFrames (PyData Global)](https://www.youtube.com/watch?v=OBpnGYjNBBI)
+*   [Scaling Machine Learning Workflows to Big Data with Fugue (KubeCon)](https://www.youtube.com/watch?v=fDIRMiwc0aA)
 
 ## Community and Contributing
 
