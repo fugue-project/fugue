@@ -5,7 +5,7 @@ except ImportError:  # pragma: no cover
 
 
 def register_plugins():
-    for plugin in entry_points(group="fugue.plugins"):
+    for plugin in entry_points().get("fugue.plugins", []):
         try:
             register_func = plugin.load()
             assert callable(register_func), f"{plugin.name} is not a callable"
