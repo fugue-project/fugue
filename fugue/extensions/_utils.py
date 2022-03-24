@@ -27,6 +27,8 @@ class ExtensionRegistry:
         raise ValueError(on_dup)
 
     def get(self, obj: Any) -> Any:
+        import fugue._utils.register  # pylint: disable=W0611 # noqa: F401
+
         if isinstance(obj, str) and obj in self._dict:
             return self._dict[obj]
         return obj

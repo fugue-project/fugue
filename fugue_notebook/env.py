@@ -5,12 +5,7 @@ from typing import Any, Callable, Dict, List
 
 import fugue_sql
 import pandas as pd
-from fugue import (
-    ExecutionEngine,
-    NativeExecutionEngine,
-    make_execution_engine,
-    register_execution_engine,
-)
+from fugue import ExecutionEngine, make_execution_engine
 from fugue.dataframe import YieldedDataFrame
 from fugue.extensions._builtins.outputters import Show
 from fugue_sql.exceptions import FugueSQLSyntaxError
@@ -37,33 +32,6 @@ class NotebookSetup(object):
     def get_pretty_print(self) -> Callable:
         """Fugue dataframe pretty print handler"""
         return _default_pretty_print
-
-    def register_execution_engines(self):
-        """Register execution engines with names. This will also try to register
-        spark and dask engines if the dependent packages are available and they
-        are not registered"""
-        register_execution_engine(
-            "native",
-            lambda conf, **kwargs: NativeExecutionEngine(conf=conf),
-            on_dup="ignore",
-        )
-
-        try:
-            import pyspark  # noqa: F401
-            import fugue_spark  # noqa: F401
-        except ImportError:
-            pass
-
-        try:
-            import dask.dataframe  # noqa: F401
-            import fugue_dask  # noqa: F401
-        except ImportError:
-            pass
-
-        try:
-            import fugue_duckdb  # noqa: F401
-        except ImportError:
-            pass
 
 
 @magics_class
@@ -151,5 +119,4 @@ def _setup_fugue_notebook(
         fsql_ignore_case=fsql_ignore_case,
     )
     ipython.register_magics(magics)
-    s.register_execution_engines()
     Show.set_hook(s.get_pretty_print())

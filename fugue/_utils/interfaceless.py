@@ -263,6 +263,8 @@ class FunctionWrapper(object):
         param: Optional[inspect.Parameter],
         none_as_other: bool = True,
     ) -> "_FuncParam":
+        import fugue._utils.register  # pylint: disable=W0611 # noqa: F401
+
         if annotation == type(None):  # noqa: E721
             return _NoneParam(param)
         if annotation == inspect.Parameter.empty:
