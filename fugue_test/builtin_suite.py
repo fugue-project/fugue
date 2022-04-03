@@ -1189,7 +1189,6 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
                 b.partition(by='c').save(path3, fmt="parquet", single=False)
-                b.save(path2, header=True)
             assert FileSystem().isdir(path3)
             assert FileSystem().isdir(os.path.join(path3, 'c=6'))
             assert FileSystem().isdir(os.path.join(path3, 'c=2'))

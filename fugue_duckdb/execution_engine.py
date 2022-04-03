@@ -465,6 +465,8 @@ class DuckExecutionEngine(ExecutionEngine):
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        if not partition_spec.empty and not force_single:
+            kwargs['partition_cols'] = partition_spec.partition_by
         dio = DuckDBIO(self.fs, self.connection)
         dio.save_df(self.to_df(df), path, format_hint, mode, **kwargs)
 
