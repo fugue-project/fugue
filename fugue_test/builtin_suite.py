@@ -589,7 +589,8 @@ class BuiltInTests(object):
             def incr():
                 fs = FileSystem(auto_close=False).makedirs(tmpdir, recreate=True)
                 fs.writetext(str(uuid4()) + ".txt", "")
-                return fs.glob("*.txt").count().files
+                return fs.glob("*.tx"
+                               "t").count().files
 
             def t1(
                 df: Iterable[Dict[str, Any]], df2: pd.DataFrame
