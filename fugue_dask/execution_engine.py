@@ -464,7 +464,7 @@ class DaskExecutionEngine(ExecutionEngine):
             )
         else:
             if not partition_spec.empty:
-                kwargs['partition_on'] = partition_spec.partition_by
+                kwargs["partition_on"] = partition_spec.partition_by
             self.fs.makedirs(os.path.dirname(path), recreate=True)
             df = self.to_df(df)
             save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)

@@ -70,7 +70,7 @@ class DuckDBIO:
             NotImplementedError(f"{mode} is not supported"),
         )
         p = FileParser(uri, format_hint).assert_no_glob()
-        if (p.file_format not in self._format_save) or ('partition_cols' in kwargs):
+        if (p.file_format not in self._format_save) or ("partition_cols" in kwargs):
             self._fs.makedirs(os.path.dirname(uri), recreate=True)
             ldf = ArrowDataFrame(df.native.arrow())
             return save_df(

@@ -589,8 +589,7 @@ class BuiltInTests(object):
             def incr():
                 fs = FileSystem(auto_close=False).makedirs(tmpdir, recreate=True)
                 fs.writetext(str(uuid4()) + ".txt", "")
-                return fs.glob("*.tx"
-                               "t").count().files
+                return fs.glob("*.tx" "t").count().files
 
             def t1(
                 df: Iterable[Dict[str, Any]], df2: pd.DataFrame
@@ -1189,15 +1188,18 @@ class BuiltInTests(object):
                 a.assert_eq(dag.df([[6, 1], [2, 7]], "c:int,a:long"))
             with self.dag() as dag:
                 b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
-                b.partition(by='c').save(path3, fmt="parquet", single=False)
+                b.partition(by="c").save(path3, fmt="parquet", single=False)
             assert FileSystem().isdir(path3)
-            assert FileSystem().isdir(os.path.join(path3, 'c=6'))
-            assert FileSystem().isdir(os.path.join(path3, 'c=2'))
-            # TODO: in test below, once issue #288 is fixed, use dag.load instead of pd.read_parquet
+            assert FileSystem().isdir(os.path.join(path3, "c=6"))
+            assert FileSystem().isdir(os.path.join(path3, "c=2"))
+            # TODO: in test below, once issue #288 is fixed, use dag.load
+            #  instead of pd.read_parquet
             pd.testing.assert_frame_equal(
-                pd.read_parquet(path3).sort_values('a').reset_index(drop=True),
-                pd.DataFrame({'c': pd.Categorical([6, 2]), 'a': [1, 7]}).reset_index(drop=True),
-                check_like=True
+                pd.read_parquet(path3).sort_values("a").reset_index(drop=True),
+                pd.DataFrame({"c": pd.Categorical([6, 2]), "a": [1, 7]}).reset_index(
+                    drop=True
+                ),
+                check_like=True,
             )
 
         def test_save_and_use(self):

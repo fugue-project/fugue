@@ -377,7 +377,7 @@ class NativeExecutionEngine(ExecutionEngine):
         **kwargs: Any,
     ) -> None:
         if not force_single and not partition_spec.empty:
-            kwargs['partition_cols'] = partition_spec.partition_by
+            kwargs["partition_cols"] = partition_spec.partition_by
         self.fs.makedirs(os.path.dirname(path), recreate=True)
         df = self.to_df(df)
         save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
