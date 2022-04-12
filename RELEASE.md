@@ -8,6 +8,8 @@
 -   Support [even partitioning](https://github.com/fugue-project/fugue/issues/303) on Dask
 -   Add handling of [nested ArrayType](https://github.com/fugue-project/fugue/issues/308) on Spark
 -   Change to [plugin approach](https://github.com/fugue-project/fugue/issues/310) to avoid explicit import
+-   Fixed [Click version issue](https://github.com/fugue-project/fugue/issues/313)
+-   Added version caps for [antlr4-python3-runtime](https://github.com/fugue-project/fugue/issues/318) and [duckdb](https://github.com/fugue-project/fugue/issues/322) as they both released new versions with breaking changes.
 
 ## 0.6.5
 
