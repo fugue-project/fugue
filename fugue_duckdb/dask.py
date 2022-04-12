@@ -37,7 +37,7 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
                 )
             else:
                 return DuckDataFrame(
-                    self.connection.from_arrow_table(ddf.as_arrow()),
+                    self.connection.from_arrow(ddf.as_arrow()),
                     metadata=dict(ddf.metadata),
                 )
         return super().to_df(df, schema, metadata)

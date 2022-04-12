@@ -42,7 +42,7 @@ setup(
         "sql": ["antlr4-python3-runtime>=4.9,<4.10", "jinja2"],
         "spark": ["pyspark"],
         "dask": ["qpd[dask]"],
-        "duckdb": ["duckdb>=0.3.1", "pyarrow>=5.0.0", "numpy"],
+        "duckdb": ["duckdb>=0.3.3", "pyarrow>=5.0.0", "numpy"],
         "ibis": ["ibis-framework>=2.1.1"],
         "notebook": ["notebook", "jupyterlab", "dash", "ipython>=7.10.0"],
         "all": [
@@ -54,7 +54,7 @@ setup(
             "jupyterlab",
             "ipython>=7.10.0",
             "dash",
-            "duckdb>=0.3.1",
+            "duckdb>=0.3.3",
             "pyarrow>=5.0.0",
             "ibis-framework>=2; python_version >= '3.7'",
         ],
