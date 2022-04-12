@@ -21,7 +21,7 @@ class DuckDataFrameTests(DataFrameTests.Tests):
         self, data: Any = None, schema: Any = None, metadata: Any = None
     ) -> DuckDataFrame:
         df = ArrowDataFrame(data, schema, metadata)
-        return DuckDataFrame(self._con.from_arrow(df.native), metadata=metadata)
+        return DuckDataFrame(self._con.from_arrow_table(df.native), metadata=metadata)
 
     def test_as_array_special_values(self):
         for func in [

@@ -68,7 +68,7 @@ class DuckDBEngine(SQLEngine):
         conn = duckdb.connect()
         try:
             for k, v in dfs.items():
-                conn.from_arrow(v.as_arrow()).create_view(k)
+                conn.from_arrow_table(v.as_arrow()).create_view(k)
             return ArrowDataFrame(conn.execute(statement).arrow())
         finally:
             conn.close()
@@ -148,12 +148,12 @@ class DuckExecutionEngine(ExecutionEngine):
                 )
             else:
                 rdf = DuckDataFrame(
-                    self.connection.from_arrow(df.as_arrow()),
+                    self.connection.from_arrow_table(df.as_arrow()),
                     metadata=dict(df.metadata),
                 )
             return rdf
         tdf = ArrowDataFrame(df, schema)
-        return DuckDataFrame(self.connection.from_arrow(tdf.native), metadata)
+        return DuckDataFrame(self.connection.from_arrow_table(tdf.native), metadata)
 
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec

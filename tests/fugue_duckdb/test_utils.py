@@ -41,7 +41,7 @@ def test_type_conversion():
     con = duckdb.connect()
 
     def assert_(tp):
-        dt = con.from_arrow(pa.Table.from_pydict(dict(a=pa.nulls(2, tp)))).types[
+        dt = con.from_arrow_table(pa.Table.from_pydict(dict(a=pa.nulls(2, tp)))).types[
             0
         ]
         assert to_pa_type(dt) == tp
