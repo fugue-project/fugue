@@ -3,6 +3,7 @@
 ## 0.6.6
 
 -   Create a hybrid [engine](https://github.com/fugue-project/fugue/issues/300) of DuckDB and Dask
+-   [Save](https://github.com/fugue-project/fugue/issues/285) Spark-like partitioned parquet files for all engines
 -   Enable DaskExecutionEngine to transform dataframes with [nested](https://github.com/fugue-project/fugue/issues/299) columns
 -   A [smarter](https://github.com/fugue-project/fugue/issues/304) way to determine default npartitions in Dask
 -   Support [even partitioning](https://github.com/fugue-project/fugue/issues/303) on Dask
