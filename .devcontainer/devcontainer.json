@@ -1,6 +1,6 @@
 {
 	"name": "Fugue Development Environment",
-	"image": "fugueproject/devenv:latest",
+	"image": "fugueproject/devenv:0.4.2",
 	"settings": {
 		"terminal.integrated.shell.linux": "/bin/bash",
 		"python.pythonPath": "/usr/local/bin/python",
@@ -22,9 +22,7 @@
 	"forwardPorts": [
 		8888
 	],
-	"postCreateCommand": [
-		"make devenv"
-	],
+	"postCreateCommand": "make devenv",
 	"mounts": [
 		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
 	]

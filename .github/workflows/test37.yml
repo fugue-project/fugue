@@ -18,12 +18,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    # - name: Install spark
-    #   run: |
-    #     wget https://www.apache.org/dyn/closer.lua/spark/spark-2.4.6/spark-2.4.6-bin-hadoop2.7.tgz -O spark.tgz
-    #     mkdir -p /opt/spark
-    #     tar -xvf spark.tgz -C /opt/spark --strip-components 1
-    #     ls /opt/spark
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
@@ -32,8 +26,3 @@ jobs:
       run: make devenv
     - name: Test
       run: make test
-    - name: "Upload coverage to Codecov"
-      if: matrix.python-version == 3.7
-      uses: codecov/codecov-action@v1
-      with:
-        fail_ci_if_error: true
