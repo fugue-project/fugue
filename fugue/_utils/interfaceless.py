@@ -282,7 +282,8 @@ class FunctionWrapper(object):
         if (
             annotation == Optional[Callable]
             or annotation == Optional[callable]
-            or str(annotation).startswith("typing.Union[typing.Callable")
+            or str(annotation).startswith("typing.Union[typing.Callable")  # 3.8-
+            or str(annotation).startswith("typing.Optional[typing.Callable")  # 3.9+
         ):
             return _OptionalCallableParam(param)
         for _, c in _ANNOTATION_CONVERTERS:
