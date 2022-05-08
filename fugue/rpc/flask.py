@@ -4,7 +4,7 @@ import cloudpickle
 from threading import Thread
 from typing import Any, Optional, Tuple, Dict, List
 
-import requests
+import requests  # type: ignore
 from fugue.rpc.base import RPCClient, RPCServer
 from triad.utils.convert import to_timedelta
 from werkzeug.serving import make_server

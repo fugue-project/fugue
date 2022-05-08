@@ -1,5 +1,9 @@
 # Release Notes
 
+## 0.7.0
+
+-   [326](https://github.com/fugue-project/fugue/pull/326): Added tests for Python 3.6 - 3.10, Linux and Windows. Updated devenv and CICD to Python 3.8.
+
 ## 0.6.6
 
 -   Create a hybrid [engine](https://github.com/fugue-project/fugue/issues/300) of DuckDB and Dask
