@@ -29,8 +29,8 @@ setup(
     keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
     install_requires=[
-        "triad>=0.6.0",
-        "adagio>=0.2.3",
+        "triad>=0.6.1",
+        "adagio>=0.2.4",
         "qpd>=0.2.6",
         "antlr4-python3-runtime>=4.9,<4.10",
         "sqlalchemy",
