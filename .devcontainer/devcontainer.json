@@ -1,6 +1,6 @@
 {
 	"name": "Fugue Development Environment",
-	"image": "fugueproject/devenv:0.4.2",
+	"image": "fugueproject/devenv:0.4.4",
 	"settings": {
 		"terminal.integrated.shell.linux": "/bin/bash",
 		"python.pythonPath": "/usr/local/bin/python",
