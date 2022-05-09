@@ -49,7 +49,7 @@ setup(
         "all": [
             "fugue-sql-antlr[cpp]",
             "pyspark",
-            "qpd[dask]",
+            "qpd[dask]==0.3.0.dev2",
             "notebook",
             "jupyterlab",
             "ipython>=7.10.0",
