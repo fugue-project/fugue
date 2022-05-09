@@ -4,15 +4,16 @@ from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.workflow.workflow import FugueWorkflow
 from fugue_sql.exceptions import FugueSQLSyntaxError
-from fugue_sql._parse import FugueSQL
+from fugue_sql_antlr import FugueSQLParser
 from fugue_sql._visitors import _Extensions, _VisitorBase
 from pytest import raises
 from triad.collections.schema import Schema
 
+_PARSE_MODE = "auto"
 
 def test_json():
     def assert_eq(expr, expected):
-        sql = FugueSQL(expr, "fugueJsonValue", ignore_case=True)
+        sql = FugueSQLParser(expr, "fugueJsonValue", ignore_case=True, parse_mode=_PARSE_MODE)
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
         if expected is None:
@@ -50,7 +51,7 @@ def test_json():
 
 def test_schema():
     def assert_eq(expr, expected=None):
-        sql = FugueSQL(expr, "fugueSchema", ignore_case=True)
+        sql = FugueSQLParser(expr, "fugueSchema", ignore_case=True, parse_mode=_PARSE_MODE)
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
         if expected is None:
@@ -66,7 +67,7 @@ def test_schema():
 
 def test_wild_schema():
     def assert_eq(expr, expected=None):
-        sql = FugueSQL(expr, "fugueWildSchema", ignore_case=True)
+        sql = FugueSQLParser(expr, "fugueWildSchema", ignore_case=True, parse_mode=_PARSE_MODE)
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
         if expected is None:
@@ -90,7 +91,7 @@ def test_wild_schema():
 
 def test_pre_partition():
     def assert_eq(expr, expected):
-        sql = FugueSQL(expr, "fuguePrepartition", ignore_case=True)
+        sql = FugueSQLParser(expr, "fuguePrepartition", ignore_case=True, parse_mode=_PARSE_MODE)
         v = _VisitorBase(sql)
         obj = json.dumps(v.visit(sql.tree).jsondict)
         assert json.dumps(expected.jsondict) == obj
@@ -121,7 +122,7 @@ def test_pre_partition():
 
 def test_params():
     def assert_eq(expr, expected):
-        sql = FugueSQL(expr, "fugueParams", ignore_case=True)
+        sql = FugueSQLParser(expr, "fugueParams", ignore_case=True, parse_mode=_PARSE_MODE)
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
         assert expected == obj
@@ -135,10 +136,10 @@ def test_params():
 
 def test_single_output_common_expr():
     def assert_eq(expr, using, params, schema):
-        sql = FugueSQL(expr, "fugueSingleOutputExtensionCommon", ignore_case=True)
+        sql = FugueSQLParser(expr, "fugueSingleOutputExtensionCommon", ignore_case=True, parse_mode=_PARSE_MODE)
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
-        assert using == obj["using"]
+        assert using == obj["fugueUsing"]
         if params is None:
             assert "params" not in obj
         else:
@@ -162,11 +163,10 @@ def test_single_output_common_expr():
 
 def test_assignment():
     def assert_eq(expr, varname, sign):
-        sql = FugueSQL(expr, "fugueAssignment", ignore_case=True, simple_assign=True)
+        sql = FugueSQLParser(expr, "fugueAssignment", ignore_case=True, parse_mode=_PARSE_MODE)
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
         assert (varname, sign) == obj
 
-    assert_eq("aA:=", "aA", ":=")
     assert_eq("aA=", "aA", "=")
     # assert_eq("aA??", "aA", "??")

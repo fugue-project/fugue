@@ -31,7 +31,7 @@ def test_workflow_conf():
 
 
 def test_conf_override():
-    with raises(FugueSQLSyntaxError):
+    with raises(SyntaxError):
         FugueSQLWorkflow()("create [[0]] schema a:int")
     with FugueSQLWorkflow(None, {"fugue.sql.compile.ignore_case": "true"}) as dag:
         a = dag.df([[0], [1]], "a:int")
@@ -366,7 +366,7 @@ def test_fsql():
 
 
 def test_fsql_syntax_error():
-    with raises(FugueSQLSyntaxError):
+    with raises(SyntaxError):
         fsql("""CREATEE [[0]] SCHEMA a:int""")
 
 

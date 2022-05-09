@@ -40,9 +40,8 @@ from triad.utils.convert import (
 from triad.utils.pyarrow import to_pa_datatype
 from triad.utils.string import validate_triad_var_name
 
-from fugue_sql._antlr import FugueSQLParser as fp
-from fugue_sql._antlr import FugueSQLVisitor
-from fugue_sql._parse import FugueSQL, _to_tokens
+from fugue_sql_antlr._parser.fugue_sqlParser import fugue_sqlParser as fp
+from fugue_sql_antlr import FugueSQLVisitor, FugueSQLParser
 from fugue_sql._utils import LazyWorkflowDataFrame
 from fugue_sql.exceptions import (
     FugueSQLError,
@@ -59,12 +58,8 @@ class FugueSQLHooks(object):
 
 
 class _VisitorBase(FugueSQLVisitor):
-    def __init__(self, sql: FugueSQL):
-        self._sql = sql
-
-    @property
-    def sql(self) -> FugueSQL:
-        return self._sql
+    def __init__(self, sql: FugueSQLParser):
+        super().__init__(sql)
 
     def visitFugueIdentifier(self, ctx: fp.FugueIdentifierContext) -> str:
         return self.ctxToStr(ctx)
@@ -78,16 +73,27 @@ class _VisitorBase(FugueSQLVisitor):
                 result.append(c.accept(self))
         return result
 
+    def _get_norm_text(
+        self, node: Union[Tree, Token, None], delimiter: str = " "
+    ) -> str:
+        # TODO: Remove this!
+        if node is None:
+            return ""
+        tp = self.sql._get_range(node)
+        if tp is None:
+            return ""
+        if tp[0] is tp[1]:
+            return self.sql.code[tp[0].start : tp[0].stop + 1]
+        return delimiter.join(
+            self.sql.code[self.sql._tokens[i].start : self.sql._tokens[i].stop + 1]
+            for i in range(tp[0]._arr_pos, tp[1]._arr_pos + 1)
+        )
+
     def ctxToStr(self, node: Union[Tree, Token, None], delimit: str = " ") -> str:
-        if isinstance(node, Token):
-            tokens: Iterable[Token] = [node]
-        else:
-            tokens = _to_tokens(node)
-        return delimit.join([self.sql.raw_code[t.start : t.stop + 1] for t in tokens])
+        return self._get_norm_text(node, delimiter=delimit)
 
     def to_runtime_error(self, ctx: ParserRuleContext) -> Exception:
-        interval = ctx.getSourceInterval()
-        msg = "\n" + self.sql.get_raw_lines(interval[0], interval[1], add_lineno=True)
+        msg = "\n" + self.sql.get_raw_text(ctx, add_lineno=True)
         return FugueSQLRuntimeError(msg)
 
     @no_type_check
@@ -212,12 +218,12 @@ class _VisitorBase(FugueSQLVisitor):
     def visitFugueSingleOutputExtensionCommon(
         self, ctx: fp.FugueSingleOutputExtensionCommonContext
     ) -> Dict[str, Any]:
-        return self.get_dict(ctx, "using", "params", "schema")
+        return self.get_dict(ctx, "fugueUsing", "params", "schema")
 
     def visitFugueSingleOutputExtensionCommonWild(
         self, ctx: fp.FugueSingleOutputExtensionCommonContext
     ) -> Dict[str, Any]:
-        return self.get_dict(ctx, "using", "params", "schema")
+        return self.get_dict(ctx, "fugueUsing", "params", "schema")
 
     def visitFugueAssignment(self, ctx: fp.FugueAssignmentContext) -> Tuple:
         varname = self.ctxToStr(ctx.varname, delimit="")
@@ -310,7 +316,7 @@ class _VisitorBase(FugueSQLVisitor):
 class _Extensions(_VisitorBase):
     def __init__(
         self,
-        sql: FugueSQL,
+        sql: FugueSQLParser,
         hooks: FugueSQLHooks,
         workflow: FugueWorkflow,
         variables: Optional[
@@ -387,7 +393,7 @@ class _Extensions(_VisitorBase):
             FugueSQLSyntaxError("must specify index or key for dataframes"),
         )
         if ctx.index is not None:
-            return self.variables[key][int(self.ctxToStr(ctx.index))]
+            return self.variables[key][int(self.ctxToStr(ctx.index))]  # type: ignore
         else:
             return self.variables[key][self.ctxToStr(ctx.key)]  # type: ignore
 
@@ -435,7 +441,7 @@ class _Extensions(_VisitorBase):
             data["dfs"] = WorkflowDataFrames(self.last)
         p = data["params"]
         using = _to_transformer(
-            p["using"],
+            p["fugueUsing"],
             schema=p.get("schema"),
             global_vars=self.global_vars,
             local_vars=self.local_vars,
@@ -455,11 +461,13 @@ class _Extensions(_VisitorBase):
     def visitFugueOutputTransformTask(
         self, ctx: fp.FugueOutputTransformTaskContext
     ) -> None:
-        data = self.get_dict(ctx, "partition", "dfs", "using", "params", "callback")
+        data = self.get_dict(
+            ctx, "partition", "dfs", "fugueUsing", "params", "callback"
+        )
         if "dfs" not in data:
             data["dfs"] = WorkflowDataFrames(self.last)
         using = _to_output_transformer(
-            data["using"],
+            data["fugueUsing"],
             global_vars=self.global_vars,
             local_vars=self.local_vars,
         )
@@ -483,7 +491,7 @@ class _Extensions(_VisitorBase):
             data["dfs"] = WorkflowDataFrames(self.last)
         p = data["params"]
         using = _to_processor(
-            p["using"],
+            p["fugueUsing"],
             schema=p.get("schema"),
             global_vars=self.global_vars,
             local_vars=self.local_vars,
@@ -500,7 +508,7 @@ class _Extensions(_VisitorBase):
         data = self.get_dict(ctx, "params")
         p = data["params"]
         using = _to_creator(
-            p["using"],
+            p["fugueUsing"],
             schema=p.get("schema"),
             global_vars=self.global_vars,
             local_vars=self.local_vars,
@@ -527,11 +535,11 @@ class _Extensions(_VisitorBase):
         )
 
     def visitFugueOutputTask(self, ctx: fp.FugueOutputTaskContext):
-        data = self.get_dict(ctx, "dfs", "using", "params", "partition")
+        data = self.get_dict(ctx, "dfs", "fugueUsing", "params", "partition")
         if "dfs" not in data:
             data["dfs"] = WorkflowDataFrames(self.last)
         using = _to_outputter(
-            data["using"],
+            data["fugueUsing"],
             global_vars=self.global_vars,
             local_vars=self.local_vars,
         )
@@ -695,9 +703,9 @@ class _Extensions(_VisitorBase):
         self._process_assignable(df, ctx)
 
     def visitFugueModuleTask(self, ctx: fp.FugueModuleTaskContext) -> None:
-        data = self.get_dict(ctx, "assign", "dfs", "using", "params")
+        data = self.get_dict(ctx, "assign", "dfs", "fugueUsing", "params")
         sub = _to_module(
-            data["using"],
+            data["fugueUsing"],
             global_vars=self.global_vars,
             local_vars=self.local_vars,
         )
@@ -728,16 +736,16 @@ class _Extensions(_VisitorBase):
     def visitFugueSqlEngine(
         self, ctx: fp.FugueSqlEngineContext
     ) -> Tuple[Any, Dict[str, Any]]:
-        data = self.get_dict(ctx, "using", "params")
+        data = self.get_dict(ctx, "fugueUsing", "params")
         try:
             engine: Any = to_type(
-                data["using"],
+                data["fugueUsing"],
                 SQLEngine,
                 global_vars=self.global_vars,
                 local_vars=self.local_vars,
             )
         except TypeError:
-            engine = str(data["using"])
+            engine = str(data["fugueUsing"])
         return engine, data.get("params", {})
 
     def visitQuery(self, ctx: fp.QueryContext) -> Iterable[Any]:
@@ -828,7 +836,7 @@ class _Extensions(_VisitorBase):
                 return sub
 
         yield from get_sub(ctx.left)
-        yield from self._get_query_elements(ctx.operator)
+        yield from self._get_query_elements(ctx.theOperator)
         if ctx.setQuantifier() is not None:
             yield from self._get_query_elements(ctx.setQuantifier())
         yield from get_sub(ctx.right)
@@ -872,11 +880,11 @@ class _Extensions(_VisitorBase):
         if node is None:
             return
         if isinstance(node, CommonToken):
-            yield self.sql.raw_code[node.start : node.stop + 1]
+            yield self.sql.code[node.start : node.stop + 1]
             return
         if isinstance(node, TerminalNode):
             token = node.getSymbol()
-            yield self.sql.raw_code[token.start : token.stop + 1]
+            yield self.sql.code[token.start : token.stop + 1]
         for i in range(node.getChildCount()):
             n = node.getChild(i)
             if isinstance(n, fp.TableNameContext):
