@@ -42,7 +42,7 @@ setup(
     extras_require={
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]"],
         "spark": ["pyspark"],
-        "dask": ["qpd[dask]"],
+        "dask": ["qpd[dask]==0.3.0.dev2"],
         "duckdb": ["duckdb>=0.3.1,<0.3.3", "pyarrow>=5.0.0", "numpy"],
         "ibis": ["ibis-framework>=2.1.1"],
         "notebook": ["notebook", "jupyterlab", "dash", "ipython>=7.10.0"],
