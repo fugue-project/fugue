@@ -1,4 +1,4 @@
-qpd[dask]
+qpd[dask]==0.3.0.dev2
 .[all]
 
 # test requirements
