@@ -16,7 +16,6 @@ from triad.utils.convert import get_caller_global_local_vars
 
 from fugue_sql._utils import LazyWorkflowDataFrame, fill_sql_template
 from fugue_sql._visitors import FugueSQLHooks, _Extensions
-from fugue_sql.exceptions import FugueSQLSyntaxError
 
 
 class FugueSQLWorkflow(FugueWorkflow):
@@ -184,6 +183,6 @@ def fsql(
     dag = FugueSQLWorkflow(None, {FUGUE_CONF_SQL_IGNORE_CASE: fsql_ignore_case})
     try:
         dag._sql(sql, global_vars, local_vars, *args, **kwargs)
-    except FugueSQLSyntaxError as ex:
-        raise FugueSQLSyntaxError(str(ex)).with_traceback(None) from None
+    except SyntaxError as ex:
+        raise SyntaxError(str(ex)).with_traceback(None) from None
     return dag
