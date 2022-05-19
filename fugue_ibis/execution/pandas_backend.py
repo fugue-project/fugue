@@ -12,7 +12,7 @@ from fugue import (
 from triad.utils.assertion import assert_or_throw
 import pandas as pd
 
-from fugue_ibis.execution.ibis_engine import IbisEngine, register_ibis_engine
+from fugue_ibis.execution.ibis_engine import IbisEngine
 from fugue_ibis._utils import to_schema, to_ibis_schema
 from ibis.backends.pandas import Backend
 
@@ -53,6 +53,3 @@ class _BackendWrapper(Backend):
             if schema is None and name in self._schemas
             else schema,
         )
-
-
-register_ibis_engine(1, _to_pandas_ibis_engine)
