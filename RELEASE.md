@@ -1,12 +1,20 @@
 # Release Notes
 
+## 0.7.0
+
+-   [326](https://github.com/fugue-project/fugue/pull/326): Added tests for Python 3.6 - 3.10, Linux and Windows. Updated devenv and CICD to Python 3.8.
+
 ## 0.6.6
 
 -   Create a hybrid [engine](https://github.com/fugue-project/fugue/issues/300) of DuckDB and Dask
+-   [Save](https://github.com/fugue-project/fugue/issues/285) Spark-like partitioned parquet files for all engines
 -   Enable DaskExecutionEngine to transform dataframes with [nested](https://github.com/fugue-project/fugue/issues/299) columns
 -   A [smarter](https://github.com/fugue-project/fugue/issues/304) way to determine default npartitions in Dask
 -   Support [even partitioning](https://github.com/fugue-project/fugue/issues/303) on Dask
 -   Add handling of [nested ArrayType](https://github.com/fugue-project/fugue/issues/308) on Spark
+-   Change to [plugin approach](https://github.com/fugue-project/fugue/issues/310) to avoid explicit import
+-   Fixed [Click version issue](https://github.com/fugue-project/fugue/issues/313)
+-   Added version caps for [antlr4-python3-runtime](https://github.com/fugue-project/fugue/issues/318) and [duckdb](https://github.com/fugue-project/fugue/issues/322) as they both released new versions with breaking changes.
 
 ## 0.6.5
 

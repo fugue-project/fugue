@@ -23,4 +23,6 @@ def is_acceptable_raw_df(df: Any) -> bool:
     :param df: input raw dataframe
     :return: whether this dataframe is convertible
     """
+    import fugue._utils.register  # pylint: disable=W0611 # noqa: F401
+
     return any(isinstance(df, t) for t in _VALID_RAW_DF_TYPES)

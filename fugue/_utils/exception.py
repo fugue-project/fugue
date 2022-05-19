@@ -34,7 +34,7 @@ def frames_to_traceback(
             limit -= 1
             frame = frame.f_back
             continue
-        break
+        break  # pragma: no cover
 
     return ctb
 

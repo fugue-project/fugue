@@ -352,6 +352,8 @@ def make_execution_engine(
             # SparkExecutionEngine + S2
             make_execution_engine((SparkExecutionEngine, "s"))
     """
+    import fugue._utils.register  # pylint: disable=W0611 # noqa: F401
+
     return _EXECUTION_ENGINE_FACTORY.make(engine, conf, **kwargs)
 
 
@@ -404,4 +406,6 @@ def make_sql_engine(
             # SqliteEngine(engine)
             make_sql_engine(SqliteEngine)
     """
+    import fugue._utils.register  # pylint: disable=W0611 # noqa: F401
+
     return _EXECUTION_ENGINE_FACTORY.make_sql_engine(engine, execution_engine, **kwargs)
