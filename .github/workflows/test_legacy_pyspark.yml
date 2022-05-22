@@ -30,7 +30,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install spark
       run: |
-        pip install pypandoc
+        pip install pypandoc==1.7.5
         pip install pyspark==2.4.5
     - name: Install dependencies
       run: |
