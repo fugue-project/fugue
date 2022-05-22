@@ -73,24 +73,8 @@ class _VisitorBase(FugueSQLVisitor):
                 result.append(c.accept(self))
         return result
 
-    def _get_norm_text(
-        self, node: Union[Tree, Token, None], delimiter: str = " "
-    ) -> str:
-        # TODO: Remove this!
-        if node is None:
-            return ""
-        tp = self.sql._get_range(node)
-        if tp is None:
-            return ""
-        if tp[0] is tp[1]:
-            return self.sql.code[tp[0].start : tp[0].stop + 1]
-        return delimiter.join(
-            self.sql.code[self.sql._tokens[i].start : self.sql._tokens[i].stop + 1]
-            for i in range(tp[0]._arr_pos, tp[1]._arr_pos + 1)
-        )
-
     def ctxToStr(self, node: Union[Tree, Token, None], delimit: str = " ") -> str:
-        return self._get_norm_text(node, delimiter=delimit)
+        return self.sql.get_norm_text(node, delimiter=delimit)
 
     def to_runtime_error(self, ctx: ParserRuleContext) -> Exception:
         msg = "\n" + self.sql.get_raw_text(ctx, add_lineno=True)
