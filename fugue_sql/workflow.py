@@ -10,12 +10,12 @@ from fugue import (
 )
 from fugue.constants import FUGUE_CONF_SQL_IGNORE_CASE
 from fugue.workflow import is_acceptable_raw_df
-from fugue_sql._parse import FugueSQL
-from fugue_sql._utils import LazyWorkflowDataFrame, fill_sql_template
-from fugue_sql._visitors import FugueSQLHooks, _Extensions
-from fugue_sql.exceptions import FugueSQLSyntaxError
+from fugue_sql_antlr import FugueSQLParser
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars
+
+from fugue_sql._utils import LazyWorkflowDataFrame, fill_sql_template
+from fugue_sql._visitors import FugueSQLHooks, _Extensions
 
 
 class FugueSQLWorkflow(FugueWorkflow):
@@ -51,11 +51,11 @@ class FugueSQLWorkflow(FugueWorkflow):
         params.update(kwargs)
         params, dfs = self._split_params(params)
         code = fill_sql_template(code, params)
-        sql = FugueSQL(
+        sql = FugueSQLParser(
             code,
             "fugueLanguage",
             ignore_case=self.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool),
-            simple_assign=True,
+            parse_mode="auto",
         )
         v = _Extensions(
             sql, FugueSQLHooks(), self, dfs, local_vars=params  # type: ignore
@@ -183,6 +183,6 @@ def fsql(
     dag = FugueSQLWorkflow(None, {FUGUE_CONF_SQL_IGNORE_CASE: fsql_ignore_case})
     try:
         dag._sql(sql, global_vars, local_vars, *args, **kwargs)
-    except FugueSQLSyntaxError as ex:
-        raise FugueSQLSyntaxError(str(ex)).with_traceback(None) from None
+    except SyntaxError as ex:
+        raise SyntaxError(str(ex)).with_traceback(None) from None
     return dag

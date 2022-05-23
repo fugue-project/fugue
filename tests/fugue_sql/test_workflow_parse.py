@@ -20,7 +20,7 @@ from triad import to_uuid
 from triad.collections.schema import Schema
 from triad.utils.convert import get_caller_global_local_vars
 
-from fugue_sql._parse import FugueSQL
+from fugue_sql_antlr import FugueSQLParser
 from fugue_sql._visitors import FugueSQLHooks, _Extensions, _VisitorBase
 from fugue_sql.exceptions import FugueSQLError
 
@@ -755,7 +755,7 @@ def test_module():
 
 def assert_eq(expr, expected: FugueWorkflow):
     global_vars, local_vars = get_caller_global_local_vars()
-    sql = FugueSQL(expr, "fugueLanguage", ignore_case=True, simple_assign=True)
+    sql = FugueSQLParser(expr, "fugueLanguage", ignore_case=True, parse_mode="auto")
     wf = FugueWorkflow()
     v = _Extensions(
         sql, FugueSQLHooks(), wf, global_vars=global_vars, local_vars=local_vars
