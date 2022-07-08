@@ -1,6 +1,5 @@
 import sys
 from collections import defaultdict
-from threading import RLock
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar, Union
 from uuid import uuid4
 
@@ -65,7 +64,13 @@ from fugue.rpc.base import EmptyRPCHandler
 from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, CreateData, FugueTask, Output, Process
 from fugue.workflow._workflow_context import FugueWorkflowContext
-from triad import ParamDict, Schema, assert_or_throw, extensible_class
+from triad import (
+    ParamDict,
+    Schema,
+    SerializableRLock,
+    assert_or_throw,
+    extensible_class,
+)
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -1435,7 +1440,7 @@ class FugueWorkflow:
     """
 
     def __init__(self, *args: Any, **kwargs: Any):
-        self._lock = RLock()
+        self._lock = SerializableRLock()
         self._spec = WorkflowSpec()
         self._workflow_ctx = self._to_ctx(*args, **kwargs)
         self._computed = False

@@ -1,12 +1,12 @@
 import json
 from abc import ABC, abstractmethod
-from threading import RLock
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import pandas as pd
 import pyarrow as pa
 from fugue.collections.yielded import Yielded
 from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
+from triad import SerializableRLock
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
@@ -28,7 +28,7 @@ class DataFrame(ABC):
         implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
 
-    _SHOW_LOCK = RLock()
+    _SHOW_LOCK = SerializableRLock()
 
     def __init__(self, schema: Any = None, metadata: Any = None):
         if not callable(schema):
@@ -45,7 +45,7 @@ class DataFrame(ABC):
             else ParamDict(metadata, deep=True)
         )
         self._metadata.set_readonly()
-        self._lazy_schema_lock = RLock()
+        self._lazy_schema_lock = SerializableRLock()
 
     @property
     def metadata(self) -> ParamDict:

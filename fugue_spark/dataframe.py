@@ -1,4 +1,3 @@
-from threading import RLock
 from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
@@ -12,9 +11,11 @@ from fugue.dataframe import (
     PandasDataFrame,
 )
 from fugue.exceptions import FugueDataFrameOperationError
-from fugue_spark._utils.convert import to_cast_expression, to_schema, to_type_safe_input
+from triad import SerializableRLock
 from triad.collections.schema import SchemaError
 from triad.utils.assertion import assert_or_throw
+
+from fugue_spark._utils.convert import to_cast_expression, to_schema, to_type_safe_input
 
 
 class SparkDataFrame(DataFrame):
@@ -37,7 +38,7 @@ class SparkDataFrame(DataFrame):
     def __init__(  # noqa: C901
         self, df: Any = None, schema: Any = None, metadata: Any = None
     ):
-        self._lock = RLock()
+        self._lock = SerializableRLock()
         if isinstance(df, ps.DataFrame):
             if schema is not None:
                 schema = to_schema(schema).assert_not_empty()

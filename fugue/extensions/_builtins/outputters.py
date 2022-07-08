@@ -1,4 +1,3 @@
-from threading import RLock
 from typing import Callable, List, Optional, no_type_check
 
 from fugue.collections.partition import PartitionCursor
@@ -11,6 +10,7 @@ from fugue.extensions.outputter import Outputter
 from fugue.extensions.transformer.convert import _to_output_transformer
 from fugue.extensions.transformer.transformer import CoTransformer, Transformer
 from fugue.rpc import EmptyRPCHandler, to_rpc_handler
+from triad import SerializableRLock
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
@@ -18,7 +18,7 @@ from triad.utils.convert import to_type
 
 
 class Show(Outputter):
-    LOCK = RLock()
+    LOCK = SerializableRLock()
     _hook: Optional[Callable] = None
 
     def process(self, dfs: DataFrames) -> None:

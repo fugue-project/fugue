@@ -1,4 +1,3 @@
-from threading import RLock
 from typing import Any, Dict
 from uuid import uuid4
 
@@ -14,6 +13,7 @@ from fugue.dataframe import DataFrame
 from fugue.execution.execution_engine import ExecutionEngine
 from fugue.execution.factory import make_execution_engine
 from fugue.workflow._checkpoint import CheckpointPath
+from triad import SerializableRLock
 
 
 class FugueWorkflowContext(WorkflowContext):
@@ -26,7 +26,7 @@ class FugueWorkflowContext(WorkflowContext):
     ):
         ee = make_execution_engine(execution_engine)
         self._fugue_engine = ee
-        self._lock = RLock()
+        self._lock = SerializableRLock()
         self._results: Dict[Any, DataFrame] = {}
         self._execution_id = ""
         self._checkpoint_path = CheckpointPath(self.execution_engine)
