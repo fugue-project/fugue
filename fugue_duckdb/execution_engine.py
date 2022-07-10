@@ -1,6 +1,5 @@
 import logging
-from threading import RLock
-from typing import Any, Callable, Dict, List, Optional, Union, Iterable
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 import duckdb
 import pyarrow as pa
@@ -25,13 +24,13 @@ from fugue.execution.execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
+from triad import SerializableRLock
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 
 from fugue_duckdb._io import DuckDBIO
 from fugue_duckdb._utils import encode_value_to_expr, get_temp_df_name
 from fugue_duckdb.dataframe import DuckDataFrame
-
 
 _FUGUE_DUCKDB_PRAGMA_CONFIG_PREFIX = "fugue.duckdb.pragma."
 
@@ -89,7 +88,7 @@ class DuckExecutionEngine(ExecutionEngine):
         self._native_engine = NativeExecutionEngine(conf)
         self._con = connection or duckdb.connect()
         self._external_con = connection is not None
-        self._context_lock = RLock()
+        self._context_lock = SerializableRLock()
 
         try:
             for pg in list(self._get_pragmas()):  # transactional

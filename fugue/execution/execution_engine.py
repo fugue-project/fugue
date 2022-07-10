@@ -1,6 +1,5 @@
 import logging
 from abc import ABC, abstractmethod
-from threading import RLock
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 from uuid import uuid4
 
@@ -17,7 +16,7 @@ from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
 from fugue.exceptions import FugueBug
 from fugue.rpc import RPCServer, make_rpc_server
-from triad import ParamDict, Schema, assert_or_throw
+from triad import ParamDict, Schema, SerializableRLock, assert_or_throw
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 from triad.utils.convert import to_size
@@ -83,7 +82,7 @@ class ExecutionEngine(ABC):
         self._conf = ParamDict({**_FUGUE_GLOBAL_CONF, **_conf})
         self._compile_conf = ParamDict()
         self._rpc_server = make_rpc_server(self.conf)
-        self._engine_start_lock = RLock()
+        self._engine_start_lock = SerializableRLock()
         self._engine_start = 0
         self._sql_engine: Optional[SQLEngine] = None
 

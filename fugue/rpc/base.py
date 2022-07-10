@@ -1,12 +1,11 @@
+import pickle
 from abc import ABC, abstractmethod
-from threading import RLock
+from types import LambdaType
 from typing import Any, Callable, Dict
 from uuid import uuid4
 
-from triad import ParamDict, assert_or_throw, to_uuid
-from triad.utils.convert import to_type, get_full_type_path
-import pickle
-from types import LambdaType
+from triad import ParamDict, SerializableRLock, assert_or_throw, to_uuid
+from triad.utils.convert import get_full_type_path, to_type
 
 
 class RPCClient(object):
@@ -20,7 +19,7 @@ class RPCHandler(RPCClient):
     """RPC handler hosting the real logic on driver side"""
 
     def __init__(self):
-        self._rpchandler_lock = RLock()
+        self._rpchandler_lock = SerializableRLock()
         self._running = 0
 
     @property

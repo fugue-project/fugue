@@ -1,6 +1,5 @@
 import concurrent.futures
 import os
-from threading import RLock
 
 import numpy as np
 import pyarrow as pa
