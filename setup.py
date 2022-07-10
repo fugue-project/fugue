@@ -54,7 +54,7 @@ setup(
             "jupyterlab",
             "ipython>=7.10.0",
             "dash",
-            "duckdb>=0.3.1,<0.3.3",
+            "duckdb>=0.3.2",
             "pyarrow>=5.0.0",
             "ibis-framework>=2; python_version >= '3.7'",
         ],
@@ -77,10 +77,10 @@ setup(
     package_data={"fugue_notebook": ["nbextension/*"]},
     entry_points={
         "fugue.plugins": [
-            "ibis = fugue_ibis:register",
-            "duckdb = fugue_duckdb:register",
-            "spark = fugue_spark:register",
-            "dask = fugue_dask:register",
+            "ibis = fugue_ibis:register[ibis]",
+            "duckdb = fugue_duckdb:register[duckdb]",
+            "spark = fugue_spark:register[spark]",
+            "dask = fugue_dask:register[dask]",
         ]
     },
 )

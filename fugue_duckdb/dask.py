@@ -1,5 +1,7 @@
-from typing import Any, Optional, Union, Callable
+from typing import Any, Callable, Optional, Union
 
+import duckdb
+import pyarrow as pa
 from duckdb import DuckDBPyConnection
 from fugue import DataFrame, LocalDataFrame, PartitionCursor, PartitionSpec
 from fugue.collections.partition import EMPTY_PARTITION_SPEC
@@ -9,7 +11,6 @@ from triad import assert_or_throw
 import dask.dataframe as dd
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckExecutionEngine
-import pyarrow as pa
 
 
 class DuckDaskExecutionEngine(DuckExecutionEngine):
@@ -37,7 +38,7 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
                 )
             else:
                 return DuckDataFrame(
-                    self.connection.from_arrow_table(ddf.as_arrow()),
+                    duckdb.arrow(ddf.as_arrow(), connection=self.connection),
                     metadata=dict(ddf.metadata),
                 )
         return super().to_df(df, schema, metadata)

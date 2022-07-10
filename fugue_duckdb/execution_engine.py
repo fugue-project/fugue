@@ -54,11 +54,12 @@ class DuckDBEngine(SQLEngine):
         for k, v in dfs.items():
             tdf: Any = self.execution_engine.to_df(v)
             if k not in self._cache or self._cache[k] != id(tdf.native):
-                # tdf.native.create_view(k, replace=True)
-                kk = k + get_temp_df_name()
-                tdf.native.query(  # TODO: a hack to avoid DuckDB stability issue
-                    kk, f"CREATE OR REPLACE TEMP VIEW {k} AS SELECT * FROM {kk}"
-                )
+                tdf.native.create_view(k, replace=True)
+                # TODO: remove the following hack, if it is stable
+                # kk = k + get_temp_df_name()
+                # tdf.native.query(
+                #    kk, f"CREATE OR REPLACE TEMP VIEW {k} AS SELECT * FROM {kk}"
+                # )
                 self._cache[k] = id(tdf.native)
         result = self.execution_engine.connection.query(statement)  # type: ignore
         return DuckDataFrame(result)
@@ -67,7 +68,7 @@ class DuckDBEngine(SQLEngine):
         conn = duckdb.connect()
         try:
             for k, v in dfs.items():
-                conn.from_arrow_table(v.as_arrow()).create_view(k)
+                duckdb.arrow(v.as_arrow(), connection=conn).create_view(k)
             return ArrowDataFrame(conn.execute(statement).arrow())
         finally:
             conn.close()
@@ -147,12 +148,14 @@ class DuckExecutionEngine(ExecutionEngine):
                 )
             else:
                 rdf = DuckDataFrame(
-                    self.connection.from_arrow_table(df.as_arrow()),
+                    duckdb.arrow(df.as_arrow(), connection=self.connection),
                     metadata=dict(df.metadata),
                 )
             return rdf
         tdf = ArrowDataFrame(df, schema)
-        return DuckDataFrame(self.connection.from_arrow_table(tdf.native), metadata)
+        return DuckDataFrame(
+            duckdb.arrow(tdf.native, connection=self.connection), metadata
+        )
 
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
