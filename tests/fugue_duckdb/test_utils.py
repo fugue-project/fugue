@@ -41,9 +41,7 @@ def test_type_conversion():
     con = duckdb.connect()
 
     def assert_(tp):
-        dt = con.from_arrow_table(pa.Table.from_pydict(dict(a=pa.nulls(2, tp)))).types[
-            0
-        ]
+        dt = duckdb.arrow(pa.Table.from_pydict(dict(a=pa.nulls(2, tp))), con).types[0]
         assert to_pa_type(dt) == tp
         dt = to_duck_type(tp)
         assert to_pa_type(dt) == tp
@@ -68,6 +66,22 @@ def test_type_conversion():
     assert_(pa.list_(pa.struct([pa.field("x", pa.int64())])))
     assert_(
         pa.struct([pa.field("x", pa.int64()), pa.field("yy", pa.list_(pa.int64()))])
+    )
+    assert_(
+        pa.struct(
+            [
+                pa.field("x", pa.int64()),
+                pa.field("yy", pa.struct([pa.field("x", pa.int64())])),
+            ]
+        )
+    )
+    assert_(
+        pa.struct(
+            [
+                pa.field("x", pa.int64()),
+                pa.field("yy", pa.list_(pa.struct([pa.field("x", pa.int64())]))),
+            ]
+        )
     )
 
     raises(ValueError, lambda: to_pa_type(""))

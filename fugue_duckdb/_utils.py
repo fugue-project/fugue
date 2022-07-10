@@ -1,10 +1,14 @@
-from datetime import datetime, date
-import pyarrow as pa
+from datetime import date, datetime
 from typing import Any, Dict, Iterable, Tuple
-from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
 from uuid import uuid4
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+import pyarrow as pa
+from duckdb import __version__ as _DUCKDB_VERSION
+from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
+
+_LEGACY_DUCKDB = _DUCKDB_VERSION < "0.3.3"
 
 _DUCK_TYPES_TO_PA: Dict[str, pa.DataType] = {
     "BIGINT": pa.int64(),
@@ -65,12 +69,66 @@ def get_temp_df_name() -> str:
 
 
 def to_duck_type(tp: pa.DataType) -> str:
+    if _LEGACY_DUCKDB:  # pragma: no cover
+        return _to_duck_type_legacy(tp)
+    return _to_duck_type(tp)
+
+
+def to_pa_type(duck_type: str) -> pa.DataType:
+    if _LEGACY_DUCKDB:  # pragma: no cover
+        return _to_pa_type_legacy(duck_type)
+    return _to_pa_type(duck_type)
+
+
+def _to_duck_type(tp: pa.DataType) -> str:
     try:
         if pa.types.is_struct(tp):
-            inner = ",".join(f.name + ": " + to_duck_type(f.type) for f in tp)
+            inner = ",".join(f.name + " " + _to_duck_type(f.type) for f in tp)
+            return f"STRUCT({inner})"
+        if pa.types.is_list(tp):
+            inner = _to_duck_type(tp.value_type)
+            return f"{inner}[]"
+        if pa.types.is_decimal(tp):
+            return f"DECIMAL({tp.precision}, {tp.scale})"
+        return _PA_TYPES_TO_DUCK[tp]
+    except Exception:  # pragma: no cover
+        raise ValueError(f"can't convert {tp} to DuckDB data type")
+
+
+def _to_pa_type(duck_type: str) -> pa.DataType:
+    try:
+        if duck_type.endswith("[]"):
+            return pa.list_(_to_pa_type(duck_type[:-2]))
+        p = duck_type.find("(")
+        if p > 0:
+            tp = duck_type[:p]
+            if tp == "STRUCT":
+                fields = [
+                    pa.field(k, _to_pa_type(v.strip()))
+                    for k, v in _split_comma(duck_type[p + 1 : -1])
+                ]
+                return pa.struct(fields)
+            if tp != "DECIMAL":
+                raise Exception
+            pair = duck_type[p + 1 : -1].split(",", 1)
+            return pa.decimal128(int(pair[0]), int(pair[1]))
+        if duck_type == "HUGEINT":
+            return pa.int64()
+        if duck_type in _DUCK_TYPES_TO_PA:
+            return _DUCK_TYPES_TO_PA[duck_type]
+        raise Exception
+    except Exception:
+        raise ValueError(f"{duck_type} is not supported")
+
+
+def _to_duck_type_legacy(tp: pa.DataType) -> str:  # pragma: no cover
+    # TODO: remove in the future
+    try:
+        if pa.types.is_struct(tp):
+            inner = ",".join(f.name + ": " + _to_duck_type_legacy(f.type) for f in tp)
             return f"STRUCT<{inner}>"
         if pa.types.is_list(tp):
-            inner = to_duck_type(tp.value_type)
+            inner = _to_duck_type_legacy(tp.value_type)
             return f"LIST<{inner}>"
         if pa.types.is_decimal(tp):
             return f"DECIMAL({tp.precision}, {tp.scale})"
@@ -79,18 +137,24 @@ def to_duck_type(tp: pa.DataType) -> str:
         raise ValueError(f"can't convert {tp} to DuckDB data type")
 
 
-def to_pa_type(duck_type: str) -> pa.DataType:
+def _to_pa_type_legacy(duck_type: str) -> pa.DataType:  # pragma: no cover
+    # TODO: remove in the future
     try:
         p = duck_type.find("<")
         if p > 0:
             tp = duck_type[:p]
             if tp == "LIST":
-                itp = to_pa_type(duck_type[p + 1 : -1])
+                itp = _to_pa_type_legacy(duck_type[p + 1 : -1])
                 return pa.list_(itp)
             if tp == "STRUCT":
                 fields = [
-                    pa.field(k, to_pa_type(v.strip()))
-                    for k, v in _split_comma(duck_type[p + 1 : -1])
+                    pa.field(k, _to_pa_type_legacy(v.strip()))
+                    for k, v in _split_comma(
+                        duck_type[p + 1 : -1],
+                        split_char=":",
+                        left_char="<",
+                        right_char=">",
+                    )
                 ]
                 return pa.struct(fields)
             raise Exception
@@ -109,17 +173,19 @@ def to_pa_type(duck_type: str) -> pa.DataType:
         raise ValueError(f"{duck_type} is not supported")
 
 
-def _split_comma(expr: str) -> Iterable[Tuple[str, str]]:
+def _split_comma(
+    expr: str, split_char=" ", left_char="(", right_char=")"
+) -> Iterable[Tuple[str, str]]:
     lv = 0
     start = 0
     for i in range(len(expr)):
-        if expr[i] == "<":
+        if expr[i] == left_char:
             lv += 1
-        elif expr[i] == ">":
+        elif expr[i] == right_char:
             lv -= 1
         elif lv == 0 and expr[i] == ",":
-            x = expr[start:i].strip().split(":", 1)
+            x = expr[start:i].strip().split(split_char, 1)
             yield x[0], x[1]
             start = i + 1
-    x = expr[start : len(expr)].strip().split(":", 1)
+    x = expr[start : len(expr)].strip().split(split_char, 1)
     yield x[0], x[1]
