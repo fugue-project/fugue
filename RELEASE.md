@@ -2,7 +2,11 @@
 
 ## 0.7.0
 
--   [326](https://github.com/fugue-project/fugue/pull/326): Added tests for Python 3.6 - 3.10, Linux and Windows. Updated devenv and CICD to Python 3.8.
+-   [326](https://github.com/fugue-project/fugue/pull/326): Added tests for Python 3.6 - 3.10 for Linux and 3.7 - 3.9 for Windows. Updated devenv and CICD to Python 3.8.
+-   [321](https://github.com/fugue-project/fugue/issues/321): Moved out Fugue SQL to https://github.com/fugue-project/fugue-sql-antlr
+-   [323](https://github.com/fugue-project/fugue/issues/323): Removed version cap of DuckDB
+-   [334](https://github.com/fugue-project/fugue/issues/334): Replaced RLock with SerializableRLock
+-   [337](https://github.com/fugue-project/fugue/issues/337): Fixed index warning in fugue_dask
 
 ## 0.6.6
 
