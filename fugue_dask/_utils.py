@@ -15,9 +15,10 @@ class DaskUtils(DaskUtilsBase):
         :param df: dask dataframe
         :return: if it is compatible
         """
-        return isinstance(
-            df.index,
-            (pandas.RangeIndex, pandas.Int64Index, pandas.UInt64Index, pd.Index),
+        if isinstance(df.index, pd.Index):
+            return True
+        return isinstance(df.index, pandas.RangeIndex) or (  # pragma: no cover
+            hasattr(df.index, "inferred_type") and df.index.inferred_type == "integer"
         )
 
     def safe_to_pandas_dtype(self, schema: pa.Schema) -> Dict[str, np.dtype]:
