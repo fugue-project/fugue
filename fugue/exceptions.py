@@ -6,6 +6,10 @@ class FugueBug(FugueError):
     """Fugue internal bug"""
 
 
+class FuguePluginsRegistrationError(FugueError):
+    """Fugue plugins registration error"""
+
+
 class FugueDataFrameError(FugueError):
     """Fugue dataframe related error"""
 
