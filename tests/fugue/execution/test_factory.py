@@ -230,8 +230,12 @@ def test_make_execution_engine():
     e = make_execution_engine(
         (NativeExecutionEngine({FUGUE_CONF_SQL_IGNORE_CASE: True}), "sqlite")
     )
+    e = make_execution_engine(e)
     assert isinstance(e, NativeExecutionEngine)
     assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+    assert isinstance(e.sql_engine, SqliteEngine)
+
+    assert isinstance(make_sql_engine(None, e), SqliteEngine)
 
     # MUST HAVE THIS STEP, or other tests will fail
     _reset()
@@ -241,4 +245,4 @@ def _reset():
     register_default_execution_engine(
         lambda conf, **kwargs: NativeExecutionEngine(conf)
     )
-    register_default_sql_engine(lambda ee, **kwargs: ee.default_sql_engine)
+    register_default_sql_engine(lambda ee, **kwargs: ee.sql_engine)

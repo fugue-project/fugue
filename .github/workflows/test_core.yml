@@ -24,6 +24,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Fix setuptools_scm
       run: pip install "setuptools_scm<7"
+    - name: Save time
+      run: pip install pandas<1.2.5
     - name: Install dependencies
       run: make devenv
     - name: Test

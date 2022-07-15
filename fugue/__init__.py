@@ -44,7 +44,7 @@ from fugue.extensions.transformer import (
     transformer,
 )
 from fugue.interfaceless import out_transform, transform
-from fugue.registry import _register_extra
+from fugue.registry import register
 from fugue.rpc import (
     EmptyRPCHandler,
     RPCClient,
@@ -58,4 +58,4 @@ from fugue.workflow._workflow_context import FugueWorkflowContext
 from fugue.workflow.module import module
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 
-_register_extra()
+register()

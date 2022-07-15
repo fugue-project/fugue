@@ -279,11 +279,11 @@ def make_execution_engine(
         result = engine
     else:
         result = parse_execution_engine(engine, conf, **kwargs)
+        sql_engine = make_sql_engine(None, result)
+        result.set_sql_engine(sql_engine)
     result.compile_conf.update(result.conf, on_dup=ParamDict.IGNORE)
     result.compile_conf.update(conf, on_dup=ParamDict.OVERWRITE)
     result.compile_conf.update(kwargs, on_dup=ParamDict.OVERWRITE)
-    sql_engine = make_sql_engine(None, result)
-    result.set_sql_engine(sql_engine)
     return result
 
 
@@ -462,7 +462,7 @@ def parse_sql_engine(
             execution_engine is not None,
             ValueError("execution_engine must be provided"),
         )
-        return execution_engine.default_sql_engine  # type: ignore
+        return execution_engine.sql_engine  # type: ignore
     try:
         return to_instance(
             engine, SQLEngine, kwargs=dict(execution_engine=execution_engine, **kwargs)
