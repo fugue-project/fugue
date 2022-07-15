@@ -171,8 +171,7 @@ def test_global_funcs():
     register_default_execution_engine(
         lambda conf, **kwargs: _MockExecutionEngine(conf, **kwargs), on_dup="ignore"
     )
-    # TODO: how to achieve 'ignore' when registering engines?
-    # assert not isinstance(make_execution_engine(), _MockExecutionEngine)
+    assert not isinstance(make_execution_engine(), _MockExecutionEngine)
     register_default_execution_engine(
         lambda conf, **kwargs: _MockExecutionEngine(conf, **kwargs), on_dup="overwrite"
     )
