@@ -25,7 +25,7 @@ jobs:
     - name: Fix setuptools_scm
       run: pip install "setuptools_scm<7"
     - name: Save time
-      run: pip install pandas<1.2.5
+      run: pip install pandas==1.2.5
     - name: Install dependencies
       run: make devenv
     - name: Test
