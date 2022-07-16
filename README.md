@@ -53,6 +53,22 @@ The best way to get started with Fugue is to work through the [tutorials](https:
 
 The tutorials can also be run in an interactive notebook environment through binder or Docker:
 
+### Using binder
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/fugue-project/tutorials/master)
+
+**Note it runs slow on binder** because the machine on binder isn't powerful enough for a distributed framework such as Spark. Parallel executions can become sequential, so some of the performance comparison examples will not give you the correct numbers.
+
+### Using Docker
+
+Alternatively, you should get decent performance by running this Docker image on your own machine:
+
+```bash
+docker run -p 8888:8888 fugueproject/tutorials:latest
+```
+
+For the API docs, [click here](https://fugue.readthedocs.org)
+
 ## Select Features
 
 *   **Cross-framework code**: Write code once in native Python, SQL, or pandas then execute it on Dask or Spark with no rewrites. Logic and execution are decoupled through Fugue, enabling users to leverage the Spark and Dask engines without learning the specific framework syntax.
@@ -160,21 +176,6 @@ There is an accompanying [notebook extension](https://pypi.org/project/fugue-jup
 
 ![FugueSQL gif](https://miro.medium.com/max/700/1*6091-RcrOPyifJTLjo0anA.gif)
 
-### Using binder
-
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/fugue-project/tutorials/master)
-
-**Note it runs slow on binder** because the machine on binder isn't powerful enough for a distributed framework such as Spark. Parallel executions can become sequential, so some of the performance comparison examples will not give you the correct numbers.
-
-### Using Docker
-
-Alternatively, you should get decent performance by running this Docker image on your own machine:
-
-```bash
-docker run -p 8888:8888 fugueproject/tutorials:latest
-```
-
-For the API docs, [click here](https://fugue.readthedocs.org)
 
 ## Ecosystem
 
