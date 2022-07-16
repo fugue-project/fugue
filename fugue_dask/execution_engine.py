@@ -3,6 +3,7 @@ import os
 from typing import Any, Callable, List, Optional, Union
 
 import dask.dataframe as dd
+from distributed import Client
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
@@ -36,7 +37,7 @@ from fugue_dask._constants import (
     FUGUE_DASK_DEFAULT_CONF,
 )
 from fugue_dask._io import load_df, save_df
-from fugue_dask._utils import DaskUtils
+from fugue_dask._utils import DASK_UTILS, DaskUtils
 from fugue_dask.dataframe import DaskDataFrame
 
 
@@ -73,6 +74,9 @@ class DaskExecutionEngine(ExecutionEngine):
 
     Please read |ExecutionEngineTutorial| to understand this important Fugue concept
 
+    :param dask_client: Dask distributed client, defaults to None. If None, then it
+      will try to get the current active global client. If there is no active client,
+      it will create and use a global `Client(processes=True)`
     :param conf: |ParamsLikeObject| defaults to None, read |FugueConfig| to
       learn Fugue specific options
 
@@ -83,16 +87,22 @@ class DaskExecutionEngine(ExecutionEngine):
         Before initializing :class:`~.DaskExecutionEngine`
     """
 
-    def __init__(self, conf: Any = None):
+    def __init__(self, dask_client: Optional[Client] = None, conf: Any = None):
         p = ParamDict(FUGUE_DASK_DEFAULT_CONF)
         p.update(ParamDict(conf))
         super().__init__(p)
         self._fs = FileSystem()
         self._log = logging.getLogger()
+        self._client = DASK_UTILS.get_or_create_client(dask_client)
         self._native = NativeExecutionEngine(conf=conf)
 
     def __repr__(self) -> str:
         return "DaskExecutionEngine"
+
+    @property
+    def dask_client(self) -> Client:
+        """The Dask Client associated with this engine"""
+        return self._client
 
     @property
     def log(self) -> logging.Logger:

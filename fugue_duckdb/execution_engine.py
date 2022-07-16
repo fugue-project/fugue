@@ -111,6 +111,7 @@ class DuckExecutionEngine(ExecutionEngine):
     def stop(self) -> None:
         if not self._external_con:
             self._con.close()
+        super().stop()
 
     def __repr__(self) -> str:
         return "DuckExecutionEngine"

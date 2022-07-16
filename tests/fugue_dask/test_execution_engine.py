@@ -14,10 +14,25 @@ from fugue_test.execution_suite import ExecutionEngineTests
 
 from fugue_dask.execution_engine import DaskExecutionEngine
 
+_CONF = {
+    "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
+    "fugue.rpc.flask_server.host": "127.0.0.1",
+    "fugue.rpc.flask_server.port": "1234",
+    "fugue.rpc.flask_server.timeout": "2 sec",
+}
+
 
 class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
+    @classmethod
+    def setUpClass(cls):
+        cls._engine = cls.make_engine(cls)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._engine.dask_client.close()
+
     def make_engine(self):
-        e = DaskExecutionEngine(dict(test=True))
+        e = DaskExecutionEngine(conf=dict(test=True, **_CONF))
         return e
 
     def test__join_outer_pandas_incompatible(self):
@@ -78,8 +93,16 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
 
 
 class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
+    @classmethod
+    def setUpClass(cls):
+        cls._engine = cls.make_engine(cls)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._engine.dask_client.close()
+
     def make_engine(self):
-        e = DaskExecutionEngine(dict(test=True))
+        e = DaskExecutionEngine(conf=dict(test=True, **_CONF))
         return e
 
     def test_default_init(self):
@@ -128,6 +151,7 @@ def test_transform():
         as_local=True,
         force_output_fugue_dataframe=True,
         engine="dask",
+        engine_conf=_CONF,
     )
     assert res.is_local
     assert 5 == res.count()
@@ -152,6 +176,7 @@ def test_transform():
         callback=cb.add,
         force_output_fugue_dataframe=True,
         engine="dask",
+        engine_conf=_CONF,
         persist=True,  # when you have a persist, you can use callback
     )
     assert not res.is_local

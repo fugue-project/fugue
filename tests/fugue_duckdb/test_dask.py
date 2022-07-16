@@ -11,9 +11,17 @@ from fugue_sql import fsql
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 from pytest import raises
-
+from dask.distributed import Client
 from fugue_duckdb import DuckDaskExecutionEngine
 from fugue_duckdb.dataframe import DuckDataFrame
+
+
+_CONF = {
+    "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
+    "fugue.rpc.flask_server.host": "127.0.0.1",
+    "fugue.rpc.flask_server.port": "1234",
+    "fugue.rpc.flask_server.timeout": "2 sec",
+}
 
 
 class DuckDaskExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -25,10 +33,13 @@ class DuckDaskExecutionEngineTests(ExecutionEngineTests.Tests):
     @classmethod
     def tearDownClass(cls):
         cls._con.close()
+        cls._engine.dask_client.close()
 
     def make_engine(self):
         e = DuckDaskExecutionEngine(
-            {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
+            conf={"test": True, "fugue.duckdb.pragma.threads": 2},
+            connection=self._con,
+            dask_client=Client(),
         )
         return e
 
@@ -94,10 +105,12 @@ class DuckDaskBuiltInTests(BuiltInTests.Tests):
     @classmethod
     def tearDownClass(cls):
         cls._con.close()
+        cls._engine.dask_client.close()
 
     def make_engine(self):
         e = DuckDaskExecutionEngine(
-            {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
+            conf={"test": True, "fugue.duckdb.pragma.threads": 2, **_CONF},
+            connection=self._con
         )
         return e
 

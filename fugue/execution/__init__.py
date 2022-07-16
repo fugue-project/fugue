@@ -13,22 +13,3 @@ from fugue.execution.native_execution_engine import (
     QPDPandasEngine,
     SqliteEngine,
 )
-
-
-def register():
-    register_execution_engine(
-        "native", lambda conf: NativeExecutionEngine(conf), on_dup="ignore"
-    )
-    register_execution_engine(
-        "pandas", lambda conf: NativeExecutionEngine(conf), on_dup="ignore"
-    )
-    register_sql_engine("sqlite", lambda engine: SqliteEngine(engine), on_dup="ignore")
-    register_sql_engine(
-        "qpdpandas", lambda engine: QPDPandasEngine(engine), on_dup="ignore"
-    )
-    register_sql_engine(
-        "qpd_pandas", lambda engine: QPDPandasEngine(engine), on_dup="ignore"
-    )
-
-
-register()

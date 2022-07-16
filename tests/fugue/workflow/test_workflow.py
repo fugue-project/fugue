@@ -17,7 +17,7 @@ from fugue.constants import (
     FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
 )
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueWorkflowCompileError
+from fugue.exceptions import FuguePluginsRegistrationError, FugueWorkflowCompileError
 from fugue.execution import NativeExecutionEngine
 from fugue.extensions.transformer.convert import transformer
 from fugue.workflow._workflow_context import FugueWorkflowContext
@@ -84,7 +84,7 @@ def test_workflow():
 
     builder.run()
     df_eq(a.result, [[0], [0], [1]], "a:int")
-    raises(TypeError, lambda: builder.run("abc"))
+    raises(FuguePluginsRegistrationError, lambda: builder.run("abc"))
     builder.run(FugueWorkflowContext())
     df_eq(a.result, [[0], [0], [1]], "a:int")
     builder.run("NativeExecutionEngine")

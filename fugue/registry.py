@@ -9,10 +9,19 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.dataframe import ArrowDataFrame, DataFrame
+from fugue.execution.factory import (
+    register_execution_engine,
+    register_sql_engine,
+)
+from fugue.execution.native_execution_engine import (
+    NativeExecutionEngine,
+    QPDPandasEngine,
+    SqliteEngine,
+)
 from fugue.workflow import register_raw_df_type
 
 
-def _register_extra() -> None:
+def _register() -> None:
     """Register Fugue core additional types
 
     .. note::
@@ -31,7 +40,19 @@ def _register_raw_dataframes() -> None:
 
 
 def _register_engines() -> None:
-    pass
+    register_execution_engine(
+        "native", lambda conf: NativeExecutionEngine(conf), on_dup="ignore"
+    )
+    register_execution_engine(
+        "pandas", lambda conf: NativeExecutionEngine(conf), on_dup="ignore"
+    )
+    register_sql_engine("sqlite", lambda engine: SqliteEngine(engine), on_dup="ignore")
+    register_sql_engine(
+        "qpdpandas", lambda engine: QPDPandasEngine(engine), on_dup="ignore"
+    )
+    register_sql_engine(
+        "qpd_pandas", lambda engine: QPDPandasEngine(engine), on_dup="ignore"
+    )
 
 
 def _register_annotation_converters() -> None:

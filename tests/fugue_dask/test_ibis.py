@@ -9,7 +9,7 @@ from fugue_dask import DaskExecutionEngine, DaskIbisEngine
 
 class DaskIbisTests(IbisTests.Tests):
     def make_engine(self):
-        e = DaskExecutionEngine(dict(test=True))
+        e = DaskExecutionEngine(conf=dict(test=True))
         return e
 
     def make_ibis_engine(self) -> IbisEngine:

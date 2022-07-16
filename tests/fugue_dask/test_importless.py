@@ -1,9 +1,11 @@
 from fugue import FugueWorkflow
 from fugue_sql import fsql
+from dask.distributed import Client
 
 
 def test_importless():
-    for engine in ["dask"]:
+    client = Client()
+    for engine in ["dask", client]:
         dag = FugueWorkflow()
         dag.df([[0]], "a:int").show()
 

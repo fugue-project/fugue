@@ -53,6 +53,7 @@ from fugue.exceptions import (
     FugueWorkflowRuntimeValidationError,
 )
 from pytest import raises
+from triad import SerializableRLock
 
 
 class BuiltInTests(object):
@@ -1371,10 +1372,12 @@ class BuiltInTests(object):
             class Callbacks(object):
                 def __init__(self):
                     self.n = 0
+                    self._lock = SerializableRLock()
 
                 def call(self, value: int) -> int:
-                    self.n += value
-                    return self.n
+                    with self._lock:
+                        self.n += value
+                        return self.n
 
             cb = Callbacks()
 

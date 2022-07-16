@@ -14,7 +14,6 @@ FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT = "fugue.workflow.exception.inject"
 FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE = "fugue.workflow.exception.optimize"
 FUGUE_CONF_SQL_IGNORE_CASE = "fugue.sql.compile.ignore_case"
 
-
 FUGUE_COMPILE_TIME_CONFIGS = set(
     [
         FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
