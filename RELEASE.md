@@ -7,6 +7,7 @@
 -   [323](https://github.com/fugue-project/fugue/issues/323): Removed version cap of DuckDB
 -   [334](https://github.com/fugue-project/fugue/issues/334): Replaced RLock with SerializableRLock
 -   [337](https://github.com/fugue-project/fugue/issues/337): Fixed index warning in fugue_dask
+-   [339](https://github.com/fugue-project/fugue/pull/339): Migrated execution engine parsing to triad conditional_dispatcher
 
 ## 0.6.6
 
