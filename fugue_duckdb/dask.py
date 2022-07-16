@@ -33,6 +33,10 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
         super().__init__(conf, connection)
         self._dask_engine = DaskExecutionEngine(dask_client=dask_client, conf=conf)
 
+    @property
+    def dask_client(self) -> Client:
+        return self._dask_engine.dask_client
+
     def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DuckDataFrame:
         if isinstance(df, (dd.DataFrame, DaskDataFrame)):
             ddf = self._to_dask_df(df, schema, metadata)

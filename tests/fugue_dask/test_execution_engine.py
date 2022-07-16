@@ -23,6 +23,14 @@ _CONF = {
 
 
 class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
+    @classmethod
+    def setUpClass(cls):
+        cls._engine = cls.make_engine(cls)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._engine.dask_client.close()
+
     def make_engine(self):
         e = DaskExecutionEngine(conf=dict(test=True, **_CONF))
         return e
@@ -85,6 +93,14 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
 
 
 class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
+    @classmethod
+    def setUpClass(cls):
+        cls._engine = cls.make_engine(cls)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._engine.dask_client.close()
+
     def make_engine(self):
         e = DaskExecutionEngine(conf=dict(test=True, **_CONF))
         return e
