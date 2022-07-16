@@ -1,13 +1,23 @@
+from typing import Dict, Optional
+
 import dask.dataframe as pd
+import numpy as np
 import pandas
 import pyarrow as pa
+from dask.distributed import Client, get_client
 from qpd_dask.engine import DaskUtils as DaskUtilsBase
 from triad.utils.pyarrow import to_pandas_dtype, to_single_pandas_dtype
-from typing import Dict
-import numpy as np
 
 
 class DaskUtils(DaskUtilsBase):
+    def get_or_create_client(self, client: Optional[Client] = None):
+        if client is not None:
+            return client
+        try:
+            return get_client()
+        except ValueError:
+            return Client(processes=True)
+
     def is_compatile_index(self, df: pd.DataFrame) -> bool:
         """Check whether the datafame is compatible with the operations inside
         this utils collection

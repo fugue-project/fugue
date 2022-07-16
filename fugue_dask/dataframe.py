@@ -116,6 +116,7 @@ class DaskDataFrame(DataFrame):
 
     def persist(self, **kwargs: Any) -> "DaskDataFrame":
         self._native = self.native.persist(**kwargs)
+        self._native.count().compute()
         return self
 
     def count(self) -> int:

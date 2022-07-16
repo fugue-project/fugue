@@ -2,6 +2,7 @@ import inspect
 from typing import Any, Optional
 
 import dask.dataframe as dd
+from dask.distributed import Client
 from fugue import DataFrame, register_execution_engine
 from fugue._utils.interfaceless import (
     DataFrameParam,
@@ -36,6 +37,13 @@ def _register_engines() -> None:
     register_execution_engine(
         "dask",
         lambda conf, **kwargs: DaskExecutionEngine(conf=conf),
+        on_dup="ignore",
+    )
+    register_execution_engine(
+        Client,
+        lambda engine, conf, **kwargs: DaskExecutionEngine(
+            dask_client=engine, conf=conf
+        ),
         on_dup="ignore",
     )
 

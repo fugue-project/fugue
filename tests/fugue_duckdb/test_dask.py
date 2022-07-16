@@ -28,7 +28,7 @@ class DuckDaskExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def make_engine(self):
         e = DuckDaskExecutionEngine(
-            {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
+            conf={"test": True, "fugue.duckdb.pragma.threads": 2}, connection=self._con
         )
         return e
 
@@ -97,7 +97,7 @@ class DuckDaskBuiltInTests(BuiltInTests.Tests):
 
     def make_engine(self):
         e = DuckDaskExecutionEngine(
-            {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
+            conf={"test": True, "fugue.duckdb.pragma.threads": 2}, connection=self._con
         )
         return e
 

@@ -41,13 +41,14 @@ setup(
     extras_require={
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.0"],
         "spark": ["pyspark"],
-        "dask": ["qpd[dask]>=0.3.1"],
+        "dask": ["dask[distributed,dataframe]", "qpd[dask]>=0.3.1"],
         "duckdb": ["duckdb>=0.3.2", "pyarrow>=5.0.0", "numpy"],
         "ibis": ["ibis-framework>=2.1.1"],
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
         "all": [
             "fugue-sql-antlr[cpp]>=0.1.0",
             "pyspark",
+            "dask[distributed,dataframe]",
             "qpd[dask]>=0.3.1",
             "notebook",
             "jupyterlab",

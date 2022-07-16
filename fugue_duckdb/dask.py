@@ -9,6 +9,7 @@ from fugue_dask import DaskDataFrame, DaskExecutionEngine
 from triad import assert_or_throw
 
 import dask.dataframe as dd
+from dask.distributed import Client
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckExecutionEngine
 
@@ -24,10 +25,13 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
     """
 
     def __init__(
-        self, conf: Any = None, connection: Optional[DuckDBPyConnection] = None
+        self,
+        conf: Any = None,
+        connection: Optional[DuckDBPyConnection] = None,
+        dask_client: Optional[Client] = None,
     ):
         super().__init__(conf, connection)
-        self._dask_engine = DaskExecutionEngine(conf)
+        self._dask_engine = DaskExecutionEngine(dask_client=dask_client, conf=conf)
 
     def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DuckDataFrame:
         if isinstance(df, (dd.DataFrame, DaskDataFrame)):
