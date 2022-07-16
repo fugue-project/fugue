@@ -21,7 +21,7 @@ from fugue.execution.native_execution_engine import (
 from fugue.workflow import register_raw_df_type
 
 
-def register() -> None:
+def _register() -> None:
     """Register Fugue core additional types
 
     .. note::

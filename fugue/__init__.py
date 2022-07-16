@@ -18,6 +18,8 @@ from fugue.execution.execution_engine import ExecutionEngine, SQLEngine
 from fugue.execution.factory import (
     make_execution_engine,
     make_sql_engine,
+    parse_execution_engine,
+    parse_sql_engine,
     register_default_execution_engine,
     register_default_sql_engine,
     register_execution_engine,
@@ -44,7 +46,7 @@ from fugue.extensions.transformer import (
     transformer,
 )
 from fugue.interfaceless import out_transform, transform
-from fugue.registry import register
+from fugue.registry import _register
 from fugue.rpc import (
     EmptyRPCHandler,
     RPCClient,
@@ -58,4 +60,4 @@ from fugue.workflow._workflow_context import FugueWorkflowContext
 from fugue.workflow.module import module
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 
-register()
+_register()

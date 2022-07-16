@@ -120,6 +120,9 @@ def test_sql_engine():
         make_sql_engine(_MockSQlEngine, make_execution_engine()), _MockSQlEngine
     )
 
+    with raises(FuguePluginsRegistrationError):
+        make_sql_engine("__dummy_no")
+
     register_execution_engine("__a", lambda conf: _MockExecutionEngine(conf))
     register_sql_engine("__aq", lambda engine: _MockSQlEngine(engine, other=11))
     e = make_execution_engine(("__a", "__aq"))
