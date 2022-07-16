@@ -22,6 +22,53 @@
 
 For a more comprehensive overview of Fugue, read [this](https://towardsdatascience.com/introducing-fugue-reducing-pyspark-developer-friction-a702230455de) article.
 
+## Installation
+
+Fugue can be installed through pip by using:
+
+```bash
+pip install fugue
+```
+
+It also has the following extras:
+
+*   **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/tutorials/advanced/execution_engine.html)
+*   **dask**: to support Dask as the ExecutionEngine.
+*   **duckdb**: to support DuckDB as the ExecutionEngine, read [details](https://fugue-tutorials.readthedocs.io/tutorials/integrations/duckdb.html).
+*   **ibis**: to enable Ibis for Fugue workflows, read [details](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ibis.html).
+*   **cpp_sql_parser**: to enable the CPP antlr parser for Fugue SQL. It can be 50+ times faster than the pure Python parser. For the main Python versions and platforms, there is already pre-built binaries, but for the remaining, it needs a C++ compiler to build on the fly.
+*   **all**: install everything above
+
+For example a common use case is:
+
+```bash
+pip install fugue[duckdb,spark]
+```
+
+Notice that installing extras may not be necessary. For example if you already installed Spark or DuckDB independently, Fugue is able to automatically enable the support for them.
+
+## [Getting Started](https://fugue-tutorials.readthedocs.io/)
+
+The best way to get started with Fugue is to work through the [tutorials](https://fugue-tutorials.readthedocs.io/).
+
+The tutorials can also be run in an interactive notebook environment through binder or Docker:
+
+### Using binder
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/fugue-project/tutorials/master)
+
+**Note it runs slow on binder** because the machine on binder isn't powerful enough for a distributed framework such as Spark. Parallel executions can become sequential, so some of the performance comparison examples will not give you the correct numbers.
+
+### Using Docker
+
+Alternatively, you should get decent performance by running this Docker image on your own machine:
+
+```bash
+docker run -p 8888:8888 fugueproject/tutorials:latest
+```
+
+For the API docs, [click here](https://fugue.readthedocs.org)
+
 ## Select Features
 
 *   **Cross-framework code**: Write code once in native Python, SQL, or pandas then execute it on Dask or Spark with no rewrites. Logic and execution are decoupled through Fugue, enabling users to leverage the Spark and Dask engines without learning the specific framework syntax.
@@ -48,14 +95,16 @@ def map_letter_to_food(df: pd.DataFrame, mapping: Dict[str, str]) -> pd.DataFram
 Now, the `map_letter_to_food()` function is brought to the Spark execution engine by invoking the `transform` function of Fugue. The output `schema`, `params` and `engine` are passed to the `transform()` call. The `schema` is needed because it's a requirement on Spark. A schema of `"*"` below means all input columns are in the output.
 
 ```python
+from pyspark.sql import SparkSession
 from fugue import transform
-import fugue_spark
+
+spark = SparkSession.builder.getOrCreate()
 
 df = transform(input_df,
                map_letter_to_food,
                schema="*",
                params=dict(mapping=map_dict),
-               engine="spark"
+               engine=spark
             )
 df.show()
 ```
@@ -123,70 +172,10 @@ For FugueSQL, we can change the engine by passing it to the `run()` method: `fsq
 
 ## Jupyter Notebook Extension
 
-There is an accompanying notebook extension for FugueSQL that lets users use the `%%fsql` cell magic. The extension also provides syntax highlighting for FugueSQL cells. (Syntax highlighting is not available yet for JupyterLab).
+There is an accompanying [notebook extension](https://pypi.org/project/fugue-jupyter/) for FugueSQL that lets users use the `%%fsql` cell magic. The extension also provides syntax highlighting for FugueSQL cells. It works for both classic notebook and Jupyter Lab
 
 ![FugueSQL gif](https://miro.medium.com/max/700/1*6091-RcrOPyifJTLjo0anA.gif)
 
-The notebook environment can be setup by using the `setup()` function as follows in the first cell of a notebook:
-
-```python
-from fugue_notebook import setup
-setup()
-```
-
-Note that you can automatically load `fugue_notebook` iPython extension at startup,
-read [this](https://ipython.readthedocs.io/en/stable/config/extensions/#using-extensions) to configure your Jupyter environment.
-
-
-## Installation
-
-Fugue can be installed through pip by using:
-
-```bash
-pip install fugue
-```
-
-It also has the following extras:
-
-*   **sql**: to support [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/fugue_sql/index.html)
-*   **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/tutorials/advanced/execution_engine.html)
-*   **dask**: to support Dask as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/tutorials/advanced/execution_engine.html)
-*   **all**: install everything above
-
-For example a common use case is:
-
-```bash
-pip install fugue[sql,spark]
-```
-
-To install the notebook extension (after installing Fugue):
-
-```bash
-jupyter nbextension install --py fugue_notebook
-jupyter nbextension enable fugue_notebook --py
-```
-
-## [Getting Started](https://fugue-tutorials.readthedocs.io/)
-
-The best way to get started with Fugue is to work through the [tutorials](https://fugue-tutorials.readthedocs.io/).
-
-The tutorials can also be run in an interactive notebook environment through binder or Docker:
-
-### Using binder
-
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/fugue-project/tutorials/master)
-
-**Note it runs slow on binder** because the machine on binder isn't powerful enough for a distributed framework such as Spark. Parallel executions can become sequential, so some of the performance comparison examples will not give you the correct numbers.
-
-### Using Docker
-
-Alternatively, you should get decent performance by running this Docker image on your own machine:
-
-```bash
-docker run -p 8888:8888 fugueproject/tutorials:latest
-```
-
-For the API docs, [click here](https://fugue.readthedocs.org)
 
 ## Ecosystem
 
@@ -198,7 +187,6 @@ Fugue can use the following projects as backends:
 *   [Dask](https://github.com/dask/dask)
 *   [Duckdb](https://github.com/duckdb/duckdb) - in-process SQL OLAP database management
 *   [Ibis](https://github.com/ibis-project/ibis/) - pandas-like interface for SQL engines
-*   [blazing-sql](https://github.com/BlazingDB/blazingsql) - GPU accelerated SQL engine based on cuDF
 *   [dask-sql](https://github.com/dask-contrib/dask-sql) - SQL interface for Dask
 
 Fugue is available as a backend or can integrate with the following projects:
@@ -219,6 +207,7 @@ View some of our latest conferences presentations and content. For a more comple
 
 *   [Introducing Fugue - Reducing PySpark Developer Friction](https://towardsdatascience.com/introducing-fugue-reducing-pyspark-developer-friction-a702230455de)
 *   [Introducing FugueSQL — SQL for Pandas, Spark, and Dask DataFrames (Towards Data Science by Khuyen Tran)](https://towardsdatascience.com/introducing-fuguesql-sql-for-pandas-spark-and-dask-dataframes-63d461a16b27)
+*   [Why Pandas-like Interfaces are Sub-optimal for Distributed Computing](https://towardsdatascience.com/why-pandas-like-interfaces-are-sub-optimal-for-distributed-computing-322dacbce43)
 *   [Interoperable Python and SQL in Jupyter Notebooks (Towards Data Science)](https://towardsdatascience.com/interoperable-python-and-sql-in-jupyter-notebooks-86245e711352)
 *   [Using Pandera on Spark for Data Validation through Fugue (Towards Data Science)](https://towardsdatascience.com/using-pandera-on-spark-for-data-validation-through-fugue-72956f274793)
 
