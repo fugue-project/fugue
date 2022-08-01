@@ -1,5 +1,9 @@
 # Release Notes
 
+## 0.7.1
+
+-   [345](https://github.com/fugue-project/fugue/issues/345): Enabled file as input/output for transform and out_transform
+
 ## 0.7.0
 
 -   [326](https://github.com/fugue-project/fugue/pull/326): Added tests for Python 3.6 - 3.10 for Linux and 3.7 - 3.9 for Windows. Updated devenv and CICD to Python 3.8.

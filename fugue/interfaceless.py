@@ -93,6 +93,17 @@ def transform(
         be saved into `save_path`. The return will be the value of `save_path`
       * When `save_path` is not None and `checkpoint` is True, then the output will
         be saved into `save_path`. The return will be the dataframe from `save_path`
+
+      It is the best practice to only use parquet file in `df` and `save_path`.
+      Csv and other file formats may need additional parameters to read and save,
+      but this function does not support extra parameters for IO.
+
+      The checkpoint here is NOT deterministic, so re-run will generate new
+      checkpoints.
+
+      If you want to read and write other file formats or if you want to use
+      deterministic checkpoints, please use
+      :class:`~fugue.workflow.workflow.FugueWorkflow`.
     """
     dag = FugueWorkflow(conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
     if isinstance(df, str):
