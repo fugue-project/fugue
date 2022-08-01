@@ -141,3 +141,6 @@ dask-worker-space
 # spark
 spark-warehourse
 =*
+
+# DS_Store
+*.DS_Store
