@@ -19,6 +19,8 @@ def transform(
     force_output_fugue_dataframe: bool = False,
     persist: bool = False,
     as_local: bool = False,
+    save_path: Optional[str] = None,
+    checkpoint: bool = False,
 ) -> Any:
     """Transform this dataframe using transformer. It's a wrapper of
     :meth:`~fugue.workflow.workflow.FugueWorkflow.transform` and
@@ -30,6 +32,8 @@ def transform(
 
     Please read |TransformerTutorial|
 
+    :param df: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
+      or a path string
     :param using: transformer-like object, can't be a string expression
     :param schema: |SchemaLikeObject|, defaults to None. The transformer
       will be able to access this value from
@@ -55,6 +59,8 @@ def transform(
       to False
     :param persist: Whether to persist(materialize) the dataframe before returning
     :param as_local: If true, the result will be converted to a ``LocalDataFrame``
+    :param save_path: Whether to save the output to a file (see the note)
+    :param checkpoint: Whether to add a checkpoint for the output (see the note)
 
     :return: the transformed dataframe, if ``df`` is a native dataframe (e.g.
       pd.DataFrame, spark dataframe, etc), the output will be a native dataframe,
@@ -73,9 +79,38 @@ def transform(
       the function call, the callback receiver is already shut down. To do that you
       can either use ``persist`` or ``as_local``, both will materialize the dataframe
       before the callback receiver shuts down.
+
+    .. note::
+
+      * When `save_path` is None and `checkpoint` is False, then the output will
+        not be saved into a file. The return will be a dataframe.
+      * When `save_path` is None and `checkpoint` is True, then the output will be
+        saved into the path set by `fugue.workflow.checkpoint.path`, the name will
+        be randomly chosen, and it is NOT a deterministic checkpoint, so if you run
+        multiple times, the output will be saved into different files. The return
+        will be a dataframe.
+      * When `save_path` is not None and `checkpoint` is False, then the output will
+        be saved into `save_path`. The return will be the value of `save_path`
+      * When `save_path` is not None and `checkpoint` is True, then the output will
+        be saved into `save_path`. The return will be the dataframe from `save_path`
+
+      It is the best practice to only use parquet file in `df` and `save_path`.
+      Csv and other file formats may need additional parameters to read and save,
+      but this function does not support extra parameters for IO.
+
+      The checkpoint here is NOT deterministic, so re-run will generate new
+      checkpoints.
+
+      If you want to read and write other file formats or if you want to use
+      deterministic checkpoints, please use
+      :class:`~fugue.workflow.workflow.FugueWorkflow`.
     """
     dag = FugueWorkflow(conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
-    tdf = dag.df(df).transform(
+    if isinstance(df, str):
+        src = dag.load(df)
+    else:
+        src = dag.df(df)
+    tdf = src.transform(
         using=using,
         schema=schema,
         params=params,
@@ -85,8 +120,33 @@ def transform(
     )
     if persist:
         tdf = tdf.persist()
-    tdf.yield_dataframe_as("result", as_local=as_local)
-    result = dag.run(engine, conf=engine_conf)["result"]
+    if checkpoint:
+        if save_path is None:
+
+            def _no_op_processor(df: DataFrame) -> DataFrame:
+                # this is a trick to force yielding again
+                # from the file to a dataframe
+                return df
+
+            tdf.yield_file_as("file_result")
+            tdf.process(_no_op_processor).yield_dataframe_as(
+                "result", as_local=as_local
+            )
+        else:
+            tdf.save_and_use(save_path).yield_dataframe_as("result", as_local=as_local)
+    else:
+        if save_path is None:
+            tdf.yield_dataframe_as("result", as_local=as_local)
+        else:
+            tdf.save(save_path)
+    dag.run(engine, conf=engine_conf)
+    if checkpoint:
+        result = dag.yields["result"].result  # type:ignore
+    else:
+        if save_path is None:
+            result = dag.yields["result"].result  # type:ignore
+        else:
+            return save_path
     if force_output_fugue_dataframe or isinstance(df, (DataFrame, Yielded)):
         return result
     return result.as_pandas() if result.is_local else result.native  # type:ignore
@@ -112,6 +172,8 @@ def out_transform(
 
     Please read |TransformerTutorial|
 
+    :param df: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
+      or a path string
     :param using: transformer-like object, can't be a string expression
     :param params: |ParamsLikeObject| to run the processor, defaults to None.
       The transformer will be able to access this value from
@@ -135,7 +197,11 @@ def out_transform(
       and return nothing
     """
     dag = FugueWorkflow(conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
-    dag.df(df).out_transform(
+    if isinstance(df, str):
+        src = dag.load(df)
+    else:
+        src = dag.df(df)
+    src.out_transform(
         using=using,
         params=params,
         pre_partition=partition,

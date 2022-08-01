@@ -1,8 +1,16 @@
+import os
 from typing import Any, Dict, Iterable
 
 import pandas as pd
 
-from fugue import DataFrame, FugueWorkflow, PandasDataFrame, out_transform, transform
+from fugue import (
+    DataFrame,
+    FugueWorkflow,
+    PandasDataFrame,
+    out_transform,
+    transform,
+    make_execution_engine,
+)
 from fugue.constants import FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH
 
 
@@ -21,6 +29,10 @@ def test_transform():
         return df.sort_values("b").head(1)
 
     result = transform(pdf, f2)
+    assert isinstance(result, pd.DataFrame)
+    assert result.values.tolist() == [[0, 0]]
+
+    result = transform(pdf, f2, persist=True)
     assert isinstance(result, pd.DataFrame)
     assert result.values.tolist() == [[0, 0]]
 
@@ -52,7 +64,7 @@ def test_transform_from_yield(tmpdir):
 
     dag = FugueWorkflow()
     dag.df([[0]], "a:int").yield_dataframe_as("x1")
-    dag.df([[1]], "b:int").yield_dataframe_as("x2")
+    dag.df([[1]], "b:int").yield_file_as("x2")
     dag.run("", {FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)})
 
     result = transform(dag.yields["x1"], f)
@@ -66,6 +78,61 @@ def test_transform_from_yield(tmpdir):
     )
     assert isinstance(result, DataFrame)
     assert result.as_array(type_safe=True) == [[1, 1]]
+
+
+def test_transform_from_file(tmpdir):
+    fp = os.path.join(tmpdir, "t.parquet")
+    pd.DataFrame(dict(a=[2])).to_parquet(fp)
+
+    # schema: *,x:int
+    def f(df: pd.DataFrame) -> pd.DataFrame:
+        return df.assign(x=1)
+
+    result = transform(fp, f, force_output_fugue_dataframe=True)
+    assert result.as_array(type_safe=True) == [[2, 1]]
+
+
+def test_transform_to_file(tmpdir):
+    fp = os.path.join(tmpdir, "t.parquet")
+    tdf = pd.DataFrame(dict(a=[2]))
+    # schema: *,x:int
+    def f(df: pd.DataFrame) -> pd.DataFrame:
+        return df.assign(x=1)
+
+    engine = make_execution_engine(
+        None, {FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)}
+    )
+
+    # checkpoint is True, save_path is None
+    result = transform(
+        tdf, f, force_output_fugue_dataframe=True, checkpoint=True, engine=engine
+    )
+    assert result.as_array() == [[2, 1]]
+
+    # checkpoint is True, save_path is not None
+    result = transform(
+        tdf,
+        f,
+        force_output_fugue_dataframe=True,
+        checkpoint=True,
+        save_path=fp,
+        engine=engine,
+    )
+    assert result.as_array() == [[2, 1]]
+    os.remove(fp)
+
+    # checkpoint is False, save_path is not None
+    result = transform(
+        tdf,
+        f,
+        force_output_fugue_dataframe=True,
+        save_path=fp,
+        engine=engine,
+    )
+    assert os.path.exists(fp)
+    assert result == fp
+    assert pd.read_parquet(fp).values.tolist() == [[2, 1]]
+    os.remove(fp)
 
 
 def test_out_transform(tmpdir):
@@ -110,7 +177,13 @@ def test_out_transform(tmpdir):
         return df
 
     cb = Callback()
-    result = out_transform(pdf, f3, callback=cb.called)
+    out_transform(pdf, f3, callback=cb.called)
+    assert 1 == cb.ct
+
+    fp = os.path.join(tmpdir, "t.parquet")
+    pdf.to_parquet(fp)
+    cb = Callback()
+    out_transform(fp, f3, callback=cb.called)
     assert 1 == cb.ct
 
 
