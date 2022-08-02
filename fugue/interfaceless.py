@@ -4,6 +4,28 @@ from fugue.collections.yielded import Yielded
 from fugue.constants import FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT
 from fugue.dataframe import DataFrame
 from fugue.workflow import FugueWorkflow
+from fugue.exceptions import FugueInterfacelessError
+from triad.utils.assertion import assert_or_throw
+
+
+def _check_valid_input(df: Any, save_path: Optional[str]) -> None:
+    # Check valid input
+    if isinstance(df, str):
+        assert_or_throw(
+            (".csv" not in df) and (".json" not in df),
+            FugueInterfacelessError(
+                """Fugue transform can only load parquet file paths.
+                Csv and json are disallowed"""
+            ),
+        )
+    if save_path:
+        assert_or_throw(
+            (".csv" not in save_path) and (".json" not in save_path),
+            FugueInterfacelessError(
+                """Fugue transform can only load parquet file paths.
+                Csv and json are disallowed"""
+            ),
+        )
 
 
 def transform(
@@ -33,7 +55,7 @@ def transform(
     Please read |TransformerTutorial|
 
     :param df: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
-      or a path string
+      or a path string to a parquet file
     :param using: transformer-like object, can't be a string expression
     :param schema: |SchemaLikeObject|, defaults to None. The transformer
       will be able to access this value from
@@ -94,9 +116,8 @@ def transform(
       * When `save_path` is not None and `checkpoint` is True, then the output will
         be saved into `save_path`. The return will be the dataframe from `save_path`
 
-      It is the best practice to only use parquet file in `df` and `save_path`.
-      Csv and other file formats may need additional parameters to read and save,
-      but this function does not support extra parameters for IO.
+      This function can only take parquet file paths in `df` and `save_path`.
+      Csv and other file formats are disallowed.
 
       The checkpoint here is NOT deterministic, so re-run will generate new
       checkpoints.
@@ -105,9 +126,11 @@ def transform(
       deterministic checkpoints, please use
       :class:`~fugue.workflow.workflow.FugueWorkflow`.
     """
+    _check_valid_input(df, save_path)
+
     dag = FugueWorkflow(conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
     if isinstance(df, str):
-        src = dag.load(df)
+        src = dag.load(df, fmt="parquet")
     else:
         src = dag.df(df)
     tdf = src.transform(
@@ -133,12 +156,14 @@ def transform(
                 "result", as_local=as_local
             )
         else:
-            tdf.save_and_use(save_path).yield_dataframe_as("result", as_local=as_local)
+            tdf.save_and_use(save_path, fmt="parquet").yield_dataframe_as(
+                "result", as_local=as_local
+            )
     else:
         if save_path is None:
             tdf.yield_dataframe_as("result", as_local=as_local)
         else:
-            tdf.save(save_path)
+            tdf.save(save_path, fmt="parquet")
     dag.run(engine, conf=engine_conf)
     if checkpoint:
         result = dag.yields["result"].result  # type:ignore
@@ -173,7 +198,7 @@ def out_transform(
     Please read |TransformerTutorial|
 
     :param df: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
-      or a path string
+      or a path string to a parquet file
     :param using: transformer-like object, can't be a string expression
     :param params: |ParamsLikeObject| to run the processor, defaults to None.
       The transformer will be able to access this value from
@@ -192,13 +217,15 @@ def out_transform(
     :param engine_conf: |ParamsLikeObject|, defaults to None
 
     .. note::
+      This function can only take parquet file paths in `df`. Csv and other file
+      formats are disallowed.
 
       This transformation is guaranteed to execute immediately (eager)
       and return nothing
     """
     dag = FugueWorkflow(conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
     if isinstance(df, str):
-        src = dag.load(df)
+        src = dag.load(df, fmt="parquet")
     else:
         src = dag.df(df)
     src.out_transform(

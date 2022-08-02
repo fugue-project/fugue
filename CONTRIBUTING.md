@@ -2,9 +2,9 @@
 
 ## Ways to Contribute
 
-We're happy you're looking to contribute. We recommend you join the [Slack channel](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ) to discuss how to get involved, or how to use Fugue. There are many ways to help this project.
+We're happy you're looking to contribute. We recommend you join the [Slack channel](slack.fugue.ai) to discuss how to get involved, or how to use Fugue. There are many ways to help this project.
 
-1.  **Use Fugue in your project** - Having more users helps us come across more use cases and make a better framework. We're always happy to help you get started using Fugue for your company use case or personal project. Feel free to message us on [Slack](https://join.slack.com/t/fugue-project/shared_invite/zt-jl0pcahu-KdlSOgi~fP50TZWmNxdWYQ).
+1.  **Use Fugue in your project** - Having more users helps us come across more use cases and make a better framework. We're always happy to help you get started using Fugue for your company use case or personal project. Feel free to message us on [Slack](slack.fugue.ai).
 
 2.  **Give us feedback/Post issues** - If you have ideas of how to make Fugue better, or have general questions about Fugue, we'd be happy to hear them. Hearing unclear parts helps us write better documentation. Posting issues helps us fix bugs or make new features.
 

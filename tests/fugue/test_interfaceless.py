@@ -12,6 +12,8 @@ from fugue import (
     make_execution_engine,
 )
 from fugue.constants import FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH
+from fugue.exceptions import FugueInterfacelessError
+from pytest import raises
 
 
 def test_transform():
@@ -91,6 +93,12 @@ def test_transform_from_file(tmpdir):
     result = transform(fp, f, force_output_fugue_dataframe=True)
     assert result.as_array(type_safe=True) == [[2, 1]]
 
+    with raises(FugueInterfacelessError):
+        transform("t.csv", f)
+
+    with raises(FugueInterfacelessError):
+        transform("t.json", f)
+
 
 def test_transform_to_file(tmpdir):
     fp = os.path.join(tmpdir, "t.parquet")
@@ -133,6 +141,37 @@ def test_transform_to_file(tmpdir):
     assert result == fp
     assert pd.read_parquet(fp).values.tolist() == [[2, 1]]
     os.remove(fp)
+
+    # test that parquet format is used for saving when
+    # no file extension is provided
+    fp = os.path.join(tmpdir, "test")
+    transform(
+        tdf,
+        f,
+        save_path=fp,
+        engine=engine,
+    )
+    loaded = pd.read_parquet(fp)
+    assert pd.read_parquet(fp).values.tolist() == [[2, 1]]
+    os.remove(fp)
+
+    # catch invalid file paths
+    with raises(FugueInterfacelessError):
+        transform(
+            tdf,
+            f,
+            force_output_fugue_dataframe=True,
+            save_path="f.csv",
+            engine=engine,
+        )
+    with raises(FugueInterfacelessError):
+        transform(
+            tdf,
+            f,
+            force_output_fugue_dataframe=True,
+            save_path="f.json",
+            engine=engine,
+        )
 
 
 def test_out_transform(tmpdir):
