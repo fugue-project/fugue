@@ -9,7 +9,7 @@ from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
 from ray.data.impl.arrow_block import ArrowRow
 from triad.collections.schema import Schema
-from triad.utils.assertion import assert_or_throw
+from ._ray_utils import get_dataset_format, build_empty
 
 
 class RayDataFrame(DataFrame):
@@ -42,19 +42,31 @@ class RayDataFrame(DataFrame):
         if df is None:
             schema = _input_schema(schema).assert_not_empty()
             super().__init__(schema, metadata)
-            self._native = rd.from_arrow(ArrowDataFrame(schema=schema).native)
+            self._native = build_empty(schema)
             return
         if isinstance(df, rd.Dataset):
-            _schema = df.schema(fetch_if_missing=True)
-            assert_or_throw(
-                _schema is None or isinstance(_schema, pa.Schema),
-                ValueError(f"Ray dataset does not have arrow schema {_schema}"),
-            )
-            rdf = df
+            fmt = get_dataset_format(df)
+            if fmt is None:  # empty:
+                schema = _input_schema(schema).assert_not_empty()
+                super().__init__(schema, metadata)
+                self._native = build_empty(schema)
+                return
+            elif fmt == "pandas":
+                rdf = rd.from_arrow_refs(df.to_arrow_refs())
+            elif fmt == "arrow":
+                rdf = df
+            else:
+                raise NotImplementedError(
+                    f"Ray Dataset in {fmt} format is not supported"
+                )
         elif isinstance(df, pa.Table):
             rdf = rd.from_arrow(df)
+            if schema is None:
+                schema = df.schema
         elif isinstance(df, RayDataFrame):
             rdf = df._native
+            if schema is None:
+                schema = df.schema
         elif isinstance(df, (pd.DataFrame, pd.Series)):
             if isinstance(df, pd.Series):
                 df = df.to_frame()
@@ -64,8 +76,9 @@ class RayDataFrame(DataFrame):
             t = ArrowDataFrame(df, schema)
             rdf = rd.from_arrow(t.as_arrow())
         elif isinstance(df, DataFrame):
-            schema = _input_schema(schema).assert_not_empty()
-            rdf = rd.from_arrow(t.as_arrow())
+            rdf = rd.from_arrow(df.as_arrow(type_safe=True))
+            if schema is None:
+                schema = df.schema
         else:
             raise ValueError(f"{df} is incompatible with DaskDataFrame")
         rdf, schema = self._apply_schema(rdf, schema, internal_schema)
@@ -143,7 +156,9 @@ class RayDataFrame(DataFrame):
         return RayDataFrame(rdf, schema=new_schema, internal_schema=True)
 
     def alter_columns(self, columns: Any) -> DataFrame:
-        def _alter(table: pa.Table) -> pa.Table:
+        def _alter(
+            table: pa.Table,
+        ) -> pa.Table:  # pragma: no cover (pytest can't capture)
             return ArrowDataFrame(table).alter_columns(columns).native  # type: ignore
 
         new_schema = self._get_altered_schema(columns)
@@ -185,10 +200,13 @@ class RayDataFrame(DataFrame):
     ) -> Tuple[rd.Dataset[ArrowRow], Schema]:
         if internal_schema:
             return rdf, schema
+        if get_dataset_format(rdf) is None:  # empty
+            schema = _input_schema(schema).assert_not_empty()
+            return build_empty(schema), schema
         if schema is None or schema == rdf.schema(fetch_if_missing=True):
             return rdf, rdf.schema(fetch_if_missing=True)
 
-        def _alter(table: pa.Table) -> pa.Table:
+        def _alter(table: pa.Table) -> pa.Table:  # pragma: no cover
             return ArrowDataFrame(table).alter_columns(schema).native  # type: ignore
 
         return rdf.map_batches(_alter, batch_format="pyarrow"), schema
