@@ -7,7 +7,6 @@ import ray.data as rd
 from fugue.dataframe import ArrowDataFrame, DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
-from ray.data.impl.arrow_block import ArrowRow
 from triad.collections.schema import Schema
 from ._ray_utils import get_dataset_format, build_empty
 
@@ -86,7 +85,7 @@ class RayDataFrame(DataFrame):
         self._native = rdf
 
     @property
-    def native(self) -> rd.Dataset[ArrowRow]:
+    def native(self) -> rd.Dataset:
         """The wrapped ray Dataset"""
         return self._native
 
@@ -196,8 +195,8 @@ class RayDataFrame(DataFrame):
         return PandasDataFrame(pdf, schema=df.schema).head(n)
 
     def _apply_schema(
-        self, rdf: rd.Dataset[ArrowRow], schema: Optional[Schema], internal_schema: bool
-    ) -> Tuple[rd.Dataset[ArrowRow], Schema]:
+        self, rdf: rd.Dataset, schema: Optional[Schema], internal_schema: bool
+    ) -> Tuple[rd.Dataset, Schema]:
         if internal_schema:
             return rdf, schema
         if get_dataset_format(rdf) is None:  # empty
