@@ -258,11 +258,15 @@ class CreateData(FugueTask):
         if not is_acceptable_raw_df(data):
             if isinstance(data, (List, Iterable)):
                 assert_or_throw(
-                    schema is not None, FugueWorkflowCompileError("schema is required")
+                    schema is not None,
+                    lambda: FugueWorkflowCompileError(
+                        f"schema is required for input data type {type(data)}"
+                    ),
                 )
             else:
                 raise FugueWorkflowCompileError(
-                    f"{data} can't be converted to WorkflowDataFrame"
+                    f"Input data of type {type(data)} can't "
+                    "be converted to WorkflowDataFrame"
                 )
 
 

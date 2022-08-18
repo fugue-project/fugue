@@ -35,8 +35,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
     ):
         if df is None:
             schema = _input_schema(schema).assert_not_empty()
-            arr = [pa.array([])] * len(schema)
-            self._native = pa.Table.from_arrays(arr, schema=schema.pa_schema)
+            self._native: pa.Table = _build_empty_arrow(schema)
             super().__init__(schema, metadata)
             return
         elif isinstance(df, pa.Table):
@@ -123,18 +122,14 @@ class ArrowDataFrame(LocalBoundedDataFrame):
         return ArrowDataFrame(self.native.drop(cols))
 
     def _select_cols(self, keys: List[Any]) -> DataFrame:
-        schema = self.schema.extract(keys)
-        cols = [self.native.columns[self.schema.index_of_key(k)] for k in keys]
-        table = pa.Table.from_arrays(cols, schema=schema.pa_schema)
-        return ArrowDataFrame(table)
+        return ArrowDataFrame(self.native.select(keys))
 
     def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
-            schema = self.schema.rename(columns)
+            new_cols = self.schema.rename(columns).names
         except Exception as e:
             raise FugueDataFrameOperationError from e
-        df = pa.Table.from_arrays(self.native.columns, schema=schema.pa_schema)
-        return ArrowDataFrame(df)
+        return ArrowDataFrame(self.native.rename_columns(new_cols))
 
     def alter_columns(self, columns: Any) -> DataFrame:
         new_schema = self._get_altered_schema(columns)
@@ -211,5 +206,4 @@ class ArrowDataFrame(LocalBoundedDataFrame):
 
 
 def _build_empty_arrow(schema: Schema) -> pa.Table:
-    d = {f.name: pa.nulls(0, f.type) for f in schema.fields}
-    return pa.Table.from_pydict(d)
+    return pa.Table.from_pylist([], schema=schema.pa_schema)

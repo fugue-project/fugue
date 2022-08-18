@@ -84,6 +84,9 @@ testspark:
 testdask:
 	python3 -bb -m pytest tests/fugue_dask
 
+testray:
+	python3 -bb -m pytest tests/fugue_ray
+
 testduck:
 	python3 -bb -m pytest --reruns 2 --only-rerun 'Overflow in cast' tests/fugue_duckdb
 
