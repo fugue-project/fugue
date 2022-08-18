@@ -8,7 +8,8 @@ from fugue.dataframe import ArrowDataFrame, DataFrame, LocalDataFrame, PandasDat
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
 from triad.collections.schema import Schema
-from ._ray_utils import get_dataset_format, build_empty
+
+from ._ray_utils import build_empty, get_dataset_format
 
 
 class RayDataFrame(DataFrame):
