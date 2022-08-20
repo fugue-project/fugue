@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Callable, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import dask.dataframe as dd
 from distributed import Client
@@ -335,7 +335,12 @@ class DaskExecutionEngine(ExecutionEngine):
         subset: List[str] = None,
         metadata: Any = None,
     ) -> DataFrame:
-        d = self.to_df(df).native.dropna(how=how, thresh=thresh, subset=subset)
+        kw: Dict[str, Any] = dict(how=how)
+        if thresh is not None:
+            kw["thresh"] = thresh
+        if subset is not None:
+            kw["subset"] = subset
+        d = self.to_df(df).native.dropna(**kw)
         return DaskDataFrame(d, df.schema, metadata)
 
     def fillna(
