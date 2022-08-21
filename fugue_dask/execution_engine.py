@@ -340,6 +340,8 @@ class DaskExecutionEngine(ExecutionEngine):
             kw["thresh"] = thresh
         if subset is not None:
             kw["subset"] = subset
+        if how == "any" and thresh is not None:
+            del kw["how"]  # to deal with a dask logic flaw
         d = self.to_df(df).native.dropna(**kw)
         return DaskDataFrame(d, df.schema, metadata)
 
