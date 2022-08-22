@@ -97,6 +97,16 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
             return
         return super().test_load_json_folder()
 
+    def test_save_and_load_json(self):
+        if sys.version_info < (3, 8):
+            return
+        return super().test_save_and_load_json()
+
+    def test_save_single_and_load_json(self):
+        if sys.version_info < (3, 8):
+            return
+        return super().test_save_single_and_load_json()
+
 
 class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
     @classmethod
