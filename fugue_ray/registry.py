@@ -10,7 +10,6 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.workflow import register_raw_df_type
-from ray._private.worker import RayContext
 from triad import run_once
 
 from .dateframe import RayDataFrame
@@ -33,11 +32,6 @@ def _register_engines() -> None:
     register_execution_engine(
         "ray",
         lambda conf, **kwargs: RayExecutionEngine(conf=conf),
-        on_dup="ignore",
-    )
-    register_execution_engine(
-        RayContext,
-        lambda engine, conf, **kwargs: RayExecutionEngine(conf=conf),
         on_dup="ignore",
     )
 

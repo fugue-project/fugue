@@ -23,9 +23,5 @@ def test_registry():
     dag = FugueWorkflow()
     dag.create(creator).process(processor1).process(processor2).output(outputter)
 
-    ctx = ray.init()
-    try:
+    with ray.init():
         dag.run("ray")
-        dag.run(ctx)
-    finally:
-        ray.shutdown()
