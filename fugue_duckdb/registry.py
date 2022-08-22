@@ -15,10 +15,13 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.workflow import register_raw_df_type
+from triad import run_once
+
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
 
 
+@run_once
 def register() -> None:
     """Register DuckDB Execution Engine
 

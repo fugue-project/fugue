@@ -42,7 +42,7 @@ setup(
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.0"],
         "spark": ["pyspark"],
         "dask": ["dask[distributed,dataframe]", "qpd[dask]>=0.3.1"],
-        "ray": ["ray>=1.13.0"],
+        "ray": ["ray>=1.13.0", "duckdb>=0.3.2"],
         "duckdb": ["duckdb>=0.3.2", "pyarrow>=5.0.0", "numpy"],
         "ibis": ["ibis-framework>=2.1.1"],
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
@@ -82,6 +82,7 @@ setup(
             "duckdb = fugue_duckdb:register[duckdb]",
             "spark = fugue_spark:register[spark]",
             "dask = fugue_dask:register[dask]",
+            "ray = fugue_ray:register[ray]",
         ]
     },
 )

@@ -13,10 +13,12 @@ from fugue._utils.interfaceless import (
 from fugue.workflow import register_raw_df_type
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
+from triad import run_once
 
 from fugue_spark.execution_engine import SparkExecutionEngine
 
 
+@run_once
 def register() -> None:
     """Register Spark Execution Engine
 

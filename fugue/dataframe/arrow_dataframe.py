@@ -109,8 +109,13 @@ class ArrowDataFrame(LocalBoundedDataFrame):
 
     def peek_array(self) -> Any:
         self.assert_not_empty()
-        it = iter(self.as_array_iterable(type_safe=True))
-        return next(it)
+        data = self.native.take([0]).to_pydict()
+        return [v[0] for v in data.values()]
+
+    def peek_dict(self) -> Dict[str, Any]:
+        self.assert_not_empty()
+        data = self.native.take([0]).to_pydict()
+        return {k: v[0] for k, v in data.items()}
 
     def count(self) -> int:
         return self.native.shape[0]
@@ -206,4 +211,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
 
 
 def _build_empty_arrow(schema: Schema) -> pa.Table:
+    if pa.__version__ < "7":  # pragma: no cover
+        arr = [pa.array([])] * len(schema)
+        return pa.Table.from_arrays(arr, schema=schema.pa_schema)
     return pa.Table.from_pylist([], schema=schema.pa_schema)

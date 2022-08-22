@@ -18,6 +18,10 @@ class RayDataFrameTests(DataFrameTests.Tests):
     def setUpClass(cls):
         ray.init(num_cpus=2)
 
+    @classmethod
+    def tearDownClass(cls):
+        ray.shutdown()
+
     def df(
         self, data: Any = None, schema: Any = None, metadata: Any = None
     ) -> RayDataFrame:

@@ -9,7 +9,7 @@ from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
 from triad.collections.schema import Schema
 
-from ._ray_utils import build_empty, get_dataset_format
+from ._ray_utils import build_empty, get_dataset_format, _build_empty_arrow
 
 
 class RayDataFrame(DataFrame):
@@ -128,18 +128,27 @@ class RayDataFrame(DataFrame):
 
     def persist(self, **kwargs: Any) -> "RayDataFrame":
         return RayDataFrame(
-            self.native.fully_executed(), schema=self.schema, internal_schema=True
+            self.native.fully_executed(),
+            schema=self.schema,
+            metadata=self.metadata,
+            internal_schema=True,
         )
 
     def count(self) -> int:
         return self.native.count()
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
-        tables = self.native.get_internal_block_refs()
-        res = pa.concat_tables([ray.get(tb) for tb in tables])
-        if res.shape[0] == 0:
-            return pa.Table.from_pylist([], self.schema.pa_schema)
-        return res
+        def get_tables() -> Iterable[pa.Table]:
+            empty = True
+            for block in self.native.get_internal_block_refs():
+                tb = ray.get(block)
+                if tb.shape[0] > 0:
+                    yield tb
+                    empty = False
+            if empty:
+                yield _build_empty_arrow(self.schema)
+
+        return pa.concat_tables(get_tables())
 
     def as_pandas(self) -> pd.DataFrame:
         return self.as_arrow().to_pandas()
