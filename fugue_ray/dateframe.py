@@ -10,6 +10,7 @@ from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationEr
 from triad.collections.schema import Schema
 
 from ._ray_utils import build_empty, get_dataset_format, _build_empty_arrow
+from triad import assert_or_throw
 
 
 class RayDataFrame(DataFrame):
@@ -63,21 +64,32 @@ class RayDataFrame(DataFrame):
             if schema is None:
                 schema = df.schema
         elif isinstance(df, RayDataFrame):
+            assert_or_throw(
+                metadata is None, ValueError(f"metadata must be None for {type(df)}")
+            )
             rdf = df._native
             if schema is None:
                 schema = df.schema
+            metadata = df.metadata
         elif isinstance(df, (pd.DataFrame, pd.Series)):
             if isinstance(df, pd.Series):
                 df = df.to_frame()
-            rdf = rd.from_arrow(ArrowDataFrame(df).native)
+            adf = ArrowDataFrame(df)
+            rdf = rd.from_arrow(adf.native)
+            if schema is None:
+                schema = adf.schema
         elif isinstance(df, Iterable):
             schema = _input_schema(schema).assert_not_empty()
             t = ArrowDataFrame(df, schema)
             rdf = rd.from_arrow(t.as_arrow())
         elif isinstance(df, DataFrame):
+            assert_or_throw(
+                metadata is None, ValueError(f"metadata must be None for {type(df)}")
+            )
             rdf = rd.from_arrow(df.as_arrow(type_safe=True))
             if schema is None:
                 schema = df.schema
+            metadata = df.metadata
         else:
             raise ValueError(f"{df} is incompatible with DaskDataFrame")
         rdf, schema = self._apply_schema(rdf, schema, internal_schema)
@@ -96,8 +108,8 @@ class RayDataFrame(DataFrame):
     def as_local(self) -> LocalDataFrame:
         adf = self.as_arrow()
         if adf.shape[0] == 0:
-            return ArrowDataFrame([], self.schema)
-        return ArrowDataFrame(adf)
+            return ArrowDataFrame([], self.schema, metadata=self.metadata)
+        return ArrowDataFrame(adf, metadata=self.metadata)
 
     @property
     def is_bounded(self) -> bool:

@@ -29,26 +29,8 @@ class RayExecutionEngine(DuckExecutionEngine):
     :param connection: DuckDB connection
     """
 
-    def _to_ray_df(
-        self, df: Any, schema: Any = None, metadata: Any = None
-    ) -> RayDataFrame:
-        # TODO: remove this in phase 2
-        res = self._to_auto_df(df, schema, metadata=metadata)
-        if not isinstance(res, RayDataFrame):
-            return RayDataFrame(res, metadata=metadata)
-        return res
-
-    def _to_auto_df(
-        self, df: Any, schema: Any = None, metadata: Any = None
-    ) -> DataFrame:
-        # TODO: remove this in phase 2
-        if isinstance(df, (DuckDataFrame, RayDataFrame)):
-            assert_or_throw(
-                schema is None and metadata is None,
-                ValueError("schema and metadata must be None when df is a DataFrame"),
-            )
-            return df
-        return RayDataFrame(df, schema, metadata=metadata)
+    def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DataFrame:
+        return self._to_ray_df(df, schema=schema, metadata=metadata)
 
     def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
         def _persist_and_count(df: RayDataFrame) -> int:
@@ -71,7 +53,7 @@ class RayExecutionEngine(DuckExecutionEngine):
         )
 
     def broadcast(self, df: DataFrame) -> DataFrame:
-        return self._to_auto_df(df)
+        return df
 
     def persist(
         self,
@@ -205,3 +187,24 @@ class RayExecutionEngine(DuckExecutionEngine):
         return RayDataFrame(
             sdf, schema=output_schema, metadata=metadata, internal_schema=True
         )
+
+    def _to_ray_df(
+        self, df: Any, schema: Any = None, metadata: Any = None
+    ) -> RayDataFrame:
+        # TODO: remove this in phase 2
+        res = self._to_auto_df(df, schema, metadata=metadata)
+        if not isinstance(res, RayDataFrame):
+            return RayDataFrame(res, metadata=metadata)
+        return res
+
+    def _to_auto_df(
+        self, df: Any, schema: Any = None, metadata: Any = None
+    ) -> DataFrame:
+        # TODO: remove this in phase 2
+        if isinstance(df, (DuckDataFrame, RayDataFrame)):
+            assert_or_throw(
+                schema is None and metadata is None,
+                ValueError("schema and metadata must be None when df is a DataFrame"),
+            )
+            return df
+        return RayDataFrame(df, schema, metadata=metadata)

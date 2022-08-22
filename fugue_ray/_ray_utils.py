@@ -37,7 +37,7 @@ def add_partition_key(
 
     if len(keys) == 1 and is_valid_type(input_schema[keys[0]].type):
 
-        def add_simple_key(arrow_df: pa.Table) -> pa.Table:
+        def add_simple_key(arrow_df: pa.Table) -> pa.Table:  # pragma: no cover
             return arrow_df.append_column(
                 output_key,
                 arrow_df.column(input_schema.index_of_key(keys[0]))

@@ -116,7 +116,7 @@ class _DuckDBPyRelationParam(DataFrameParam):
 
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         assert isinstance(ctx, DuckExecutionEngine)
-        return ctx.to_df(df).native
+        return ctx.to_df(df).native  # type: ignore
 
     def to_output_df(self, output: Any, schema: Any, ctx: Any) -> DataFrame:
         assert isinstance(output, DuckDBPyRelation)

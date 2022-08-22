@@ -38,6 +38,13 @@ class RayDataFrameTests(DataFrameTests.Tests):
         assert df.schema == "a:str,b:int"
         assert df.is_bounded
 
+        pdf = pd.DataFrame(dict(a=[1.1, 2.2], b=["a", "b"]))
+        pdf = pdf[pdf.a < 0]
+        df = RayDataFrame(pdf)
+        assert df.empty
+        assert df.schema == "a:double,b:str"
+        assert df.is_bounded
+
         df = RayDataFrame([], "x:str,y:double")
         assert df.empty
         assert not df.is_local
@@ -68,6 +75,15 @@ class RayDataFrameTests(DataFrameTests.Tests):
         raises(Exception, lambda: RayDataFrame(123))
 
         raises(NotImplementedError, lambda: RayDataFrame(rd.from_items([1, 2])))
+
+    def test_ray_metadata(self):
+        data = ArrayDataFrame(
+            [["a", "1"], ["b", "2"]], "a:str,b:str", metadata=dict(a=1)
+        )
+        df = RayDataFrame(data)
+        assert df.metadata == dict(a=1)
+        df = RayDataFrame(df)
+        assert df.metadata == dict(a=1)
 
     def test_ray_cast(self):
         data = [["a", "1"], ["b", "2"]]
