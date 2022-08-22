@@ -1,4 +1,5 @@
 import pickle
+import sys
 from threading import RLock
 from typing import Any, List, Optional
 
@@ -90,6 +91,11 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
     def test_sample_n(self):
         # TODO: dask does not support sample by number of rows
         pass
+
+    def test_load_json_folder(self):
+        if sys.version_info < (3, 8):
+            return
+        return super().test_load_json_folder()
 
 
 class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
