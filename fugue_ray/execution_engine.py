@@ -15,6 +15,7 @@ from fugue_duckdb.execution_engine import DuckExecutionEngine
 from triad import Schema, assert_or_throw, to_uuid
 from triad.utils.threading import RunOnce
 
+from ._constants import FUGUE_RAY_CONF_SHUFFLE_PARTITIONS
 from ._ray_utils import add_partition_key
 from .dateframe import RayDataFrame
 
@@ -136,9 +137,15 @@ class RayExecutionEngine(DuckExecutionEngine):
             output_df = map_func(cursor, input_df)
             return output_df.as_arrow()
 
-        rdf = self._to_ray_df(df).native
+        _df = self._to_ray_df(df)
+        if partition_spec.num_partitions != "0":
+            _df = self.repartition(_df, partition_spec)  # type: ignore
+        else:
+            n = self.conf.get(FUGUE_RAY_CONF_SHUFFLE_PARTITIONS, -1)
+            if n > 1:
+                _df = self.repartition(_df, PartitionSpec(num=n))  # type: ignore
         rdf, _ = add_partition_key(
-            rdf,
+            _df.native,
             keys=partition_spec.partition_by,
             input_schema=input_schema,
             output_key=_RAY_PARTITION_KEY,
