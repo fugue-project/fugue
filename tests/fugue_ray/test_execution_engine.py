@@ -42,13 +42,46 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
         )
         return e
 
-    def test_over_repartitioning(self):
+    def test_repartitioning(self):
         # schema: *
         def t(df: pd.DataFrame) -> pd.DataFrame:
             return df.head(1)
 
         test = pd.DataFrame(dict(a=[1, 2, 3]))
 
+        # even partitioning
+        res = transform(
+            test,
+            t,
+            partition="per_row",
+            engine="ray",
+            as_local=True,
+            force_output_fugue_dataframe=True,
+        )
+        df_eq(
+            res,
+            ArrayDataFrame([[1], [2], [3]], schema="a:long"),
+            check_order=False,
+            throw=True,
+        )
+
+        # rand partitioning
+        res = transform(
+            test,
+            t,
+            partition=dict(num=3, algo="rand"),
+            engine="ray",
+            as_local=True,
+            force_output_fugue_dataframe=True,
+        )
+        df_eq(
+            res,
+            ArrayDataFrame([[1], [2], [3]], schema="a:long"),
+            check_order=False,
+            throw=True,
+        )
+
+        # over partitioning
         res = transform(
             test,
             t,
@@ -83,17 +116,3 @@ class RayBuiltInTests(BuiltInTests.Tests):
             connection=self._con,
         )
         return e
-
-    def _test_special_types(self):
-        def assert_data(df: DataFrame) -> None:
-            assert df.schema == "a:datetime,b:bytes,c:[long]"
-
-        df = pd.DataFrame(
-            [["2020-01-01", pickle.dumps([1, 2]), [1, 2]]], columns=list("abc")
-        )
-        df["a"] = pd.to_datetime(df.a)
-
-        with self.dag() as dag:
-            x = dag.df(df)
-            result = dag.select("SELECT * FROM ", x)
-            result.output(assert_data)

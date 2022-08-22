@@ -127,12 +127,10 @@ class RayDataFrame(DataFrame):
         return data[0]
 
     def persist(self, **kwargs: Any) -> "RayDataFrame":
-        return RayDataFrame(
-            self.native.fully_executed(),
-            schema=self.schema,
-            metadata=self.metadata,
-            internal_schema=True,
-        )
+        # TODO: it mutates the dataframe, is this a good bahavior
+        if not self.native.is_fully_executed():  # pragma: no cover
+            self._native = self.native.fully_executed()
+        return self
 
     def count(self) -> int:
         return self.native.count()

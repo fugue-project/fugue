@@ -1,6 +1,5 @@
 from typing import Any, Callable, Optional
 
-import duckdb
 import pyarrow as pa
 from fugue import (
     ArrowDataFrame,
@@ -49,8 +48,6 @@ class RayExecutionEngine(DuckExecutionEngine):
                 ValueError("schema and metadata must be None when df is a DataFrame"),
             )
             return df
-        if isinstance(df, duckdb.DuckDBPyRelation):
-            return super().to_df(df, schema, metadata)
         return RayDataFrame(df, schema, metadata=metadata)
 
     def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
