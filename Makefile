@@ -53,6 +53,7 @@ docs:
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_sql fugue_sql/
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_spark fugue_spark/
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_dask fugue_dask/
+	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_ray fugue_ray/
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_duckdb fugue_duckdb/
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_ibis fugue_ibis/
 	sphinx-build -b html docs/ docs/build/

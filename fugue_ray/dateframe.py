@@ -16,18 +16,17 @@ class RayDataFrame(DataFrame):
     """DataFrame that wraps Ray DataSet. Please also read
     |DataFrameTutorial| to understand this Fugue concept
 
-    :param df: :class:`dask:dask.dataframe.DataFrame`,
-      pandas DataFrame or list or iterable of arrays
-    :param schema: |SchemaLikeObject| or :class:`spark:pyspark.sql.types.StructType`,
-      defaults to None.
+    :param df: :class:`ray:ray.data.Dataset`, :class:`pa:pyarrow.Table`,
+      :class:`pd:pandas.DataFrame`,
+      Fugue :class:`~fugue.dataframe.dataframe.DataFrame`,
+      or list or iterable of arrays
+    :param schema: |SchemaLikeObject|, defaults to None. If the schema
+      is different from the ``df`` schema, then type casts will happen.
     :param metadata: |ParamsLikeObject|, defaults to None
-    :param num_partitions: initial number of partitions for the dask dataframe
-      defaults to 0 to get the value from `fugue.dask.dataframe.default.partitions`
-    :param type_safe: whether to cast input data to ensure type safe, defaults to True
-
-    .. note::
-
-        For :class:`dask:dask.dataframe.DataFrame`, schema must be None
+    :param internal_schema: for internal schema, it means the schema
+      is guaranteed by the provider to be consistent with the schema of
+      ``df``, so no type cast will happen. Defaults to False. This is
+      for internal use only.
     """
 
     def __init__(  # noqa: C901

@@ -33,9 +33,6 @@ jobs:
     - name: Lint
       if: matrix.python-version == 3.8
       run: make lint
-    - name: Pin Version
-      if: matrix.python-version == 3.7
-      run: pip install dask[dataframe,distributed]==2022.7.1
     - name: Test
       run: make test
     - name: "Upload coverage to Codecov"

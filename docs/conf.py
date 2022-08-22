@@ -39,6 +39,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autodoc.typehints",
     "sphinx_rtd_theme",
+    "furo.sphinxext",
 ]
 
 autodoc_typehints = "description"
@@ -64,16 +65,17 @@ language = "python"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
-html_logo = "_static/logo_doc.svg"
+html_logo = "_static/logo.svg"
 html_theme_options = {
     "logo_only": True,
     "display_version": True,
+    "sidebar_hide_name": True,
     "style_nav_header_background": "#264263",
 }
 
@@ -82,9 +84,11 @@ master_doc = "index"
 intersphinx_mapping = {
     "triad": ("https://triad.readthedocs.io/en/latest", None),
     "tutorial": ("https://fugue-tutorials.readthedocs.io", None),
+    "pd": ("https://pandas.pydata.org/docs", None),
     "pa": ("https://arrow.apache.org/docs", None),
     "fs": ("https://docs.pyfilesystem.org/en/latest", None),
     "spark": ("https://spark.apache.org/docs/latest/api/python", None),
     "dask": ("https://docs.dask.org/en/latest", None),
-    "ibis": ("https://ibis-project.org", None),
+    "ray": ("https://docs.ray.io/en/latest", None),
+    "ibis": ("https://ibis-project.org/docs/3.1.0", None),
 }

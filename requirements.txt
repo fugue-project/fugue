@@ -1,6 +1,8 @@
 qpd[dask]>=0.3.1
 .[all]
 
+furo==2022.6.21
+
 # test requirements
 pre-commit
 black>=22.3.0
