@@ -12,19 +12,20 @@
 | [![Doc](https://readthedocs.org/projects/fugue/badge)](https://fugue.readthedocs.org) | [![Jupyter Book Badge](https://jupyterbook.org/badge.svg)](https://fugue-tutorials.readthedocs.io/) | [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](http://slack.fugue.ai) |
 
 
-**Fugue is a unified interface for distributed computing that lets users execute Python, pandas, and SQL code on Spark and Dask without rewrites**. It is meant for:
+**Fugue is a unified interface for distributed computing that lets users execute Python, pandas, and SQL code on Spark and Dask without rewrites**.
 
-*   Data scientists/analysts who want to **focus on defining logic rather than worrying about execution**
-*   SQL-lovers wanting to use **SQL to define end-to-end workflows** in pandas, Spark, and Dask
-*   Data scientists using pandas wanting to take advantage of **Spark or Dask** with minimal effort
-*   Big data practitioners finding **testing code** to be costly and slow
-*   Data teams with big data projects that **struggle maintaining code**
+The most common use cases are:
+
+*   **Accelerating or scaling existing Python and pandas code** by bringing it to Spark or Dask with minimal rewrites.
+*   Using [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes_sql.html) to **define end-to-end workflows** on top of pandas, Spark, and Dask DataFrames. FugueSQL is an enhanced SQL interface that can invoke Python code with added keywords.
+*   Maintaining one codebase for pandas, Spark, and Dask projects. **Logic and execution are decoupled through Fugue**, enabling users to be focused on their business logic rather than writing framework-specific code.
+*   Improving iteration speed of big data projects. Fugue seamlessly scales execution to big data after local development and testing. By removing PySpark code, unit tests can be written in Python or pandas and ran locally without spinning up a cluster.
 
 For a more comprehensive overview of Fugue, read [this](https://towardsdatascience.com/introducing-fugue-reducing-pyspark-developer-friction-a702230455de) article.
 
 ## Installation
 
-Fugue can be installed through pip by using:
+Fugue can be installed through pip or conda. For example:
 
 ```bash
 pip install fugue
@@ -49,9 +50,12 @@ Notice that installing extras may not be necessary. For example if you already i
 
 ## [Getting Started](https://fugue-tutorials.readthedocs.io/)
 
-The best way to get started with Fugue is to work through the [tutorials](https://fugue-tutorials.readthedocs.io/).
+The best way to get started with Fugue is to work through the 10 minute tutorials:
 
-The tutorials can also be run in an interactive notebook environment through binder or Docker:
+*   [Fugue in 10 minutes](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes.html)
+*   [FugueSQL in 10 minutes](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes_sql.html)
+
+The [tutorials](https://fugue-tutorials.readthedocs.io/) can also be run in an interactive notebook environment through binder or Docker:
 
 ### Using binder
 
@@ -68,13 +72,6 @@ docker run -p 8888:8888 fugueproject/tutorials:latest
 ```
 
 For the API docs, [click here](https://fugue.readthedocs.org)
-
-## Select Features
-
-*   **Cross-framework code**: Write code once in native Python, SQL, or pandas then execute it on Dask or Spark with no rewrites. Logic and execution are decoupled through Fugue, enabling users to leverage the Spark and Dask engines without learning the specific framework syntax.
-*   **Rapid iterations for big data projects**: Test code on smaller data, then reliably scale to Dask or Spark when ready. This accelerates project iteration time and reduces expensive mistakes.
-*   **Friendlier interface for Spark**: Users can get Python/pandas code running on Spark with significantly less effort compared to PySpark. FugueSQL extends SparkSQL to be a more complete programming language.
-*   **Highly testable code**: Fugue makes logic more testable because all code is written in native Python. Unit tests scale seamlessly from local workflows to distributed computing workflows.
 
 ## Fugue Transform
 
@@ -148,7 +145,7 @@ result.show()
   ```
 </details>
 
-This syntax is simpler, cleaner, and more maintainable than the PySpark equivalent. At the same time, no edits were made to the original pandas-based function to bring it to Spark. It is still usable on pandas DataFrames. Because the Spark execution engine was used, the returned `df` is now a Spark DataFrame. Fugue `transform()` also supports `DaskExecutionEngine` and the pandas-based `NativeExecutionEngine`.
+This syntax is simpler, cleaner, and more maintainable than the PySpark equivalent. At the same time, no edits were made to the original pandas-based function to bring it to Spark. It is still usable on pandas DataFrames. Because the Spark execution engine was used, the returned `df` is now a Spark DataFrame. Fugue `transform()` also supports Dask and pandas as execution engines.
 
 ## [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/fugue_sql/index.html)
 
@@ -168,11 +165,11 @@ map_dict_str = json.dumps(map_dict)
 fsql(query,mapping=map_dict_str).run()
 ```
 
-For FugueSQL, we can change the engine by passing it to the `run()` method: `fsql(query,mapping=map_dict_str).run("spark")`.
+For FugueSQL, we can change the engine by passing it to the `run()` method: `fsql(query,mapping=map_dict_str).run(spark)`.
 
 ## Jupyter Notebook Extension
 
-There is an accompanying [notebook extension](https://pypi.org/project/fugue-jupyter/) for FugueSQL that lets users use the `%%fsql` cell magic. The extension also provides syntax highlighting for FugueSQL cells. It works for both classic notebook and Jupyter Lab
+There is an accompanying [notebook extension](https://pypi.org/project/fugue-jupyter/) for FugueSQL that lets users use the `%%fsql` cell magic. The extension also provides syntax highlighting for FugueSQL cells. It works for both classic notebook and Jupyter Lab. More details can be found in the [installation instructions](https://github.com/fugue-project/fugue-jupyter#install).
 
 ![FugueSQL gif](https://miro.medium.com/max/700/1*6091-RcrOPyifJTLjo0anA.gif)
 
@@ -193,6 +190,7 @@ Fugue is available as a backend or can integrate with the following projects:
 
 *   [PyCaret](https://github.com/pycaret/pycaret) - low code machine learning
 *   [Pandera](https://github.com/pandera-dev/pandera) - data validation
+*   [Nixtla](https://github.com/Nixtla/statsforecast) - timeseries modelling
 
 
 ## Further Resources
