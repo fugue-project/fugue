@@ -52,8 +52,8 @@ Notice that installing extras may not be necessary. For example if you already i
 
 The best way to get started with Fugue is to work through the 10 minute tutorials:
 
-* [Fugue in 10 minutes](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes.html)
-* [FugueSQL in 10 minutes](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes_sql.html)
+*   [Fugue in 10 minutes](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes.html)
+*   [FugueSQL in 10 minutes](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes_sql.html)
 
 The [tutorials](https://fugue-tutorials.readthedocs.io/) can also be run in an interactive notebook environment through binder or Docker:
 
