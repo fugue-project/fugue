@@ -1,5 +1,5 @@
 import pickle
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 
 import pyarrow as pa
 import ray.data as rd
@@ -35,6 +35,11 @@ def add_partition_key(
             or pa.types.is_binary(tp)
         )
 
+    ray_remote_args: Dict[str, Any] = {
+        "num_cpus": 1,
+        "scheduling_strategy": "SPREAD",
+    }
+
     if len(keys) == 1 and is_valid_type(input_schema[keys[0]].type):
 
         def add_simple_key(arrow_df: pa.Table) -> pa.Table:  # pragma: no cover
@@ -45,7 +50,9 @@ def add_partition_key(
                 .fill_null(_RAY_NULL_REPR),
             )
 
-        return df.map_batches(add_simple_key, batch_format="pyarrow"), input_schema + (
+        return df.map_batches(
+            add_simple_key, batch_format="pyarrow", **ray_remote_args
+        ), input_schema + (
             output_key,
             str,
         )
@@ -60,7 +67,9 @@ def add_partition_key(
             sarr = pa.array([pickle.dumps(x) for x in sarr])
             return fdf.append_column(output_key, sarr)
 
-        return df.map_batches(add_key, batch_format="pyarrow"), input_schema + (
+        return df.map_batches(
+            add_key, batch_format="pyarrow", **ray_remote_args
+        ), input_schema + (
             output_key,
             pa.binary(),
         )

@@ -97,6 +97,39 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             throw=True,
         )
 
+    def test_partition_by_more(self):
+        # schema: *
+        def t(df: pd.DataFrame) -> pd.DataFrame:
+            return df.head(1)
+
+        test = pd.DataFrame(dict(a=[1, 2, 3]))
+
+        res = transform(
+            test,
+            t,
+            partition={"by": "a"},
+            engine="ray",
+            engine_conf={
+                "fugue.ray.shuffle.partitions": 2,
+                "fugue.ray.remote.num_cpus": 1,
+            },
+            as_local=True,
+            force_output_fugue_dataframe=True,
+        )
+        df_eq(
+            res,
+            ArrayDataFrame([[1], [2], [3]], schema="a:long"),
+            check_order=False,
+            throw=True,
+        )
+
+    def test_remote_args(self):
+        e = RayExecutionEngine(conf={"fugue.ray.remote.num_cpus": 3})
+        assert e._get_remote_args() == {"num_cpus": 3, "scheduling_strategy": "SPREAD"}
+
+        e = RayExecutionEngine(conf={"fugue.ray.remote.scheduling_strategy": "DEFAULT"})
+        assert e._get_remote_args() == {"scheduling_strategy": "DEFAULT"}
+
 
 class RayBuiltInTests(BuiltInTests.Tests):
     @classmethod
