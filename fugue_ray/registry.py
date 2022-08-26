@@ -12,7 +12,7 @@ from fugue._utils.interfaceless import (
 from fugue.workflow import register_raw_df_type
 from triad import run_once
 
-from .dateframe import RayDataFrame
+from .dataframe import RayDataFrame
 from .execution_engine import RayExecutionEngine
 
 

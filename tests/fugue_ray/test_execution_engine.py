@@ -1,9 +1,10 @@
+import os
 import pickle
 
 import duckdb
 import pandas as pd
 import ray
-from fugue import DataFrame, transform, ArrayDataFrame
+from fugue import ArrayDataFrame, DataFrame, transform
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_dask import DaskDataFrame
 from fugue_duckdb.dataframe import DuckDataFrame
@@ -11,7 +12,7 @@ from fugue_sql import fsql
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 from pytest import raises
-from fugue.dataframe.utils import _df_eq as df_eq
+from triad import FileSystem
 
 from fugue_ray import RayExecutionEngine
 
@@ -123,6 +124,21 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             throw=True,
         )
 
+    def test_load_parquet_more(self):
+        pq = os.path.join(str(self.tmpdir), "tmp.parquet")
+        pd.DataFrame(dict(a=[1, 2], b=[3, 4], c=["a", "b"])).to_parquet(pq)
+        tdf = self.engine.load_df(pq, columns="b:int,a:str").as_array()
+        assert tdf == [[3, "1"], [4, "2"]]
+
+    def test_load_json_more(self):
+        js = os.path.join(str(self.tmpdir), "tmp.json")
+        pdf = pd.DataFrame(dict(a=[1, 2], b=[3, 4], c=["a", "b"]))
+        self.engine.save_df(self.engine.to_df(pdf), js)
+        tdf = self.engine.load_df(js).as_array()
+        assert tdf == [[1, 3, "a"], [2, 4, "b"]]
+        tdf = self.engine.load_df(js, columns="b:int,a:str").as_array()
+        assert tdf == [[3, "1"], [4, "2"]]
+
     def test_remote_args(self):
         e = RayExecutionEngine(conf={"fugue.ray.remote.num_cpus": 3})
         assert e._get_remote_args() == {"num_cpus": 3, "scheduling_strategy": "SPREAD"}
@@ -149,3 +165,36 @@ class RayBuiltInTests(BuiltInTests.Tests):
             connection=self._con,
         )
         return e
+
+    def test_io(self):
+        path = os.path.join(self.tmpdir, "a")
+        path2 = os.path.join(self.tmpdir, "b.test.csv")
+        path3 = os.path.join(self.tmpdir, "c.partition")
+        with self.dag() as dag:
+            b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
+            b.partition(num=3).save(path, fmt="parquet", single=True)
+            b.save(path2, header=True)
+        assert FileSystem().isfile(path)
+        with self.dag() as dag:
+            a = dag.load(path, fmt="parquet", columns=["a", "c"])
+            a.assert_eq(dag.df([[1, 6], [7, 2]], "a:long,c:int"))
+            a = dag.load(path2, header=True, columns="c:int,a:long")
+            a.assert_eq(dag.df([[6, 1], [2, 7]], "c:int,a:long"))
+
+        return
+        # TODO: the following (writing partitions) is not supported by Ray
+        # with self.dag() as dag:
+        #     b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
+        #     b.partition(by="c").save(path3, fmt="parquet", single=False)
+        # assert FileSystem().isdir(path3)
+        # assert FileSystem().isdir(os.path.join(path3, "c=6"))
+        # assert FileSystem().isdir(os.path.join(path3, "c=2"))
+        # # TODO: in test below, once issue #288 is fixed, use dag.load
+        # #  instead of pd.read_parquet
+        # pd.testing.assert_frame_equal(
+        #     pd.read_parquet(path3).sort_values("a").reset_index(drop=True),
+        #     pd.DataFrame({"c": pd.Categorical([6, 2]), "a": [1, 7]}).reset_index(
+        #         drop=True
+        #     ),
+        #     check_like=True,
+        # )

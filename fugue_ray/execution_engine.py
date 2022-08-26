@@ -1,6 +1,7 @@
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import pyarrow as pa
+from duckdb import DuckDBPyConnection
 from fugue import (
     ArrowDataFrame,
     DataFrame,
@@ -8,6 +9,7 @@ from fugue import (
     PartitionCursor,
     PartitionSpec,
 )
+from fugue.collections.partition import EMPTY_PARTITION_SPEC
 from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue_duckdb.dataframe import DuckDataFrame
@@ -16,8 +18,9 @@ from triad import Schema, assert_or_throw, to_uuid
 from triad.utils.threading import RunOnce
 
 from ._constants import FUGUE_RAY_CONF_SHUFFLE_PARTITIONS
-from ._ray_utils import add_partition_key
-from .dateframe import RayDataFrame
+from ._utils.dataframe import add_partition_key
+from ._utils.io import RayIO
+from .dataframe import RayDataFrame
 
 _RAY_PARTITION_KEY = "__ray_partition_key__"
 
@@ -29,6 +32,12 @@ class RayExecutionEngine(DuckExecutionEngine):
     :param conf: |ParamsLikeObject|, read |FugueConfig| to learn Fugue specific options
     :param connection: DuckDB connection
     """
+
+    def __init__(
+        self, conf: Any = None, connection: Optional[DuckDBPyConnection] = None
+    ):
+        super().__init__(conf, connection)
+        self._io = RayIO(self)
 
     def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DataFrame:
         return self._to_ray_df(df, schema=schema, metadata=metadata)
@@ -44,9 +53,13 @@ class RayExecutionEngine(DuckExecutionEngine):
         num = partition_spec.get_num_partitions(**num_funcs)
 
         if partition_spec.algo in ["hash", "even"]:
-            pdf = rdf.native.repartition(num)
+            pdf = rdf.native
+            if num > 0:
+                pdf = pdf.repartition(num)
         elif partition_spec.algo == "rand":
-            pdf = rdf.native.repartition(num, shuffle=True)
+            pdf = rdf.native
+            if num > 0:
+                pdf = pdf.repartition(num, shuffle=True)
         else:  # pragma: no cover
             raise NotImplementedError(partition_spec.algo + " is not supported")
         return RayDataFrame(
@@ -71,6 +84,38 @@ class RayExecutionEngine(DuckExecutionEngine):
         if isinstance(df, RayDataFrame):
             return df if not as_local else df.as_local()
         return super().convert_yield_dataframe(df, as_local)
+
+    def load_df(  # type:ignore
+        self,
+        path: Union[str, List[str]],
+        format_hint: Any = None,
+        columns: Any = None,
+        **kwargs: Any,
+    ) -> DataFrame:
+        return self._io.load_df(
+            uri=path, format_hint=format_hint, columns=columns, **kwargs
+        )
+
+    def save_df(
+        self,
+        df: DataFrame,
+        path: str,
+        format_hint: Any = None,
+        mode: str = "overwrite",
+        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        force_single: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        df = self._to_ray_df(df)
+        self._io.save_df(
+            df,
+            uri=path,
+            format_hint=format_hint,
+            mode=mode,
+            partition_spec=partition_spec,
+            force_single=force_single,
+            **kwargs,
+        )
 
     def map(
         self,

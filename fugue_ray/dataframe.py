@@ -9,7 +9,7 @@ from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
 from triad.collections.schema import Schema
 
-from ._ray_utils import build_empty, get_dataset_format, _build_empty_arrow
+from ._utils.dataframe import build_empty, get_dataset_format, _build_empty_arrow
 from triad import assert_or_throw
 
 
@@ -128,7 +128,11 @@ class RayDataFrame(DataFrame):
         return self._select_cols(cols)
 
     def _select_cols(self, cols: List[Any]) -> DataFrame:
-        rdf = self.native.map_batches(lambda b: b.select(cols), batch_format="pyarrow")
+        if cols == self.schema.names:
+            return self
+        rdf = self.native.map_batches(
+            lambda b: b.select(cols), batch_format="pyarrow", **self._remote_args()
+        )
         return RayDataFrame(rdf, self.schema.extract(cols), internal_schema=True)
 
     def peek_array(self) -> Any:
@@ -169,7 +173,9 @@ class RayDataFrame(DataFrame):
         except Exception as e:
             raise FugueDataFrameOperationError from e
         rdf = self.native.map_batches(
-            lambda b: b.rename_columns(new_cols), batch_format="pyarrow"
+            lambda b: b.rename_columns(new_cols),
+            batch_format="pyarrow",
+            **self._remote_args(),
         )
         return RayDataFrame(rdf, schema=new_schema, internal_schema=True)
 
@@ -180,7 +186,11 @@ class RayDataFrame(DataFrame):
             return ArrowDataFrame(table).alter_columns(columns).native  # type: ignore
 
         new_schema = self._get_altered_schema(columns)
-        rdf = self.native.map_batches(_alter, batch_format="pyarrow")
+        if self.schema == new_schema:
+            return self
+        rdf = self.native.map_batches(
+            _alter, batch_format="pyarrow", **self._remote_args()
+        )
         return RayDataFrame(rdf, schema=new_schema, internal_schema=True)
 
     def as_array(
@@ -227,4 +237,10 @@ class RayDataFrame(DataFrame):
         def _alter(table: pa.Table) -> pa.Table:  # pragma: no cover
             return ArrowDataFrame(table).alter_columns(schema).native  # type: ignore
 
-        return rdf.map_batches(_alter, batch_format="pyarrow"), schema
+        return (
+            rdf.map_batches(_alter, batch_format="pyarrow", **self._remote_args()),
+            schema,
+        )
+
+    def _remote_args(self) -> Dict[str, Any]:
+        return {"scheduling_strategy": "SPREAD"}

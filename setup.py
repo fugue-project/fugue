@@ -1,6 +1,8 @@
-from setuptools import setup, find_packages
-from fugue_version import __version__
 import os
+
+from setuptools import find_packages, setup
+
+from fugue_version import __version__
 
 with open("README.md") as f:
     _text = ["# Fugue"] + f.read().splitlines()[1:]
@@ -42,7 +44,7 @@ setup(
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.0"],
         "spark": ["pyspark"],
         "dask": ["dask[distributed,dataframe]", "qpd[dask]>=0.3.1"],
-        "ray": ["ray>=1.13.0", "duckdb>=0.3.2"],
+        "ray": ["ray>=1.13.0", "duckdb>=0.3.2", "pyarrow>=7.0.0"],
         "duckdb": ["duckdb>=0.3.2", "pyarrow>=5.0.0", "numpy"],
         "ibis": ["ibis-framework>=2.1.1"],
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
@@ -56,7 +58,7 @@ setup(
             "jupyterlab",
             "ipython>=7.10.0",
             "duckdb>=0.3.2",
-            "pyarrow>=5.0.0",
+            "pyarrow>=7.0.0",
             "ibis-framework>=2; python_version >= '3.7'",
         ],
     },

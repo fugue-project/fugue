@@ -1,7 +1,8 @@
-from fugue_ray._ray_utils import add_partition_key
-from fugue_ray import RayDataFrame
-from triad import Schema
 import ray
+from triad import Schema
+
+from fugue_ray import RayDataFrame
+from fugue_ray._utils.dataframe import add_partition_key
 
 
 def test_add_partition_key():
