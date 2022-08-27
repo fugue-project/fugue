@@ -12,13 +12,13 @@
 | [![Doc](https://readthedocs.org/projects/fugue/badge)](https://fugue.readthedocs.org) | [![Jupyter Book Badge](https://jupyterbook.org/badge.svg)](https://fugue-tutorials.readthedocs.io/) | [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](http://slack.fugue.ai) |
 
 
-**Fugue is a unified interface for distributed computing that lets users execute Python, pandas, and SQL code on Spark and Dask without rewrites**.
+**Fugue is a unified interface for distributed computing that lets users execute Python, pandas, and SQL code on Spark, Dask and Ray without rewrites**.
 
 The most common use cases are:
 
 *   **Accelerating or scaling existing Python and pandas code** by bringing it to Spark or Dask with minimal rewrites.
 *   Using [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes_sql.html) to **define end-to-end workflows** on top of pandas, Spark, and Dask DataFrames. FugueSQL is an enhanced SQL interface that can invoke Python code with added keywords.
-*   Maintaining one codebase for pandas, Spark, and Dask projects. **Logic and execution are decoupled through Fugue**, enabling users to be focused on their business logic rather than writing framework-specific code.
+*   Maintaining one codebase for pandas, Spark, Dask and Ray projects. **Logic and execution are decoupled through Fugue**, enabling users to be focused on their business logic rather than writing framework-specific code.
 *   Improving iteration speed of big data projects. Fugue seamlessly scales execution to big data after local development and testing. By removing PySpark code, unit tests can be written in Python or pandas and ran locally without spinning up a cluster.
 
 For a more comprehensive overview of Fugue, read [this](https://towardsdatascience.com/introducing-fugue-reducing-pyspark-developer-friction-a702230455de) article.
@@ -35,6 +35,7 @@ It also has the following extras:
 
 *   **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/tutorials/advanced/execution_engine.html)
 *   **dask**: to support Dask as the ExecutionEngine.
+*   **ray**: to support Ray as the ExecutionEngine.
 *   **duckdb**: to support DuckDB as the ExecutionEngine, read [details](https://fugue-tutorials.readthedocs.io/tutorials/integrations/duckdb.html).
 *   **ibis**: to enable Ibis for Fugue workflows, read [details](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ibis.html).
 *   **cpp_sql_parser**: to enable the CPP antlr parser for Fugue SQL. It can be 50+ times faster than the pure Python parser. For the main Python versions and platforms, there is already pre-built binaries, but for the remaining, it needs a C++ compiler to build on the fly.
@@ -75,7 +76,7 @@ For the API docs, [click here](https://fugue.readthedocs.org)
 
 ## Fugue Transform
 
-The simplest way to use Fugue is the [`transform()` function](https://fugue-tutorials.readthedocs.io/tutorials/beginner/introduction.html#fugue-transform). This lets users parallelize the execution of a single function by bringing it to Spark or Dask. In the example below, the `map_letter_to_food()` function takes in a mapping and applies it on a column. This is just pandas and Python so far (without Fugue).
+The simplest way to use Fugue is the [`transform()` function](https://fugue-tutorials.readthedocs.io/tutorials/beginner/introduction.html#fugue-transform). This lets users parallelize the execution of a single function by bringing it to Spark, Dask or Ray. In the example below, the `map_letter_to_food()` function takes in a mapping and applies it on a column. This is just pandas and Python so far (without Fugue).
 
 ```python
 import pandas as pd
@@ -145,7 +146,7 @@ result.show()
   ```
 </details>
 
-This syntax is simpler, cleaner, and more maintainable than the PySpark equivalent. At the same time, no edits were made to the original pandas-based function to bring it to Spark. It is still usable on pandas DataFrames. Because the Spark execution engine was used, the returned `df` is now a Spark DataFrame. Fugue `transform()` also supports Dask and pandas as execution engines.
+This syntax is simpler, cleaner, and more maintainable than the PySpark equivalent. At the same time, no edits were made to the original pandas-based function to bring it to Spark. It is still usable on pandas DataFrames. Because the Spark execution engine was used, the returned `df` is now a Spark DataFrame. Fugue `transform()` also supports Dask, Ray and pandas as execution engines.
 
 ## [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/fugue_sql/index.html)
 
@@ -182,6 +183,7 @@ Fugue can use the following projects as backends:
 
 *   [Spark](https://github.com/apache/spark)
 *   [Dask](https://github.com/dask/dask)
+*   [Ray](https://github.com/ray-project/ray)
 *   [Duckdb](https://github.com/duckdb/duckdb) - in-process SQL OLAP database management
 *   [Ibis](https://github.com/ibis-project/ibis/) - pandas-like interface for SQL engines
 *   [dask-sql](https://github.com/dask-contrib/dask-sql) - SQL interface for Dask
