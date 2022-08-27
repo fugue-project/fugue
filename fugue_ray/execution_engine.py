@@ -271,7 +271,4 @@ class RayExecutionEngine(DuckExecutionEngine):
                 key = k.split(".", 3)[-1]
                 res[key] = v
 
-        if "fugue.ray.remote.scheduling_strategy" not in self.conf:
-            res["scheduling_strategy"] = "SPREAD"
-
         return res

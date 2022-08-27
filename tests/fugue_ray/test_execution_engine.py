@@ -141,10 +141,10 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_remote_args(self):
         e = RayExecutionEngine(conf={"fugue.ray.remote.num_cpus": 3})
-        assert e._get_remote_args() == {"num_cpus": 3, "scheduling_strategy": "SPREAD"}
+        assert e._get_remote_args() == {"num_cpus": 3}
 
-        e = RayExecutionEngine(conf={"fugue.ray.remote.scheduling_strategy": "DEFAULT"})
-        assert e._get_remote_args() == {"scheduling_strategy": "DEFAULT"}
+        e = RayExecutionEngine(conf={"fugue.ray.remote.scheduling_strategy": "SPREAD"})
+        assert e._get_remote_args() == {"scheduling_strategy": "SPREAD"}
 
 
 class RayBuiltInTests(BuiltInTests.Tests):

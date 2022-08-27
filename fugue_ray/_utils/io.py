@@ -221,7 +221,7 @@ class RayIO(object):
             return _read_json()[schema.names].alter_columns(schema)
 
     def _remote_args(self) -> Dict[str, Any]:
-        return {"scheduling_strategy": "SPREAD"}
+        return {"num_cpus": 1}
 
 
 class _FileFiler(FileExtensionFilter):

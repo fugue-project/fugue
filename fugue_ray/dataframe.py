@@ -243,4 +243,4 @@ class RayDataFrame(DataFrame):
         )
 
     def _remote_args(self) -> Dict[str, Any]:
-        return {"scheduling_strategy": "SPREAD"}
+        return {"num_cpus": 1}

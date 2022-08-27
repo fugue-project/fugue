@@ -35,10 +35,7 @@ def add_partition_key(
             or pa.types.is_binary(tp)
         )
 
-    ray_remote_args: Dict[str, Any] = {
-        "num_cpus": 1,
-        "scheduling_strategy": "SPREAD",
-    }
+    ray_remote_args: Dict[str, Any] = {"num_cpus": 1}
 
     if len(keys) == 1 and is_valid_type(input_schema[keys[0]].type):
 
