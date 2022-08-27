@@ -11,10 +11,12 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.workflow import register_raw_df_type
+from triad import run_once
 
 from fugue_dask.execution_engine import DaskExecutionEngine
 
 
+@run_once
 def register() -> None:
     """Register Dask Execution Engine
 

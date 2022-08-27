@@ -53,6 +53,7 @@ docs:
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_sql fugue_sql/
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_spark fugue_spark/
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_dask fugue_dask/
+	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_ray fugue_ray/
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_duckdb fugue_duckdb/
 	sphinx-apidoc --no-toc -f -t=docs/_templates -o docs/api_ibis fugue_ibis/
 	sphinx-build -b html docs/ docs/build/
@@ -73,25 +74,28 @@ jupyter:
 	jupyter notebook --port=8888 --ip=0.0.0.0 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*'
 
 test:
-	python3 -bb -m pytest --reruns 2 --only-rerun 'Overflow in cast' --only-rerun 'Table or view not found' tests/
+	python3 -b -m pytest --reruns 2 --only-rerun 'Overflow in cast' --only-rerun 'Table or view not found' tests/
 
 testcore:
-	python3 -bb -m pytest tests/fugue
+	python3 -b -m pytest tests/fugue
 
 testspark:
-	python3 -bb -m pytest --reruns 2 --only-rerun 'Table or view not found' tests/fugue_spark
+	python3 -b -m pytest --reruns 2 --only-rerun 'Table or view not found' tests/fugue_spark
 
 testdask:
-	python3 -bb -m pytest tests/fugue_dask
+	python3 -b -m pytest tests/fugue_dask
+
+testray:
+	python3 -b -m pytest tests/fugue_ray
 
 testduck:
-	python3 -bb -m pytest --reruns 2 --only-rerun 'Overflow in cast' tests/fugue_duckdb
+	python3 -b -m pytest --reruns 2 --only-rerun 'Overflow in cast' tests/fugue_duckdb
 
 testsql:
-	python3 -bb -m pytest tests/fugue_sql
+	python3 -b -m pytest tests/fugue_sql
 
 testibis:
-	python3 -bb -m pytest tests/fugue_ibis
+	python3 -b -m pytest tests/fugue_ibis
 
 testnotebook:
 	pip install .

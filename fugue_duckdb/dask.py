@@ -136,7 +136,7 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
             return df
         if isinstance(df, dd.DataFrame):
             return self._dask_engine.to_df(df, schema, metadata)
-        return super().to_df(df, schema, metadata)
+        return self._to_duck_df(df, schema, metadata)
 
     def _to_dask_df(
         self, df: Any, schema: Any = None, metadata: Any = None

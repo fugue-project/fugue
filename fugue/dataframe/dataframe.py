@@ -392,9 +392,6 @@ class LocalDataFrame(DataFrame):
         implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
 
-    def __init__(self, schema: Any = None, metadata: Any = None):
-        super().__init__(schema=schema, metadata=metadata)
-
     @property
     def is_local(self) -> bool:
         """Always True because it's a LocalDataFrame"""
@@ -425,9 +422,6 @@ class LocalBoundedDataFrame(LocalDataFrame):
         implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
 
-    def __init__(self, schema: Any = None, metadata: Any = None):
-        super().__init__(schema=schema, metadata=metadata)
-
     @property
     def is_bounded(self) -> bool:
         """Always True because it's a bounded dataframe"""
@@ -449,9 +443,6 @@ class LocalUnboundedDataFrame(LocalDataFrame):
         unless you are
         implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
-
-    def __init__(self, schema: Any = None, metadata: Any = None):
-        super().__init__(schema=schema, metadata=metadata)
 
     @property
     def is_bounded(self):

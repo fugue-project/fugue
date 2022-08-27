@@ -52,7 +52,7 @@ class DuckDBEngine(SQLEngine):
 
     def _duck_select(self, dfs: DataFrames, statement: str) -> DataFrame:
         for k, v in dfs.items():
-            tdf: Any = self.execution_engine.to_df(v)
+            tdf: Any = self.execution_engine._to_duck_df(v)  # type: ignore
             if k not in self._cache or self._cache[k] != id(tdf.native):
                 tdf.native.create_view(k, replace=True)
                 # TODO: remove the following hack, if it is stable
@@ -132,31 +132,8 @@ class DuckExecutionEngine(ExecutionEngine):
     def default_sql_engine(self) -> SQLEngine:
         return DuckDBEngine(self)
 
-    def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DuckDataFrame:
-        if isinstance(df, DataFrame):
-            assert_or_throw(
-                schema is None and metadata is None,
-                ValueError("schema and metadata must be None when df is a DataFrame"),
-            )
-            if isinstance(df, DuckDataFrame):
-                return df
-
-            if isinstance(df, PandasDataFrame) and all(
-                not pa.types.is_nested(f.type) for f in df.schema.fields
-            ):
-                rdf = DuckDataFrame(
-                    self.connection.df(df.as_pandas()), metadata=dict(df.metadata)
-                )
-            else:
-                rdf = DuckDataFrame(
-                    duckdb.arrow(df.as_arrow(), connection=self.connection),
-                    metadata=dict(df.metadata),
-                )
-            return rdf
-        tdf = ArrowDataFrame(df, schema)
-        return DuckDataFrame(
-            duckdb.arrow(tdf.native, connection=self.connection), metadata
-        )
+    def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DataFrame:
+        return self._to_duck_df(df, schema=schema, metadata=metadata)
 
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
@@ -183,7 +160,7 @@ class DuckExecutionEngine(ExecutionEngine):
         )
 
     def broadcast(self, df: DataFrame) -> DataFrame:
-        return self.to_df(df)
+        return df
 
     def persist(
         self,
@@ -274,7 +251,8 @@ class DuckExecutionEngine(ExecutionEngine):
             sql = f"SELECT * FROM {t1} UNION SELECT * FROM {t2}"
             return self._sql(sql, {t1: df1, t2: df2}, metadata=metadata)
         return DuckDataFrame(
-            self.to_df(df1).native.union(self.to_df(df2).native), metadata=metadata
+            self._to_duck_df(df1).native.union(self._to_duck_df(df2).native),
+            metadata=metadata,
         )
 
     def subtract(
@@ -289,7 +267,8 @@ class DuckExecutionEngine(ExecutionEngine):
             sql = f"SELECT * FROM {t1} EXCEPT SELECT * FROM {t2}"
             return self._sql(sql, {t1: df1, t2: df2}, metadata=metadata)
         return DuckDataFrame(
-            self.to_df(df1).native.except_(self.to_df(df2).native), metadata=metadata
+            self._to_duck_df(df1).native.except_(self._to_duck_df(df2).native),
+            metadata=metadata,
         )
 
     def intersect(
@@ -304,7 +283,8 @@ class DuckExecutionEngine(ExecutionEngine):
             sql = f"SELECT * FROM {t1} INTERSECT SELECT * FROM {t2}"
             return self._sql(sql, {t1: df1, t2: df2}, metadata=metadata)
         return DuckDataFrame(
-            self.to_df(df1).native.intersect(self.to_df(df2).native), metadata=metadata
+            self._to_duck_df(df1).native.intersect(self._to_duck_df(df2).native),
+            metadata=metadata,
         )
 
     def distinct(
@@ -312,7 +292,7 @@ class DuckExecutionEngine(ExecutionEngine):
         df: DataFrame,
         metadata: Any = None,
     ) -> DataFrame:
-        rel = self.to_df(df).native.distinct()
+        rel = self._to_duck_df(df).native.distinct()
         return DuckDataFrame(rel, metadata=metadata)
 
     def dropna(
@@ -334,7 +314,9 @@ class DuckExecutionEngine(ExecutionEngine):
             raise ValueError(f"{how} is not one of any and all")
         cw = [f"CASE WHEN {f} IS NULL THEN 0 ELSE 1 END" for f in schema.names]
         expr = " + ".join(cw) + f" >= {thr}"
-        return DuckDataFrame(self.to_df(df).native.filter(expr), metadata=metadata)
+        return DuckDataFrame(
+            self._to_duck_df(df).native.filter(expr), metadata=metadata
+        )
 
     def fillna(
         self,
@@ -366,7 +348,7 @@ class DuckExecutionEngine(ExecutionEngine):
             for f in df.schema.names
         ]
         return DuckDataFrame(
-            self.to_df(df).native.project(", ".join(cols)), metadata=metadata
+            self._to_duck_df(df).native.project(", ".join(cols)), metadata=metadata
         )
 
     def sample(
@@ -416,7 +398,9 @@ class DuckExecutionEngine(ExecutionEngine):
 
         if len(_presort) == 0:
             if len(partition_spec.partition_by) == 0:
-                return DuckDataFrame(self.to_df(df).native.limit(n), metadata=metadata)
+                return DuckDataFrame(
+                    self._to_duck_df(df).native.limit(n), metadata=metadata
+                )
             cols = ", ".join(df.schema.names)
             pcols = ", ".join(partition_spec.partition_by)
             sql = (
@@ -471,7 +455,7 @@ class DuckExecutionEngine(ExecutionEngine):
         if not partition_spec.empty and not force_single:
             kwargs["partition_cols"] = partition_spec.partition_by
         dio = DuckDBIO(self.fs, self.connection)
-        dio.save_df(self.to_df(df), path, format_hint, mode, **kwargs)
+        dio.save_df(self._to_duck_df(df), path, format_hint, mode, **kwargs)
 
     def convert_yield_dataframe(self, df: DataFrame, as_local: bool) -> DataFrame:
         return df.as_local() if not self._external_con or as_local else df
@@ -482,3 +466,31 @@ class DuckExecutionEngine(ExecutionEngine):
         with self._context_lock:
             df = self.sql_engine.select(DataFrames(dfs), sql)
             return DuckDataFrame(df.native, metadata=metadata)  # type: ignore
+
+    def _to_duck_df(
+        self, df: Any, schema: Any = None, metadata: Any = None
+    ) -> DuckDataFrame:
+        if isinstance(df, DataFrame):
+            assert_or_throw(
+                schema is None and metadata is None,
+                ValueError("schema and metadata must be None when df is a DataFrame"),
+            )
+            if isinstance(df, DuckDataFrame):
+                return df
+
+            if isinstance(df, PandasDataFrame) and all(
+                not pa.types.is_nested(f.type) for f in df.schema.fields
+            ):
+                rdf = DuckDataFrame(
+                    self.connection.df(df.as_pandas()), metadata=dict(df.metadata)
+                )
+            else:
+                rdf = DuckDataFrame(
+                    duckdb.arrow(df.as_arrow(), connection=self.connection),
+                    metadata=dict(df.metadata),
+                )
+            return rdf
+        tdf = ArrowDataFrame(df, schema)
+        return DuckDataFrame(
+            duckdb.arrow(tdf.native, connection=self.connection), metadata
+        )

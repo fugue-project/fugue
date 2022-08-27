@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.7.2
+
+-   [348](https://github.com/fugue-project/fugue/issues/348) Make create data error more informative
+-   [349](https://github.com/fugue-project/fugue/issues/349) Ray integration, phase 1: transformation and IO
+
 ## 0.7.1
 
 -   [345](https://github.com/fugue-project/fugue/issues/345): Enabled file as input/output for transform and out_transform

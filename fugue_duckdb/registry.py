@@ -15,10 +15,13 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.workflow import register_raw_df_type
+from triad import run_once
+
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
 
 
+@run_once
 def register() -> None:
     """Register DuckDB Execution Engine
 
@@ -113,7 +116,7 @@ class _DuckDBPyRelationParam(DataFrameParam):
 
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         assert isinstance(ctx, DuckExecutionEngine)
-        return ctx.to_df(df).native
+        return ctx.to_df(df).native  # type: ignore
 
     def to_output_df(self, output: Any, schema: Any, ctx: Any) -> DataFrame:
         assert isinstance(output, DuckDBPyRelation)
