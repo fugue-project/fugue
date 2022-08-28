@@ -11,7 +11,6 @@ from fugue.dataframe import DataFrame
 from fugue_ray.dataframe import RayDataFrame
 from pyarrow import csv as pacsv
 from pyarrow import json as pajson
-from ray.data.datasource import FileExtensionFilter
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
@@ -158,7 +157,7 @@ class RayIO(object):
                 read_options=pacsv.ReadOptions(**read_options),
                 parse_options=pacsv.ParseOptions(**parse_options),
                 convert_options=pacsv.ConvertOptions(**convert_options),
-                partition_filter=_FileFiler(
+                partition_filter=_make_filter(
                     file_extensions=["csv"], exclude=["_SUCCESS"]
                 ),
             )
@@ -205,7 +204,7 @@ class RayIO(object):
                     ray_remote_args=self._remote_args(),
                     read_options=pajson.ReadOptions(**read_options),
                     parse_options=pajson.ParseOptions(**parse_options),
-                    partition_filter=_FileFiler(
+                    partition_filter=_make_filter(
                         file_extensions=["json"], exclude=["_SUCCESS"]
                     ),
                 )
@@ -224,15 +223,25 @@ class RayIO(object):
         return {"num_cpus": 1}
 
 
-class _FileFiler(FileExtensionFilter):
-    def __init__(self, file_extensions: Union[str, List[str]], exclude: Iterable[str]):
-        super().__init__(file_extensions, allow_if_no_extension=True)
-        self._exclude = set(exclude)
+def _make_filter(**kwargs) -> Any:
+    try:  # ray >= 2.0.0
+        from ray.data.datasource import FileExtensionFilter
 
-    def _is_valid(self, path: str) -> bool:
-        return pathlib.Path(
-            path
-        ).name not in self._exclude and self._file_has_extension(path)
+        class _FileFiler(FileExtensionFilter):
+            def __init__(
+                self, file_extensions: Union[str, List[str]], exclude: Iterable[str]
+            ):
+                super().__init__(file_extensions, allow_if_no_extension=True)
+                self._exclude = set(exclude)
 
-    def __call__(self, paths: List[str]) -> List[str]:
-        return [path for path in paths if self._is_valid(path)]
+            def _is_valid(self, path: str) -> bool:
+                return pathlib.Path(
+                    path
+                ).name not in self._exclude and self._file_has_extension(path)
+
+            def __call__(self, paths: List[str]) -> List[str]:
+                return [path for path in paths if self._is_valid(path)]
+
+        return _FileFiler(**kwargs)
+    except ImportError:  # ray < 2.0.0
+        return None  # pragma: no cover

@@ -1,5 +1,4 @@
 import os
-import pickle
 
 import duckdb
 import pandas as pd
@@ -42,6 +41,14 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             connection=self._con,
         )
         return e
+
+    def test_load_csv_folder(self):
+        if ray.__version__ >= "2":
+            return super().test_load_csv_folder()
+
+    def test_load_json_folder(self):
+        if ray.__version__ >= "2":
+            return super().test_load_json_folder()
 
     def test_repartitioning(self):
         # schema: *
