@@ -76,6 +76,8 @@ def _ibis_to_pa_type(tp: dt.DataType) -> pa.DataType:
     if isinstance(tp, dt.Struct):
         fields = [pa.field(n, _ibis_to_pa_type(t)) for n, t in zip(tp.names, tp.types)]
         return pa.struct(fields)
+    if isinstance(tp, dt.Map):
+        return pa.map_(_ibis_to_pa_type(tp.key_type), _ibis_to_pa_type(tp.value_type))
     raise NotImplementedError(tp)  # pragma: no cover
 
 
@@ -84,10 +86,12 @@ def _pa_to_ibis_type(tp: pa.DataType) -> dt.DataType:
         return _PYARROW_TO_IBIS[tp]
     if pa.types.is_list(tp):
         ttp = _pa_to_ibis_type(tp.value_type)
-        return dt.Array(ttp)
+        return dt.Array(value_type=ttp)
     if pa.types.is_struct(tp):
         fields = [(f.name, _pa_to_ibis_type(f.type)) for f in tp]
-        return dt.Struct([x[0] for x in fields], [x[1] for x in fields])
+        return dt.Struct.from_tuples(fields)
+    if pa.types.is_map(tp):
+        return dt.Map(key_type=tp.key_type, value_type=tp.item_type)
     raise NotImplementedError(tp)  # pragma: no cover
 
 

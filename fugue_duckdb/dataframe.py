@@ -90,7 +90,7 @@ class DuckDataFrame(LocalBoundedDataFrame):
     ) -> List[Any]:
         if columns is not None:
             return self[columns].as_array(type_safe=type_safe)
-        return [list(x) for x in self._rel.fetchall()]
+        return self._fetchall(self._rel)
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
@@ -98,9 +98,23 @@ class DuckDataFrame(LocalBoundedDataFrame):
         if columns is not None:
             yield from self[columns].as_array_iterable(type_safe=type_safe)
         else:
-            yield from [list(x) for x in self._rel.fetchall()]
+            yield from self._fetchall(self._rel)
 
     def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
         if columns is not None:
             return self[columns].head(n)
-        return [list(x) for x in self._rel.limit(n).fetchall()]
+        return self._fetchall(self._rel.limit(n))
+
+    def _fetchall(self, rel: DuckDBPyRelation) -> List[List[Any]]:
+        map_pos = [i for i, t in enumerate(self.schema.types) if pa.types.is_map(t)]
+        if len(map_pos) == 0:
+            return [list(x) for x in rel.fetchall()]
+        else:
+
+            def to_list(row: Any) -> List[Any]:
+                res = list(row)
+                for p in map_pos:
+                    res[p] = list(zip(row[p]["key"], row[p]["value"]))
+                return res
+
+            return [to_list(x) for x in rel.fetchall()]

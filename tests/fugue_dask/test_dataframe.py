@@ -128,7 +128,7 @@ def test_as_array():
 
     df = DaskDataFrame([[pandas.NaT, 1.1]], "a:datetime,b:int")
     df.native["a"] = pd.to_datetime(df.native["a"])
-    assert isinstance(df.as_array()[0][0], datetime)
+    assert df.as_array()[0][0] is None
     assert isinstance(df.as_array()[0][1], int)
 
     df = DaskDataFrame([[1.0, 1.1]], "a:double,b:int")
@@ -158,11 +158,11 @@ def test_nan_none():
     df = ArrayDataFrame([["a", 1.1], [None, None]], "b:str,c:double")
     arr = DaskDataFrame(df.as_pandas(), df.schema).as_array()[1]
     assert arr[0] is None
-    assert math.isnan(arr[1])
+    assert arr[1] is None
 
     arr = DaskDataFrame(df.as_array(), df.schema).as_array()[1]
     assert arr[0] is None
-    assert math.isnan(arr[1])
+    assert arr[1] is None
 
     arr = DaskDataFrame(df.as_pandas()["b"], "b:str").as_array()[1]
     assert arr[0] is None

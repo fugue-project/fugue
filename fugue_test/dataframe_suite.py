@@ -170,12 +170,25 @@ class DataFrameTests(object):
             df = self.df([[pd.Timestamp("2020-01-01"), 1]], "a:datetime,b:int")
             assert [dict(a=datetime(2020, 1, 1), b=1)] == list(df.as_dict_iterable())
 
-        def test_nested(self):
+        def test_list_type(self):
             data = [[[30, 40]]]
             df = self.df(data, "a:[int]")
             a = df.as_array(type_safe=True)
             assert data == a
 
+        def test_struct_type(self):
+            data = [[{"a": 1}], [{"a": 2}]]
+            df = self.df(data, "x:{a:int}")
+            a = df.as_array(type_safe=True)
+            assert data == a
+
+        def test_map_type(self):
+            data = [[[("a", 1), ("b", 3)]], [[("b", 2)]]]
+            df = self.df(data, "x:<str,int>")
+            a = df.as_array(type_safe=True)
+            assert data == a
+
+        def test_deep_nested_types(self):
             data = [[dict(a="1", b=[3, 4], d=1.0)], [dict(b=[30, 40])]]
             df = self.df(data, "a:{a:str,b:[int]}")
             a = df.as_array(type_safe=True)
@@ -186,7 +199,7 @@ class DataFrameTests(object):
             a = df.as_array(type_safe=True)
             assert [[[dict(a=None, b=[30, 40])]]] == a
 
-        def test_binary(self):
+        def test_binary_type(self):
             data = [[b"\x01\x05"]]
             df = self.df(data, "a:bytes")
             a = df.as_array(type_safe=True)

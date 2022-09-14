@@ -145,7 +145,7 @@ class SparkExecutionEngine(ExecutionEngine):
     def default_sql_engine(self) -> SQLEngine:
         return SparkSQLEngine(self)
 
-    def to_df(
+    def to_df(  # noqa: C901
         self, df: Any, schema: Any = None, metadata: Any = None
     ) -> SparkDataFrame:
         """Convert a data structure to :class:`~fugue_spark.dataframe.SparkDataFrame`
@@ -217,9 +217,22 @@ class SparkExecutionEngine(ExecutionEngine):
             schema is not None, FugueDataFrameInitError("schema can't be None")
         )
         adf = ArrowDataFrame(df, to_schema(schema))
-        sdf = self.spark_session.createDataFrame(
-            adf.as_array(), to_spark_schema(adf.schema)
-        )
+        map_pos = [i for i, t in enumerate(adf.schema.types) if pa.types.is_map(t)]
+        if len(map_pos) == 0:
+            sdf = self.spark_session.createDataFrame(
+                adf.as_array(), to_spark_schema(adf.schema)
+            )
+        else:
+
+            def to_dict(rows: Iterable[List[Any]]) -> Iterable[List[Any]]:
+                for row in rows:
+                    for p in map_pos:
+                        row[p] = dict(row[p])
+                    yield row
+
+            sdf = self.spark_session.createDataFrame(
+                to_dict(adf.as_array_iterable()), to_spark_schema(adf.schema)
+            )
         return SparkDataFrame(sdf, adf.schema, metadata)
 
     def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:

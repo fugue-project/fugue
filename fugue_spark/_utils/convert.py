@@ -126,6 +126,8 @@ def _to_arrow_type(dt: pt.DataType) -> pa.DataType:
         return pa.struct(fields)
     if isinstance(dt, pt.ArrayType):
         return pa.list_(_to_arrow_type(dt.elementType))
+    if isinstance(dt, pt.MapType):
+        return pa.map_(_to_arrow_type(dt.keyType), _to_arrow_type(dt.valueType))
     return to_arrow_type(dt)
 
 

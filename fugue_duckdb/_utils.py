@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Any, Dict, Iterable, Tuple
+from typing import Any, Dict, Iterable, Optional, Tuple
 from uuid import uuid4
 
 import numpy as np
@@ -85,6 +85,10 @@ def _to_duck_type(tp: pa.DataType) -> str:
         if pa.types.is_struct(tp):
             inner = ",".join(f.name + " " + _to_duck_type(f.type) for f in tp)
             return f"STRUCT({inner})"
+        if pa.types.is_map(tp):
+            k = _to_duck_type(tp.key_type)
+            v = _to_duck_type(tp.item_type)
+            return f"MAP({k},{v})"
         if pa.types.is_list(tp):
             inner = _to_duck_type(tp.value_type)
             return f"{inner}[]"
@@ -108,6 +112,12 @@ def _to_pa_type(duck_type: str) -> pa.DataType:
                     for k, v in _split_comma(duck_type[p + 1 : -1])
                 ]
                 return pa.struct(fields)
+            if tp == "MAP":
+                fields = [
+                    _to_pa_type(t.strip())
+                    for t, _ in _split_comma(duck_type[p + 1 : -1], split_char=None)
+                ]
+                return pa.map_(fields[0], fields[1])
             if tp != "DECIMAL":
                 raise Exception
             pair = duck_type[p + 1 : -1].split(",", 1)
@@ -130,6 +140,10 @@ def _to_duck_type_legacy(tp: pa.DataType) -> str:  # pragma: no cover
         if pa.types.is_list(tp):
             inner = _to_duck_type_legacy(tp.value_type)
             return f"LIST<{inner}>"
+        if pa.types.is_map(tp):
+            k = _to_duck_type_legacy(tp.key_type)
+            v = _to_duck_type_legacy(tp.item_type)
+            return f"LIST<{k},{v}>"
         if pa.types.is_decimal(tp):
             return f"DECIMAL({tp.precision}, {tp.scale})"
         return _PA_TYPES_TO_DUCK[tp]
@@ -174,7 +188,10 @@ def _to_pa_type_legacy(duck_type: str) -> pa.DataType:  # pragma: no cover
 
 
 def _split_comma(
-    expr: str, split_char=" ", left_char="(", right_char=")"
+    expr: str,
+    split_char: Optional[str] = " ",
+    left_char: str = "(",
+    right_char: str = ")",
 ) -> Iterable[Tuple[str, str]]:
     lv = 0
     start = 0
@@ -184,8 +201,14 @@ def _split_comma(
         elif expr[i] == right_char:
             lv -= 1
         elif lv == 0 and expr[i] == ",":
-            x = expr[start:i].strip().split(split_char, 1)
-            yield x[0], x[1]
+            if split_char is None:
+                yield expr[start:i].strip(), ""
+            else:
+                x = expr[start:i].strip().split(split_char, 1)
+                yield x[0], x[1]
             start = i + 1
-    x = expr[start : len(expr)].strip().split(split_char, 1)
-    yield x[0], x[1]
+    if split_char is None:
+        yield expr[start : len(expr)].strip(), ""
+    else:
+        x = expr[start : len(expr)].strip().split(split_char, 1)
+        yield x[0], x[1]
