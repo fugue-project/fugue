@@ -52,8 +52,8 @@ setup(
             "numpy",
         ],
         "ibis": [
-            "ibis-framework>=2.1.1; python_version < '3.7'",
-            "ibis-framework>=3.2.0; python_version >= '3.7'",
+            "ibis-framework>=2.1.1; python_version < '3.8'",
+            "ibis-framework>=3.2.0; python_version >= '3.8'",
         ],
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
         "all": [
@@ -69,8 +69,8 @@ setup(
             "duckdb>=0.5.0; python_version >= '3.7'",
             "pyarrow>=5.0.0; python_version < '3.7'",
             "pyarrow>=7.0.0; python_version >= '3.7'",
-            "ibis-framework>=2.1.1; python_version < '3.7'",
-            "ibis-framework>=3.2.0; python_version >= '3.7'",
+            "ibis-framework>=2.1.1; python_version < '3.8'",
+            "ibis-framework>=3.2.0; python_version >= '3.8'",
         ],
     },
     classifiers=[

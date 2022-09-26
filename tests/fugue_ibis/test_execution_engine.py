@@ -7,7 +7,7 @@ from fugue_test.execution_suite import ExecutionEngineTests
 from .mock.execution_engine import MockDuckExecutionEngine
 
 
-@pytest.mark.skipif(sys.version_info < (3, 7), reason="3.6")
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="< 3.8")
 class IbisExecutionEngineTests(ExecutionEngineTests.Tests):
     @classmethod
     def setUpClass(cls):
@@ -26,7 +26,7 @@ class IbisExecutionEngineTests(ExecutionEngineTests.Tests):
         pass
 
 
-@pytest.mark.skipif(sys.version_info < (3, 7), reason="3.6")
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="< 3.8")
 class DuckBuiltInTests(BuiltInTests.Tests):
     @classmethod
     def setUpClass(cls):

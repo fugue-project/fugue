@@ -3,47 +3,16 @@ from datetime import datetime
 from typing import Any
 
 import ibis
-import ibis.expr.types as ir
 import pandas as pd
 import pytest
-from fugue import (
-    ArrowDataFrame,
-    DataFrame,
-    IterableDataFrame,
-    LocalDataFrame,
-    PandasDataFrame,
-)
-from fugue.dataframe.utils import _df_eq as df_eq
+from fugue import ArrowDataFrame
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
-from pytest import raises
-
-from fugue_ibis._utils import to_schema
-from fugue_ibis.dataframe import IbisDataFrame
 
 from .mock.dataframe import MockDuckDataFrame
 
 
-@pytest.mark.skipif(sys.version_info < (3, 7), reason="3.6")
-class TestPandasIbisDataFrame(IbisDataFrame):
-    def _to_new_df(self, table: ir.Table, metadata: Any = None) -> DataFrame:
-        return TestPandasIbisDataFrame(table, metadata)
-
-    def _to_local_df(self, table: ir.Table, metadata: Any = None) -> LocalDataFrame:
-        return PandasDataFrame(
-            table.execute(), to_schema(table.schema()), metadata=metadata
-        )
-
-    def _to_iterable_df(
-        self, table: ir.Table, metadata: Any = None
-    ) -> IterableDataFrame:
-        return PandasDataFrame(
-            table.execute().values.tolist(),
-            to_schema(table.schema()),
-            metadata=metadata,
-        )
-
-
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="< 3.8")
 class IbisDataFrameTests(DataFrameTests.Tests):
     @classmethod
     def setUpClass(cls):
