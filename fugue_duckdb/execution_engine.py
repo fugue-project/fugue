@@ -280,11 +280,11 @@ class DuckExecutionEngine(ExecutionEngine):
     ) -> DataFrame:
         if distinct:
             t1, t2 = get_temp_df_name(), get_temp_df_name()
-            sql = f"SELECT * FROM {t1} INTERSECT SELECT * FROM {t2}"
+            sql = f"SELECT * FROM {t1} INTERSECT DISTINCT SELECT * FROM {t2}"
             return self._sql(sql, {t1: df1, t2: df2}, metadata=metadata)
-        return DuckDataFrame(
-            self._to_duck_df(df1).native.intersect(self._to_duck_df(df2).native),
-            metadata=metadata,
+        raise NotImplementedError(
+            "DuckDB doesn't have consist behavior on INTERSECT ALL,"
+            " so Fugue doesn't support it"
         )
 
     def distinct(

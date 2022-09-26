@@ -1,8 +1,11 @@
 # flake8: noqa
-from fugue_ibis.execution.ibis_engine import IbisEngine, register_ibis_engine
-from fugue_ibis.execution.pandas_backend import _to_pandas_ibis_engine
-from fugue_ibis.extensions import as_fugue, as_ibis, run_ibis
 from triad import run_at_def
+
+from .dataframe import IbisDataFrame
+from .execution.ibis_engine import IbisEngine, register_ibis_engine
+from .execution.pandas_backend import _to_pandas_ibis_engine
+from .execution_engine import IbisExecutionEngine
+from .extensions import as_fugue, as_ibis, run_ibis
 
 
 @run_at_def

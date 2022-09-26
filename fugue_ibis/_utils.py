@@ -91,7 +91,10 @@ def _pa_to_ibis_type(tp: pa.DataType) -> dt.DataType:
         fields = [(f.name, _pa_to_ibis_type(f.type)) for f in tp]
         return dt.Struct.from_tuples(fields)
     if pa.types.is_map(tp):
-        return dt.Map(key_type=tp.key_type, value_type=tp.item_type)
+        return dt.Map(
+            key_type=_pa_to_ibis_type(tp.key_type),
+            value_type=_pa_to_ibis_type(tp.item_type),
+        )
     raise NotImplementedError(tp)  # pragma: no cover
 
 

@@ -103,7 +103,7 @@ class IbisDataFrame(DataFrame):
         )
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
-        return self._to_local_df(self._table).as_arrow()
+        return self._to_local_df(self._table).as_arrow(type_safe=type_safe)
 
     def as_pandas(self) -> pd.DataFrame:
         return self._to_local_df(self._table).as_pandas()

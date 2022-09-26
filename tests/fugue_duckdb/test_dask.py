@@ -80,21 +80,6 @@ class DuckDaskExecutionEngineTests(ExecutionEngineTests.Tests):
         ddf = DaskDataFrame(df)
         assert isinstance(self.engine.broadcast(ddf), DaskDataFrame)
 
-    def test_intersect_all(self):
-        e = self.engine
-        a = e.to_df([[1, 2, 3], [4, None, 6], [4, None, 6]], "a:double,b:double,c:int")
-        b = e.to_df(
-            [[1, 2, 33], [4, None, 6], [4, None, 6], [4, None, 6]],
-            "a:double,b:double,c:int",
-        )
-        c = e.intersect(a, b, distinct=False)
-        df_eq(
-            c,
-            [[4, None, 6], [4, None, 6]],
-            "a:double,b:double,c:int",
-            throw=True,
-        )
-
 
 class DuckDaskBuiltInTests(BuiltInTests.Tests):
     @classmethod
@@ -110,7 +95,7 @@ class DuckDaskBuiltInTests(BuiltInTests.Tests):
     def make_engine(self):
         e = DuckDaskExecutionEngine(
             conf={"test": True, "fugue.duckdb.pragma.threads": 2, **_CONF},
-            connection=self._con
+            connection=self._con,
         )
         return e
 
