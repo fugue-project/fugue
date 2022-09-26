@@ -23,6 +23,8 @@ pandavro
 fastavro
 psutil
 
+duckdb-engine>=0.6.4
+
 # publish to pypi
 wheel
 twine
