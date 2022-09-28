@@ -168,6 +168,10 @@ class _VisitorBase(FugueSQLVisitor):
         fields = self.visit(ctx.fugueSchema()).fields
         return pa.struct(fields)
 
+    def visitFugueSchemaMapType(self, ctx: fp.FugueSchemaMapTypeContext) -> pa.DataType:
+        tps = self.collectChildren(ctx, fp.FugueSchemaTypeContext)
+        return pa.map_(tps[0], tps[1])
+
     def visitFuguePrepartition(self, ctx: fp.FuguePrepartitionContext) -> PartitionSpec:
         params = self.get_dict(ctx, "algo", "num", "by", "presort")
         return PartitionSpec(**params)

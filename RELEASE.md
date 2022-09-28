@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.7.3
+
+-   [362](https://github.com/fugue-project/fugue/issues/362) Remove Python 3.6 Support
+-   [363](https://github.com/fugue-project/fugue/issues/363) Create IbisDataFrame and IbisExecutionEngine
+-   [364](https://github.com/fugue-project/fugue/issues/364) Enable Map type support
+
 ## 0.7.2
 
 -   [348](https://github.com/fugue-project/fugue/issues/348) Make create data error more informative
