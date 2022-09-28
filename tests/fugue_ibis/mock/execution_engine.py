@@ -1,8 +1,7 @@
 import logging
-from typing import Any, Callable, Iterable, Optional, Union, List
+from typing import Any, Callable, Iterable, List, Optional, Union
 
 import ibis
-import ibis.expr.types as ir
 import pyarrow as pa
 from fugue import (
     ArrowDataFrame,
@@ -12,9 +11,10 @@ from fugue import (
     PartitionCursor,
     PartitionSpec,
 )
-from fugue_ibis import IbisDataFrame, IbisExecutionEngine
-from triad import FileSystem, assert_or_throw
 from fugue.collections.partition import EMPTY_PARTITION_SPEC
+from fugue_ibis import IbisDataFrame, IbisExecutionEngine, IbisTable
+from triad import FileSystem, assert_or_throw
+
 from .dataframe import MockDuckDataFrame
 
 
@@ -44,7 +44,7 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
             )
         if isinstance(df, pa.Table):
             return self._register_df(df, schema=schema, metadata=metadata)
-        if isinstance(df, ir.Table):
+        if isinstance(df, IbisTable):
             return MockDuckDataFrame(df, schema=schema, metadata=metadata)
         if isinstance(df, Iterable):
             adf = ArrowDataFrame(df, schema)

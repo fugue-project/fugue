@@ -1,6 +1,5 @@
 from typing import Any, Dict, Iterable, List, Optional
 
-import ibis.expr.types as ir
 import pandas as pd
 import pyarrow as pa
 from fugue import DataFrame, IterableDataFrame, LocalDataFrame
@@ -8,6 +7,7 @@ from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
 from triad import Schema
 
+from ._compat import IbisTable
 from ._utils import _pa_to_ibis_type, to_schema
 
 
@@ -18,7 +18,7 @@ class IbisDataFrame(DataFrame):
     :param metadata: dict-like object with string keys, default ``None``
     """
 
-    def __init__(self, table: ir.Table, schema: Any = None, metadata: Any = None):
+    def __init__(self, table: IbisTable, schema: Any = None, metadata: Any = None):
         self._table = table
         _schema = to_schema(table.schema())
         if schema is not None:
@@ -30,22 +30,22 @@ class IbisDataFrame(DataFrame):
         super().__init__(schema=_schema, metadata=metadata)
 
     @property
-    def native(self) -> ir.Table:
+    def native(self) -> IbisTable:
         """Ibis Table object"""
         return self._table
 
-    def _to_local_df(self, table: ir.Table, metadata: Any = None) -> LocalDataFrame:
+    def _to_local_df(self, table: IbisTable, metadata: Any = None) -> LocalDataFrame:
         raise NotImplementedError  # pragma: no cover
 
     def _to_iterable_df(
-        self, table: ir.Table, metadata: Any = None
+        self, table: IbisTable, metadata: Any = None
     ) -> IterableDataFrame:
         raise NotImplementedError  # pragma: no cover
 
-    def _to_new_df(self, table: ir.Table, metadata: Any = None) -> DataFrame:
+    def _to_new_df(self, table: IbisTable, metadata: Any = None) -> DataFrame:
         raise NotImplementedError  # pragma: no cover
 
-    def _compute_scalar(self, table: ir.Table) -> Any:
+    def _compute_scalar(self, table: IbisTable) -> Any:
         return table.execute()
 
     @property
@@ -133,7 +133,9 @@ class IbisDataFrame(DataFrame):
             return self[columns].head(n)
         return self._to_local_df(self._table.head(n)).as_array(type_safe=True)
 
-    def _alter_table_columns(self, table: ir.Table, schema: Schema, new_schema: Schema):
+    def _alter_table_columns(
+        self, table: IbisTable, schema: Schema, new_schema: Schema
+    ):
         fields: Dict[str, Any] = {}
         for f1, f2 in zip(schema.fields, new_schema.fields):
             if f1.type != f2.type:

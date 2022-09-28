@@ -1,25 +1,25 @@
 from typing import Any, Callable, Optional
 
 import ibis
-import ibis.expr.types as ir
+import pandas as pd
 from fugue import (
     DataFrame,
     DataFrames,
     ExecutionEngine,
-    PandasDataFrame,
     NativeExecutionEngine,
+    PandasDataFrame,
 )
-from triad.utils.assertion import assert_or_throw
-import pandas as pd
-
+from fugue_ibis._utils import to_ibis_schema, to_schema
 from fugue_ibis.execution.ibis_engine import IbisEngine
-from fugue_ibis._utils import to_schema, to_ibis_schema
 from ibis.backends.pandas import Backend
+from triad.utils.assertion import assert_or_throw
+
+from .._compat import IbisTable
 
 
 class PandasIbisEngine(IbisEngine):
     def select(
-        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], ir.TableExpr]
+        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], IbisTable]
     ) -> DataFrame:  # pragma: no cover
         pdfs = {k: v.as_pandas() for k, v in dfs.items()}
         be = _BackendWrapper().connect(pdfs)

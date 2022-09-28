@@ -1,6 +1,7 @@
 # flake8: noqa
 from triad import run_at_def
 
+from ._compat import IbisTable
 from .dataframe import IbisDataFrame
 from .execution.ibis_engine import IbisEngine, register_ibis_engine
 from .execution.pandas_backend import _to_pandas_ibis_engine
