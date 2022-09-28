@@ -84,6 +84,22 @@ def test_type_conversion():
         )
     )
 
+    assert_(
+        pa.map_(
+            pa.struct(
+                [
+                    pa.field("x", pa.int64()),
+                    pa.field("yy", pa.struct([pa.field("x", pa.int64())])),
+                ]
+            ),
+            pa.struct(
+                [
+                    pa.field("yy", pa.list_(pa.struct([pa.field("x", pa.int64())]))),
+                ]
+            ),
+        )
+    )
+
     raises(ValueError, lambda: to_pa_type(""))
     raises(ValueError, lambda: to_pa_type("XX"))
     raises(ValueError, lambda: to_pa_type("XX(1,2)"))

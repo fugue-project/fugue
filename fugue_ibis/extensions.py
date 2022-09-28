@@ -1,7 +1,6 @@
 from typing import Any, Callable, Dict
 
 import ibis
-import ibis.expr.types as ir
 from fugue import DataFrame, DataFrames, Processor, WorkflowDataFrame
 from fugue.exceptions import FugueWorkflowCompileError
 from fugue.workflow.workflow import WorkflowDataFrames
@@ -10,9 +9,11 @@ from triad import assert_or_throw, extension_method
 from fugue_ibis._utils import LazyIbisObject, _materialize
 from fugue_ibis.execution.ibis_engine import to_ibis_engine
 
+from ._compat import IbisTable
+
 
 def run_ibis(
-    ibis_func: Callable[[ibis.BaseBackend], ir.TableExpr],
+    ibis_func: Callable[[ibis.BaseBackend], IbisTable],
     ibis_engine: Any = None,
     **dfs: WorkflowDataFrame,
 ) -> WorkflowDataFrame:
@@ -51,7 +52,7 @@ def run_ibis(
 
 
 @extension_method
-def as_ibis(df: WorkflowDataFrame) -> ir.TableExpr:
+def as_ibis(df: WorkflowDataFrame) -> IbisTable:
     """Convert the Fugue workflow dataframe to an ibis table for ibis
     operations.
 
@@ -112,7 +113,7 @@ def as_ibis(df: WorkflowDataFrame) -> ir.TableExpr:
 
 @extension_method(class_type=LazyIbisObject)
 def as_fugue(
-    expr: ir.TableExpr,
+    expr: IbisTable,
     ibis_engine: Any = None,
 ) -> WorkflowDataFrame:
     """Convert a lazy ibis object to Fugue workflow dataframe
@@ -174,7 +175,7 @@ def as_fugue(
         be: ibis.BaseBackend,
         lazy_expr: LazyIbisObject,
         ctx: Dict[int, Any],
-    ) -> ir.TableExpr:
+    ) -> IbisTable:
         return _materialize(
             lazy_expr, {k: be.table(f"_{id(v)}") for k, v in ctx.items()}
         )

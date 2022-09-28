@@ -1,10 +1,7 @@
-import json
-import math
 from datetime import datetime
 from typing import Any
 
-import numpy as np
-import pandas as pd
+import pyspark
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -15,9 +12,9 @@ from pytest import raises
 from triad.collections.schema import Schema, SchemaError
 from triad.exceptions import InvalidOperationError
 
+from fugue_spark import SparkExecutionEngine
 from fugue_spark._utils.convert import to_schema, to_spark_schema
 from fugue_spark.dataframe import SparkDataFrame
-from fugue_spark import SparkExecutionEngine
 
 
 class SparkDataFrameTests(DataFrameTests.Tests):
@@ -31,6 +28,10 @@ class SparkDataFrameTests(DataFrameTests.Tests):
     def test_alter_columns_invalid(self):
         # TODO: Spark will silently cast invalid data to nulls without exceptions
         pass
+
+    def test_map_type(self):
+        if pyspark.__version__ >= "3":
+            return super().test_map_type()
 
 
 def test_init(spark_session):

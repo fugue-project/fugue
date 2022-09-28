@@ -1,8 +1,8 @@
 from typing import Any, Callable, Optional
 
 import ibis
-import ibis.expr.types as ir
 from fugue import DataFrame, DataFrames, ExecutionEngine
+from fugue_ibis import IbisTable
 from fugue_ibis._utils import to_ibis_schema
 from fugue_ibis.execution.ibis_engine import IbisEngine, register_ibis_engine
 from ibis.backends.pandas import Backend
@@ -12,7 +12,7 @@ from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
 
 class DuckDBIbisEngine(IbisEngine):
     def select(
-        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], ir.TableExpr]
+        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], IbisTable]
     ) -> DataFrame:
         be = _BackendWrapper().connect({})
         be.set_schemas(dfs)

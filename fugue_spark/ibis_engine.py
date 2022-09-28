@@ -1,8 +1,8 @@
 from typing import Any, Callable, Optional
 
 import ibis
-import ibis.expr.types as ir
 from fugue import DataFrame, DataFrames, ExecutionEngine
+from fugue_ibis import IbisTable
 from fugue_ibis._utils import to_schema
 from fugue_ibis.execution.ibis_engine import IbisEngine, register_ibis_engine
 from pyspark.sql import DataFrame as PySparkDataFrame
@@ -23,7 +23,7 @@ class SparkIbisEngine(IbisEngine):
         super().__init__(execution_engine)
 
     def select(
-        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], ir.TableExpr]
+        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], IbisTable]
     ) -> DataFrame:
         for k, v in dfs.items():
             self.execution_engine.register(v, k)  # type: ignore

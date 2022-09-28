@@ -36,13 +36,15 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
             [[1, 2, 33], [4, None, 6], [4, None, 6], [4, None, 6]],
             "a:double,b:double,c:int",
         )
-        c = e.intersect(a, b, distinct=False)
-        df_eq(
-            c,
-            [[4, None, 6], [4, None, 6]],
-            "a:double,b:double,c:int",
-            throw=True,
-        )
+        raises(NotImplementedError, lambda: e.intersect(a, b, distinct=False))
+        # DuckDB 0.5.0 stopped support INTERSECT ALL
+        # c = e.intersect(a, b, distinct=False)
+        # df_eq(
+        #     c,
+        #     [[4, None, 6], [4, None, 6]],
+        #     "a:double,b:double,c:int",
+        #     throw=True,
+        # )
 
 
 class DuckBuiltInTests(BuiltInTests.Tests):

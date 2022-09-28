@@ -1,7 +1,7 @@
 import inspect
 import logging
 import os
-from typing import Any, Callable, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import pandas as pd
 from fugue._utils.interfaceless import (
@@ -266,13 +266,16 @@ class NativeExecutionEngine(ExecutionEngine):
         self,
         df: DataFrame,
         how: str = "any",
-        thresh: int = None,
+        thresh: Optional[int] = None,
         subset: List[str] = None,
         metadata: Any = None,
     ) -> DataFrame:
-        d = df.as_pandas().dropna(
-            axis=0, how=how, thresh=thresh, subset=subset, inplace=False
-        )
+        kwargs: Dict[str, Any] = dict(axis=0, subset=subset, inplace=False)
+        if thresh is None:
+            kwargs["how"] = how
+        else:
+            kwargs["thresh"] = thresh
+        d = df.as_pandas().dropna(**kwargs)
         return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
 
     def fillna(

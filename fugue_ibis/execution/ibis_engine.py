@@ -2,8 +2,9 @@ from abc import abstractmethod
 from typing import Any, Callable, List, Optional, Tuple
 
 import ibis
-import ibis.expr.types as ir
 from fugue import DataFrame, DataFrames, ExecutionEngine
+
+from .._compat import IbisTable
 
 _ENGINE_FUNC: List[
     Tuple[int, int, Callable[[ExecutionEngine, Any], Optional["IbisEngine"]]]
@@ -47,7 +48,7 @@ class IbisEngine:
 
     @abstractmethod
     def select(
-        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], ir.TableExpr]
+        self, dfs: DataFrames, ibis_func: Callable[[ibis.BaseBackend], IbisTable]
     ) -> DataFrame:  # pragma: no cover
         """Execute the ibis select expression.
 

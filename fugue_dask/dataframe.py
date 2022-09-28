@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import dask.dataframe as pd
 import pandas
 import pyarrow as pa
-from fugue.dataframe import DataFrame, LocalDataFrame, PandasDataFrame
+from fugue.dataframe import ArrowDataFrame, DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameOperationError
 from triad.collections.schema import Schema
@@ -183,7 +183,7 @@ class DaskDataFrame(DataFrame):
         df: DataFrame = self
         if columns is not None:
             df = df[columns]
-        return PandasDataFrame(df.as_pandas(), schema=df.schema).as_array(
+        return ArrowDataFrame(df.as_pandas(), schema=df.schema).as_array(
             type_safe=type_safe
         )
 
