@@ -252,7 +252,7 @@ class IbisExecutionEngine(ExecutionEngine):
             _presort = parse_presort_exp(presort)
         else:
             _presort = partition_spec.presort
-        tbn = self.get_temp_table_name()
+        tbn = "_temp"
         idf = self._to_ibis_dataframe(df)
 
         if len(_presort) == 0:
