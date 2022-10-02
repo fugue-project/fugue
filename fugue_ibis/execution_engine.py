@@ -17,6 +17,7 @@ from ibis import BaseBackend
 from triad.utils.assertion import assert_or_throw
 
 from .dataframe import IbisDataFrame
+from ._compat import IbisTable
 import itertools
 
 _JOIN_RIGHT_SUFFIX = "_ibis_y__"
@@ -40,10 +41,9 @@ class IbisSQLEngine(SQLEngine):
         self._ibis_engine: IbisExecutionEngine = execution_engine  # type: ignore
 
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:
-        for k, v in dfs.items():
-            self._ibis_engine._to_ibis_dataframe(v).native.alias(k)
-        tb = self._ibis_engine.backend.sql(statement)
-        return self._ibis_engine._to_ibis_dataframe(tb)
+        return self._ibis_engine._to_ibis_dataframe(
+            self._ibis_engine._raw_select(statement, dfs)
+        )
 
 
 class IbisExecutionEngine(ExecutionEngine):
@@ -71,6 +71,9 @@ class IbisExecutionEngine(ExecutionEngine):
         self, df: Any, schema: Any = None, metadata: Any = None
     ) -> IbisDataFrame:  # pragma: no cover
         raise NotImplementedError
+
+    def _compile_sql(self, df: IbisDataFrame) -> str:
+        return str(df.native.compile())
 
     def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DataFrame:
         return self._to_ibis_dataframe(df, schema=schema, metadata=metadata)
@@ -249,7 +252,7 @@ class IbisExecutionEngine(ExecutionEngine):
             _presort = parse_presort_exp(presort)
         else:
             _presort = partition_spec.presort
-        tbn = self.get_temp_table_name()
+        tbn = "_temp"
         idf = self._to_ibis_dataframe(df)
 
         if len(_presort) == 0:
@@ -264,7 +267,7 @@ class IbisExecutionEngine(ExecutionEngine):
                 f"AS __fugue_take_param FROM {tbn}"
                 f") WHERE __fugue_take_param<={n}"
             )
-            tb = idf.native.alias(tbn).sql(sql)
+            tb = self._raw_select(sql, {tbn: idf})
             return self._to_ibis_dataframe(tb[df.schema.names], metadata=metadata)
 
         sorts: List[str] = []
@@ -277,7 +280,7 @@ class IbisExecutionEngine(ExecutionEngine):
 
         if len(partition_spec.partition_by) == 0:
             sql = f"SELECT * FROM {tbn} {sort_expr} LIMIT {n}"
-            tb = idf.native.alias(tbn).sql(sql)
+            tb = self._raw_select(sql, {tbn: idf})
             return self._to_ibis_dataframe(tb[df.schema.names], metadata=metadata)
 
         pcols = ", ".join(
@@ -289,5 +292,16 @@ class IbisExecutionEngine(ExecutionEngine):
             f"AS __fugue_take_param FROM {tbn}"
             f") WHERE __fugue_take_param<={n}"
         )
-        tb = idf.native.alias(tbn).sql(sql)
+        tb = self._raw_select(sql, {tbn: idf})
         return self._to_ibis_dataframe(tb[df.schema.names], metadata=metadata)
+
+    def _raw_select(self, statement: str, dfs: Dict[str, Any]) -> IbisTable:
+        cte: List[str] = []
+        for k, v in dfs.items():
+            idf = self._to_ibis_dataframe(v)
+            cte.append(k + " AS (" + self._compile_sql(idf) + ")")
+        if len(cte) > 0:
+            sql = "WITH " + ",\n".join(cte) + "\n" + statement
+        else:
+            sql = statement
+        return self.backend.sql(sql)

@@ -5,6 +5,10 @@ import pandas
 import pyarrow as pa
 from fugue.dataframe import ArrowDataFrame, DataFrame, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.dataframe import _input_schema
+from fugue.dataframe.utils import (
+    get_dataframe_column_names,
+    rename_dataframe_column_names,
+)
 from fugue.exceptions import FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
@@ -15,6 +19,20 @@ from fugue_dask._constants import (
     FUGUE_DASK_DEFAULT_CONF,
 )
 from fugue_dask._utils import DASK_UTILS
+
+
+@get_dataframe_column_names.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _get_dask_dataframe_columns(df: pd.DataFrame) -> List[Any]:
+    return list(df.columns)
+
+
+@rename_dataframe_column_names.candidate(
+    lambda df, *args, **kwargs: isinstance(df, pd.DataFrame)
+)
+def _rename_dask_dataframe(df: pd.DataFrame, names: Dict[str, Any]) -> pd.DataFrame:
+    if len(names) == 0:
+        return df
+    return df.rename(columns=names)
 
 
 class DaskDataFrame(DataFrame):

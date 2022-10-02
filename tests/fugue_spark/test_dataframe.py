@@ -1,11 +1,17 @@
 from datetime import datetime
 from typing import Any
 
+import pandas as pd
 import pyspark
+import pyspark.sql as ps
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.dataframe.utils import to_local_bounded_df
+from fugue.dataframe.utils import (
+    get_dataframe_column_names,
+    rename_dataframe_column_names,
+    to_local_bounded_df,
+)
 from fugue_test.dataframe_suite import DataFrameTests
 from pyspark.sql import SparkSession
 from pytest import raises
@@ -117,3 +123,26 @@ def _df(data, schema=None, metadata=None):
     else:
         df = session.createDataFrame(data)
     return SparkDataFrame(df, schema, metadata)
+
+
+def test_get_dataframe_column_names(spark_session):
+    df = spark_session.createDataFrame(
+        pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"])
+    )
+    assert get_dataframe_column_names(df) == ["0", "1", "2"]
+
+
+def test_rename_dataframe_column_names(spark_session):
+    pdf = spark_session.createDataFrame(
+        pd.DataFrame([[0, 1, 2]], columns=["a", "b", "c"])
+    )
+    df = rename_dataframe_column_names(pdf, {})
+    assert isinstance(df, ps.DataFrame)
+    assert get_dataframe_column_names(df) == ["a", "b", "c"]
+
+    pdf = spark_session.createDataFrame(
+        pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"])
+    )
+    df = rename_dataframe_column_names(pdf, {"0": "_0", "1": "_1", "2": "_2"})
+    assert isinstance(df, ps.DataFrame)
+    assert get_dataframe_column_names(df) == ["_0", "_1", "_2"]

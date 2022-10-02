@@ -1,7 +1,7 @@
-import concurrent.futures
 import os
 
 import numpy as np
+import pandas as pd
 import pyarrow as pa
 from fugue.dataframe import to_local_bounded_df, to_local_df
 from fugue.dataframe.array_dataframe import ArrayDataFrame
@@ -11,8 +11,11 @@ from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dataframe.utils import (
     _schema_eq,
     deserialize_df,
+    get_dataframe_column_names,
     get_join_schemas,
+    normalize_dataframe_column_names,
     pickle_df,
+    rename_dataframe_column_names,
     serialize_df,
     unpickle_df,
 )
@@ -201,3 +204,52 @@ def test_serialize_df(tmpdir):
     df_eq(df, deserialize_df(s), throw=True)
 
     raises(ValueError, lambda: deserialize_df('{"x":1}'))
+
+
+def test_get_dataframe_column_names():
+    df = pd.DataFrame([[0, 1, 2]])
+    assert get_dataframe_column_names(df) == [0, 1, 2]
+
+    adf = pa.Table.from_pandas(df)
+    assert get_dataframe_column_names(adf) == ["0", "1", "2"]
+
+    pdf = PandasDataFrame(pd.DataFrame([[0, 1]], columns=["a", "b"]))
+    assert get_dataframe_column_names(pdf) == ["a", "b"]
+
+
+def test_rename_dataframe_column_names():
+    assert rename_dataframe_column_names("dummy", {}) == "dummy"
+    pdf = pd.DataFrame([[0, 1, 2]], columns=["a", "b", "c"])
+    df = rename_dataframe_column_names(pdf, {})
+    assert get_dataframe_column_names(df) == ["a", "b", "c"]
+    df = rename_dataframe_column_names(pdf, {"b": "bb"})
+    assert get_dataframe_column_names(df) == ["a", "bb", "c"]
+
+    adf = pa.Table.from_pandas(pdf)
+    adf = rename_dataframe_column_names(adf, {})
+    assert get_dataframe_column_names(adf) == ["a", "b", "c"]
+    adf = rename_dataframe_column_names(adf, {"b": "bb"})
+    assert get_dataframe_column_names(adf) == ["a", "bb", "c"]
+
+    fdf = PandasDataFrame(pdf)
+    fdf = rename_dataframe_column_names(fdf, {})
+    assert get_dataframe_column_names(fdf) == ["a", "b", "c"]
+    fdf = rename_dataframe_column_names(fdf, {"b": "bb"})
+    assert get_dataframe_column_names(fdf) == ["a", "bb", "c"]
+
+
+def test_normalize_dataframe_column_names():
+    df = pd.DataFrame([[0, 1, 2]], columns=["a", "b", "c"])
+    df, names = normalize_dataframe_column_names(df)
+    assert get_dataframe_column_names(df) == ["a", "b", "c"]
+    assert names == {}
+
+    df = pd.DataFrame([[0, 1, 2]])
+    df, names = normalize_dataframe_column_names(df)
+    assert get_dataframe_column_names(df) == ["_0", "_1", "_2"]
+    assert names == {"_0": 0, "_1": 1, "_2": 2}
+
+    df = pd.DataFrame([[0, 1, 2, 3]], columns=["1", "2", "_2", "大"])
+    df, names = normalize_dataframe_column_names(df)
+    assert get_dataframe_column_names(df) == ["_1", "_2_1", "_2", "_1_1"]
+    assert names == {"_1": "1", "_2_1": "2", "_1_1": "大"}

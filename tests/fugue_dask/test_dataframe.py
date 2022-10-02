@@ -13,6 +13,10 @@ from fugue_dask.dataframe import DaskDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 from triad.collections.schema import Schema
+from fugue.dataframe.utils import (
+    get_dataframe_column_names,
+    rename_dataframe_column_names,
+)
 
 
 class DaskDataFrameTests(DataFrameTests.Tests):
@@ -195,3 +199,22 @@ def _test_as_array_perf():
         res = df.as_array(type_safe=True)
         ts += (datetime.now() - t).total_seconds()
     print(nts, ts)
+
+
+def test_get_dataframe_column_names():
+    df = pd.from_pandas(pandas.DataFrame([[0, 1, 2]]), npartitions=1)
+    assert get_dataframe_column_names(df) == [0, 1, 2]
+
+
+def test_rename_dataframe_column_names():
+    pdf = pd.from_pandas(
+        pandas.DataFrame([[0, 1, 2]], columns=["a", "b", "c"]), npartitions=1
+    )
+    df = rename_dataframe_column_names(pdf, {})
+    assert isinstance(df, pd.DataFrame)
+    assert get_dataframe_column_names(df) == ["a", "b", "c"]
+
+    pdf = pd.from_pandas(pandas.DataFrame([[0, 1, 2]]), npartitions=1)
+    df = rename_dataframe_column_names(pdf, {0: "_0", 1: "_1", 2: "_2"})
+    assert isinstance(df, pd.DataFrame)
+    assert get_dataframe_column_names(df) == ["_0", "_1", "_2"]

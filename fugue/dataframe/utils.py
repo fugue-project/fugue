@@ -2,7 +2,7 @@ import base64
 import json
 import os
 import pickle
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 import pyarrow as pa
@@ -17,6 +17,137 @@ from triad.collections.schema import SchemaError
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.assertion import assert_or_throw as aot
+from triad.utils.rename import normalize_names
+
+from .._utils.registry import fugue_plugin
+
+
+@fugue_plugin
+def get_dataframe_column_names(df: Any) -> List[Any]:  # pragma: no cover
+    """A generic function to get column names of any dataframe
+
+    :param df: the dataframe object
+    :return: the column names
+
+    .. note::
+
+        In order to support a new type of dataframe, an implementation must
+        be registered, for example
+
+        .. code-block::python
+
+            @get_dataframe_column_names.candidate(lambda df: isinstance(df, pa.Table))
+            def _get_pyarrow_dataframe_columns(df: pa.Table) -> List[Any]:
+                return [f.name for f in df.schema]
+    """
+    raise NotImplementedError(f"{type(df)} is not supported")
+
+
+@fugue_plugin
+def rename_dataframe_column_names(df: Any, names: Dict[str, Any]) -> Any:
+    """A generic function to rename column names of any dataframe
+
+    :param df: the dataframe object
+    :param names: the rename operations as a dict: ``old name => new name``
+    :return: the renamed dataframe
+
+    .. note::
+
+        In order to support a new type of dataframe, an implementation must
+        be registered, for example
+
+        .. code-block::python
+
+            @rename_dataframe_column_names.candidate(
+                lambda df, *args, **kwargs: isinstance(df, pd.DataFrame)
+            )
+            def _rename_pandas_dataframe(
+                df: pd.DataFrame, names: Dict[str, Any]
+            ) -> pd.DataFrame:
+                if len(names) == 0:
+                    return df
+                return df.rename(columns=names)
+    """
+    if len(names) == 0:
+        return df
+    else:  # pragma: no cover
+        raise NotImplementedError(f"{type(df)} is not supported")
+
+
+def normalize_dataframe_column_names(df: Any) -> Tuple[Any, Dict[str, Any]]:
+    """A generic function to normalize any dataframe's column names to follow
+    Fugue naming rules
+
+    .. note::
+
+        This is a temporary solution before
+        :class:`~triad:triad.collections.schema.Schema`
+        can take arbitrary names
+
+    .. admonition:: Examples
+
+        * ``[0,1]`` => ``{"_0":0, "_1":1}``
+        * ``["1a","2b"]`` => ``{"_1a":"1a", "_2b":"2b"}``
+        * ``["*a","-a"]`` => ``{"_a":"*a", "_a_1":"-a"}``
+
+    :param df: a dataframe object
+    :return: the renamed dataframe and the rename operations as a dict that
+        can **undo** the change
+
+    .. seealso::
+
+        * :func:`~.get_dataframe_column_names`
+        * :func:`~.rename_dataframe_column_names`
+        * :func:`~triad:triad.utils.rename.normalize_names`
+    """
+    cols = get_dataframe_column_names(df)
+    names = normalize_names(cols)
+    if len(names) == 0:
+        return df, {}
+    undo = {v: k for k, v in names.items()}
+    return (rename_dataframe_column_names(df, names), undo)
+
+
+@get_dataframe_column_names.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _get_pandas_dataframe_columns(df: pd.DataFrame) -> List[Any]:
+    return list(df.columns)
+
+
+@rename_dataframe_column_names.candidate(
+    lambda df, *args, **kwargs: isinstance(df, pd.DataFrame)
+)
+def _rename_pandas_dataframe(df: pd.DataFrame, names: Dict[str, Any]) -> pd.DataFrame:
+    if len(names) == 0:
+        return df
+    return df.rename(columns=names)
+
+
+@get_dataframe_column_names.candidate(lambda df: isinstance(df, pa.Table))
+def _get_pyarrow_dataframe_columns(df: pa.Table) -> List[Any]:
+    return [f.name for f in df.schema]
+
+
+@rename_dataframe_column_names.candidate(
+    lambda df, *args, **kwargs: isinstance(df, pa.Table)
+)
+def _rename_pyarrow_dataframe(df: pa.Table, names: Dict[str, Any]) -> pa.Table:
+    if len(names) == 0:
+        return df
+    return df.rename_columns([names.get(f.name, f.name) for f in df.schema])
+
+
+@get_dataframe_column_names.candidate(lambda df: isinstance(df, DataFrame))
+def _get_fugue_dataframe_columns(df: "DataFrame") -> List[Any]:
+    return df.schema.names
+
+
+@rename_dataframe_column_names.candidate(
+    lambda df, *args, **kwargs: isinstance(df, DataFrame)
+)
+def _rename_fugue_dataframe(df: "DataFrame", names: Dict[str, Any]) -> "DataFrame":
+    if len(names) == 0:
+        return df
+    return df.rename(columns=names)
 
 
 def _pa_type_eq(t1: pa.DataType, t2: pa.DataType) -> bool:

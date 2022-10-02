@@ -27,10 +27,10 @@ fugue\_ray
 .. |FugueDataTypes| replace:: :doc:`Fugue Data Types <tutorial:tutorials/appendix/generate_types>`
 
 
-fugue\_ray.dateframe
+fugue\_ray.dataframe
 --------------------
 
-.. automodule:: fugue_ray.dateframe
+.. automodule:: fugue_ray.dataframe
    :members:
    :undoc-members:
    :show-inheritance:
