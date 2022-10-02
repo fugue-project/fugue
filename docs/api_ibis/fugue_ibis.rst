@@ -32,6 +32,22 @@ fugue\_ibis
 .. |FugueDataTypes| replace:: :doc:`Fugue Data Types <tutorial:tutorials/appendix/generate_types>`
 
 
+fugue\_ibis.dataframe
+---------------------
+
+.. automodule:: fugue_ibis.dataframe
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+fugue\_ibis.execution\_engine
+-----------------------------
+
+.. automodule:: fugue_ibis.execution_engine
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue\_ibis.extensions
 ----------------------
 

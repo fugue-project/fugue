@@ -1,11 +1,14 @@
 from typing import Any
 
-import dask.dataframe as pd
 import pandas as pd
 import pyarrow as pa
 import ray
 import ray.data as rd
 from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue.dataframe.utils import (
+    get_dataframe_column_names,
+    rename_dataframe_column_names,
+)
 from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 from triad import Schema
@@ -107,3 +110,23 @@ class RayDataFrameTests(DataFrameTests.Tests):
         rdf = rd.from_pandas(pd.DataFrame(dict(a=range(10))))
         df = RayDataFrame(rdf.repartition(5))
         assert 5 == df.num_partitions
+
+    def test_get_dataframe_column_names(self):
+        df = rd.from_pandas(pd.DataFrame([[0, 10, 20]], columns=["0", "1", "2"]))
+        assert get_dataframe_column_names(df) == ["0", "1", "2"]
+
+        df = rd.from_arrow(
+            pa.Table.from_pandas(pd.DataFrame([[0, 10, 20]], columns=["0", "1", "2"]))
+        )
+        assert get_dataframe_column_names(df) == ["0", "1", "2"]
+
+    def test_rename_dataframe_column_names(self):
+        rdf = rd.from_pandas(pd.DataFrame([[0, 10, 20]], columns=["a", "b", "c"]))
+        df = rename_dataframe_column_names(rdf, {})
+        assert isinstance(df, rd.Dataset)
+        assert get_dataframe_column_names(df) == ["a", "b", "c"]
+
+        pdf = rd.from_pandas(pd.DataFrame([[0, 10, 20]], columns=["0", "1", "2"]))
+        df = rename_dataframe_column_names(pdf, {"0": "_0", "1": "_1", "2": "_2"})
+        assert isinstance(df, rd.Dataset)
+        assert get_dataframe_column_names(df) == ["_0", "_1", "_2"]
