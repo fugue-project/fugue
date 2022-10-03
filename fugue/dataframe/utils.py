@@ -490,10 +490,11 @@ def get_join_schemas(
     )
     cm = df1.schema.intersect(on)
     if how == "cross":
+        cs = df1.schema.intersect(schema2)
         aot(
-            len(df1.schema.intersect(schema2)) == 0,
-            SchemaError("can't specify on for cross join"),
+            len(cs) == 0,
+            SchemaError(f"invalid cross join, two dataframes have common columns {cs}"),
         )
     else:
-        aot(len(on) > 0, SchemaError("on must be specified"))
+        aot(len(on) > 0, SchemaError("join on columns must be specified"))
     return cm, (df1.schema.union(schema2))

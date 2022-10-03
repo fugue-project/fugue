@@ -6,6 +6,7 @@
 -   [363](https://github.com/fugue-project/fugue/issues/363) Create IbisDataFrame and IbisExecutionEngine
 -   [364](https://github.com/fugue-project/fugue/issues/364) Enable Map type support
 -   [365](https://github.com/fugue-project/fugue/issues/365) Support column names starting with numbers
+-   [361](https://github.com/fugue-project/fugue/issues/361) Better error message for cross join
 
 ## 0.7.2
 
