@@ -195,7 +195,7 @@ class IbisExecutionEngine(ExecutionEngine):
         )
         sm = None
         for col in schema.names:
-            expr = _df.native[col].case().when(ibis.null(), 0).else_(1).end()
+            expr = _df.native[col].isnull().ifelse(0, 1)
             if sm is None:
                 sm = expr
             else:
