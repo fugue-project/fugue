@@ -125,7 +125,9 @@ class IbisExecutionEngine(ExecutionEngine):
             tb = _df1.native.inner_join(
                 _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
             )
-        return self._to_ibis_dataframe(tb[end_schema.names], metadata=metadata)
+        return self._to_ibis_dataframe(
+            tb[end_schema.names], schema=end_schema, metadata=metadata
+        )
 
     def union(
         self,
@@ -232,7 +234,7 @@ class IbisExecutionEngine(ExecutionEngine):
             ibis.coalesce(tb[f], ibis.literal(vd[f])).name(f) if f in names else tb[f]
             for f in df.schema.names
         ]
-        return self._to_ibis_dataframe(tb[cols], metadata=metadata)
+        return self._to_ibis_dataframe(tb[cols], schema=df.schema, metadata=metadata)
 
     def take(
         self,
@@ -257,7 +259,9 @@ class IbisExecutionEngine(ExecutionEngine):
 
         if len(_presort) == 0:
             if len(partition_spec.partition_by) == 0:
-                return self._to_ibis_dataframe(idf.native.head(n), metadata=metadata)
+                return self._to_ibis_dataframe(
+                    idf.native.head(n), schema=df.schema, metadata=metadata
+                )
             pcols = ", ".join(
                 self.encode_column_name(x) for x in partition_spec.partition_by
             )
@@ -268,7 +272,9 @@ class IbisExecutionEngine(ExecutionEngine):
                 f") WHERE __fugue_take_param<={n}"
             )
             tb = self._raw_select(sql, {tbn: idf})
-            return self._to_ibis_dataframe(tb[df.schema.names], metadata=metadata)
+            return self._to_ibis_dataframe(
+                tb[df.schema.names], schema=df.schema, metadata=metadata
+            )
 
         sorts: List[str] = []
         for k, v in _presort.items():
@@ -281,7 +287,9 @@ class IbisExecutionEngine(ExecutionEngine):
         if len(partition_spec.partition_by) == 0:
             sql = f"SELECT * FROM {tbn} {sort_expr} LIMIT {n}"
             tb = self._raw_select(sql, {tbn: idf})
-            return self._to_ibis_dataframe(tb[df.schema.names], metadata=metadata)
+            return self._to_ibis_dataframe(
+                tb[df.schema.names], schema=df.schema, metadata=metadata
+            )
 
         pcols = ", ".join(
             self.encode_column_name(x) for x in partition_spec.partition_by
@@ -293,7 +301,9 @@ class IbisExecutionEngine(ExecutionEngine):
             f") WHERE __fugue_take_param<={n}"
         )
         tb = self._raw_select(sql, {tbn: idf})
-        return self._to_ibis_dataframe(tb[df.schema.names], metadata=metadata)
+        return self._to_ibis_dataframe(
+            tb[df.schema.names], schema=df.schema, metadata=metadata
+        )
 
     def _raw_select(self, statement: str, dfs: Dict[str, Any]) -> IbisTable:
         cte: List[str] = []

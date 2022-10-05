@@ -712,14 +712,14 @@ class ExecutionEngineTests(object):
             ps2 = PartitionSpec(by=["c"], presort="b ASC")
             a = e.to_df(
                 [
-                    [1, 2, 3],
-                    [1, 3, 4],
-                    [2, 1, 2],
-                    [2, 2, 2],
+                    ["a", 2, 3],
+                    ["a", 3, 4],
+                    ["b", 1, 2],
+                    ["b", 2, 2],
                     [None, 4, 2],
                     [None, 2, 1],
                 ],
-                "a:double,b:double,c:double",
+                "a:str,b:int,c:long",
             )
             b = e.take(a, n=1, presort="b desc", metadata=(dict(a=1)))
             c = e.take(a, n=2, presort="a desc", na_position="first")
@@ -730,32 +730,32 @@ class ExecutionEngineTests(object):
             df_eq(
                 b,
                 [[None, 4, 2]],
-                "a:double,b:double,c:double",
+                "a:str,b:int,c:long",
                 metadata=dict(a=1),
                 throw=True,
             )
             df_eq(
                 c,
                 [[None, 4, 2], [None, 2, 1]],
-                "a:double,b:double,c:double",
+                "a:str,b:int,c:long",
                 throw=True,
             )
             df_eq(
                 d,
-                [[1, 3, 4], [2, 2, 2], [None, 4, 2]],
-                "a:double,b:double,c:double",
+                [["a", 3, 4], ["b", 2, 2], [None, 4, 2]],
+                "a:str,b:int,c:long",
                 throw=True,
             )
             df_eq(
                 f,
-                [[1, 2, 3], [1, 3, 4], [2, 1, 2], [None, 2, 1]],
-                "a:double,b:double,c:double",
+                [["a", 2, 3], ["a", 3, 4], ["b", 1, 2], [None, 2, 1]],
+                "a:str,b:int,c:long",
                 throw=True,
             )
             df_eq(
                 g,
-                [[2, 1, 2], [2, 2, 2]],
-                "a:double,b:double,c:double",
+                [["b", 1, 2], ["b", 2, 2]],
+                "a:str,b:int,c:long",
                 throw=True,
             )
             df_eq(
@@ -764,7 +764,7 @@ class ExecutionEngineTests(object):
                     [None, 4, 2],
                     [None, 2, 1],
                 ],
-                "a:double,b:double,c:double",
+                "a:str,b:int,c:long",
                 throw=True,
             )
             raises(ValueError, lambda: e.take(a, n=0.5, presort=None))
