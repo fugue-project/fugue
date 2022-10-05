@@ -155,21 +155,23 @@ class ExecutionEngineTests(object):
             col_b = ff.sum(col("b"))
             b = e.select(
                 a,
-                SelectColumns(col("a"), col_b.cast(float).alias("b")),
+                SelectColumns(col("a"), col_b.cast(float).alias("c")),
                 having=(col_b >= 7) | (col("a") == 1),
             )
-            df_eq(b, [[1, 2], [None, 7]], "a:double,b:double", throw=True)
+            df_eq(b, [[1, 2], [None, 7]], "a:double,c:double", throw=True)
 
             # literal + alias inference
             # https://github.com/fugue-project/fugue/issues/222
             col_b = ff.sum(col("b"))
             b = e.select(
                 a,
-                SelectColumns(col("a"), lit(1, "o").cast(str), col_b.cast(float)),
+                SelectColumns(
+                    col("a"), lit(1, "o").cast(str), col_b.cast(float).alias("c")
+                ),
                 having=(col_b >= 7) | (col("a") == 1),
             )
             df_eq(
-                b, [[1, "1", 2], [None, "1", 7]], "a:double,o:str,b:double", throw=True
+                b, [[1, "1", 2], [None, "1", 7]], "a:double,o:str,c:double", throw=True
             )
 
         def test_assign(self):
