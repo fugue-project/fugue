@@ -23,7 +23,7 @@ class IbisDataFrame(DataFrame):
         _schema = to_schema(table.schema())
         if schema is not None:
             _to_schema = _input_schema(schema).assert_not_empty()
-            if _to_schema != schema:
+            if _to_schema != _schema:
                 table = self._alter_table_columns(table, _schema, _to_schema)
                 _schema = _to_schema
         self._table = table
@@ -34,15 +34,19 @@ class IbisDataFrame(DataFrame):
         """Ibis Table object"""
         return self._table
 
-    def _to_local_df(self, table: IbisTable, metadata: Any = None) -> LocalDataFrame:
+    def _to_local_df(
+        self, table: IbisTable, schema: Any = None, metadata: Any = None
+    ) -> LocalDataFrame:
         raise NotImplementedError  # pragma: no cover
 
     def _to_iterable_df(
-        self, table: IbisTable, metadata: Any = None
+        self, table: IbisTable, sdhema: Any = None, metadata: Any = None
     ) -> IterableDataFrame:
         raise NotImplementedError  # pragma: no cover
 
-    def _to_new_df(self, table: IbisTable, metadata: Any = None) -> DataFrame:
+    def _to_new_df(
+        self, table: IbisTable, schema: Any = None, metadata: Any = None
+    ) -> DataFrame:
         raise NotImplementedError  # pragma: no cover
 
     def _compute_scalar(self, table: IbisTable) -> Any:
@@ -75,11 +79,11 @@ class IbisDataFrame(DataFrame):
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         schema = self.schema.exclude(cols)
-        return self._to_new_df(self._table[schema.names])
+        return self._to_new_df(self._table[schema.names], schema=schema)
 
     def _select_cols(self, keys: List[Any]) -> DataFrame:
         schema = self.schema.extract(keys)
-        return self._to_new_df(self._table[schema.names])
+        return self._to_new_df(self._table[schema.names], schema=schema)
 
     def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
@@ -92,31 +96,34 @@ class IbisDataFrame(DataFrame):
                 cols.append(self._table[a])
             else:
                 cols.append(self._table[a].name(b))
-        return self._to_new_df(self._table.projection(cols))
+        return self._to_new_df(self._table.projection(cols), schema=schema)
 
     def alter_columns(self, columns: Any) -> DataFrame:
         new_schema = self._get_altered_schema(columns)
         if new_schema == self.schema:
             return self
         return self._to_new_df(
-            self._alter_table_columns(self._table, self.schema, new_schema)
+            self._alter_table_columns(self._table, self.schema, new_schema),
+            schema=new_schema,
         )
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
-        return self._to_local_df(self._table).as_arrow(type_safe=type_safe)
+        return self.as_local().as_arrow(type_safe=type_safe)
 
     def as_pandas(self) -> pd.DataFrame:
-        return self._to_local_df(self._table).as_pandas()
+        return self.as_local().as_pandas()
 
     def as_local(self) -> LocalDataFrame:
-        return self._to_local_df(self._table, self.metadata)
+        return self._to_local_df(
+            self._table, schema=self.schema, metadata=self.metadata
+        )
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:
         if columns is not None:
             return self[columns].as_array(type_safe=type_safe)
-        return self._to_local_df(self._table).as_array(type_safe=type_safe)
+        return self.as_local().as_array(type_safe=type_safe)
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
@@ -138,6 +145,9 @@ class IbisDataFrame(DataFrame):
     ):
         fields: Dict[str, Any] = {}
         for f1, f2 in zip(schema.fields, new_schema.fields):
-            if f1.type != f2.type:
+            if not self._type_equal(f1.type, f2.type):
                 fields[f1.name] = self._table[f1.name].cast(_pa_to_ibis_type(f2.type))
         return table.mutate(**fields)
+
+    def _type_equal(self, tp1: pa.DataType, tp2: pa.DataType) -> bool:
+        return tp1 == tp2

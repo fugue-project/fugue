@@ -1050,19 +1050,19 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 a = dag.df(
                     [
-                        [0, 1, 1],
-                        [0, 2, 1],
-                        [1, 3, 1],
-                        [1, 4, 1],
+                        ["0", 1, 1],
+                        ["0", 2, 1],
+                        ["1", 3, 1],
+                        ["1", 4, 1],
                         [None, 2, 1],
                         [None, 3, 1],
                     ],
-                    "a:double,b:double,c:double",
+                    "a:str,b:int,c:long",
                 )
                 a.partition(by=["a"], presort="b desc").take(n=1).assert_eq(
                     ArrayDataFrame(
-                        [[0, 2, 1], [1, 4, 1], [None, 3, 1]],
-                        "a:double,b:double,c:double",
+                        [["0", 2, 1], ["1", 4, 1], [None, 3, 1]],
+                        "a:str,b:int,c:long",
                     )
                 )
             # No partition
@@ -1074,25 +1074,25 @@ class BuiltInTests(object):
             # take presort overrides partition presort
             with self.dag() as dag:
                 a = dag.df(
-                    [[0, 1], [0, 2], [1, 3], [1, 4], [None, 2], [None, 3]],
-                    "a:double,b:double",
+                    [["0", 1], ["0", 2], ["1", 3], ["1", 4], [None, 2], [None, 3]],
+                    "a:str,b:double",
                 )
                 a.partition(by=["a"], presort="b desc").take(
                     n=1, presort="b asc"
                 ).assert_eq(
-                    ArrayDataFrame([[0, 1], [1, 3], [None, 2]], "a:double,b:double")
+                    ArrayDataFrame([["0", 1], ["1", 3], [None, 2]], "a:str,b:double")
                 )
             # order by with NULL first
             with self.dag() as dag:
-                a = dag.df([[0, 1], [0, 2], [None, 3]], "a:double,b:double")
+                a = dag.df([["0", 1], ["0", 2], [None, 3]], "a:str,b:double")
                 a.take(1, presort="a desc", na_position="first").assert_eq(
-                    ArrayDataFrame([[None, 3]], "a:double,b:double")
+                    ArrayDataFrame([[None, 3]], "a:str,b:double")
                 )
             # order by with NULL last
             with self.dag() as dag:
-                a = dag.df([[0, 1], [1, 2], [None, 3]], "a:double,b:double")
+                a = dag.df([["0", 1], ["1", 2], [None, 3]], "a:str,b:double")
                 a.take(1, presort="a desc", na_position="last").assert_eq(
-                    ArrayDataFrame([[1, 2]], "a:double,b:double")
+                    ArrayDataFrame([["1", 2]], "a:str,b:double")
                 )
             # Return any row because no presort
             with self.dag() as dag:

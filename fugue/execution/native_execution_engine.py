@@ -118,6 +118,11 @@ class NativeExecutionEngine(ExecutionEngine):
     def to_df(
         self, df: Any, schema: Any = None, metadata: Any = None
     ) -> LocalBoundedDataFrame:
+        return self._to_native_df(df, schema, metadata)
+
+    def _to_native_df(
+        self, df: Any, schema: Any = None, metadata: Any = None
+    ) -> LocalBoundedDataFrame:
         return to_local_bounded_df(df, schema, metadata)
 
     def repartition(
@@ -160,7 +165,7 @@ class NativeExecutionEngine(ExecutionEngine):
             )
             output_df._metadata = ParamDict(metadata, deep=True)
             output_df._metadata.set_readonly()
-            return self.to_df(output_df)
+            return self._to_native_df(output_df)
         presort = partition_spec.presort
         presort_keys = list(presort.keys())
         presort_asc = list(presort.values())
@@ -182,7 +187,7 @@ class NativeExecutionEngine(ExecutionEngine):
         return PandasDataFrame(result, output_schema, metadata)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
-        return self.to_df(df)
+        return self._to_native_df(df)
 
     def persist(
         self,
@@ -190,7 +195,7 @@ class NativeExecutionEngine(ExecutionEngine):
         lazy: bool = False,
         **kwargs: Any,
     ) -> DataFrame:
-        return self.to_df(df)
+        return self._to_native_df(df)
 
     def join(
         self,
@@ -363,7 +368,7 @@ class NativeExecutionEngine(ExecutionEngine):
         columns: Any = None,
         **kwargs: Any,
     ) -> LocalBoundedDataFrame:
-        return self.to_df(
+        return self._to_native_df(
             load_df(
                 path, format_hint=format_hint, columns=columns, fs=self.fs, **kwargs
             )
@@ -382,7 +387,7 @@ class NativeExecutionEngine(ExecutionEngine):
         if not force_single and not partition_spec.empty:
             kwargs["partition_cols"] = partition_spec.partition_by
         self.fs.makedirs(os.path.dirname(path), recreate=True)
-        df = self.to_df(df)
+        df = self._to_native_df(df)
         save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
 
 
