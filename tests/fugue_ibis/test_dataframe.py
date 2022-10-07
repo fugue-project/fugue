@@ -28,6 +28,11 @@ class IbisDataFrameTests(DataFrameTests.Tests):
             self._con.table(name), schema=schema, metadata=metadata
         )
 
+    def test_init_df(self):
+        df = self.df([["x", 1]], "a:str,b:int")
+        df = MockDuckDataFrame(df.native, "a:str,b:long")
+        assert df.schema == "a:str,b:long"
+
     def test_is_local(self):
         df = self.df([["x", 1]], "a:str,b:int")
         assert not df.is_local
