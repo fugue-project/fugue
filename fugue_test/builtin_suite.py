@@ -1092,7 +1092,7 @@ class BuiltInTests(object):
             with self.dag() as dag:
                 a = dag.df([["0", 1], ["1", 2], [None, 3]], "a:str,b:double")
                 a.take(1, presort="a desc", na_position="last").assert_eq(
-                    ArrayDataFrame([[1, 2]], "a:str,b:double")
+                    ArrayDataFrame([["1", 2]], "a:str,b:double")
                 )
             # Return any row because no presort
             with self.dag() as dag:
