@@ -11,38 +11,36 @@ from adagio.specs import WorkflowSpec
 from fugue.constants import FUGUE_CONF_WORKFLOW_CONCURRENCY
 from fugue.dataframe import DataFrame
 from fugue.execution.execution_engine import ExecutionEngine
-from fugue.execution.factory import make_execution_engine
 from fugue.workflow._checkpoint import CheckpointPath
-from triad import SerializableRLock
+from triad import SerializableRLock, ParamDict
 
 
 class FugueWorkflowContext(WorkflowContext):
     def __init__(
         self,
-        execution_engine: Any = None,
+        engine: ExecutionEngine,
+        compile_conf: Any = None,
         cache: Any = NoOpCache,
         workflow_engine: Any = None,
         hooks: Any = WorkflowHooks,
     ):
-        ee = make_execution_engine(execution_engine)
-        self._fugue_engine = ee
+        conf = ParamDict(compile_conf)
+        self._fugue_engine = engine
         self._lock = SerializableRLock()
         self._results: Dict[Any, DataFrame] = {}
         self._execution_id = ""
         self._checkpoint_path = CheckpointPath(self.execution_engine)
         if workflow_engine is None:
             workflow_engine = ParallelExecutionEngine(
-                self.execution_engine.conf.get_or_throw(
-                    FUGUE_CONF_WORKFLOW_CONCURRENCY, int
-                ),
+                conf.get_or_throw(FUGUE_CONF_WORKFLOW_CONCURRENCY, int),
                 self,
             )
         super().__init__(
             cache=cache,
             engine=workflow_engine,
             hooks=hooks,
-            logger=ee.log,
-            config=ee.compile_conf,
+            logger=self.execution_engine.log,
+            config=conf,
         )
 
     def run(self, spec: WorkflowSpec, conf: Dict[str, Any]) -> None:
@@ -50,12 +48,10 @@ class FugueWorkflowContext(WorkflowContext):
             self._execution_id = str(uuid4())
             self._checkpoint_path = CheckpointPath(self.execution_engine)
             self._checkpoint_path.init_temp_path(self._execution_id)
-            self.execution_engine.start()
             super().run(spec, conf)
         finally:
             self._checkpoint_path.remove_temp_path()
             self._execution_id = ""
-            self.execution_engine.stop()
 
     @property
     def checkpoint_path(self) -> CheckpointPath:

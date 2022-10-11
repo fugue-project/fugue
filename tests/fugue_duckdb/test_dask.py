@@ -108,7 +108,8 @@ class DuckDaskBuiltInTests(BuiltInTests.Tests):
         )
         df["a"] = pd.to_datetime(df.a)
 
-        with self.dag() as dag:
+        with FugueWorkflow() as dag:
             x = dag.df(df)
             result = dag.select("SELECT * FROM ", x)
             result.output(assert_data)
+        dag.run(self.engine)

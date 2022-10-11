@@ -170,20 +170,22 @@ class RayBuiltInTests(BuiltInTests.Tests):
         path = os.path.join(self.tmpdir, "a")
         path2 = os.path.join(self.tmpdir, "b.test.csv")
         path3 = os.path.join(self.tmpdir, "c.partition")
-        with self.dag() as dag:
+        with FugueWorkflow() as dag:
             b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
             b.partition(num=3).save(path, fmt="parquet", single=True)
             b.save(path2, header=True)
+        dag.run(self.engine)
         assert FileSystem().isfile(path)
-        with self.dag() as dag:
+        with FugueWorkflow() as dag:
             a = dag.load(path, fmt="parquet", columns=["a", "c"])
             a.assert_eq(dag.df([[1, 6], [7, 2]], "a:long,c:int"))
             a = dag.load(path2, header=True, columns="c:int,a:long")
             a.assert_eq(dag.df([[6, 1], [2, 7]], "c:int,a:long"))
+        dag.run(self.engine)
 
         return
         # TODO: the following (writing partitions) is not supported by Ray
-        # with self.dag() as dag:
+        # with FugueWorkflow() as dag:
         #     b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
         #     b.partition(by="c").save(path3, fmt="parquet", single=False)
         # assert FileSystem().isdir(path3)

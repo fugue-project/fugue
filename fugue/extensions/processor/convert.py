@@ -78,9 +78,10 @@ def register_processor(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
             import pn  # register_extensions will be called
             from fugue import FugueWorkflow
 
-            with FugueWorkflow() as dag:
-                # use my_processor by alias
-                dag.df([[0]],"a:int").process("mp").show()
+            dag = FugueWorkflow()
+            # use my_processor by alias
+            dag.df([[0]],"a:int").process("mp").show()
+            dag.run()
     """
     _PROCESSOR_REGISTRY.register(alias, obj, on_dup=on_dup)
 

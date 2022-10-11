@@ -28,9 +28,11 @@ def test_input_module():
 
     with FugueWorkflow() as dag:
         input1(dag).assert_eq(dag.df([[0]], "a:int"))
+    dag.run()
 
     with FugueWorkflow() as dag:
         input2(a=10, wf=dag).assert_eq(dag.df([[10]], "a:int"))
+    dag.run()
 
     with FugueWorkflow() as dag:
         dfs = input3(dag, 10, 11)
@@ -39,6 +41,7 @@ def test_input_module():
         dfs = dag.input3(10, 11)
         dfs["a"].assert_eq(dag.df([[10]], "a:int"))
         dfs["b"].assert_eq(dag.df([[11]], "b:int"))
+    dag.run()
 
 
 def test_process_module():
@@ -89,12 +92,14 @@ def test_process_module():
         r = p2(d=1, dfs=dfs)
         r["aa"].assert_eq(dag.df([[1]], "a:int"))
         r["bb"].assert_eq(dag.df([[11]], "a:int"))
+    dag.run()
 
     with FugueWorkflow() as dag:
         df = dag.df([[0]], "a:int")
         p3(df).assert_eq(dag.df([[1]], "a:int"))
         p3(df=df).assert_eq(dag.df([[1]], "a:int"))
         df.p4().assert_eq(dag.df([[1]], "a:int"))
+    dag.run()
 
 
 def test_output_module():
@@ -125,6 +130,7 @@ def test_output_module():
         o2(df=df, wf=dag)
         o3(df)
         df.o3()
+    dag.run()
 
 
 def test_invalid_module():

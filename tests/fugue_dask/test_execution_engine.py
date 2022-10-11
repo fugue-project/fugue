@@ -120,10 +120,11 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
         def m_o(engine: DaskExecutionEngine, df: dd.DataFrame) -> None:
             assert 1 == df.compute().shape[0]
 
-        with self.dag() as dag:
+        with FugueWorkflow() as dag:
             df = dag.create(m_c).process(m_p)
             df.assert_eq(dag.df([[0]], "a:long"))
             df.output(m_o)
+        dag.run(self.engine)
 
 
 def test_transform():

@@ -6,23 +6,23 @@ from pytest import raises
 
 
 def test_parallel():
-    dag = FugueWorkflow()
+    dag = FugueWorkflow({"fugue.workflow.concurrency": 10})
     dag.create(create).process(process).output(display)
     dag.create(create).process(process).output(display)
 
     t = timeit(
-        lambda: dag.run(NativeExecutionEngine({"fugue.workflow.concurrency": 10})),
+        lambda: dag.run(),
         number=1,
     )  # warmup
     t = timeit(
-        lambda: dag.run(NativeExecutionEngine({"fugue.workflow.concurrency": 10})),
+        lambda: dag.run(),
         number=1,
     )
     assert t < 0.4
 
 
 def test_parallel_exception():
-    dag = FugueWorkflow()
+    dag = FugueWorkflow({"fugue.workflow.concurrency": 2})
     dag.create(create).process(process).process(process, params=dict(sec=0.5)).output(
         display
     )
@@ -33,11 +33,11 @@ def test_parallel_exception():
             dag.run(*args)
 
     t = timeit(
-        lambda: run(dag, NativeExecutionEngine({"fugue.workflow.concurrency": 2})),
+        lambda: run(dag),
         number=1,
     )  # warmup
     t = timeit(
-        lambda: run(dag, NativeExecutionEngine({"fugue.workflow.concurrency": 2})),
+        lambda: run(dag),
         number=1,
     )
     assert t < 0.5

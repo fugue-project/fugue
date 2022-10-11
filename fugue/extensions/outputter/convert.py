@@ -76,9 +76,10 @@ def register_outputter(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
             import pn  # register_extensions will be called
             from fugue import FugueWorkflow
 
-            with FugueWorkflow() as dag:
-                # use my_outputter by alias
-                dag.df([[0]],"a:int").output("mo")
+            dag = FugueWorkflow()
+            # use my_outputter by alias
+            dag.df([[0]],"a:int").output("mo")
+            dag.run()
     """
     _OUTPUTTER_REGISTRY.register(alias, obj, on_dup=on_dup)
 

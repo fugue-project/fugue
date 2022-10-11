@@ -70,10 +70,11 @@ class NativeExecutionEngineBuiltInSqliteTests(BuiltInTests.Tests):
         def m_o(engine: NativeExecutionEngine, df: pa.Table) -> None:
             assert 1 == df.to_pandas().shape[0]
 
-        with self.dag() as dag:
+        with FugueWorkflow() as dag:
             df = dag.create(m_c).process(m_p)
             df.assert_eq(dag.df([[0]], "a:long"))
             df.output(m_o)
+        dag.run(self.engine)
 
 
 class NativeExecutionEngineQPDTests(ExecutionEngineTests.Tests):

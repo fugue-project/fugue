@@ -128,7 +128,7 @@ def transform(
     """
     _check_valid_input(df, save_path)
 
-    dag = FugueWorkflow(conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
+    dag = FugueWorkflow(compile_conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
     if isinstance(df, str):
         src = dag.load(df, fmt="parquet")
     else:
@@ -223,7 +223,7 @@ def out_transform(
       This transformation is guaranteed to execute immediately (eager)
       and return nothing
     """
-    dag = FugueWorkflow(conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
+    dag = FugueWorkflow(compile_conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
     if isinstance(df, str):
         src = dag.load(df, fmt="parquet")
     else:

@@ -85,8 +85,7 @@ def test_workflow():
     builder.run()
     df_eq(a.result, [[0], [0], [1]], "a:int")
     raises(FuguePluginsRegistrationError, lambda: builder.run("abc"))
-    builder.run(FugueWorkflowContext())
-    df_eq(a.result, [[0], [0], [1]], "a:int")
+
     builder.run("NativeExecutionEngine")
     df_eq(b.result, [[0, 2], [0, 2], [1, 1]], "a:int,b:int")
     df_eq(b.compute(), [[0, 2], [0, 2], [1, 1]], "a:int,b:int")
@@ -121,30 +120,11 @@ def test_yield(tmpdir):
 
 
 def test_compile_conf():
-    def assert_conf(e: ExecutionEngine, **kwargs) -> pd.DataFrame:
-        for k, v in kwargs.items():
-            assert e.compile_conf[k] == v
-        return pd.DataFrame([[0]], columns=["a"])
+    dag = FugueWorkflow(compile_conf={"a": 1})
+    assert dag.conf["a"] == 1
 
-    dag = FugueWorkflow(conf={"a": 1})
-    dag.create(assert_conf, params=dict(a=1))
-
-    dag.run()
-
-    with raises(KeyError):  # non-compile time param doesn't keep in new engine
-        dag.run(NativeExecutionEngine())
-
-    dag = FugueWorkflow(conf={FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE: "abc"})
-    dag.create(assert_conf, params=dict({FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE: "abc"}))
-
-    dag.run()
-
-    # non-compile time param is kepts
-    dag.run(NativeExecutionEngine())
-
-    # non-compile time param can't be changed by new engines
-    # new engine compile conf will be overwritten
-    dag.run(NativeExecutionEngine({FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE: "def"}))
+    dag = FugueWorkflow()  # default conf test
+    assert dag.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str) != ""
 
 
 class MockCache(WorkflowResultCache):

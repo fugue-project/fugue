@@ -85,9 +85,10 @@ def register_transformer(alias: str, obj: Any, on_dup: str = "overwrite") -> Non
             import pn  # register_extensions will be called
             from fugue import FugueWorkflow
 
-            with FugueWorkflow() as dag:
-                # use my_transformer by alias
-                dag.df([[0]],"a:int").transform("mt").show()
+            dag = FugueWorkflow()
+            # use my_transformer by alias
+            dag.df([[0]],"a:int").transform("mt").show()
+            dag.run()
     """
     _TRANSFORMER_REGISTRY.register(alias, obj, on_dup=on_dup)
 
@@ -154,9 +155,10 @@ def register_output_transformer(
             import pn  # register_extensions will be called
             from fugue import FugueWorkflow
 
-            with FugueWorkflow() as dag:
-                # use my_transformer by alias
-                dag.df([[0]],"a:int").out_transform("mt")
+            dag = FugueWorkflow()
+            # use my_transformer by alias
+            dag.df([[0]],"a:int").out_transform("mt")
+            dag.run()
     """
     _OUT_TRANSFORMER_REGISTRY.register(alias, obj, on_dup=on_dup)
 
