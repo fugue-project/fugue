@@ -10,8 +10,8 @@ from fugue.collections.yielded import Yielded
 from fugue.column import ColumnExpr
 from fugue.column import SelectColumns as ColumnsSelect
 from fugue.column import col, lit
-from fugue.constants import _FUGUE_GLOBAL_CONF
 from fugue.constants import (
+    _FUGUE_GLOBAL_CONF,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE,
     FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
@@ -21,6 +21,7 @@ from fugue.constants import (
 from fugue.dataframe import DataFrame, YieldedDataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
+from fugue.execution import ExecutionEngine
 from fugue.execution.factory import make_execution_engine
 from fugue.extensions._builtins import (
     Aggregate,
@@ -1452,6 +1453,11 @@ class FugueWorkflow:
     """
 
     def __init__(self, compile_conf: Any = None):
+        assert_or_throw(
+            not isinstance(compile_conf, ExecutionEngine),
+            ValueError("FugueWorkflow no longer takes ExecutionEngine as the input"),
+        )
+
         self._lock = SerializableRLock()
         self._spec = WorkflowSpec()
         self._computed = False
@@ -1505,9 +1511,6 @@ class FugueWorkflow:
             e = make_execution_engine(engine=engine, conf=conf, **kwargs)
             self._computed = False
             self._workflow_ctx = FugueWorkflowContext(engine=e, compile_conf=self.conf)
-            # self._workflow_ctx.execution_engine.compile_conf.update(
-            #     self._compile_conf
-            # )
             try:
                 self._workflow_ctx.run(self._spec, {})
             except Exception as ex:

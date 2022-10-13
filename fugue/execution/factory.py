@@ -267,17 +267,13 @@ def make_execution_engine(
         execution_engine.set_sql_engine(sql_engine)
         return execution_engine
     if isinstance(engine, ExecutionEngine):
-        if conf is not None:
-            engine.compile_conf.update(conf)
-        engine.compile_conf.update(kwargs)
         result = engine
     else:
         result = parse_execution_engine(engine, conf, **kwargs)
         sql_engine = make_sql_engine(None, result)
         result.set_sql_engine(sql_engine)
-    result.compile_conf.update(result.conf, on_dup=ParamDict.IGNORE)
-    result.compile_conf.update(conf, on_dup=ParamDict.OVERWRITE)
-    result.compile_conf.update(kwargs, on_dup=ParamDict.OVERWRITE)
+    result.conf.update(conf, on_dup=ParamDict.OVERWRITE)
+    result.conf.update(kwargs, on_dup=ParamDict.OVERWRITE)
     return result
 
 

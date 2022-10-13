@@ -21,8 +21,8 @@ from fugue_sql._visitors import FugueSQLHooks, _Extensions
 class FugueSQLWorkflow(FugueWorkflow):
     """Fugue workflow that supports Fugue SQL. Please read |FugueSQLTutorial|."""
 
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
+    def __init__(self, compile_conf: Any = None):
+        super().__init__(compile_conf)
         self._sql_vars: Dict[str, WorkflowDataFrame] = {}
 
     @property
@@ -180,7 +180,7 @@ def fsql(
         ''', df=df, t=t, fsql_ignore_case=True).run()
     """
     global_vars, local_vars = get_caller_global_local_vars()
-    dag = FugueSQLWorkflow(None, {FUGUE_CONF_SQL_IGNORE_CASE: fsql_ignore_case})
+    dag = FugueSQLWorkflow(compile_conf={FUGUE_CONF_SQL_IGNORE_CASE: fsql_ignore_case})
     try:
         dag._sql(sql, global_vars, local_vars, *args, **kwargs)
     except SyntaxError as ex:
