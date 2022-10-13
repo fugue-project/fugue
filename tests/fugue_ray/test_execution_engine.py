@@ -3,7 +3,7 @@ import os
 import duckdb
 import pandas as pd
 import ray
-from fugue import ArrayDataFrame, FugueWorkflow, transform
+from fugue import ArrayDataFrame, FugueWorkflow, transform, DataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_sql import fsql
 from fugue_test.builtin_suite import BuiltInTests
