@@ -12,6 +12,7 @@ from fugue import (
     WorkflowDataFrames,
 )
 from fugue.collections.partition import PartitionSpec
+from fugue.collections.yielded import YieldedFile
 from fugue.constants import (
     FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH,
     FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
@@ -106,7 +107,8 @@ def test_yield(tmpdir):
 
     dag1 = FugueWorkflow()
     dag1.df(df).transform(t).yield_file_as("x")
-    dag1.run("", {FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)})
+    res = dag1.run("", {FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)})
+    assert isinstance(res.yields["x"], YieldedFile)
 
     dag2 = FugueWorkflow()
     dag2.df(dag1.yields["x"]).transform(t).yield_dataframe_as("y")

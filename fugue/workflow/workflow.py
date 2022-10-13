@@ -21,7 +21,6 @@ from fugue.constants import (
 from fugue.dataframe import DataFrame, YieldedDataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
-from fugue.execution import ExecutionEngine
 from fugue.execution.factory import make_execution_engine
 from fugue.extensions._builtins import (
     Aggregate,
@@ -1427,6 +1426,12 @@ class WorkflowDataFrames(DataFrames):
 
 
 class FugueWorkflowResult(DataFrames):
+    """The result object of :meth:`~.FugueWorkflow.run`. Users should not
+    construct this object.
+
+    :param DataFrames: yields of the workflow
+    """
+
     def __init__(self, yields: Dict[str, Yielded]):
         self._yields = yields
         super().__init__(
@@ -1454,8 +1459,10 @@ class FugueWorkflow:
 
     def __init__(self, compile_conf: Any = None):
         assert_or_throw(
-            not isinstance(compile_conf, ExecutionEngine),
-            ValueError("FugueWorkflow no longer takes ExecutionEngine as the input"),
+            compile_conf is None or isinstance(compile_conf, (dict, ParamDict)),
+            ValueError(
+                f"FugueWorkflow no longer takes {type(compile_conf)} as the input"
+            ),
         )
 
         self._lock = SerializableRLock()
@@ -1480,9 +1487,16 @@ class FugueWorkflow:
         self, engine: Any = None, conf: Any = None, **kwargs: Any
     ) -> FugueWorkflowResult:
         """Execute the workflow and compute all dataframes.
-        If not arguments, it will use
-        :class:`~fugue.execution.native_execution_engine.NativeExecutionEngine`
-        to run the workflow.
+
+        .. note::
+
+            For inputs, please read
+            :func:`~.fugue.execution.factory.make_execution_engine`
+
+        :param engine: object that can be recognized as an engine, defaults to None
+        :param conf: engine config, defaults to None
+        :param kwargs: additional parameters to initialize the execution engine
+        :return: the result set
 
         .. admonition:: Examples
 

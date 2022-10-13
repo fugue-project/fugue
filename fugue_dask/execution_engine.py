@@ -10,11 +10,7 @@ from fugue.collections.partition import (
     PartitionSpec,
     parse_presort_exp,
 )
-from fugue.constants import (
-    FUGUE_CONF_SQL_IGNORE_CASE,
-    KEYWORD_CORECOUNT,
-    KEYWORD_ROWCOUNT,
-)
+from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import (
@@ -59,13 +55,7 @@ class QPDDaskEngine(SQLEngine):
             k: self.execution_engine.to_df(v).native  # type: ignore
             for k, v in dfs.items()
         }
-        df = run_sql_on_dask(
-            statement,
-            dask_dfs,
-            ignore_case=self.execution_engine.compile_conf.get(
-                FUGUE_CONF_SQL_IGNORE_CASE, False
-            ),
-        )
+        df = run_sql_on_dask(statement, dask_dfs, ignore_case=True)
         return DaskDataFrame(df)
 
 
