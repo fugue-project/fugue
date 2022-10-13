@@ -13,27 +13,22 @@ from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
 
 
 def test_workflow_conf():
-    dag = FugueSQLWorkflow(NativeExecutionEngine({"x": 10}))
+    dag = FugueSQLWorkflow({"x": 10})
     assert 10 == dag.conf.get_or_throw("x", int)
     assert not dag.conf.get_or_throw("fugue.sql.compile.ignore_case", bool)
 
-    dag = FugueSQLWorkflow(
-        NativeExecutionEngine({"x": 10, "fugue.sql.compile.ignore_case": True})
-    )
+    dag = FugueSQLWorkflow({"x": 10, "fugue.sql.compile.ignore_case": True})
     assert 10 == dag.conf.get_or_throw("x", int)
     assert dag.conf.get_or_throw("fugue.sql.compile.ignore_case", bool)
 
-    dag = FugueSQLWorkflow(
-        NativeExecutionEngine({"x": 10}), {"fugue.sql.compile.ignore_case": "true"}
-    )
-    assert 10 == dag.conf.get_or_throw("x", int)
+    dag = FugueSQLWorkflow({"fugue.sql.compile.ignore_case": "true"})
     assert dag.conf.get_or_throw("fugue.sql.compile.ignore_case", bool)
 
 
 def test_conf_override():
     with raises(SyntaxError):
         FugueSQLWorkflow()("create [[0]] schema a:int")
-    with FugueSQLWorkflow(None, {"fugue.sql.compile.ignore_case": "true"}) as dag:
+    with FugueSQLWorkflow({"fugue.sql.compile.ignore_case": "true"}) as dag:
         a = dag.df([[0], [1]], "a:int")
         dag(
             """
@@ -41,6 +36,7 @@ def test_conf_override():
         b = select *
         output a,b using assert_eq"""
         )
+    dag.run(conf={"fugue.sql.compile.ignore_case": "true"})
 
 
 def test_show():
@@ -63,6 +59,7 @@ def test_show():
         PRINT a, b
         """
         )
+    dag.run()
     assert not cs.called
     Show.set_hook(cs.show)
     with FugueSQLWorkflow() as dag:
@@ -74,12 +71,12 @@ def test_show():
         PRINT a, b
         """
         )
-
+    dag.run()
     assert cs.called
 
 
 def test_jinja_keyword_in_sql():
-    with FugueSQLWorkflow(("", "sqlite")) as dag:
+    with FugueSQLWorkflow() as dag:
         dag(
             """{% raw -%}
             CREATE [["{%'{%'"]] SCHEMA a:str
@@ -98,6 +95,7 @@ def test_jinja_keyword_in_sql():
         OUTPUT df, df2 USING assert_eq
         """
         )
+    dag.run(("", "sqlite"))
 
 
 def test_use_df(tmpdir):
@@ -111,7 +109,7 @@ def test_use_df(tmpdir):
         """
         )
         dag.sql_vars["b"].assert_eq(a)
-
+    dag.run()
     # external non-workflowdataframe
     arr = ArrayDataFrame([[0], [1]], "a:int")
     with FugueSQLWorkflow() as dag:
@@ -123,16 +121,16 @@ def test_use_df(tmpdir):
             a=arr,
         )
         dag.sql_vars["b"].assert_eq(dag.df([[0], [1]], "a:int"))
-
+    dag.run()
     # from yield file
     engine = NativeExecutionEngine(
         conf={"fugue.workflow.checkpoint.path": os.path.join(tmpdir, "ck")}
     )
-    with FugueSQLWorkflow(engine) as dag:
+    with FugueSQLWorkflow() as dag:
         dag("CREATE[[0], [1]] SCHEMA a: int YIELD FILE AS b")
         res = dag.yields["b"]
-
-    with FugueSQLWorkflow(engine) as dag:
+    dag.run(engine)
+    with FugueSQLWorkflow() as dag:
         dag(
             """
         b=CREATE[[0], [1]] SCHEMA a: int
@@ -140,14 +138,16 @@ def test_use_df(tmpdir):
         """,
             a=res,
         )
+    dag.run(engine)
 
     # from yield dataframe
     engine = NativeExecutionEngine()
-    with FugueSQLWorkflow(engine) as dag:
+    with FugueSQLWorkflow() as dag:
         dag("CREATE[[0], [1]] SCHEMA a: int YIELD DATAFRAME AS b")
         res = dag.yields["b"]
+    dag.run(engine)
 
-    with FugueSQLWorkflow(engine) as dag:
+    with FugueSQLWorkflow() as dag:
         dag(
             """
         b=CREATE[[0], [1]] SCHEMA a: int
@@ -155,6 +155,7 @@ def test_use_df(tmpdir):
         """,
             a=res,
         )
+    dag.run(engine)
 
 
 def test_use_soecial_df(tmpdir):
@@ -178,11 +179,11 @@ def test_use_soecial_df(tmpdir):
     engine = NativeExecutionEngine(
         conf={"fugue.workflow.checkpoint.path": os.path.join(tmpdir, "ck")}
     )
-    with FugueSQLWorkflow(engine) as dag:
+    with FugueSQLWorkflow() as dag:
         dag("CREATE[[0], [1]] SCHEMA a: int YIELD FILE AS b")
         res = dag.yields["b"]
-
-    with FugueSQLWorkflow(engine) as dag:
+    dag.run(engine)
+    with FugueSQLWorkflow() as dag:
         dag(
             """
         b=CREATE[[0], [1]] SCHEMA a: int
@@ -191,6 +192,7 @@ def test_use_soecial_df(tmpdir):
         """,
             {"a.x": res},
         )
+    dag.run(engine)
 
 
 def test_lazy_use_df():
@@ -219,6 +221,7 @@ def test_use_param():
         """,
             y=1,
         )
+    dag.run()
 
 
 def test_multiple_sql():
@@ -226,6 +229,7 @@ def test_multiple_sql():
         a = dag.df([[0], [1]], "a:int")
         dag("b = CREATE [[0],[1]] SCHEMA a:int")
         dag("OUTPUT a,b USING assert_eq")
+    dag.run()
 
 
 def test_multiple_sql_with_reset():
@@ -240,6 +244,7 @@ def test_multiple_sql_with_reset():
         OUTPUT a, (CREATE[[0], [2]] SCHEMA a: int) USING assert_eq
         """
         )
+    dag.run()
 
 
 def test_multiple_blocks():
@@ -251,6 +256,7 @@ def test_multiple_blocks():
         OUTPUT a, (CREATE[[0], [1]] SCHEMA a: int) USING assert_eq
         """
         )
+    dag.run()
     # dataframe can't pass to another workflow
     with FugueSQLWorkflow() as dag:
         assert "a" in locals()
@@ -260,6 +266,7 @@ def test_multiple_blocks():
             OUTPUT a, (CREATE[[0], [1]] SCHEMA a: int) USING assert_eq
             """
             )
+    dag.run()
     # other local variables are fine
     with FugueSQLWorkflow() as dag:
         a = dag.df([[0], [1]], "a:int")
@@ -268,12 +275,14 @@ def test_multiple_blocks():
         OUTPUT a, (CREATE[[0], [{{c}}]] SCHEMA a: int) USING assert_eq
         """
         )
+    dag.run()
 
 
 def test_function_calls():
     with FugueSQLWorkflow() as dag:
         a = dag.df([[0], [1]], "a:int")
         _eq(dag, a)
+    dag.run()
 
 
 def test_local_instance_as_extension():
@@ -291,6 +300,7 @@ def test_local_instance_as_extension():
                 OUTPUT a,b USING assert_eq
                 """
                 )
+            dag.run()
 
     m = _Mock()
     m.test()
@@ -302,6 +312,7 @@ def test_local_instance_as_extension():
         OUTPUT a,b USING assert_eq
         """
         )
+    dag.run()
 
 
 def test_call_back():
@@ -328,6 +339,7 @@ def test_call_back():
         OUTTRANSFORM a PREPARTITION BY a USING t CALLBACK cb.incr
         """
         )
+    dag.run()
 
     assert 4 == cb.n
 

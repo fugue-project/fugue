@@ -200,42 +200,41 @@ def test_global_funcs():
 def test_make_execution_engine():
     e = make_execution_engine(None, {FUGUE_CONF_SQL_IGNORE_CASE: True})
     assert isinstance(e, NativeExecutionEngine)
-    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+    assert e.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
 
     e = make_execution_engine(NativeExecutionEngine, {FUGUE_CONF_SQL_IGNORE_CASE: True})
     assert isinstance(e, NativeExecutionEngine)
-    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+    assert e.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
 
     e = make_execution_engine(
         NativeExecutionEngine({"ab": "c"}), {FUGUE_CONF_SQL_IGNORE_CASE: True}, de="f"
     )
     assert isinstance(e, NativeExecutionEngine)
-    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
-    assert "c" == e.compile_conf.get_or_throw("ab", str)
-    assert "f" == e.compile_conf.get_or_throw("de", str)
+    assert e.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
     assert "c" == e.conf.get_or_throw("ab", str)
-    assert "de" not in e.conf
+    assert "f" == e.conf.get_or_throw("de", str)
+    assert "c" == e.conf.get_or_throw("ab", str)
 
     e = make_execution_engine("pandas", {FUGUE_CONF_SQL_IGNORE_CASE: True})
     assert isinstance(e, NativeExecutionEngine)
-    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+    assert e.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
 
     e = make_execution_engine(
         (NativeExecutionEngine, "sqlite"), {FUGUE_CONF_SQL_IGNORE_CASE: True}
     )
     assert isinstance(e, NativeExecutionEngine)
-    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+    assert e.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
 
     e = make_execution_engine(NativeExecutionEngine({FUGUE_CONF_SQL_IGNORE_CASE: True}))
     assert isinstance(e, NativeExecutionEngine)
-    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+    assert e.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
 
     e = make_execution_engine(
         (NativeExecutionEngine({FUGUE_CONF_SQL_IGNORE_CASE: True}), "sqlite")
     )
     e = make_execution_engine(e)
     assert isinstance(e, NativeExecutionEngine)
-    assert e.compile_conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
+    assert e.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
     assert isinstance(e.sql_engine, SqliteEngine)
 
     assert isinstance(make_sql_engine(None, e), SqliteEngine)

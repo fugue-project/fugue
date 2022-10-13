@@ -11,7 +11,7 @@ from fugue.column import ColumnExpr
 from fugue.column import SelectColumns as ColumnsSelect
 from fugue.column import col, lit
 from fugue.constants import (
-    FUGUE_COMPILE_TIME_CONFIGS,
+    _FUGUE_GLOBAL_CONF,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST_VALUE,
     FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
@@ -1425,6 +1425,24 @@ class WorkflowDataFrames(DataFrames):
         raise AttributeError(name)
 
 
+class FugueWorkflowResult(DataFrames):
+    """The result object of :meth:`~.FugueWorkflow.run`. Users should not
+    construct this object.
+
+    :param DataFrames: yields of the workflow
+    """
+
+    def __init__(self, yields: Dict[str, Yielded]):
+        self._yields = yields
+        super().__init__(
+            {k: v.result for k, v in yields.items() if isinstance(v, YieldedDataFrame)}
+        )
+
+    @property
+    def yields(self) -> Dict[str, Any]:
+        return self._yields
+
+
 @extensible_class
 class FugueWorkflow:
     """Fugue Workflow, also known as the Fugue Programming Interface.
@@ -1439,35 +1457,46 @@ class FugueWorkflow:
     to learn how to initialize it in different ways and pros and cons.
     """
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, compile_conf: Any = None):
+        assert_or_throw(
+            compile_conf is None or isinstance(compile_conf, (dict, ParamDict)),
+            ValueError(
+                f"FugueWorkflow no longer takes {type(compile_conf)} as the input"
+            ),
+        )
+
         self._lock = SerializableRLock()
         self._spec = WorkflowSpec()
-        self._workflow_ctx = self._to_ctx(*args, **kwargs)
         self._computed = False
         self._graph = _Graph()
         self._yields: Dict[str, Yielded] = {}
-        self._compile_conf = {
-            k: v
-            for k, v in self._workflow_ctx.execution_engine.compile_conf.items()
-            if k in FUGUE_COMPILE_TIME_CONFIGS
-        }
+        self._compile_conf = ParamDict(
+            {**_FUGUE_GLOBAL_CONF, **ParamDict(compile_conf)}
+        )
 
     @property
     def conf(self) -> ParamDict:
-        """All configs of this workflow and underlying
-        :class:`~fugue.execution.execution_engine.ExecutionEngine` (if given)
-        """
-        return self._workflow_ctx.execution_engine.compile_conf
+        """Compile time configs"""
+        return self._compile_conf
 
     def spec_uuid(self) -> str:
         """UUID of the workflow spec (`description`)"""
         return self._spec.__uuid__()
 
-    def run(self, *args: Any, **kwargs: Any) -> DataFrames:
+    def run(
+        self, engine: Any = None, conf: Any = None, **kwargs: Any
+    ) -> FugueWorkflowResult:
         """Execute the workflow and compute all dataframes.
-        If not arguments, it will use
-        :class:`~fugue.execution.native_execution_engine.NativeExecutionEngine`
-        to run the workflow.
+
+        .. note::
+
+            For inputs, please read
+            :func:`~.fugue.execution.factory.make_execution_engine`
+
+        :param engine: object that can be recognized as an engine, defaults to None
+        :param conf: engine config, defaults to None
+        :param kwargs: additional parameters to initialize the execution engine
+        :return: the result set
 
         .. admonition:: Examples
 
@@ -1493,22 +1522,17 @@ class FugueWorkflow:
         to learn how to run in different ways and pros and cons.
         """
         with self._lock:
+            e = make_execution_engine(engine=engine, conf=conf, **kwargs)
             self._computed = False
-            if len(args) > 0 or len(kwargs) > 0:
-                self._workflow_ctx = self._to_ctx(*args, **kwargs)
-                self._workflow_ctx.execution_engine.compile_conf.update(
-                    self._compile_conf
-                )
+            self._workflow_ctx = FugueWorkflowContext(engine=e, compile_conf=self.conf)
             try:
                 self._workflow_ctx.run(self._spec, {})
             except Exception as ex:
-                if not self._workflow_ctx.execution_engine.conf.get_or_throw(
+                if not self.conf.get_or_throw(
                     FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE, bool
                 ) or sys.version_info < (3, 7):
                     raise
-                conf = self._workflow_ctx.execution_engine.conf.get_or_throw(
-                    FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str
-                )
+                conf = self.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str)
                 pre = [p for p in conf.split(",") if p != ""]
                 if len(pre) == 0:
                     raise
@@ -1522,13 +1546,7 @@ class FugueWorkflow:
                     raise
                 raise ex.with_traceback(ctb)
             self._computed = True
-        return DataFrames(
-            {
-                k: v.result
-                for k, v in self.yields.items()
-                if isinstance(v, YieldedDataFrame)
-            }
-        )
+        return FugueWorkflowResult(self.yields)
 
     @property
     def yields(self) -> Dict[str, Yielded]:
@@ -1538,7 +1556,7 @@ class FugueWorkflow:
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.run()
+        return
 
     def get_result(self, df: WorkflowDataFrame) -> DataFrame:
         """After :meth:`~.run`, get the result of a dataframe defined in the dag
@@ -2052,6 +2070,7 @@ class FugueWorkflow:
                     a = dag.df([[0,"a"]],a:int,b:str)
                     b = dag.df([[0]],a:int)
                     c = dag.select("SELECT a FROM",a,"UNION SELECT * FROM",b)
+                dag.run()
 
         Please read :ref:`this <tutorial:tutorials/advanced/dag:select query>`
         for more examples
@@ -2161,11 +2180,6 @@ class FugueWorkflow:
 
     def _to_dfs(self, *args: Any, **kwargs: Any) -> DataFrames:
         return DataFrames(*args, **kwargs).convert(self.create_data)
-
-    def _to_ctx(self, *args: Any, **kwargs) -> FugueWorkflowContext:
-        if len(args) == 1 and isinstance(args[0], FugueWorkflowContext):
-            return args[0]
-        return FugueWorkflowContext(make_execution_engine(*args, **kwargs))
 
     def __getattr__(self, name: str) -> Any:  # pragma: no cover
         """The dummy method to avoid PyLint complaint"""

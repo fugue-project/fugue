@@ -35,15 +35,11 @@ def register_execution_engine(
             make_execution_engine("my", {"myconfig":"value})
 
             # 1
-            with FugueWorkflow("my") as dag:
-                dag.create([[0]],"a:int").show()
-
-            # 2
             dag = FugueWorkflow()
             dag.create([[0]],"a:int").show()
             dag.run("my", {"myconfig":"value})
 
-            # 3
+            # 2
             fsql('''
             CREATE [[0]] SCHEMA a:int
             PRINT
@@ -108,15 +104,11 @@ def register_default_execution_engine(func: Callable, on_dup="overwrite") -> Non
             make_execution_engine(None, {"myconfig":"value})
 
             # 1
-            with FugueWorkflow() as dag:
-                dag.create([[0]],"a:int").show()
-
-            # 2
             dag = FugueWorkflow()
             dag.create([[0]],"a:int").show()
             dag.run(None, {"myconfig":"value})
 
-            # 3
+            # 2
             fsql('''
             CREATE [[0]] SCHEMA a:int
             PRINT
@@ -156,8 +148,9 @@ def register_sql_engine(name: str, func: Callable, on_dup="overwrite") -> None:
             make_execution_engine(("dask", "mysql"))
 
             # default execution engine + MySQLEngine
-            with FugueWorkflow(("","mysql")) as dag:
+            with FugueWorkflow() as dag:
                 dag.create([[0]],"a:int").show()
+            dag.run(("","mysql"))
     """
     nm = name
     parse_sql_engine.register(  # type: ignore
@@ -209,6 +202,7 @@ def register_default_sql_engine(func: Callable, on_dup="overwrite") -> None:
             # NativeExecutionEngine with MySQLEngine
             with FugueWorkflow() as dag:
                 dag.create([[0]],"a:int").show()
+            dag.run()
     """
     parse_sql_engine.register(  # type: ignore
         func=lambda engine, execution_engine, **kwargs: func(
@@ -273,17 +267,13 @@ def make_execution_engine(
         execution_engine.set_sql_engine(sql_engine)
         return execution_engine
     if isinstance(engine, ExecutionEngine):
-        if conf is not None:
-            engine.compile_conf.update(conf)
-        engine.compile_conf.update(kwargs)
         result = engine
     else:
         result = parse_execution_engine(engine, conf, **kwargs)
         sql_engine = make_sql_engine(None, result)
         result.set_sql_engine(sql_engine)
-    result.compile_conf.update(result.conf, on_dup=ParamDict.IGNORE)
-    result.compile_conf.update(conf, on_dup=ParamDict.OVERWRITE)
-    result.compile_conf.update(kwargs, on_dup=ParamDict.OVERWRITE)
+    result.conf.update(conf, on_dup=ParamDict.OVERWRITE)
+    result.conf.update(kwargs, on_dup=ParamDict.OVERWRITE)
     return result
 
 

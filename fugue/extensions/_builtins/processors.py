@@ -34,7 +34,7 @@ class RunTransformer(Processor):
         tf._partition_spec = self.partition_spec
         rpc_handler = to_rpc_handler(self.params.get_or_throw("rpc_handler", object))
         if not isinstance(rpc_handler, EmptyRPCHandler):
-            tf._rpc_client = self.execution_engine.rpc_server.make_client(rpc_handler)
+            tf._rpc_client = self.rpc_server.make_client(rpc_handler)
         ie = self.params.get("ignore_errors", [])
         self._ignore_errors = [to_type(x, Exception) for x in ie]
         tf.validate_on_runtime(df)

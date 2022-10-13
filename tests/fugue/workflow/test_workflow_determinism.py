@@ -65,19 +65,19 @@ def test_yield():
 
 
 def test_auto_persist():
-    dag1 = FugueWorkflow(NativeExecutionEngine())
+    dag1 = FugueWorkflow()
     df1 = dag1.df([[0]], "a:int")
     df1.show()
     df1.show()
     id1 = dag1.spec_uuid()
 
-    dag2 = FugueWorkflow(NativeExecutionEngine({"fugue.workflow.auto_persist": True}))
+    dag2 = FugueWorkflow({"fugue.workflow.auto_persist": True})
     df1 = dag2.df([[0]], "a:int")
     df1.show()
     df1.show()
     id2 = dag2.spec_uuid()
 
-    dag3 = FugueWorkflow(NativeExecutionEngine())
+    dag3 = FugueWorkflow()
     df1 = dag3.df([[0]], "a:int").weak_checkpoint(level=None)
     df1.show()
     df1.show()
@@ -87,19 +87,17 @@ def test_auto_persist():
     assert id2 == id3
 
     dag2 = FugueWorkflow(
-        NativeExecutionEngine(
-            {
-                "fugue.workflow.auto_persist": True,
-                "fugue.workflow.auto_persist_value": "abc",
-            }
-        )
+        {
+            "fugue.workflow.auto_persist": True,
+            "fugue.workflow.auto_persist_value": "abc",
+        }
     )
     df1 = dag2.df([[0]], "a:int")
     df1.show()
     df1.show()
     id2 = dag2.spec_uuid()
 
-    dag3 = FugueWorkflow(NativeExecutionEngine())
+    dag3 = FugueWorkflow()
     df1 = dag3.df([[0]], "a:int").weak_checkpoint(level="abc")
     df1.show()
     df1.show()
@@ -107,17 +105,17 @@ def test_auto_persist():
 
     assert id2 == id3
 
-    dag1 = FugueWorkflow(NativeExecutionEngine())
+    dag1 = FugueWorkflow()
     df1 = dag1.df([[0]], "a:int")
     df1.show()
     id1 = dag1.spec_uuid()
 
-    dag2 = FugueWorkflow(NativeExecutionEngine({"fugue.workflow.auto_persist": True}))
+    dag2 = FugueWorkflow({"fugue.workflow.auto_persist": True})
     df1 = dag2.df([[0]], "a:int")
     df1.show()  # auto persist will not trigger
     id2 = dag2.spec_uuid()
 
-    dag3 = FugueWorkflow(NativeExecutionEngine())
+    dag3 = FugueWorkflow()
     df1 = dag3.df([[0]], "a:int").weak_checkpoint(level=None)
     df1.show()
     id3 = dag3.spec_uuid()

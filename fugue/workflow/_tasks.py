@@ -19,6 +19,7 @@ from fugue.execution import ExecutionEngine
 from fugue.extensions.creator.convert import _to_creator
 from fugue.extensions.outputter.convert import _to_outputter
 from fugue.extensions.processor.convert import _to_processor
+from fugue.rpc.base import RPCServer
 from fugue.workflow._checkpoint import Checkpoint
 from fugue.workflow._workflow_context import FugueWorkflowContext
 from fugue.workflow.utils import is_acceptable_raw_df
@@ -155,6 +156,9 @@ class FugueTask(TaskSpec, ABC):
 
     def _get_execution_engine(self, ctx: TaskContext) -> ExecutionEngine:
         return self._get_workflow_context(ctx).execution_engine
+
+    def _get_rpc_server(self, ctx: TaskContext) -> RPCServer:
+        return self._get_workflow_context(ctx).rpc_server
 
     def _handle_checkpoint(self, df: DataFrame, ctx: TaskContext) -> DataFrame:
         wfctx = self._get_workflow_context(ctx)
@@ -338,6 +342,7 @@ class Process(FugueTask):
     def execute(self, ctx: TaskContext) -> None:
         e = self._get_execution_engine(ctx)
         self._processor._execution_engine = e
+        self._processor._rpc_server = self._get_rpc_server(ctx)
         if self._input_has_key:
             inputs = DataFrames(ctx.inputs)
         else:
@@ -390,6 +395,7 @@ class Output(FugueTask):
     @no_type_check
     def execute(self, ctx: TaskContext) -> None:
         self._outputter._execution_engine = self._get_execution_engine(ctx)
+        self._outputter._rpc_server = self._get_rpc_server(ctx)
         if self._input_has_key:
             inputs = DataFrames(ctx.inputs)
         else:

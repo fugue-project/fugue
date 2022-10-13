@@ -74,8 +74,9 @@ def register_creator(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
             import pn  # register_extensions will be called
             from fugue import FugueWorkflow
 
-            with FugueWorkflow() as dag:
-                dag.create("mc").show()  # use my_creator by alias
+            dag = FugueWorkflow()
+            dag.create("mc").show()  # use my_creator by alias
+            dag.run()
     """
     _CREATOR_REGISTRY.register(alias, obj, on_dup=on_dup)
 

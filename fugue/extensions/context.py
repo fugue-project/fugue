@@ -4,7 +4,7 @@ from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.execution.execution_engine import ExecutionEngine
 from fugue.extensions._utils import validate_input_schema, validate_partition_spec
-from fugue.rpc import RPCClient
+from fugue.rpc import RPCClient, RPCServer
 from triad.collections import ParamDict, Schema
 from triad.utils.convert import get_full_type_path
 from triad.utils.hash import to_uuid
@@ -94,6 +94,13 @@ class ExtensionContext(object):
         and available on both driver and workers
         """
         return self._rpc_client  # type: ignore
+
+    @property
+    def rpc_server(self) -> RPCServer:
+        """RPC client to talk to driver, this is for transformers only,
+        and available on both driver and workers
+        """
+        return self._rpc_server  # type: ignore
 
     @property
     def validation_rules(self) -> Dict[str, Any]:

@@ -187,7 +187,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
         df_eq(a.compute(SparkExecutionEngine), [[0]], "a:int")
 
     def test_repartition(self):
-        with self.dag() as dag:
+        with FugueWorkflow() as dag:
             a = dag.df(
                 [[0, 1], [0, 2], [0, 3], [0, 4], [1, 1], [1, 2], [1, 3]], "a:int,b:int"
             )
@@ -202,9 +202,10 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             c = a.partition(num=1).transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[7]))
             c = a.partition(algo="rand", num=100).transform(count_partition).persist()
+        dag.run(self.engine)
 
     def test_repartition_large(self):
-        with self.dag() as dag:
+        with FugueWorkflow() as dag:
             a = dag.df([[p, 0] for p in range(100)], "a:int,b:int")
             c = (
                 a.partition(algo="even", by=["a"])
@@ -228,6 +229,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             dag.output(c, using=assert_all_n, params=dict(n=2, l=50))
             c = a.partition(num=1).transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[100]))
+        dag.run(self.engine)
 
     def test_session_as_engine(self):
         dag = FugueWorkflow()
@@ -258,10 +260,11 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
         def m_o(engine: SparkExecutionEngine, df: ps.DataFrame) -> None:
             assert 1 == df.toPandas().shape[0]
 
-        with self.dag() as dag:
+        with FugueWorkflow() as dag:
             df = dag.create(m_c).process(m_p)
             df.assert_eq(dag.df([[0]], "a:long"))
             df.output(m_o)
+        dag.run(self.engine)
 
     def test_annotation_2(self):
         def m_c(session: SparkSession) -> ps.DataFrame:
@@ -275,10 +278,11 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             assert isinstance(session, SparkSession)
             assert 1 == df.toPandas().shape[0]
 
-        with self.dag() as dag:
+        with FugueWorkflow() as dag:
             df = dag.create(m_c).process(m_p)
             df.assert_eq(dag.df([[0]], "a:long"))
             df.output(m_o)
+        dag.run(self.engine)
 
     def test_annotation_3(self):
         # schema: a:int,b:str
@@ -294,10 +298,11 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             assert isinstance(ctx, SparkContext)
             assert 1 == len(data.collect())
 
-        with self.dag() as dag:
+        with FugueWorkflow() as dag:
             df = dag.create(m_c).process(m_p)
             df.assert_eq(dag.df([[0, "x"]], "a:int,b:str"))
             df.output(m_o)
+        dag.run(self.engine)
 
 
 class SparkExecutionEnginePandasUDFBuiltInTests(SparkExecutionEngineBuiltInTests):

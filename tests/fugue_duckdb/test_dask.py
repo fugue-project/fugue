@@ -108,7 +108,23 @@ class DuckDaskBuiltInTests(BuiltInTests.Tests):
         )
         df["a"] = pd.to_datetime(df.a)
 
-        with self.dag() as dag:
+        with FugueWorkflow() as dag:
             x = dag.df(df)
             result = dag.select("SELECT * FROM ", x)
             result.output(assert_data)
+        dag.run(self.engine)
+
+    def test_yield_2(self):
+        def assert_data(df: DataFrame) -> None:
+            assert df.schema == "a:datetime,b:bytes,c:[long]"
+
+        df = pd.DataFrame(
+            [[1,2,3]], columns=list("abc")
+        )
+
+        with FugueWorkflow() as dag:
+            x = dag.df(df)
+            result = dag.select("SELECT * FROM ", x)
+            result.yield_dataframe_as("x")
+        res = dag.run(self.engine)
+        assert res["x"].as_array() == [[1,2,3]]

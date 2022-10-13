@@ -15,8 +15,7 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
 from fugue.exceptions import FugueBug
-from fugue.rpc import RPCServer, make_rpc_server
-from triad import ParamDict, Schema, SerializableRLock, assert_or_throw
+from triad import ParamDict, Schema, assert_or_throw
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 from triad.utils.convert import to_size
@@ -81,39 +80,13 @@ class ExecutionEngine(ABC):
         _conf = ParamDict(conf)
         self._conf = ParamDict({**_FUGUE_GLOBAL_CONF, **_conf})
         self._compile_conf = ParamDict()
-        self._rpc_server = make_rpc_server(self.conf)
-        self._engine_start_lock = SerializableRLock()
-        self._engine_start = 0
         self._sql_engine: Optional[SQLEngine] = None
-
-    def start(self) -> None:
-        """Start this execution engine, do not override.
-        You should customize :meth:`~.start_engine` if necessary.
-        """
-        with self._engine_start_lock:
-            if self._engine_start == 0:
-                self.rpc_server.start()
-                self.start_engine()
-            self._engine_start += 1
 
     def stop(self) -> None:
         """Stop this execution engine, do not override
         You should customize :meth:`~.stop_engine` if necessary.
         """
-        with self._engine_start_lock:
-            if self._engine_start == 1:
-                try:
-                    self.stop_engine()
-                finally:
-                    self._engine_start -= 1
-                    self.rpc_server.stop()
-            else:
-                self._engine_start -= 1
-            self._engine_start = max(0, self._engine_start)
-
-    def start_engine(self) -> None:  # pragma: no cover
-        """Custom logic to start the execution engine, defaults to no operation"""
-        return
+        self.stop_engine()
 
     def stop_engine(self) -> None:  # pragma: no cover
         """Custom logic to stop the execution engine, defaults to no operation"""
@@ -131,23 +104,6 @@ class ExecutionEngine(ABC):
             using this property.
         """
         return self._conf
-
-    @property
-    def compile_conf(self) -> ParamDict:
-        """Compiled time (workflow level) configurations, it is always a
-        superset of conf
-
-        .. note::
-
-            Users normally don't need to use this property. It is for
-            internal use.
-        """
-        return self._compile_conf
-
-    @property
-    def rpc_server(self) -> RPCServer:
-        """:class:`~fugue.rpc.base.RPCServer` of this execution engine"""
-        return self._rpc_server
 
     @property
     def sql_engine(self) -> SQLEngine:

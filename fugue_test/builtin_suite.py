@@ -83,32 +83,29 @@ class BuiltInTests(object):
         def make_engine(self) -> ExecutionEngine:  # pragma: no cover
             raise NotImplementedError
 
-        def dag(self, conf: Optional[Dict[str, Any]] = None) -> FugueWorkflow:
-            if conf is None:
-                return FugueWorkflow(self.engine)
-            else:
-                return FugueWorkflow(self.engine, conf)
-
         def test_workflows(self):
             a = FugueWorkflow().df([[0]], "a:int")
             df_eq(a.compute(self.engine), [[0]], "a:int")
 
         def test_create_show(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 dag.df([[0]], "a:int").persist().partition(num=2).show()
                 dag.df(dag.df([[0]], "a:int")).persist().broadcast().show(title="t")
+            dag.run(self.engine)
 
         def test_checkpoint(self):
             with raises(FugueWorkflowError):
-                with self.dag() as dag:
+                with FugueWorkflow() as dag:
                     dag.df([[0]], "a:int").checkpoint()
+                dag.run(self.engine)
 
             self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(
                 self.tmpdir, "ck"
             )
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[0]], "a:int").checkpoint()
                 dag.df([[0]], "a:int").assert_eq(a)
+            dag.run(self.engine)
 
         def test_deterministic_checkpoint(self):
             self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(
@@ -120,36 +117,42 @@ class BuiltInTests(object):
                 return pd.DataFrame(np.random.rand(3, 2), columns=["a", "b"])
 
             # base case without checkpoint, two runs should generate different result
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.create(mock_create)
                 a.save(temp_file)
-            with self.dag() as dag:
+            dag.run(self.engine)
+            with FugueWorkflow() as dag:
                 a = dag.create(mock_create)
                 b = dag.load(temp_file)
                 b.assert_not_eq(a)
+            dag.run(self.engine)
 
             # strong checkpoint is not cross execution, so result should be different
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.create(mock_create).strong_checkpoint()
                 a.save(temp_file)
-            with self.dag() as dag:
+            dag.run(self.engine)
+            with FugueWorkflow() as dag:
                 a = dag.create(mock_create).strong_checkpoint()
                 b = dag.load(temp_file)
                 b.assert_not_eq(a)
+            dag.run(self.engine)
 
             # with deterministic checkpoint, two runs should generate the same result
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 dag.create(
                     mock_create, params=dict(dummy=2)
                 )  # this should not affect a because it's not a dependency
                 a = dag.create(mock_create).deterministic_checkpoint()
                 id1 = a.spec_uuid()
                 a.save(temp_file)
-            with self.dag() as dag:
+            dag.run(self.engine)
+            with FugueWorkflow() as dag:
                 a = dag.create(mock_create).deterministic_checkpoint()
                 b = dag.load(temp_file)
                 b.assert_eq(a)
-            with self.dag() as dag:
+            dag.run(self.engine)
+            with FugueWorkflow() as dag:
                 # checkpoint specs itself doesn't change determinism
                 # of the previous steps
                 a = dag.create(mock_create).deterministic_checkpoint(
@@ -158,7 +161,8 @@ class BuiltInTests(object):
                 id2 = a.spec_uuid()
                 b = dag.load(temp_file)
                 b.assert_eq(a)
-            with self.dag() as dag:
+            dag.run(self.engine)
+            with FugueWorkflow() as dag:
                 # dependency change will affect determinism
                 a = dag.create(
                     mock_create, params={"dummy": 2}
@@ -166,6 +170,7 @@ class BuiltInTests(object):
                 id3 = a.spec_uuid()
                 b = dag.load(temp_file)
                 b.assert_not_eq(a)
+            dag.run(self.engine)
 
             assert (
                 id1 == id2
@@ -182,33 +187,37 @@ class BuiltInTests(object):
                 return pd.DataFrame(np.random.rand(3, 2), columns=["a", "b"])
 
             # base case without checkpoint, two runs should generate different result
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.create(mock_create).drop(["a"])
                 b = dag.create(mock_create).drop(["a"])
                 c = a.union(b)
                 c.save(temp_file)
-            with self.dag() as dag:
+            dag.run(self.engine)
+            with FugueWorkflow() as dag:
                 a = dag.create(mock_create).drop(["a"])
                 b = dag.create(mock_create).drop(["a"])
                 c = a.union(b)
                 d = dag.load(temp_file)
                 d.assert_not_eq(c)
+            dag.run(self.engine)
 
             # strong checkpoint is not cross execution, so result should be different
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.create(mock_create).drop(["a"])
                 b = dag.create(mock_create).drop(["a"])
                 c = a.union(b).strong_checkpoint()
                 c.save(temp_file)
-            with self.dag() as dag:
+            dag.run(self.engine)
+            with FugueWorkflow() as dag:
                 a = dag.create(mock_create).drop(["a"])
                 b = dag.create(mock_create).drop(["a"])
                 c = a.union(b).strong_checkpoint()
                 d = dag.load(temp_file)
                 d.assert_not_eq(c)
+            dag.run(self.engine)
 
             # with deterministic checkpoint, two runs should generate the same result
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 dag.create(
                     mock_create, params=dict(dummy=2)
                 )  # this should not affect a because it's not a dependency
@@ -217,13 +226,15 @@ class BuiltInTests(object):
                 c = a.union(b)
                 c.deterministic_checkpoint()
                 c.save(temp_file)
-            with self.dag() as dag:
+            dag.run(self.engine)
+            with FugueWorkflow() as dag:
                 a = dag.create(mock_create).drop(["a"])
                 b = dag.create(mock_create).drop(["a"])
                 c = a.union(b).deterministic_checkpoint()
                 d = dag.load(temp_file)
                 d.assert_eq(c)
-            with self.dag() as dag:
+            dag.run(self.engine)
+            with FugueWorkflow() as dag:
                 # checkpoint specs itself doesn't change determinism
                 # of the previous steps
                 a = dag.create(mock_create).drop(["a"])
@@ -231,13 +242,15 @@ class BuiltInTests(object):
                 c = a.union(b).deterministic_checkpoint(partition=PartitionSpec(num=2))
                 d = dag.load(temp_file)
                 d.assert_eq(c)
-            with self.dag() as dag:
+            dag.run(self.engine)
+            with FugueWorkflow() as dag:
                 # dependency change will affect determinism
                 a = dag.create(mock_create, params={"dummy": 2}).drop(["a"])
                 b = dag.create(mock_create).drop(["a"])
                 c = a.union(b).deterministic_checkpoint(partition=PartitionSpec(num=2))
                 d = dag.load(temp_file)
                 d.assert_not_eq(c)
+            dag.run(self.engine)
 
         def test_yield_file(self):
             self.engine.conf["fugue.workflow.checkpoint.path"] = os.path.join(
@@ -245,23 +258,23 @@ class BuiltInTests(object):
             )
 
             with raises(FugueWorkflowCompileError):
-                self.dag().df([[0]], "a:int").checkpoint().yield_file_as("x")
+                FugueWorkflow().df([[0]], "a:int").checkpoint().yield_file_as("x")
 
             with raises(FugueWorkflowCompileError):
-                self.dag().df([[0]], "a:int").persist().yield_file_as("x")
+                FugueWorkflow().df([[0]], "a:int").persist().yield_file_as("x")
 
             def run_test(deterministic):
-                dag1 = self.dag()
+                dag1 = FugueWorkflow()
                 df = dag1.df([[0]], "a:int")
                 if deterministic:
                     df = df.deterministic_checkpoint()
                 df.yield_file_as("x")
                 id1 = dag1.spec_uuid()
-                dag2 = self.dag()
+                dag2 = FugueWorkflow()
                 dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))
                 id2 = dag2.spec_uuid()
-                dag1.run()
-                dag2.run()
+                dag1.run(self.engine)
+                dag2.run(self.engine)
                 return id1, id2
 
             id1, id2 = run_test(False)
@@ -275,7 +288,7 @@ class BuiltInTests(object):
             assert id2 == id4  # deterministic yield (yield deterministic checkpoint)
 
         def test_yield_dataframe(self):
-            dag = self.dag()
+            dag = FugueWorkflow()
             df1 = dag.df([[1]], "a:int")
             df2 = dag.df([[1]], "a:int")
             df1.union(df2, distinct=False).yield_dataframe_as("x")
@@ -287,7 +300,7 @@ class BuiltInTests(object):
             assert result.is_local
 
         def test_create_process_output(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.create(mock_creator, params=dict(p=2))
                 a.assert_eq(ArrayDataFrame([[2]], "a:int"))
                 b = dag.process(a, a, using=mock_processor)
@@ -304,9 +317,10 @@ class BuiltInTests(object):
                 dag.output(dict(df=a), using=mock_outputter2)
                 a.partition(num=3).output(MockOutputter3)
                 dag.output(dict(aa=a, bb=b), using=MockOutputter4)
+            dag.run(self.engine)
 
         def test_zip(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [2, 3], [2, 5]], "a:int,b:int")
                 b = dag.df([[1, 3]], "a:int,c:int")
                 c1 = a.zip(b)
@@ -326,9 +340,10 @@ class BuiltInTests(object):
                 c = dag.df([[1, 4]], "a:int,e:int")
                 e = dag.df([[1, 2], [1, 3]], "a:int,b:int")
                 dag.zip(a, b, c)[["a", "b"]].assert_eq(e, check_metadata=False)
+            dag.run(self.engine)
 
         def test_transform(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:double,b:int", dict(x=1))
                 c = a.transform(mock_tf0)
                 dag.df([[1, 2, 1], [3, 4, 1]], "a:double,b:int,p:int").assert_eq(c)
@@ -344,6 +359,7 @@ class BuiltInTests(object):
                     [[1, 2, 10], [None, 1, 10], [3, 4, 10], [None, 4, 10]],
                     "a:double,b:int,p:int",
                 ).assert_eq(c)
+            dag.run(self.engine)
 
         def test_local_instance_as_extension(self):
             class _Mock(object):
@@ -359,13 +375,15 @@ class BuiltInTests(object):
                         a = dag_.df([[0], [1]], "a:int")
                         b = a.transform(self.t1)
                         b.assert_eq(a)
+                    dag_.run()
 
             m = _Mock()
             m.test()
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[0], [1]], "a:int")
                 b = a.transform(m.t1).transform(m.t2, schema="*")
                 b.assert_eq(a)
+            dag.run(self.engine)
 
         def test_transform_iterable_pd(self):
             # this test is important for using mapInPandas in spark
@@ -375,20 +393,22 @@ class BuiltInTests(object):
                 for df in dfs:
                     yield df.assign(c=2)
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:int,b:int", dict(x=1))
                 b = a.transform(mt)
                 dag.df([[1, 2, 2], [3, 4, 2]], "a:int,b:int,c:int").assert_eq(b)
+            dag.run(self.engine)
 
         def test_transform_binary(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, pickle.dumps([0, "a"])]], "a:int,b:bytes")
                 c = a.transform(mock_tf3).persist()
                 b = dag.df([[1, pickle.dumps([1, "ax"])]], "a:int,b:bytes")
                 b.assert_eq(c, check_order=True)
+            dag.run(self.engine)
 
         def test_transform_by(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df(
                     [[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int", dict(x=1)
                 )
@@ -418,9 +438,10 @@ class BuiltInTests(object):
                     mock_tf2_except, schema="*", ignore_errors=[NotImplementedError]
                 )
                 dag.df([[1, 2], [3, 4]], "a:double,b:int").assert_eq(c)
+            dag.run(self.engine)
 
         def test_cotransform(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [1, 3], [2, 1]], "a:int,b:int", dict(x=1))
                 b = dag.df([[1, 2], [3, 4]], "a:int,c:int", dict(x=1))
                 c = dag.transform(a.zip(b), using=MockCoTransform1)
@@ -469,9 +490,10 @@ class BuiltInTests(object):
                 )
                 e = dag.df([[1, 2, 1]], "a:int,ct1:int,p:int")
                 e.assert_eq(c)
+            dag.run(self.engine)
 
         def test_cotransform_with_key(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [1, 3], [2, 1]], "a:int,b:int", dict(x=1))
                 b = dag.df([[1, 2], [3, 4]], "a:int,c:int", dict(x=1))
                 dag.zip(dict(x=a, y=b)).show()
@@ -505,6 +527,7 @@ class BuiltInTests(object):
                 c = dag.zip(dict(df1=a)).transform(mock_co_tf3)
                 e = dag.df([[1, 3, 1]], "a:int,ct1:int,p:int")
                 e.assert_eq(c)
+            dag.run(self.engine)
 
         def test_out_transform(self):  # noqa: C901
             tmpdir = str(self.tmpdir)
@@ -565,7 +588,7 @@ class BuiltInTests(object):
                 incr()
                 yield df
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:double,b:int")
                 a.out_transform(t1)  # +2
                 a.partition_by("b").out_transform(t2)  # +1 or +2
@@ -581,6 +604,7 @@ class BuiltInTests(object):
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t4))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t5))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(T7))
+            dag.run(self.engine)
 
             assert 12 <= incr()
 
@@ -643,7 +667,7 @@ class BuiltInTests(object):
                 for df in [df1, df2]:
                     yield df
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a0 = dag.df([[1, 2], [3, 4]], "a:double,b:int")
                 a1 = dag.df([[1, 2], [3, 4]], "aa:double,b:int")
                 a = dag.zip(a0, a1)
@@ -657,11 +681,12 @@ class BuiltInTests(object):
                 a.out_transform(T7)  # +1
                 a.out_transform(t8, ignore_errors=[NotImplementedError])  # +1
                 a.out_transform(t9)  # +1
+            dag.run(self.engine)
 
             assert 12 <= incr()
 
         def test_join(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "a:int,b:int")
                 dag.join(a, how="inner").assert_eq(a)
 
@@ -714,9 +739,10 @@ class BuiltInTests(object):
                     [[1, 10, 2, 4], [1, 10, 3, 4], [2, 20, 2, 4], [2, 20, 3, 4]],
                     "a:int,b:int,c:int,d:int",
                 ).assert_eq(d)
+            dag.run(self.engine)
 
         def test_df_select(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 # wildcard
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
                 a.select("*").assert_eq(a)
@@ -758,20 +784,23 @@ class BuiltInTests(object):
                 ).show()
 
                 raises(ValueError, lambda: a.select("*", "x"))
+            dag.run(self.engine)
 
-            with self.dag({"fugue.sql.compile.ignore_case": True}) as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[0]], "a:long")
                 b = dag.df([[0]], "a:long")
                 dag.select("select * from", a).assert_eq(b)
+            dag.run(self.engine, {"fugue.sql.compile.ignore_case": True})
 
         def test_df_filter(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
                 b = dag.df([[2, 20]], "x:int,y:int")
                 a.filter((col("y") > 15) & (col("y") < 25)).assert_eq(b)
+            dag.run(self.engine)
 
         def test_df_assign(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
                 b = dag.df([[1, "x"], [2, "x"], [3, "x"]], "x:int,y:str")
                 a.assign(y="x").assert_eq(b)
@@ -781,9 +810,10 @@ class BuiltInTests(object):
                     [[1, "x", 11], [2, "x", 21], [3, "x", 31]], "x:int,y:str,z:double"
                 )
                 a.assign(lit("x").alias("y"), z=(col("y") + 1).cast(float)).assert_eq(b)
+            dag.run(self.engine)
 
         def test_aggregate(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [1, 200], [3, 30]], "x:int,y:int")
                 b = dag.df([[1, 200], [3, 30]], "x:int,y:int")
                 c = dag.df([[-200, 200, 70]], "y:int,zz:int,ww:int")
@@ -793,6 +823,7 @@ class BuiltInTests(object):
                     zz=ff.max(col("y")),
                     ww=((ff.min(col("y")) + ff.max(col("y"))) / 3).cast("int32"),
                 ).assert_eq(c)
+            dag.run(self.engine)
 
         def test_select(self):
             class MockEngine(SqliteEngine):
@@ -804,7 +835,7 @@ class BuiltInTests(object):
                     assert 2 == self.p  # assert set p value is working
                     return super().select(dfs, statement)
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:long,y:long")
                 b = dag.df([[2, 20, 40], [3, 30, 90]], "x:long,y:long,z:long")
                 dag.select("* FROM", a).assert_eq(a)
@@ -853,9 +884,10 @@ class BuiltInTests(object):
                 a = a.transform(mock_tf1)
                 aa = dag.select("* FROM", a)
                 dag.select("* FROM", b).assert_eq(aa)
+            dag.run(self.engine)
 
         def test_union(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, None], [2, None]], "x:long,y:double")
                 b = dag.df([[2, None], [2, 20]], "x:long,y:double")
                 c = dag.df([[1, 10], [2, 20]], "x:long,y:double")
@@ -884,9 +916,10 @@ class BuiltInTests(object):
                         "x:long,y:double",
                     )
                 )
+            dag.run(self.engine)
 
         def test_intersect(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, None], [2, None]], "x:long,y:double")
                 b = dag.df([[2, None], [2, 20]], "x:long,y:double")
                 c = dag.df([[1, 10], [2, 20]], "x:long,y:double")
@@ -916,9 +949,10 @@ class BuiltInTests(object):
                 #         "x:long,y:double",
                 #     )
                 # )
+            dag.run(self.engine)
 
         def test_subtract(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, None], [2, None]], "x:long,y:double")
                 b = dag.df([[2, None], [2, 20]], "x:long,y:double")
                 c = dag.df([[1, 10], [2, 20]], "x:long,y:double")
@@ -947,9 +981,10 @@ class BuiltInTests(object):
                         "x:long,y:double",
                     )
                 )
+            dag.run(self.engine)
 
         def test_distinct(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, None], [2, None]], "x:long,y:double")
                 a.distinct().assert_eq(
                     ArrayDataFrame(
@@ -957,9 +992,10 @@ class BuiltInTests(object):
                         "x:long,y:double",
                     )
                 )
+            dag.run(self.engine)
 
         def test_dropna(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df(
                     [[1, 10, 10], [None, 2, None], [2, None, 4]],
                     "x:double,y:double,z:double",
@@ -984,9 +1020,10 @@ class BuiltInTests(object):
                     )
                 )
                 a.dropna(thresh=1, subset=["y", "z"]).assert_eq(a)
+            dag.run(self.engine)
 
         def test_fillna(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df(
                     [[1, 10, 10], [None, 2, None], [2, None, 4]],
                     "x:double,y:double,z:double",
@@ -1010,44 +1047,51 @@ class BuiltInTests(object):
                         "x:double,y:double,z:double",
                     )
                 )
+            dag.run(self.engine)
             with raises(FugueWorkflowError):
-                with self.dag() as dag:
+                with FugueWorkflow() as dag:
                     dag.df([[None, 1]], "a:int,b:int").fillna({"a": None, "b": 1})
+                dag.run(self.engine)
 
             with raises(FugueWorkflowError):
-                with self.dag() as dag:
+                with FugueWorkflow() as dag:
                     dag.df([[None, 1]], "a:int,b:int").fillna(None)
+                dag.run(self.engine)
 
         def test_sample(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df(
                     [[1, 10, 10], [None, 2, None], [2, None, 4]],
                     "x:double,y:double,z:double",
                 )
                 a.sample(frac=0.5, replace=False, seed=0).show()
+            dag.run(self.engine)
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 with raises(ValueError):
                     dag.df([[None, 1]], "a:int,b:int").sample(n=1, frac=0.2)
+            dag.run(self.engine)
 
         def test_take(self):
             # Test for presort parsing
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 df = dag.df(
                     pd.DataFrame({"aaa": [1, 1, 2, 2], "bbb": ["a", "b", "c", "d"]})
                 )
                 df = df.partition(by=["aaa"], presort="bbb").take(1)
                 df.show()
+            dag.run(self.engine)
             # Partition but no presort. Output not deterministic
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 df = dag.df(
                     pd.DataFrame({"aaa": [1, 1, 2, 2], "bbb": ["a", "b", "c", "d"]})
                 )
                 df = df.partition(by=["aaa"]).take(1)
                 df.show()
+            dag.run(self.engine)
             # Partition by and presort with NULLs
             # Column c needs to be kept even if not in presort or partition
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df(
                     [
                         ["0", 1, 1],
@@ -1065,14 +1109,16 @@ class BuiltInTests(object):
                         "a:str,b:int,c:long",
                     )
                 )
+            dag.run(self.engine)
             # No partition
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")
                 a.take(1, presort="a,b desc").assert_eq(
                     ArrayDataFrame([[0, 2]], "a:int,b:int")
                 )
+            dag.run(self.engine)
             # take presort overrides partition presort
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df(
                     [["0", 1], ["0", 2], ["1", 3], ["1", 4], [None, 2], [None, 3]],
                     "a:str,b:double",
@@ -1082,34 +1128,40 @@ class BuiltInTests(object):
                 ).assert_eq(
                     ArrayDataFrame([["0", 1], ["1", 3], [None, 2]], "a:str,b:double")
                 )
+            dag.run(self.engine)
             # order by with NULL first
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([["0", 1], ["0", 2], [None, 3]], "a:str,b:double")
                 a.take(1, presort="a desc", na_position="first").assert_eq(
                     ArrayDataFrame([[None, 3]], "a:str,b:double")
                 )
+            dag.run(self.engine)
             # order by with NULL last
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([["0", 1], ["1", 2], [None, 3]], "a:str,b:double")
                 a.take(1, presort="a desc", na_position="last").assert_eq(
                     ArrayDataFrame([["1", 2]], "a:str,b:double")
                 )
+            dag.run(self.engine)
             # Return any row because no presort
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")
                 a.take(1).show()
+            dag.run(self.engine)
             # n must be int
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 with raises(ValueError):
                     a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")
                     a.take(0.5).show()
+            dag.run(self.engine)
             # na_position not valid
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 with raises(ValueError):
                     a = dag.df([[0, 1], [0, 2], [1, 3]], "a:int,b:int")
                     a.take(1, na_position=["True", "False"]).show()
+            dag.run(self.engine)
             # Multiple takes
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 df = dag.df(
                     pd.DataFrame({"aaa": [1, 1, 2, 2], "bbb": ["a", "b", "c", "d"]})
                 )
@@ -1126,9 +1178,10 @@ class BuiltInTests(object):
                     .take(1, presort="aaa")
                 )
                 df2.show()
+            dag.run(self.engine)
 
         def test_col_ops(self):
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, 20]], "x:long,y:long")
                 aa = dag.df([[1, 10], [2, 20]], "xx:long,y:long")
                 a.rename({"x": "xx"}).assert_eq(aa)
@@ -1142,6 +1195,7 @@ class BuiltInTests(object):
                 a.alter_columns("x:str").assert_eq(
                     ArrayDataFrame([["1", 10], ["2", 20]], "x:str,y:long")
                 )
+            dag.run(self.engine)
 
         def test_datetime_in_workflow(self):
             # schema: a:date,b:datetime
@@ -1158,7 +1212,7 @@ class BuiltInTests(object):
                     # test for issue https://github.com/fugue-project/fugue/issues/92
                     return PandasDataFrame(df.as_pandas())
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.df([["2020-01-01"]], "a:date").transform(t1)
                 b = dag.df(
                     [[datetime.date(2020, 1, 1), datetime.datetime(2020, 1, 2)]],
@@ -1168,6 +1222,7 @@ class BuiltInTests(object):
                 c = dag.df([["2020-01-01", "2020-01-01 00:00:00"]], "a:date,b:datetime")
                 c.transform(T2).assert_eq(c)
                 c.partition(by=["a"]).transform(T2).assert_eq(c)
+            dag.run(self.engine)
 
         @pytest.fixture(autouse=True)
         def init_tmpdir(self, tmpdir):
@@ -1177,19 +1232,22 @@ class BuiltInTests(object):
             path = os.path.join(self.tmpdir, "a")
             path2 = os.path.join(self.tmpdir, "b.test.csv")
             path3 = os.path.join(self.tmpdir, "c.partition")
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
                 b.partition(num=3).save(path, fmt="parquet", single=True)
                 b.save(path2, header=True)
+            dag.run(self.engine)
             assert FileSystem().isfile(path)
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 a = dag.load(path, fmt="parquet", columns=["a", "c"])
                 a.assert_eq(dag.df([[1, 6], [7, 2]], "a:long,c:int"))
                 a = dag.load(path2, header=True, columns="c:int,a:long")
                 a.assert_eq(dag.df([[6, 1], [2, 7]], "c:int,a:long"))
-            with self.dag() as dag:
+            dag.run(self.engine)
+            with FugueWorkflow() as dag:
                 b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
                 b.partition(by="c").save(path3, fmt="parquet", single=False)
+            dag.run(self.engine)
             assert FileSystem().isdir(path3)
             assert FileSystem().isdir(os.path.join(path3, "c=6"))
             assert FileSystem().isdir(os.path.join(path3, "c=2"))
@@ -1205,15 +1263,17 @@ class BuiltInTests(object):
 
         def test_save_and_use(self):
             path = os.path.join(self.tmpdir, "a")
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
                 c = b.save_and_use(path, fmt="parquet")
                 b.assert_eq(c)
+            dag.run(self.engine)
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
                 d = dag.load(path, fmt="parquet")
                 b.assert_eq(d)
+            dag.run(self.engine)
 
         def test_transformer_validation(self):
             # partitionby_has: b
@@ -1240,17 +1300,19 @@ class BuiltInTests(object):
             for t in [t1, t2, T3]:
                 # compile time
                 with raises(FugueWorkflowCompileValidationError):
-                    self.dag().df([[0, 1]], "a:int,b:int").transform(t)
+                    FugueWorkflow().df([[0, 1]], "a:int,b:int").transform(t)
 
                 # runtime
                 with raises(FugueWorkflowRuntimeValidationError):
-                    with self.dag() as dag:
+                    with FugueWorkflow() as dag:
                         dag.df([[0, 1]], "c:int,b:int").partition(by=["b"]).transform(t)
+                    dag.run(self.engine)
 
-                with self.dag() as dag:
+                with FugueWorkflow() as dag:
                     dag.df([[0, 1]], "a:int,b:int").partition(by=["b"]).transform(
                         t
                     ).assert_eq(dag.df([[0, 1]], "a:int,b:int"))
+                dag.run(self.engine)
 
         def test_processor_validation(self):
             # input_has: a
@@ -1272,15 +1334,17 @@ class BuiltInTests(object):
             for p in [p1, p2, P3]:
                 # run time
                 with raises(FugueWorkflowRuntimeValidationError):
-                    with self.dag() as dag:
+                    with FugueWorkflow() as dag:
                         df1 = dag.df([[0, 1]], "a:int,b:int")
                         df2 = dag.df([[0, 1]], "c:int,d:int")
                         dag.process([df1, df2], using=p)
+                    dag.run(self.engine)
 
-                with self.dag() as dag:
+                with FugueWorkflow() as dag:
                     df1 = dag.df([[0, 1]], "a:int,b:int")
                     df2 = dag.df([[0, 1]], "a:int,b:int")
                     dag.process([df1, df2], using=p).assert_eq(df1)
+                dag.run(self.engine)
 
             # input_has: a
             # partitionby_has: b
@@ -1289,12 +1353,13 @@ class BuiltInTests(object):
 
             # compile time
             with raises(FugueWorkflowCompileValidationError):
-                dag = self.dag()
+                dag = FugueWorkflow()
                 df = dag.df([[0, 1]], "a:int,b:int")
                 df.process(p4)
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 dag.df([[0, 1]], "a:int,b:int").partition(by=["b"]).process(p4)
+            dag.run(self.engine)
 
         def test_outputter_validation(self):
             # input_has: a
@@ -1316,15 +1381,17 @@ class BuiltInTests(object):
             for o in [o1, o2, O3]:
                 # run time
                 with raises(FugueWorkflowRuntimeValidationError):
-                    with self.dag() as dag:
+                    with FugueWorkflow() as dag:
                         df1 = dag.df([[0, 1]], "a:int,b:int")
                         df2 = dag.df([[0, 1]], "c:int,d:int")
                         dag.output([df1, df2], using=o)
+                    dag.run(self.engine)
 
-                with self.dag() as dag:
+                with FugueWorkflow() as dag:
                     df1 = dag.df([[0, 1]], "a:int,b:int")
                     df2 = dag.df([[0, 1]], "a:int,b:int")
                     dag.output([df1, df2], using=o)
+                dag.run(self.engine)
 
             # input_has: a
             # partitionby_has: b
@@ -1333,12 +1400,13 @@ class BuiltInTests(object):
 
             # compile time
             with raises(FugueWorkflowCompileValidationError):
-                dag = self.dag()
+                dag = FugueWorkflow()
                 df = dag.df([[0, 1]], "a:int,b:int")
                 df.output(o4)
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 dag.df([[0, 1]], "a:int,b:int").partition(by=["b"]).output(o4)
+            dag.run(self.engine)
 
         def test_extension_registry(self):
             def my_creator() -> pd.DataFrame:
@@ -1363,10 +1431,11 @@ class BuiltInTests(object):
             register_output_transformer("mot", my_out_transformer, on_dup="overwrite")
             register_outputter("mo", my_outputter, on_dup="overwrite")
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 df = dag.create("mc").process("mp").transform("mt")
                 df.out_transform("mot")
                 df.output("mo")
+            dag.run(self.engine)
 
         def test_callback(self):  # noqa: C901
             class Callbacks(object):
@@ -1393,7 +1462,7 @@ class BuiltInTests(object):
                         print(self.callback(v))
                     return df
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 df = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
                 res = df.partition(by=["a"]).transform(
                     CallbackTransformer, callback=cb.call, params=dict(has=True)
@@ -1403,6 +1472,7 @@ class BuiltInTests(object):
                     CallbackTransformer, params=dict(has=False)
                 )
                 df.assert_eq(res)
+            dag.run(self.engine)
 
             assert 8 == cb.n
 
@@ -1429,7 +1499,7 @@ class BuiltInTests(object):
             def t2(df: pd.DataFrame, c: Callable[[int], int]) -> None:
                 c(1)
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 df = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
                 df.partition(by=["a"]).transform(
                     t0, callback=cb2.call
@@ -1443,6 +1513,7 @@ class BuiltInTests(object):
                     lambda: (df.partition(by=["a"]).out_transform(t1)),
                 )  # for t1, callback must be provided
                 df.assert_eq(res)
+            dag.run(self.engine)
 
             assert 9 == cb2.n
 
@@ -1466,7 +1537,7 @@ class BuiltInTests(object):
                 if c is not None:
                     c(1)
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 df1 = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,b:int")
                 df2 = dag.df([[1, 1], [1, 2], [2, 3], [5, 6]], "a:int,c:int")
                 res = df1.zip(df2).transform(t3, callback=cb2.call).persist()  # +3
@@ -1477,6 +1548,7 @@ class BuiltInTests(object):
                     FugueInterfacelessError,
                     lambda: df1.zip(df2).transform(t3).persist(),
                 )  # for t3, callback must be provided
+            dag.run(self.engine)
 
             assert 9 == cb2.n
 
@@ -1486,10 +1558,11 @@ class BuiltInTests(object):
 
             cb3 = Callbacks()
 
-            with self.dag() as dag:
+            with FugueWorkflow() as dag:
                 df = dag.df([[0], [1], [2], [3]], "a:int")
                 df = df.transform(t5, schema="a:binary", callback=cb3.call)
                 df.persist().yield_dataframe_as("x", as_local=True)
+            dag.run(self.engine)
             assert dag.yields["x"].result.is_local
 
             assert 4 == cb3.n

@@ -25,17 +25,27 @@ def test_runtime_exception():
 
     try:
         dag.run()
-    except:
+    except Exception:
         assert len(traceback.extract_tb(sys.exc_info()[2])) < 10
 
-    try:
-        dag.run("native", {FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE: False})
-    except:
-        assert len(traceback.extract_tb(sys.exc_info()[2])) > 10
+    dag = FugueWorkflow({FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE: False})
+    df = dag.df([[0]], "a:int")
+    df = df.transform(tr, schema="*")
+    show(df)
 
     try:
-        dag.run("native", {FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE: ""})
-    except:
+        dag.run("native")
+    except Exception:
+        assert len(traceback.extract_tb(sys.exc_info()[2])) > 10
+
+    dag = FugueWorkflow({FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE: ""})
+    df = dag.df([[0]], "a:int")
+    df = df.transform(tr, schema="*")
+    show(df)
+
+    try:
+        dag.run("native")
+    except Exception:
         assert len(traceback.extract_tb(sys.exc_info()[2])) > 10
 
 

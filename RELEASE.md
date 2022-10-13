@@ -1,5 +1,9 @@
 # Release Notes
 
+## 0.7.4
+
+-   [369](https://github.com/fugue-project/fugue/issues/369) Remove execution from FugueWorkflow context manager, remove engine from FugueWorkflow
+
 ## 0.7.3
 
 -   [362](https://github.com/fugue-project/fugue/issues/362) Remove Python 3.6 Support

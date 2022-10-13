@@ -1,5 +1,4 @@
 # pylint: disable-all
-from typing import Any, Dict, Optional
 from unittest import TestCase
 
 import ibis
@@ -38,12 +37,6 @@ class IbisTests(object):
         def make_ibis_engine(self) -> IbisEngine:  # pragma: no cover
             raise NotImplementedError
 
-        def dag(self, conf: Optional[Dict[str, Any]] = None) -> FugueWorkflow:
-            if conf is None:
-                return FugueWorkflow(self.engine)
-            else:  # pragma: no cover
-                return FugueWorkflow(self.engine, conf)
-
         def test_run_ibis(self):
             def _test1(con: ibis.BaseBackend) -> ibis.Expr:
                 tb = con.table("a")
@@ -53,7 +46,7 @@ class IbisTests(object):
                 tb = con.table("a")
                 return tb.mutate(c=tb.a + tb.b)
 
-            dag = self.dag()
+            dag = FugueWorkflow()
             df = dag.df([[0, 1], [2, 3]], "a:long,b:long")
             res = run_ibis(_test1, ibis_engine=self.ibis_engine, a=df)
             res.assert_eq(df)
@@ -61,17 +54,17 @@ class IbisTests(object):
             res = run_ibis(_test2, ibis_engine=self.ibis_engine, a=df)
             df2 = dag.df([[0, 1, 1], [2, 3, 5]], "a:long,b:long,c:long")
             res.assert_eq(df2)
-            dag.run()
+            dag.run(self.engine)
 
         def test_run_as_ibis(self):
-            dag = self.dag()
+            dag = FugueWorkflow()
             df = dag.df([[0, 1], [2, 3]], "a:long,b:long")
             idf = as_ibis(df)
             res = as_fugue(idf)
             res.assert_eq(df)
-            dag.run()
+            dag.run(self.engine)
 
-            dag = self.dag()
+            dag = FugueWorkflow()
             df1 = dag.df([[0, 1], [2, 3]], "a:long,b:long")
             df2 = dag.df([[0, ["x"]], [3, ["y"]]], "a:long,c:[str]")
             idf1 = as_ibis(df1)
@@ -80,20 +73,20 @@ class IbisTests(object):
             res = as_fugue(idf)
             expected = dag.df([[0, 1, ["x"]]], "a:long,b:long,c:[str]")
             res.assert_eq(expected, check_order=True, check_schema=True)
-            dag.run()
+            dag.run(self.engine)
 
-            dag = self.dag()
+            dag = FugueWorkflow()
             idf1 = dag.df([[0, 1], [2, 3]], "a:long,b:long").as_ibis()
             idf2 = dag.df([[0, ["x"]], [3, ["y"]]], "a:long,c:[str]").as_ibis()
             res = idf1.inner_join(idf2, idf1.a == idf2.a)[idf1, idf2.c].as_fugue()
             expected = dag.df([[0, 1, ["x"]]], "a:long,b:long,c:[str]")
             res.assert_eq(expected, check_order=True, check_schema=True)
-            dag.run()
+            dag.run(self.engine)
 
         def test_literal(self):
-            dag = self.dag()
+            dag = FugueWorkflow()
             idf1 = dag.df([[0, 1], [2, 3]], "a:long,b:long").as_ibis()
             res = idf1.mutate(c=idf1.b + 10).as_fugue()
             expected = dag.df([[0, 1, 11], [2, 3, 13]], "a:long,b:long,c:long")
             res.assert_eq(expected, check_order=True, check_schema=True)
-            dag.run()
+            dag.run(self.engine)
