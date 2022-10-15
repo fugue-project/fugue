@@ -12,7 +12,3 @@ try:
     from fugue_duckdb.ibis_engine import DuckDBIbisEngine
 except Exception:  # pragma: no cover
     pass
-
-from fugue_duckdb.registry import register
-
-register()

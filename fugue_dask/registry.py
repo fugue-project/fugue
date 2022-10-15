@@ -11,24 +11,9 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.workflow import register_raw_df_type
-from triad import run_once
+from triad import run_at_def
 
 from fugue_dask.execution_engine import DaskExecutionEngine
-
-
-@run_once
-def register() -> None:
-    """Register Dask Execution Engine
-
-    .. note::
-
-        This function is automatically called when you do
-
-        >>> import fugue_dask
-    """
-    _register_raw_dataframes()
-    _register_engines()
-    _register_annotation_converters()
 
 
 def _register_raw_dataframes() -> None:
@@ -91,3 +76,18 @@ class _DaskDataFrameParam(DataFrameParam):
 
     def count(self, df: DataFrame) -> int:  # pragma: no cover
         raise NotImplementedError("not allowed")
+
+
+@run_at_def
+def _register() -> None:
+    """Register Dask Execution Engine
+
+    .. note::
+
+        This function is automatically called when you do
+
+        >>> import fugue_dask
+    """
+    _register_raw_dataframes()
+    _register_engines()
+    _register_annotation_converters()

@@ -13,24 +13,9 @@ from fugue._utils.interfaceless import (
 from fugue.workflow import register_raw_df_type
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
-from triad import run_once
+from triad import run_at_def
 
 from fugue_spark.execution_engine import SparkExecutionEngine
-
-
-@run_once
-def register() -> None:
-    """Register Spark Execution Engine
-
-    .. note::
-
-        This function is automatically called when you do
-
-        >>> import fugue_spark
-    """
-    _register_raw_dataframes()
-    _register_engines()
-    _register_annotation_converters()
 
 
 def _register_raw_dataframes() -> None:
@@ -159,3 +144,18 @@ class _RddParam(DataFrameParam):
 
     def need_schema(self) -> Optional[bool]:
         return True
+
+
+@run_at_def
+def _register() -> None:
+    """Register Spark Execution Engine
+
+    .. note::
+
+        This function is automatically called when you do
+
+        >>> import fugue_spark
+    """
+    _register_raw_dataframes()
+    _register_engines()
+    _register_annotation_converters()

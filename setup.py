@@ -31,7 +31,7 @@ setup(
     keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
     install_requires=[
-        "triad>=0.6.9",
+        "triad>=0.7.0",
         "adagio>=0.2.4",
         "qpd>=0.3.1",
         "fugue-sql-antlr>=0.1.1",
@@ -87,11 +87,11 @@ setup(
     package_data={"fugue_notebook": ["nbextension/*"]},
     entry_points={
         "fugue.plugins": [
-            "ibis = fugue_ibis:register[ibis]",
-            "duckdb = fugue_duckdb:register[duckdb]",
-            "spark = fugue_spark:register[spark]",
-            "dask = fugue_dask:register[dask]",
-            "ray = fugue_ray:register[ray]",
+            "ibis = fugue_ibis[ibis]",
+            "duckdb = fugue_duckdb.registry[duckdb]",
+            "spark = fugue_spark.registry[spark]",
+            "dask = fugue_dask.registry[dask]",
+            "ray = fugue_ray.registry[ray]",
         ]
     },
 )

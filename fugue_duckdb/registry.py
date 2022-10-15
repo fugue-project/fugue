@@ -15,25 +15,10 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.workflow import register_raw_df_type
-from triad import run_once
+from triad import run_at_def
 
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
-
-
-@run_once
-def register() -> None:
-    """Register DuckDB Execution Engine
-
-    .. note::
-
-        This function is automatically called when you do
-
-        >>> import fugue_duckdb
-    """
-    _register_raw_dataframes()
-    _register_engines()
-    _register_annotation_converters()
 
 
 def _register_raw_dataframes() -> None:
@@ -125,3 +110,18 @@ class _DuckDBPyRelationParam(DataFrameParam):
 
     def count(self, df: Any) -> int:  # pragma: no cover
         return df.count()
+
+
+@run_at_def
+def _register() -> None:
+    """Register DuckDB Execution Engine
+
+    .. note::
+
+        This function is automatically called when you do
+
+        >>> import fugue_duckdb
+    """
+    _register_raw_dataframes()
+    _register_engines()
+    _register_annotation_converters()
