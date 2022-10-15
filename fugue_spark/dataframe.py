@@ -15,6 +15,7 @@ from fugue.dataframe.utils import (
     rename_dataframe_column_names,
 )
 from fugue.exceptions import FugueDataFrameOperationError
+from pyspark.sql.functions import col
 from triad import SerializableRLock
 from triad.collections.schema import SchemaError
 from triad.utils.assertion import assert_or_throw
@@ -33,9 +34,13 @@ def _get_spark_dataframe_columns(df: ps.DataFrame) -> List[Any]:
 def _rename_spark_dataframe(df: ps.DataFrame, names: Dict[str, Any]) -> ps.DataFrame:
     if len(names) == 0:
         return df
-    for k, v in names.items():
-        df = df.withColumnRenamed(k, v)
-    return df
+    cols: List[ps.Column] = []
+    for f in df.schema:
+        c = col(f.name)
+        if f.name in names:
+            c = c.alias(names[f.name])
+        cols.append(c)
+    return df.select(cols)
 
 
 class SparkDataFrame(DataFrame):
@@ -131,10 +136,7 @@ class SparkDataFrame(DataFrame):
             self.schema.rename(columns)
         except Exception as e:
             raise FugueDataFrameOperationError from e
-        df = self.native
-        for o, n in columns.items():
-            df = df.withColumnRenamed(o, n)
-        return SparkDataFrame(df)
+        return SparkDataFrame(_rename_spark_dataframe(self.native, columns))
 
     def alter_columns(self, columns: Any) -> DataFrame:
         new_schema = self._get_altered_schema(columns)

@@ -2,11 +2,10 @@ from typing import Any, List
 
 import numpy as np
 import pandas as pd
-import pyspark.sql as ps
 import pyspark.rdd as pr
-from pyspark import SparkContext
+import pyspark.sql as ps
 import pytest
-from fugue import transform
+from fugue import infer_execution_engine, transform
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import (
     ArrayDataFrame,
@@ -19,11 +18,12 @@ from fugue.extensions.transformer import Transformer, transformer
 from fugue.workflow.workflow import FugueWorkflow
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
-from pyspark import StorageLevel
+from pyspark import SparkContext, StorageLevel
 from pyspark.sql import DataFrame as SDataFrame
 from pyspark.sql import SparkSession
 from pytest import raises
 
+from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
 
@@ -106,6 +106,13 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         b = engine.sample(a, n=90, metadata=(dict(a=1)))
         assert abs(len(b.as_array()) - 90) < 2
         assert b.metadata == dict(a=1)
+
+    def test_infer_engine(self):
+        df = self.spark_session.createDataFrame(pd.DataFrame([[0]], columns=["a"]))
+        assert isinstance(infer_execution_engine(df), SparkSession)
+
+        fdf = SparkDataFrame(df)
+        assert isinstance(infer_execution_engine(fdf), SparkSession)
 
 
 class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):

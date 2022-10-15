@@ -16,6 +16,7 @@ from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import to_local_bounded_df, to_local_df
 from fugue.execution.execution_engine import ExecutionEngine, SQLEngine
 from fugue.execution.factory import (
+    infer_execution_engine,
     make_execution_engine,
     make_sql_engine,
     parse_execution_engine,

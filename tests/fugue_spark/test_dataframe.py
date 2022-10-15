@@ -4,19 +4,16 @@ from typing import Any
 import pandas as pd
 import pyspark
 import pyspark.sql as ps
-from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
-from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dataframe.utils import (
     get_dataframe_column_names,
     rename_dataframe_column_names,
-    to_local_bounded_df,
 )
 from fugue_test.dataframe_suite import DataFrameTests
 from pyspark.sql import SparkSession
-from pytest import raises
-from triad.collections.schema import Schema, SchemaError
-from triad.exceptions import InvalidOperationError
+
+from triad.collections.schema import Schema
+
 
 from fugue_spark import SparkExecutionEngine
 from fugue_spark._utils.convert import to_schema, to_spark_schema

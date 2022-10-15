@@ -3,7 +3,14 @@ import os
 import duckdb
 import pandas as pd
 import ray
-from fugue import ArrayDataFrame, FugueWorkflow, transform, DataFrame
+import ray.data as rd
+from fugue import (
+    ArrayDataFrame,
+    FugueWorkflow,
+    transform,
+    DataFrame,
+    infer_execution_engine,
+)
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_sql import fsql
 from fugue_test.builtin_suite import BuiltInTests
@@ -11,7 +18,7 @@ from fugue_test.execution_suite import ExecutionEngineTests
 from pytest import raises
 from triad import FileSystem
 
-from fugue_ray import RayExecutionEngine
+from fugue_ray import RayExecutionEngine, RayDataFrame
 
 _CONF = {
     "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
@@ -143,6 +150,13 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
         e = RayExecutionEngine(conf={"fugue.ray.remote.scheduling_strategy": "SPREAD"})
         assert e._get_remote_args() == {"scheduling_strategy": "SPREAD"}
 
+    def test_infer_engine(self):
+        df = rd.from_pandas(pd.DataFrame([[0]], columns=["a"]))
+        assert infer_execution_engine(df) == "ray"
+
+        fdf = RayDataFrame(df)
+        assert infer_execution_engine(fdf) == "ray"
+
 
 class RayBuiltInTests(BuiltInTests.Tests):
     @classmethod
@@ -167,16 +181,14 @@ class RayBuiltInTests(BuiltInTests.Tests):
         def assert_data(df: DataFrame) -> None:
             assert df.schema == "a:datetime,b:bytes,c:[long]"
 
-        df = pd.DataFrame(
-            [[1,2,3]], columns=list("abc")
-        )
+        df = pd.DataFrame([[1, 2, 3]], columns=list("abc"))
 
         with FugueWorkflow() as dag:
             x = dag.df(df)
             result = dag.select("SELECT * FROM ", x)
             result.yield_dataframe_as("x")
         res = dag.run(self.engine)
-        assert res["x"].as_array() == [[1,2,3]]
+        assert res["x"].as_array() == [[1, 2, 3]]
 
     def test_io(self):
         path = os.path.join(self.tmpdir, "a")

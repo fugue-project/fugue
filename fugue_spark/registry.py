@@ -3,7 +3,12 @@ from typing import Any, Optional
 
 import pyspark.rdd as pr
 import pyspark.sql as ps
-from fugue import DataFrame, ExecutionEngine, register_execution_engine
+from fugue import (
+    DataFrame,
+    ExecutionEngine,
+    infer_execution_engine,
+    register_execution_engine,
+)
 from fugue._utils.interfaceless import (
     DataFrameParam,
     ExecutionEngineParam,
@@ -15,7 +20,15 @@ from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from triad import run_at_def
 
+from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
+
+
+@infer_execution_engine.candidate(
+    lambda obj: isinstance(obj, (ps.DataFrame, SparkDataFrame))
+)
+def _infer_spark_client(obj: Any) -> Any:
+    return SparkSession.builder.getOrCreate()
 
 
 def _register_raw_dataframes() -> None:

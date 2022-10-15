@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 import dask.dataframe as dd
 from dask.distributed import Client
-from fugue import DataFrame, register_execution_engine
+from fugue import DataFrame, infer_execution_engine, register_execution_engine
 from fugue._utils.interfaceless import (
     DataFrameParam,
     ExecutionEngineParam,
@@ -14,6 +14,15 @@ from fugue.workflow import register_raw_df_type
 from triad import run_at_def
 
 from fugue_dask.execution_engine import DaskExecutionEngine
+from fugue_dask.dataframe import DaskDataFrame
+from fugue_dask._utils import DASK_UTILS
+
+
+@infer_execution_engine.candidate(
+    lambda obj: isinstance(obj, (dd.DataFrame, DaskDataFrame))
+)
+def _infer_dask_client(obj: Any) -> Any:
+    return DASK_UTILS.get_or_create_client()
 
 
 def _register_raw_dataframes() -> None:

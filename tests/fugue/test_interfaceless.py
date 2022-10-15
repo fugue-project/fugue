@@ -174,6 +174,9 @@ def test_transform_to_file(tmpdir):
         )
 
 
+# def test_transform_infer_engine():
+
+
 def test_out_transform(tmpdir):
     pdf = pd.DataFrame([[1, 10], [0, 0], [1, 1], [0, 20]], columns=["a", "b"])
 

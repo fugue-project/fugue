@@ -2,7 +2,7 @@ import inspect
 from typing import Any, Optional
 
 import ray.data as rd
-from fugue import DataFrame, register_execution_engine
+from fugue import DataFrame, infer_execution_engine, register_execution_engine
 from fugue._utils.interfaceless import (
     DataFrameParam,
     ExecutionEngineParam,
@@ -14,6 +14,13 @@ from triad import run_at_def
 
 from .dataframe import RayDataFrame
 from .execution_engine import RayExecutionEngine
+
+
+@infer_execution_engine.candidate(
+    lambda obj: isinstance(obj, (rd.Dataset, RayDataFrame))
+)
+def _infer_ray_client(obj: Any) -> Any:
+    return "ray"
 
 
 def _register_raw_dataframes() -> None:
