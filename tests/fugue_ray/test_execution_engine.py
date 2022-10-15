@@ -3,7 +3,8 @@ import os
 import duckdb
 import pandas as pd
 import ray
-from fugue import ArrayDataFrame, FugueWorkflow, transform, DataFrame
+import ray.data as rd
+from fugue import ArrayDataFrame, FugueWorkflow, transform, DataFrame, infer_execution_engine
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_sql import fsql
 from fugue_test.builtin_suite import BuiltInTests
@@ -11,7 +12,7 @@ from fugue_test.execution_suite import ExecutionEngineTests
 from pytest import raises
 from triad import FileSystem
 
-from fugue_ray import RayExecutionEngine
+from fugue_ray import RayExecutionEngine, RayDataFrame
 
 _CONF = {
     "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
@@ -212,3 +213,11 @@ class RayBuiltInTests(BuiltInTests.Tests):
         #     ),
         #     check_like=True,
         # )
+
+
+def test_infer_engine():
+    df = rd.from_pandas(pd.DataFrame([[0]], columns=["a"]))
+    assert infer_execution_engine(df)=="ray"
+
+    fdf = RayDataFrame(df)
+    assert infer_execution_engine(fdf)=="ray"

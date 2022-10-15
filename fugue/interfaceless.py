@@ -1,11 +1,13 @@
 from typing import Any, List, Optional
 
+from triad.utils.assertion import assert_or_throw
+
 from fugue.collections.yielded import Yielded
 from fugue.constants import FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT
 from fugue.dataframe import DataFrame
-from fugue.workflow import FugueWorkflow
 from fugue.exceptions import FugueInterfacelessError
-from triad.utils.assertion import assert_or_throw
+from fugue.execution import infer_execution_engine
+from fugue.workflow import FugueWorkflow
 
 
 def _check_valid_input(df: Any, save_path: Optional[str]) -> None:
@@ -28,7 +30,7 @@ def _check_valid_input(df: Any, save_path: Optional[str]) -> None:
         )
 
 
-def transform(
+def transform(  # noqa: C901
     df: Any,
     using: Any,
     schema: Any = None,
@@ -164,6 +166,10 @@ def transform(
             tdf.yield_dataframe_as("result", as_local=as_local)
         else:
             tdf.save(save_path, fmt="parquet")
+
+    if engine is None:
+        engine = infer_execution_engine(df)
+
     dag.run(engine, conf=engine_conf)
     if checkpoint:
         result = dag.yields["result"].result  # type:ignore
@@ -235,4 +241,8 @@ def out_transform(
         callback=callback,
         ignore_errors=ignore_errors or [],
     )
+
+    if engine is None:
+        engine = infer_execution_engine(df)
+
     dag.run(engine, conf=engine_conf)

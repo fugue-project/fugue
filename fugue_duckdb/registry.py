@@ -5,6 +5,7 @@ from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from fugue import (
     DataFrame,
     ExecutionEngine,
+    infer_execution_engine,
     register_execution_engine,
     register_sql_engine,
 )
@@ -19,6 +20,13 @@ from triad import run_at_def
 
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
+
+
+@infer_execution_engine.candidate(
+    lambda obj: isinstance(obj, (DuckDBPyRelation, DuckDataFrame))
+)
+def _infer_duckdb_client(obj: Any) -> Any:
+    return "duckdb"
 
 
 def _register_raw_dataframes() -> None:

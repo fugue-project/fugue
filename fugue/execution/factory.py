@@ -336,6 +336,36 @@ def parse_execution_engine(
         ) from e
 
 
+@fugue_plugin
+def infer_execution_engine(obj: Any) -> Any:
+    """Infer the correspondent ExecutionEngine based on the input object. This is
+    used in interfaceless functions.
+
+    :param obj: the object
+    :return: if the inference succeeded, it returns an object that can be used by
+      :func:`~.parse_execution_engine` in the ``engine`` field to construct an
+      ExecutionEngine. Otherwise, it returns None.
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            from fugue import transform
+
+            transform(spark_df)
+
+        In this example, the SparkExecutionEngine is inferred from spark_df, it
+        is equivalent to:
+
+        .. code-block:: python
+
+            from fugue import transform
+
+            transform(spark_df, engine=current_spark_session)
+    """
+    return None
+
+
 def make_sql_engine(
     engine: Any = None,
     execution_engine: Optional[ExecutionEngine] = None,

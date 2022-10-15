@@ -1,11 +1,11 @@
 import pickle
-import sys
 from threading import RLock
 from typing import Any, List, Optional
 
 import dask.dataframe as dd
 import pandas as pd
-from fugue import transform
+from dask.distributed import Client
+from fugue import infer_execution_engine, transform
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -13,6 +13,7 @@ from fugue.workflow.workflow import FugueWorkflow
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 
+from fugue_dask.dataframe import DaskDataFrame
 from fugue_dask.execution_engine import DaskExecutionEngine
 
 _CONF = {
@@ -184,3 +185,11 @@ def test_transform():
     assert not res.is_local
     assert 5 == res.count()
     assert 5 == cb.n
+
+
+def test_infer_engine(tmpdir):
+    ddf = dd.from_pandas(pd.DataFrame([[0]], columns=["a"]), npartitions=2)
+    assert isinstance(infer_execution_engine(ddf), Client)
+
+    fdf = DaskDataFrame(ddf)
+    assert isinstance(infer_execution_engine(fdf), Client)
