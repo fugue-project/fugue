@@ -3,7 +3,6 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
-from pyspark.sql.functions import col
 from fugue.dataframe import (
     ArrayDataFrame,
     DataFrame,
@@ -16,6 +15,7 @@ from fugue.dataframe.utils import (
     rename_dataframe_column_names,
 )
 from fugue.exceptions import FugueDataFrameOperationError
+from pyspark.sql.functions import col
 from triad import SerializableRLock
 from triad.collections.schema import SchemaError
 from triad.utils.assertion import assert_or_throw
