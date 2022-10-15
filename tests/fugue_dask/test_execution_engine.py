@@ -93,6 +93,13 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
         # TODO: dask does not support sample by number of rows
         pass
 
+    def test_infer_engine(self):
+        ddf = dd.from_pandas(pd.DataFrame([[0]], columns=["a"]), npartitions=2)
+        assert isinstance(infer_execution_engine(ddf), Client)
+
+        fdf = DaskDataFrame(ddf)
+        assert isinstance(infer_execution_engine(fdf), Client)
+
 
 class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
     @classmethod
@@ -187,9 +194,4 @@ def test_transform():
     assert 5 == cb.n
 
 
-def test_infer_engine(tmpdir):
-    ddf = dd.from_pandas(pd.DataFrame([[0]], columns=["a"]), npartitions=2)
-    assert isinstance(infer_execution_engine(ddf), Client)
 
-    fdf = DaskDataFrame(ddf)
-    assert isinstance(infer_execution_engine(fdf), Client)

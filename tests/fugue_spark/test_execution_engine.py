@@ -107,6 +107,13 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         assert abs(len(b.as_array()) - 90) < 2
         assert b.metadata == dict(a=1)
 
+    def test_infer_engine():
+        df = self.spark_session.createDataFrame(pd.DataFrame([[0]], columns=["a"]))
+        assert isinstance(infer_execution_engine(df), SparkSession)
+
+        fdf = SparkDataFrame(df)
+        assert isinstance(infer_execution_engine(fdf), SparkSession)
+
 
 class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
     @pytest.fixture(autouse=True)
@@ -354,12 +361,3 @@ def assert_match(df: List[List[Any]], values: List[int]) -> None:
 def assert_all_n(df: List[List[Any]], n, l) -> None:
     assert all(x[0] == n for x in df)
     assert l == len(df)
-
-
-def test_infer_engine():
-    spark = SparkSession.builder.getOrCreate()
-    df = spark.createDataFrame(pd.DataFrame([[0]], columns=["a"]))
-    assert isinstance(infer_execution_engine(df), SparkSession)
-
-    fdf = SparkDataFrame(df)
-    assert isinstance(infer_execution_engine(fdf), SparkSession)
