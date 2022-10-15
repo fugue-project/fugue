@@ -107,7 +107,7 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         assert abs(len(b.as_array()) - 90) < 2
         assert b.metadata == dict(a=1)
 
-    def test_infer_engine():
+    def test_infer_engine(self):
         df = self.spark_session.createDataFrame(pd.DataFrame([[0]], columns=["a"]))
         assert isinstance(infer_execution_engine(df), SparkSession)
 
