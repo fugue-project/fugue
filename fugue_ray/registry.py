@@ -10,18 +10,10 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.workflow import register_raw_df_type
-from triad import run_once
+from triad import run_at_def
 
 from .dataframe import RayDataFrame
 from .execution_engine import RayExecutionEngine
-
-
-@run_once
-def register() -> None:
-    """Register Ray Execution Engine"""
-    _register_raw_dataframes()
-    _register_engines()
-    _register_annotation_converters()
 
 
 def _register_raw_dataframes() -> None:
@@ -75,3 +67,11 @@ class _RayDatasetParam(DataFrameParam):
 
     def count(self, df: DataFrame) -> int:  # pragma: no cover
         raise NotImplementedError("not allowed")
+
+
+@run_at_def
+def _register() -> None:
+    """Register Ray Execution Engine"""
+    _register_raw_dataframes()
+    _register_engines()
+    _register_annotation_converters()
