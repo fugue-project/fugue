@@ -2,7 +2,7 @@ import inspect
 from typing import Any, Optional
 
 import ray.data as rd
-from fugue import DataFrame, register_execution_engine, infer_execution_engine
+from fugue import DataFrame, infer_execution_engine, register_execution_engine
 from fugue._utils.interfaceless import (
     DataFrameParam,
     ExecutionEngineParam,

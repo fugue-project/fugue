@@ -2,11 +2,10 @@ from typing import Any, List
 
 import numpy as np
 import pandas as pd
-import pyspark.sql as ps
 import pyspark.rdd as pr
-from pyspark import SparkContext
+import pyspark.sql as ps
 import pytest
-from fugue import transform
+from fugue import infer_execution_engine, transform
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import (
     ArrayDataFrame,
@@ -19,11 +18,12 @@ from fugue.extensions.transformer import Transformer, transformer
 from fugue.workflow.workflow import FugueWorkflow
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
-from pyspark import StorageLevel
+from pyspark import SparkContext, StorageLevel
 from pyspark.sql import DataFrame as SDataFrame
 from pyspark.sql import SparkSession
 from pytest import raises
 
+from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
 
@@ -354,3 +354,12 @@ def assert_match(df: List[List[Any]], values: List[int]) -> None:
 def assert_all_n(df: List[List[Any]], n, l) -> None:
     assert all(x[0] == n for x in df)
     assert l == len(df)
+
+
+def test_infer_engine():
+    spark = SparkSession.builder.getOrCreate()
+    df = spark.createDataFrame(pd.DataFrame([[0]], columns=["a"]))
+    assert isinstance(infer_execution_engine(df), SparkSession)
+
+    fdf = SparkDataFrame(df)
+    assert isinstance(infer_execution_engine(fdf), SparkSession)
