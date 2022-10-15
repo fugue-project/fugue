@@ -3,6 +3,7 @@
 ## 0.7.4
 
 -   [369](https://github.com/fugue-project/fugue/issues/369) Remove execution from FugueWorkflow context manager, remove engine from FugueWorkflow
+-   [373](https://github.com/fugue-project/fugue/issues/373) Fixed Spark engine rename slowness when there are a lot of columns
 
 ## 0.7.3
 

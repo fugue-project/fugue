@@ -3,6 +3,7 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
+from pyspark.sql.functions import col
 from fugue.dataframe import (
     ArrayDataFrame,
     DataFrame,
@@ -33,9 +34,13 @@ def _get_spark_dataframe_columns(df: ps.DataFrame) -> List[Any]:
 def _rename_spark_dataframe(df: ps.DataFrame, names: Dict[str, Any]) -> ps.DataFrame:
     if len(names) == 0:
         return df
-    for k, v in names.items():
-        df = df.withColumnRenamed(k, v)
-    return df
+    cols: List[ps.Column] = []
+    for f in df.schema:
+        c = col(f.name)
+        if f.name in names:
+            c = c.alias(names[f.name])
+        cols.append(c)
+    return df.select(cols)
 
 
 class SparkDataFrame(DataFrame):
@@ -131,10 +136,7 @@ class SparkDataFrame(DataFrame):
             self.schema.rename(columns)
         except Exception as e:
             raise FugueDataFrameOperationError from e
-        df = self.native
-        for o, n in columns.items():
-            df = df.withColumnRenamed(o, n)
-        return SparkDataFrame(df)
+        return SparkDataFrame(_rename_spark_dataframe(self.native, columns))
 
     def alter_columns(self, columns: Any) -> DataFrame:
         new_schema = self._get_altered_schema(columns)
