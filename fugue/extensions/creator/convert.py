@@ -2,19 +2,27 @@ import copy
 from typing import Any, Callable, Dict, List, Optional, no_type_check
 
 from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
+from fugue._utils.registry import fugue_plugin
 from fugue.dataframe import DataFrame
 from fugue.exceptions import FugueInterfacelessError
-from fugue.extensions._utils import ExtensionRegistry
 from fugue.extensions.creator.creator import Creator
+from triad import ParamDict
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 from triad.utils.hash import to_uuid
 
-_CREATOR_REGISTRY = ExtensionRegistry()
+_CREATOR_REGISTRY = ParamDict()
 
 
-def register_creator(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
+@fugue_plugin
+def parse_creator(obj: Any) -> Any:
+    if isinstance(obj, str) and obj in _CREATOR_REGISTRY:
+        return _CREATOR_REGISTRY[obj]
+    return obj
+
+
+def register_creator(alias: str, obj: Any, on_dup: int = ParamDict.OVERWRITE) -> None:
     """Register creator with an alias.
 
     :param alias: alias of the creator
@@ -78,7 +86,7 @@ def register_creator(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
             dag.create("mc").show()  # use my_creator by alias
             dag.run()
     """
-    _CREATOR_REGISTRY.register(alias, obj, on_dup=on_dup)
+    _CREATOR_REGISTRY.update({alias: obj}, on_dup=on_dup)
 
 
 def creator(schema: Any = None) -> Callable[[Any], "_FuncAsCreator"]:
@@ -101,7 +109,7 @@ def _to_creator(
     local_vars: Optional[Dict[str, Any]] = None,
 ) -> Creator:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
-    obj = _CREATOR_REGISTRY.get(obj)
+    obj = parse_creator(obj)
     exp: Optional[Exception] = None
     try:
         return copy.copy(

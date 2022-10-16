@@ -50,7 +50,6 @@ from fugue.extensions._builtins import (
     Take,
     Zip,
 )
-from fugue.extensions.creator.convert import _CREATOR_REGISTRY
 from fugue.extensions.outputter.convert import _OUTPUTTER_REGISTRY
 from fugue.extensions.processor.convert import _PROCESSOR_REGISTRY
 from fugue.extensions.transformer.convert import (
@@ -1596,8 +1595,6 @@ class FugueWorkflow:
           :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
         :return: result dataframe
         """
-        if isinstance(using, str):
-            using = _CREATOR_REGISTRY.get(using)
         task = Create(creator=using, schema=schema, params=params)
         return self.add(task)
 

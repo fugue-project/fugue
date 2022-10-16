@@ -1425,7 +1425,7 @@ class BuiltInTests(object):
             def my_outputter(df: pd.DataFrame) -> None:
                 print(df)
 
-            register_creator("mc", my_creator, on_dup="overwrite")
+            register_creator("mc", my_creator)
             register_processor("mp", my_processor, on_dup="overwrite")
             register_transformer("mt", my_transformer, on_dup="overwrite")
             register_output_transformer("mot", my_out_transformer, on_dup="overwrite")
