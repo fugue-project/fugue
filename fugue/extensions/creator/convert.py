@@ -38,13 +38,13 @@ def parse_creator(obj: Any) -> Any:
                     return to_uuid(super().__uuid__(), self.x)
 
             @parse_creator.candidate(
-                lambda x: isinstance(x, str) and x.startswith("-"))
+                lambda x: isinstance(x, str) and x.startswith("-*"))
             def _parse(obj):
                 return My(obj)
 
             dag = FugueWorkflow()
-            dag.create("-abc").show()
-            # == dag.create(My("-abc")).show()
+            dag.create("-*abc").show()
+            # == dag.create(My("-*abc")).show()
 
             dag.run()
     """

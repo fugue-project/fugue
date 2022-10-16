@@ -45,13 +45,13 @@ def test_parse_creator():
         def __uuid__(self) -> str:
             return to_uuid(super().__uuid__(), self._x)
 
-    @parse_creator.candidate(lambda x: isinstance(x, str) and x.startswith("-"))
+    @parse_creator.candidate(lambda x: isinstance(x, str) and x.startswith("(("))
     def _parse(obj):
         return _C(obj)
 
-    a = _to_creator("-abc")
-    b = _to_creator("-bc")
-    c = _to_creator("-abc")
+    a = _to_creator("((abc")
+    b = _to_creator("((bc")
+    c = _to_creator("((abc")
 
     assert isinstance(a, _C)
     assert isinstance(b, _C)
