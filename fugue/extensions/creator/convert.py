@@ -17,19 +17,51 @@ _CREATOR_REGISTRY = ParamDict()
 
 @fugue_plugin
 def parse_creator(obj: Any) -> Any:
+    """Parse an object to another object that can be converted to a Fugue
+    :class:`~fugue.extensions.creator.creator.Creator`.
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            from fugue import Creator, parse_creator, FugueWorkflow
+            from triad import to_uuid
+
+            class My(Creator):
+                def __init__(self, x):
+                    self.x = x
+
+                def create(self) :
+                    raise NotImplementedError
+
+                def __uuid__(self) -> str:
+                    return to_uuid(super().__uuid__(), self.x)
+
+            @parse_creator.candidate(
+                lambda x: isinstance(x, str) and x.startswith("-"))
+            def _parse(obj):
+                return My(obj)
+
+            dag = FugueWorkflow()
+            dag.create("-abc").show()
+            # == dag.create(My("-abc")).show()
+
+            dag.run()
+    """
     if isinstance(obj, str) and obj in _CREATOR_REGISTRY:
         return _CREATOR_REGISTRY[obj]
     return obj
 
 
 def register_creator(alias: str, obj: Any, on_dup: int = ParamDict.OVERWRITE) -> None:
-    """Register creator with an alias.
+    """Register creator with an alias. This is a simplified version of
+    :func:`~.parse_creator`
 
     :param alias: alias of the creator
     :param obj: the object that can be converted to
         :class:`~fugue.extensions.creator.creator.Creator`
-    :param on_dup: action on duplicated ``alias``. It can be "overwrite", "ignore"
-        (not overwriting) or "throw" (throw exception), defaults to "overwrite".
+    :param on_dup: see :meth:`triad.collections.dict.ParamDict.update`
+        , defaults to ``ParamDict.OVERWRITE``
 
     .. tip::
 

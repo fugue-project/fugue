@@ -31,7 +31,7 @@ from fugue.execution.native_execution_engine import (
     QPDPandasEngine,
     SqliteEngine,
 )
-from fugue.extensions.creator import Creator, creator, register_creator
+from fugue.extensions.creator import Creator, creator, parse_creator, register_creator
 from fugue.extensions.outputter import Outputter, outputter, register_outputter
 from fugue.extensions.processor import Processor, processor, register_processor
 from fugue.extensions.transformer import (
