@@ -28,13 +28,13 @@ from fugue.extensions._builtins import (
     AssertEqual,
     AssertNotEqual,
     Assign,
+    CreateData,
     Distinct,
     DropColumns,
     Dropna,
     Fillna,
     Filter,
     Load,
-    LoadYielded,
     Rename,
     RunJoin,
     RunOutputTransformer,
@@ -61,8 +61,9 @@ from fugue.extensions.transformer.convert import (
 from fugue.rpc import to_rpc_handler
 from fugue.rpc.base import EmptyRPCHandler
 from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
-from fugue.workflow._tasks import Create, CreateData, FugueTask, Output, Process
+from fugue.workflow._tasks import Create, FugueTask, Output, Process
 from fugue.workflow._workflow_context import FugueWorkflowContext
+from fugue.workflow.input import is_acceptable_raw_df
 from triad import (
     ParamDict,
     Schema,
@@ -1679,7 +1680,7 @@ class FugueWorkflow:
         data: Any,
         schema: Any = None,
         metadata: Any = None,
-        data_determiner: Optional[Callable[[Any], str]] = None,
+        data_determiner: Optional[Callable[[Any], Any]] = None,
     ) -> WorkflowDataFrame:
         """Create dataframe.
 
@@ -1711,18 +1712,23 @@ class FugueWorkflow:
                 ),
             )
             return data
-        if isinstance(data, Yielded):
-            assert_or_throw(
-                schema is None and metadata is None,
-                FugueWorkflowCompileError(
-                    "schema and metadata must be None when data is Yielded"
-                ),
+        if (
+            (isinstance(data, (List, Iterable)) and not isinstance(data, str))
+            or isinstance(data, Yielded)
+            or is_acceptable_raw_df(data)
+        ):
+            return self.create(
+                using=CreateData(
+                    data,
+                    schema=schema,
+                    metadata=metadata,
+                    data_determiner=data_determiner,
+                )
             )
-            return self.create(using=LoadYielded, params=dict(yielded=data))
-        task = CreateData(
-            data=data, schema=schema, metadata=metadata, data_determiner=data_determiner
+        raise FugueWorkflowCompileError(
+            f"Input data of type {type(data)} can't "
+            "be converted to WorkflowDataFrame"
         )
-        return self.add(task)
 
     def df(
         self,

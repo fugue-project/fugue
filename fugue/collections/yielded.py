@@ -28,7 +28,7 @@ class Yielded(object):
         """``copy`` should have no effect"""
         return self
 
-    def __deepcopy__(self, memo: Any) -> Any:
+    def __deepcopy__(self, memo: Any) -> Any:  # pragma: no cover
         """``deepcopy`` should have no effect"""
         return self
 

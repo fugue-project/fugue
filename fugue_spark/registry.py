@@ -8,6 +8,7 @@ from fugue import (
     ExecutionEngine,
     infer_execution_engine,
     register_execution_engine,
+    parse_creator,
 )
 from fugue._utils.interfaceless import (
     DataFrameParam,
@@ -24,11 +25,26 @@ from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
 
+def _is_sparksql(obj: Any) -> bool:
+    if not isinstance(obj, str):
+        return False
+    obj = obj[:20].lower()
+    return obj.startswith("--sparksql") or obj.startswith("/*sparksql*/")
+
+
 @infer_execution_engine.candidate(
-    lambda obj: isinstance(obj, (ps.DataFrame, SparkDataFrame))
+    lambda obj: isinstance(obj, (ps.DataFrame, SparkDataFrame)) or _is_sparksql(obj)
 )
 def _infer_spark_client(obj: Any) -> Any:
     return SparkSession.builder.getOrCreate()
+
+
+@parse_creator.candidate(lambda obj: _is_sparksql(obj))
+def _parse_sparksql_creator(sql):
+    def _run_sql(spark: SparkSession) -> ps.DataFrame:
+        return spark.sql(sql)
+
+    return _run_sql
 
 
 def _register_raw_dataframes() -> None:

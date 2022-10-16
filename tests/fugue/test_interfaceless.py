@@ -12,7 +12,7 @@ from fugue import (
     make_execution_engine,
 )
 from fugue.constants import FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH
-from fugue.exceptions import FugueInterfacelessError
+from fugue.exceptions import FugueInterfacelessError, FugueWorkflowCompileError
 from pytest import raises
 
 
@@ -57,6 +57,9 @@ def test_transform():
     cb = Callback()
     result = transform(pdf, f3, callback=cb.called)
     assert 1 == cb.ct
+
+    with raises(FugueWorkflowCompileError):
+        transform(123, f2)
 
 
 def test_transform_from_yield(tmpdir):
@@ -174,9 +177,6 @@ def test_transform_to_file(tmpdir):
         )
 
 
-# def test_transform_infer_engine():
-
-
 def test_out_transform(tmpdir):
     pdf = pd.DataFrame([[1, 10], [0, 0], [1, 1], [0, 20]], columns=["a", "b"])
 
@@ -227,6 +227,9 @@ def test_out_transform(tmpdir):
     cb = Callback()
     out_transform(fp, f3, callback=cb.called)
     assert 1 == cb.ct
+
+    with raises(FugueWorkflowCompileError):
+        out_transform(123, t.f)
 
 
 class Callback:

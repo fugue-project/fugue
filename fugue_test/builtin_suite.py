@@ -93,6 +93,14 @@ class BuiltInTests(object):
                 dag.df(dag.df([[0]], "a:int")).persist().broadcast().show(title="t")
             dag.run(self.engine)
 
+        def test_create_df_equivalence(self):
+            ndf = self.engine.to_df(pd.DataFrame([[0]], columns=["a"]))
+            dag1 = FugueWorkflow()
+            dag1.df(ndf).show()
+            dag2 = FugueWorkflow()
+            dag2.create(ndf).show()
+            assert dag1.spec_uuid() == dag2.spec_uuid()
+
         def test_checkpoint(self):
             with raises(FugueWorkflowError):
                 with FugueWorkflow() as dag:
