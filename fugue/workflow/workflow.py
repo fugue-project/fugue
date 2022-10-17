@@ -50,14 +50,7 @@ from fugue.extensions._builtins import (
     Take,
     Zip,
 )
-from fugue.extensions.outputter.convert import _OUTPUTTER_REGISTRY
-from fugue.extensions.processor.convert import _PROCESSOR_REGISTRY
-from fugue.extensions.transformer.convert import (
-    _OUT_TRANSFORMER_REGISTRY,
-    _TRANSFORMER_REGISTRY,
-    _to_output_transformer,
-    _to_transformer,
-)
+from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
 from fugue.rpc import to_rpc_handler
 from fugue.rpc.base import EmptyRPCHandler
 from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
@@ -1627,8 +1620,6 @@ class FugueWorkflow:
 
         :return: result dataframe
         """
-        if isinstance(using, str):
-            using = _PROCESSOR_REGISTRY.get(using)
         _dfs = self._to_dfs(*dfs)
         task = Process(
             len(_dfs),
@@ -1660,8 +1651,6 @@ class FugueWorkflow:
           The outputter will be able to access this value from
           :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
         """
-        if isinstance(using, str):
-            using = _OUTPUTTER_REGISTRY.get(using)
         _dfs = self._to_dfs(*dfs)
         task = Output(
             len(_dfs),
@@ -1963,8 +1952,6 @@ class FugueWorkflow:
             :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
             return nothing
         """
-        if isinstance(using, str):
-            using = _TRANSFORMER_REGISTRY.get(using)
         assert_or_throw(
             len(dfs) == 1,
             NotImplementedError("transform supports only single dataframe"),
@@ -2024,8 +2011,6 @@ class FugueWorkflow:
             :meth:`~.out_transform` is guaranteed to execute immediately (eager) and
             return nothing
         """
-        if isinstance(using, str):
-            using = _OUT_TRANSFORMER_REGISTRY.get(using)
         assert_or_throw(
             len(dfs) == 1,
             NotImplementedError("output transform supports only single dataframe"),

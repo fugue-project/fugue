@@ -6,10 +6,10 @@ from fugue._utils.interfaceless import (
     is_class_method,
     parse_output_schema_from_comment,
 )
+from fugue._utils.registry import fugue_plugin
 from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames, LocalDataFrame
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions._utils import (
-    ExtensionRegistry,
     parse_validation_rules_from_comment,
     to_validation_rules,
 )
@@ -20,19 +20,95 @@ from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 from triad.utils.hash import to_uuid
 
-_TRANSFORMER_REGISTRY = ExtensionRegistry()
-_OUT_TRANSFORMER_REGISTRY = ExtensionRegistry()
+_TRANSFORMER_REGISTRY = ParamDict()
+_OUT_TRANSFORMER_REGISTRY = ParamDict()
 
 
-def register_transformer(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
+@fugue_plugin
+def parse_transformer(obj: Any) -> Any:
+    """Parse an object to another object that can be converted to a Fugue
+    :class:`~fugue.extensions.transformer.transformer.Transformer`.
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            from fugue import Transformer, parse_transformer, FugueWorkflow
+            from triad import to_uuid
+
+            class My(Transformer):
+                def __init__(self, x):
+                    self.x = x
+
+                ...
+
+                def __uuid__(self) -> str:
+                    return to_uuid(super().__uuid__(), self.x)
+
+            @parse_transformer.candidate(
+                lambda x: isinstance(x, str) and x.startswith("-*"))
+            def _parse(obj):
+                return My(obj)
+
+            dag = FugueWorkflow()
+            dag.df([[0]], "a:int").transform("-*abc")
+            # ==  dag.df([[0]], "a:int").transform(My("-*abc"))
+
+            dag.run()
+    """
+    if isinstance(obj, str) and obj in _TRANSFORMER_REGISTRY:
+        return _TRANSFORMER_REGISTRY[obj]
+    return obj
+
+
+@fugue_plugin
+def parse_output_transformer(obj: Any) -> Any:
+    """Parse an object to another object that can be converted to a Fugue
+    :class:`~fugue.extensions.transformer.transformer.OutputTransformer`.
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            from fugue import Transformer, parse_output_transformer, FugueWorkflow
+            from triad import to_uuid
+
+            class My(OutputTransformer):
+                def __init__(self, x):
+                    self.x = x
+
+                ...
+
+                def __uuid__(self) -> str:
+                    return to_uuid(super().__uuid__(), self.x)
+
+            @parse_output_transformer.candidate(
+                lambda x: isinstance(x, str) and x.startswith("-*"))
+            def _parse(obj):
+                return My(obj)
+
+            dag = FugueWorkflow()
+            dag.df([[0]], "a:int").out_transform("-*abc")
+            # ==  dag.df([[0]], "a:int").out_transform(My("-*abc"))
+
+            dag.run()
+    """
+    if isinstance(obj, str) and obj in _OUT_TRANSFORMER_REGISTRY:
+        return _OUT_TRANSFORMER_REGISTRY[obj]
+    return obj
+
+
+def register_transformer(
+    alias: str, obj: Any, on_dup: int = ParamDict.OVERWRITE
+) -> None:
     """Register transformer with an alias.
 
     :param alias: alias of the transformer
     :param obj: the object that can be converted to
         :class:`~fugue.extensions.transformer.transformer.Transformer` or
         :class:`~fugue.extensions.transformer.transformer.CoTransformer`
-    :param on_dup: action on duplicated ``alias``. It can be "overwrite", "ignore"
-        (not overwriting) or "throw" (throw exception), defaults to "overwrite".
+    :param on_dup: see :meth:`triad.collections.dict.ParamDict.update`
+        , defaults to ``ParamDict.OVERWRITE``
 
     .. tip::
 
@@ -90,11 +166,11 @@ def register_transformer(alias: str, obj: Any, on_dup: str = "overwrite") -> Non
             dag.df([[0]],"a:int").transform("mt").show()
             dag.run()
     """
-    _TRANSFORMER_REGISTRY.register(alias, obj, on_dup=on_dup)
+    _TRANSFORMER_REGISTRY.update({alias: obj}, on_dup=on_dup)
 
 
 def register_output_transformer(
-    alias: str, obj: Any, on_dup: str = "overwrite"
+    alias: str, obj: Any, on_dup: int = ParamDict.OVERWRITE
 ) -> None:
     """Register output transformer with an alias.
 
@@ -102,8 +178,8 @@ def register_output_transformer(
     :param obj: the object that can be converted to
         :class:`~fugue.extensions.transformer.transformer.OutputTransformer` or
         :class:`~fugue.extensions.transformer.transformer.OutputCoTransformer`
-    :param on_dup: action on duplicated ``alias``. It can be "overwrite", "ignore"
-        (not overwriting) or "throw" (throw exception), defaults to "overwrite".
+    :param on_dup: see :meth:`triad.collections.dict.ParamDict.update`
+        , defaults to ``ParamDict.OVERWRITE``
 
     .. tip::
 
@@ -160,7 +236,7 @@ def register_output_transformer(
             dag.df([[0]],"a:int").out_transform("mt")
             dag.run()
     """
-    _OUT_TRANSFORMER_REGISTRY.register(alias, obj, on_dup=on_dup)
+    _OUT_TRANSFORMER_REGISTRY.update({alias: obj}, on_dup=on_dup)
 
 
 def transformer(
@@ -490,7 +566,7 @@ def _to_transformer(
 ) -> Union[Transformer, CoTransformer]:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
     return _to_general_transformer(
-        obj=_TRANSFORMER_REGISTRY.get(obj),
+        obj=parse_transformer(obj),
         schema=schema,
         global_vars=global_vars,
         local_vars=local_vars,
@@ -508,7 +584,7 @@ def _to_output_transformer(
 ) -> Union[Transformer, CoTransformer]:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
     return _to_general_transformer(
-        obj=_OUT_TRANSFORMER_REGISTRY.get(obj),
+        obj=parse_output_transformer(obj),
         schema=None,
         global_vars=global_vars,
         local_vars=local_vars,

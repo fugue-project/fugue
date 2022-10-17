@@ -7,6 +7,7 @@ from fugue.execution import ExecutionEngine, NativeExecutionEngine
 from fugue.extensions.processor import (
     Processor,
     _to_processor,
+    parse_processor,
     processor,
     register_processor,
 )
@@ -27,7 +28,7 @@ def test_register():
 
     raises(
         KeyError,
-        lambda: register_processor("x", MockProcessor, on_dup="throw"),
+        lambda: register_processor("x", MockProcessor, on_dup=ParamDict.THROW),
     )
 
 
@@ -142,6 +143,32 @@ def test_to_processor_validation():
     assert {"input_has": ["a", "b"]} == b.validation_rules
     c = _to_processor(MockProcessorV)
     assert {"input_is": "a:int,b:int"} == c.validation_rules
+
+
+def test_parse_processor():
+    class _C(Processor):
+        def __init__(self, x):
+            self._x = x
+
+        def process(self, dfs):
+            raise NotImplementedError
+
+        def __uuid__(self) -> str:
+            return to_uuid(super().__uuid__(), self._x)
+
+    @parse_processor.candidate(lambda x: isinstance(x, str) and x.startswith("(("))
+    def _parse(obj):
+        return _C(obj)
+
+    a = _to_processor("((abc")
+    b = _to_processor("((bc")
+    c = _to_processor("((abc")
+
+    assert isinstance(a, _C)
+    assert isinstance(b, _C)
+    assert isinstance(c, _C)
+    assert to_uuid(a) == to_uuid(c)
+    assert to_uuid(a) != to_uuid(b)
 
 
 class T0(Processor):

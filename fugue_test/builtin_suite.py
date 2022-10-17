@@ -1434,10 +1434,10 @@ class BuiltInTests(object):
                 print(df)
 
             register_creator("mc", my_creator)
-            register_processor("mp", my_processor, on_dup="overwrite")
-            register_transformer("mt", my_transformer, on_dup="overwrite")
-            register_output_transformer("mot", my_out_transformer, on_dup="overwrite")
-            register_outputter("mo", my_outputter, on_dup="overwrite")
+            register_processor("mp", my_processor)
+            register_transformer("mt", my_transformer)
+            register_output_transformer("mot", my_out_transformer)
+            register_outputter("mo", my_outputter)
 
             with FugueWorkflow() as dag:
                 df = dag.create("mc").process("mp").transform("mt")

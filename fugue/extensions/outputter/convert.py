@@ -2,28 +2,66 @@ import copy
 from typing import Any, Callable, Dict, List, Optional, no_type_check
 
 from fugue._utils.interfaceless import FunctionWrapper
+from fugue._utils.registry import fugue_plugin
 from fugue.dataframe import DataFrames
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions._utils import (
-    ExtensionRegistry,
     parse_validation_rules_from_comment,
     to_validation_rules,
 )
 from fugue.extensions.outputter.outputter import Outputter
+from triad import ParamDict, to_uuid
 from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
-from triad.utils.hash import to_uuid
 
-_OUTPUTTER_REGISTRY = ExtensionRegistry()
+_OUTPUTTER_REGISTRY = ParamDict()
 
 
-def register_outputter(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
+@fugue_plugin
+def parse_outputter(obj: Any) -> Any:
+    """Parse an object to another object that can be converted to a Fugue
+    :class:`~fugue.extensions.outputter.outputter.Outputter`.
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            from fugue import Outputter, parse_outputter, FugueWorkflow
+            from triad import to_uuid
+
+            class My(Outputter):
+                def __init__(self, x):
+                    self.x = x
+
+                def process(self, dfs):
+                    raise NotImplementedError
+
+                def __uuid__(self) -> str:
+                    return to_uuid(super().__uuid__(), self.x)
+
+            @parse_outputter.candidate(
+                lambda x: isinstance(x, str) and x.startswith("-*"))
+            def _parse(obj):
+                return My(obj)
+
+            dag = FugueWorkflow()
+            dag.df([[0]], "a:int").output("-*abc")
+            # ==  dag.df([[0]], "a:int").output(My("-*abc"))
+
+            dag.run()
+    """
+    if isinstance(obj, str) and obj in _OUTPUTTER_REGISTRY:
+        return _OUTPUTTER_REGISTRY[obj]
+    return obj
+
+
+def register_outputter(alias: str, obj: Any, on_dup: int = ParamDict.OVERWRITE) -> None:
     """Register outputter with an alias.
 
     :param alias: alias of the processor
     :param obj: the object that can be converted to
         :class:`~fugue.extensions.outputter.outputter.Outputter`
-    :param on_dup: action on duplicated ``alias``. It can be "overwrite", "ignore"
-        (not overwriting) or "throw" (throw exception), defaults to "overwrite".
+    :param on_dup: see :meth:`triad.collections.dict.ParamDict.update`
+        , defaults to ``ParamDict.OVERWRITE``
 
     .. tip::
 
@@ -81,7 +119,7 @@ def register_outputter(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
             dag.df([[0]],"a:int").output("mo")
             dag.run()
     """
-    _OUTPUTTER_REGISTRY.register(alias, obj, on_dup=on_dup)
+    _OUTPUTTER_REGISTRY.update({alias: obj}, on_dup=on_dup)
 
 
 def outputter(**validation_rules: Any) -> Callable[[Any], "_FuncAsOutputter"]:
@@ -106,7 +144,7 @@ def _to_outputter(
     validation_rules: Optional[Dict[str, Any]] = None,
 ) -> Outputter:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
-    obj = _OUTPUTTER_REGISTRY.get(obj)
+    obj = parse_outputter(obj)
     exp: Optional[Exception] = None
     if validation_rules is None:
         validation_rules = {}

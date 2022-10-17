@@ -6,12 +6,13 @@ from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.transformer import (
     Transformer,
     _to_transformer,
-    transformer,
+    parse_transformer,
     register_transformer,
+    transformer,
 )
 from pytest import raises
+from triad import ParamDict, to_uuid
 from triad.collections.schema import Schema
-from triad.utils.hash import to_uuid
 
 
 def test_transformer():
@@ -92,7 +93,9 @@ def test__register():
     # can't overwrite
     raises(
         KeyError,
-        lambda: register_transformer("register_temp", MockTransformer, on_dup="raise"),
+        lambda: register_transformer(
+            "register_temp", MockTransformer, on_dup=ParamDict.THROW
+        ),
     )
 
 
@@ -172,6 +175,22 @@ def test_inside_class():
     assert {"input_is": "a:int,b:int"} == a.validation_rules
 
 
+def test_parse_transformer():
+    @parse_transformer.candidate(lambda x: isinstance(x, str) and x.startswith("(("))
+    def _parse(obj):
+        return MockTransformer(obj)
+
+    a = _to_transformer("((abc")
+    b = _to_transformer("((bc")
+    c = _to_transformer("((abc")
+
+    assert isinstance(a, MockTransformer)
+    assert isinstance(b, MockTransformer)
+    assert isinstance(c, MockTransformer)
+    assert to_uuid(a) == to_uuid(c)
+    assert to_uuid(a) != to_uuid(b)
+
+
 @transformer(["*", None, "b:int"])
 def t1(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
     for r in df:
@@ -233,8 +252,14 @@ def t10(df: pd.DataFrame, c: callable) -> pd.DataFrame:
 
 
 class MockTransformer(Transformer):
+    def __init__(self, x=""):
+        self._x = x
+
     def get_output_schema(self, df):
         pass
 
     def transform(self, df):
         pass
+
+    def __uuid__(self) -> str:
+        return to_uuid(super().__uuid__(), self._x)
