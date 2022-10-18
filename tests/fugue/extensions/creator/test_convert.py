@@ -4,7 +4,13 @@ import pandas as pd
 from fugue.dataframe import ArrayDataFrame, DataFrame
 from fugue.exceptions import FugueInterfacelessError
 from fugue.execution import ExecutionEngine, NativeExecutionEngine
-from fugue.extensions.creator import Creator, _to_creator, creator, register_creator
+from fugue.extensions.creator import (
+    Creator,
+    _to_creator,
+    creator,
+    parse_creator,
+    register_creator,
+)
 from pytest import raises
 from triad.collections.dict import ParamDict
 from triad.utils.hash import to_uuid
@@ -20,17 +26,38 @@ def test_register():
     b = _to_creator("x")
     assert isinstance(b, Creator)
 
-    register_creator("x", Creator, on_dup="ignore")
+    register_creator("x", Creator, on_dup=ParamDict.IGNORE)
 
     raises(
         KeyError,
-        lambda: register_creator("x", Creator, on_dup="raise"),
+        lambda: register_creator("x", Creator, on_dup=ParamDict.THROW),
     )
 
-    raises(
-        ValueError,
-        lambda: register_creator("x", Creator, on_dup="dummy"),
-    )
+
+def test_parse_creator():
+    class _C(Creator):
+        def __init__(self, x):
+            self._x = x
+
+        def create(self) -> DataFrame:
+            raise NotImplementedError
+
+        def __uuid__(self) -> str:
+            return to_uuid(super().__uuid__(), self._x)
+
+    @parse_creator.candidate(lambda x: isinstance(x, str) and x.startswith("(("))
+    def _parse(obj):
+        return _C(obj)
+
+    a = _to_creator("((abc")
+    b = _to_creator("((bc")
+    c = _to_creator("((abc")
+
+    assert isinstance(a, _C)
+    assert isinstance(b, _C)
+    assert isinstance(c, _C)
+    assert to_uuid(a) == to_uuid(c)
+    assert to_uuid(a) != to_uuid(b)
 
 
 def test__to_creator():

@@ -5,7 +5,7 @@ from triad.utils.assertion import assert_or_throw
 from fugue.collections.yielded import Yielded
 from fugue.constants import FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT
 from fugue.dataframe import DataFrame
-from fugue.exceptions import FugueInterfacelessError
+from fugue.exceptions import FugueInterfacelessError, FugueWorkflowCompileError
 from fugue.execution import infer_execution_engine
 from fugue.workflow import FugueWorkflow
 
@@ -131,10 +131,13 @@ def transform(  # noqa: C901
     _check_valid_input(df, save_path)
 
     dag = FugueWorkflow(compile_conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
-    if isinstance(df, str):
-        src = dag.load(df, fmt="parquet")
-    else:
-        src = dag.df(df)
+    try:
+        src = dag.create(df)
+    except FugueWorkflowCompileError:
+        if isinstance(df, str):
+            src = dag.load(df, fmt="parquet")
+        else:
+            raise
     tdf = src.transform(
         using=using,
         schema=schema,
@@ -230,10 +233,13 @@ def out_transform(
       and return nothing
     """
     dag = FugueWorkflow(compile_conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
-    if isinstance(df, str):
-        src = dag.load(df, fmt="parquet")
-    else:
-        src = dag.df(df)
+    try:
+        src = dag.create(df)
+    except FugueWorkflowCompileError:
+        if isinstance(df, str):
+            src = dag.load(df, fmt="parquet")
+        else:
+            raise
     src.out_transform(
         using=using,
         params=params,

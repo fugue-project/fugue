@@ -93,6 +93,14 @@ class BuiltInTests(object):
                 dag.df(dag.df([[0]], "a:int")).persist().broadcast().show(title="t")
             dag.run(self.engine)
 
+        def test_create_df_equivalence(self):
+            ndf = self.engine.to_df(pd.DataFrame([[0]], columns=["a"]))
+            dag1 = FugueWorkflow()
+            dag1.df(ndf).show()
+            dag2 = FugueWorkflow()
+            dag2.create(ndf).show()
+            assert dag1.spec_uuid() == dag2.spec_uuid()
+
         def test_checkpoint(self):
             with raises(FugueWorkflowError):
                 with FugueWorkflow() as dag:
@@ -1425,11 +1433,11 @@ class BuiltInTests(object):
             def my_outputter(df: pd.DataFrame) -> None:
                 print(df)
 
-            register_creator("mc", my_creator, on_dup="overwrite")
-            register_processor("mp", my_processor, on_dup="overwrite")
-            register_transformer("mt", my_transformer, on_dup="overwrite")
-            register_output_transformer("mot", my_out_transformer, on_dup="overwrite")
-            register_outputter("mo", my_outputter, on_dup="overwrite")
+            register_creator("mc", my_creator)
+            register_processor("mp", my_processor)
+            register_transformer("mt", my_transformer)
+            register_output_transformer("mot", my_out_transformer)
+            register_outputter("mo", my_outputter)
 
             with FugueWorkflow() as dag:
                 df = dag.create("mc").process("mp").transform("mt")

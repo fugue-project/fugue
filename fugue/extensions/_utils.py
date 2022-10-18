@@ -10,30 +10,6 @@ from triad import Schema
 from triad.utils.assertion import assert_or_throw
 
 
-class ExtensionRegistry:
-    def __init__(self) -> None:
-        self._dict: Dict[str, Any] = {}
-
-    def register(self, name: str, extension: Any, on_dup="overwrite") -> None:
-        if name not in self._dict:
-            self._dict[name] = extension
-        if on_dup in ["raise", "throw"]:
-            raise KeyError(f"{name} is already registered")
-        if on_dup == "overwrite":
-            self._dict[name] = extension
-            return
-        if on_dup == "ignore":
-            return
-        raise ValueError(on_dup)
-
-    def get(self, obj: Any) -> Any:
-        import fugue._utils.register  # pylint: disable=W0611 # noqa: F401
-
-        if isinstance(obj, str) and obj in self._dict:
-            return self._dict[obj]
-        return obj
-
-
 def parse_validation_rules_from_comment(func: Callable) -> Dict[str, Any]:
     res: Dict[str, Any] = {}
     for key in [

@@ -2,30 +2,68 @@ import copy
 from typing import Any, Callable, Dict, List, Optional, no_type_check
 
 from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
+from fugue._utils.registry import fugue_plugin
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions._utils import (
-    ExtensionRegistry,
     parse_validation_rules_from_comment,
     to_validation_rules,
 )
 from fugue.extensions.processor.processor import Processor
+from triad import ParamDict, to_uuid
 from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
-from triad.utils.hash import to_uuid
 
-_PROCESSOR_REGISTRY = ExtensionRegistry()
+_PROCESSOR_REGISTRY = ParamDict()
 
 
-def register_processor(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
+@fugue_plugin
+def parse_processor(obj: Any) -> Any:
+    """Parse an object to another object that can be converted to a Fugue
+    :class:`~fugue.extensions.processor.processor.Processor`.
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            from fugue import Processor, parse_processor, FugueWorkflow
+            from triad import to_uuid
+
+            class My(Processor):
+                def __init__(self, x):
+                    self.x = x
+
+                def process(self, dfs):
+                    raise NotImplementedError
+
+                def __uuid__(self) -> str:
+                    return to_uuid(super().__uuid__(), self.x)
+
+            @parse_processor.candidate(
+                lambda x: isinstance(x, str) and x.startswith("-*"))
+            def _parse(obj):
+                return My(obj)
+
+            dag = FugueWorkflow()
+            dag.df([[0]], "a:int").process("-*abc")
+            # ==  dag.df([[0]], "a:int").process(My("-*abc"))
+
+            dag.run()
+    """
+    if isinstance(obj, str) and obj in _PROCESSOR_REGISTRY:
+        return _PROCESSOR_REGISTRY[obj]
+    return obj
+
+
+def register_processor(alias: str, obj: Any, on_dup: int = ParamDict.OVERWRITE) -> None:
     """Register processor with an alias.
 
     :param alias: alias of the processor
     :param obj: the object that can be converted to
         :class:`~fugue.extensions.processor.processor.Processor`
-    :param on_dup: action on duplicated ``alias``. It can be "overwrite", "ignore"
-        (not overwriting) or "throw" (throw exception), defaults to "overwrite".
+    :param on_dup: see :meth:`triad.collections.dict.ParamDict.update`
+        , defaults to ``ParamDict.OVERWRITE``
 
     .. tip::
 
@@ -83,7 +121,7 @@ def register_processor(alias: str, obj: Any, on_dup: str = "overwrite") -> None:
             dag.df([[0]],"a:int").process("mp").show()
             dag.run()
     """
-    _PROCESSOR_REGISTRY.register(alias, obj, on_dup=on_dup)
+    _PROCESSOR_REGISTRY.update({alias: obj}, on_dup=on_dup)
 
 
 def processor(
@@ -111,7 +149,7 @@ def _to_processor(
     validation_rules: Optional[Dict[str, Any]] = None,
 ) -> Processor:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
-    obj = _PROCESSOR_REGISTRY.get(obj)
+    obj = parse_processor(obj)
     exp: Optional[Exception] = None
     if validation_rules is None:
         validation_rules = {}

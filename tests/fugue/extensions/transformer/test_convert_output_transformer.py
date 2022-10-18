@@ -5,6 +5,7 @@ from fugue.extensions.transformer import (
     Transformer,
     _to_output_transformer,
     output_transformer,
+    parse_output_transformer,
     register_output_transformer,
 )
 from fugue.extensions.transformer.constants import OUTPUT_TRANSFORMER_DUMMY_SCHEMA
@@ -108,6 +109,24 @@ def test_to_output_transformer_validation():
     assert {"input_is": "a:int,b:int"} == c.validation_rules
 
 
+def test_parse_output_transformer():
+    @parse_output_transformer.candidate(
+        lambda x: isinstance(x, str) and x.startswith("((")
+    )
+    def _parse(obj):
+        return MockTransformer(obj)
+
+    a = _to_output_transformer("((abc")
+    b = _to_output_transformer("((bc")
+    c = _to_output_transformer("((abc")
+
+    assert isinstance(a, MockTransformer)
+    assert isinstance(b, MockTransformer)
+    assert isinstance(c, MockTransformer)
+    assert to_uuid(a) == to_uuid(c)
+    assert to_uuid(a) != to_uuid(b)
+
+
 @output_transformer()
 def t1(df: Iterable[Dict[str, Any]]) -> None:
     pass
@@ -138,8 +157,14 @@ def t8(df: pd.DataFrame, c: Callable[[str], str]) -> Iterable[pd.DataFrame]:
 
 
 class MockTransformer(Transformer):
+    def __init__(self, x=""):
+        self._x = x
+
     def get_output_schema(self, df):
         pass
 
     def transform(self, df):
         pass
+
+    def __uuid__(self) -> str:
+        return to_uuid(super().__uuid__(), self._x)

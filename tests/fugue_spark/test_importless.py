@@ -1,6 +1,9 @@
-from fugue import FugueWorkflow
+from fugue import FugueWorkflow, transform
 from fugue_sql import fsql
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
+import pandas as pd
+
+from fugue_spark.registry import _is_sparksql
 
 
 def test_importless():
@@ -24,3 +27,29 @@ def test_importless():
         idf[idf.a < 1].as_fugue().show()
 
         dag.run(engine)
+
+
+def test_is_sparksql():
+    assert _is_sparksql("--SparkSQL abc")
+    assert _is_sparksql("/*SparkSQL*/ abc")
+    assert not _is_sparksql(123)
+    assert not _is_sparksql("SELECT *")
+
+
+def test_transform_from_sparksql():
+    # schema: *
+    def t(df: pd.DataFrame) -> pd.DataFrame:
+        return df
+
+    res = transform(
+        """--sparksql
+    SELECT 1 AS a, 'b' AS aa
+    """,
+        t,
+    )
+    assert isinstance(res, DataFrame)  # engine inference
+    assert res.toPandas().to_dict("records") == [{"a": 1, "aa": "b"}]
+
+    res = transform("/*sparksql*/ SELECT 1 AS a, 'b' AS aa", t)
+    assert isinstance(res, DataFrame)  # engine inference
+    assert res.toPandas().to_dict("records") == [{"a": 1, "aa": "b"}]

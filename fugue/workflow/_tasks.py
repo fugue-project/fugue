@@ -1,7 +1,7 @@
 import sys
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Any, Callable, Iterable, List, Optional, no_type_check
+from typing import Any, Callable, List, Optional, no_type_check
 
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
@@ -14,7 +14,7 @@ from fugue.collections.partition import PartitionSpec
 from fugue.collections.yielded import YieldedFile
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
+from fugue.exceptions import FugueWorkflowError
 from fugue.execution import ExecutionEngine
 from fugue.extensions.creator.convert import _to_creator
 from fugue.extensions.outputter.convert import _to_outputter
@@ -22,8 +22,7 @@ from fugue.extensions.processor.convert import _to_processor
 from fugue.rpc.base import RPCServer
 from fugue.workflow._checkpoint import Checkpoint
 from fugue.workflow._workflow_context import FugueWorkflowContext
-from fugue.workflow.utils import is_acceptable_raw_df
-from triad import ParamDict, Schema
+from triad import ParamDict
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
@@ -207,71 +206,6 @@ class FugueTask(TaskSpec, ABC):
             if ctb is None:  # pragma: no cover
                 raise
             raise ex.with_traceback(ctb)
-
-
-class CreateData(FugueTask):
-    """CreateData task.
-
-    .. note::
-
-        This task's determinism is not dependent on the input dataframe, but if
-        you want the input dataframe to affect the determinism, then you should
-        provide a function ``data_determiner``, which can compute a unique id
-        from ``df``
-    """
-
-    @no_type_check
-    def __init__(
-        self,
-        data: Any,
-        schema: Any = None,
-        metadata: Any = None,
-        deterministic: bool = True,
-        data_determiner: Optional[Callable[[Any], str]] = None,
-        lazy: bool = True,
-    ):
-        self._validate_data(data, schema, metadata)
-        self._data = data
-        self._schema = None if schema is None else Schema(schema)
-        self._metadata = None if metadata is None else ParamDict(metadata)
-        did = "" if data_determiner is None else data_determiner(data)
-        super().__init__(
-            params=dict(
-                schema=self._schema,
-                metadata=self._metadata,
-                determinism_id=did,
-            ),
-            input_n=0,
-            output_n=1,
-            deterministic=deterministic,
-            lazy=lazy,
-        )
-
-    @no_type_check
-    def execute(self, ctx: TaskContext) -> None:
-        e = self._get_execution_engine(ctx)
-        df = self._execute_with_modified_traceback(
-            lambda: e.to_df(self._data, self._schema, self._metadata)
-        )
-        df = self.set_result(ctx, df)
-        ctx.outputs["_0"] = df
-
-    def _validate_data(
-        self, data: Any, schema: Any = None, metadata: Any = None
-    ) -> None:
-        if not is_acceptable_raw_df(data):
-            if isinstance(data, (List, Iterable)):
-                assert_or_throw(
-                    schema is not None,
-                    lambda: FugueWorkflowCompileError(
-                        f"schema is required for input data type {type(data)}"
-                    ),
-                )
-            else:
-                raise FugueWorkflowCompileError(
-                    f"Input data of type {type(data)} can't "
-                    "be converted to WorkflowDataFrame"
-                )
 
 
 class Create(FugueTask):

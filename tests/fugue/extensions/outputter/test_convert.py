@@ -7,6 +7,7 @@ from fugue.extensions.outputter import (
     Outputter,
     _to_outputter,
     outputter,
+    parse_outputter,
     register_outputter,
 )
 from pytest import raises
@@ -26,7 +27,7 @@ def test_register():
 
     raises(
         KeyError,
-        lambda: register_outputter("x", MockOutputter, on_dup="raise"),
+        lambda: register_outputter("x", MockOutputter, on_dup=ParamDict.THROW),
     )
 
 
@@ -146,6 +147,32 @@ def test_to_outputter_validation():
     assert {"input_has": ["a", "b"]} == b.validation_rules
     c = _to_outputter(MockOutputterV)
     assert {"input_is": "a:int,b:int"} == c.validation_rules
+
+
+def test_parse_outputter():
+    class _C(Outputter):
+        def __init__(self, x):
+            self._x = x
+
+        def process(self, dfs) -> DataFrame:
+            raise NotImplementedError
+
+        def __uuid__(self) -> str:
+            return to_uuid(super().__uuid__(), self._x)
+
+    @parse_outputter.candidate(lambda x: isinstance(x, str) and x.startswith("(("))
+    def _parse(obj):
+        return _C(obj)
+
+    a = _to_outputter("((abc")
+    b = _to_outputter("((bc")
+    c = _to_outputter("((abc")
+
+    assert isinstance(a, _C)
+    assert isinstance(b, _C)
+    assert isinstance(c, _C)
+    assert to_uuid(a) == to_uuid(c)
+    assert to_uuid(a) != to_uuid(b)
 
 
 class T0(Outputter):
