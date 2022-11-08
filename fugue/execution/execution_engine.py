@@ -3,8 +3,16 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 from uuid import uuid4
 
+from triad import ParamDict, Schema, assert_or_throw
+from triad.collections.fs import FileSystem
+from triad.exceptions import InvalidOperationError
+from triad.utils.convert import to_size
+from triad.utils.string import validate_triad_var_name
+
+from fugue.bag import Bag, LocalBag
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
+    BagPartitionCursor,
     PartitionCursor,
     PartitionSpec,
 )
@@ -15,19 +23,12 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
 from fugue.exceptions import FugueBug
-from triad import ParamDict, Schema, assert_or_throw
-from triad.collections.fs import FileSystem
-from triad.exceptions import InvalidOperationError
-from triad.utils.convert import to_size
-from triad.utils.string import validate_triad_var_name
 
 _DEFAULT_JOIN_KEYS: List[str] = []
 
 
-class SQLEngine(ABC):
-    """The abstract base class for different SQL execution implementations. Please read
-    :ref:`this <tutorial:tutorials/advanced/execution_engine:sqlengine>`
-    to understand the concept
+class ExecutionEngineFacet:
+    """The base class for different factes of the execution engines.
 
     :param execution_engine: the execution engine this sql engine will run on
     """
@@ -39,6 +40,15 @@ class SQLEngine(ABC):
     def execution_engine(self) -> "ExecutionEngine":
         """the execution engine this sql engine will run on"""
         return self._execution_engine
+
+
+class SQLEngine(ExecutionEngineFacet, ABC):
+    """The abstract base class for different SQL execution implementations. Please read
+    :ref:`this <tutorial:tutorials/advanced/execution_engine:sqlengine>`
+    to understand the concept
+
+    :param execution_engine: the execution engine this sql engine will run on
+    """
 
     @abstractmethod
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:  # pragma: no cover
@@ -63,6 +73,69 @@ class SQLEngine(ABC):
         raise NotImplementedError
 
 
+class MapEngine(ExecutionEngineFacet, ABC):
+    """The abstract base class for different map operation implementations.
+
+    :param execution_engine: the execution engine this sql engine will run on
+    """
+
+    @abstractmethod
+    def map_dataframe(
+        self,
+        df: DataFrame,
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        output_schema: Any,
+        partition_spec: PartitionSpec,
+        metadata: Any = None,
+        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+    ) -> DataFrame:  # pragma: no cover
+        """Apply a function to each partition after you partition the dataframe in a
+        specified way.
+
+        :param df: input dataframe
+        :param map_func: the function to apply on every logical partition
+        :param output_schema: |SchemaLikeObject| that can't be None.
+          Please also understand :ref:`why we need this
+          <tutorial:tutorials/beginner/interface:schema>`
+        :param partition_spec: partition specification
+        :param metadata: dict-like metadata object to add to the dataframe after the
+          map operation, defaults to None
+        :param on_init: callback function when the physical partition is initializaing,
+          defaults to None
+        :return: the dataframe after the map operation
+
+        .. note::
+
+            Before implementing, you must read
+            :ref:`this <tutorial:tutorials/advanced/execution_engine:map>`
+            to understand what map is used for and how it should work.
+        """
+        raise NotImplementedError
+
+    # @abstractmethod
+    def map_bag(
+        self,
+        bag: Bag,
+        map_func: Callable[[BagPartitionCursor, LocalBag], LocalBag],
+        partition_spec: PartitionSpec,
+        metadata: Any = None,
+        on_init: Optional[Callable[[int, Bag], Any]] = None,
+    ) -> Bag:  # pragma: no cover
+        """Apply a function to each partition after you partition the bag in a
+        specified way.
+
+        :param df: input dataframe
+        :param map_func: the function to apply on every logical partition
+        :param partition_spec: partition specification
+        :param metadata: dict-like metadata object to add to the dataframe after the
+          map operation, defaults to None
+        :param on_init: callback function when the physical partition is initializaing,
+          defaults to None
+        :return: the bag after the map operation
+        """
+        raise NotImplementedError
+
+
 class ExecutionEngine(ABC):
     """The abstract base class for execution engines.
     It is the layer that unifies core concepts of distributed computing,
@@ -81,6 +154,7 @@ class ExecutionEngine(ABC):
         self._conf = ParamDict({**_FUGUE_GLOBAL_CONF, **_conf})
         self._compile_conf = ParamDict()
         self._sql_engine: Optional[SQLEngine] = None
+        self._map_engine: Optional[MapEngine] = None
 
     def stop(self) -> None:
         """Stop this execution engine, do not override
@@ -106,18 +180,28 @@ class ExecutionEngine(ABC):
         return self._conf
 
     @property
+    def map_engine(self) -> MapEngine:
+        """The :class:`~.MapEngine` currently used by this execution engine.
+        You should use :meth:`~.set_map_engine` to set a new MapEngine
+        instance. If not set, the default is :meth:`~.create_default_map_engine`
+        """
+        if self._map_engine is None:
+            self._map_engine = self.create_default_map_engine()
+        return self._map_engine
+
+    @property
     def sql_engine(self) -> SQLEngine:
         """The :class:`~.SQLEngine` currently used by this execution engine.
         You should use :meth:`~.set_sql_engine` to set a new SQLEngine
-        instance. If not set, the default is :meth:`~.default_sql_engine`
+        instance. If not set, the default is :meth:`~.create_default_sql_engine`
         """
         if self._sql_engine is None:
-            self._sql_engine = self.default_sql_engine
+            self._sql_engine = self.create_default_sql_engine()
         return self._sql_engine
 
     def set_sql_engine(self, engine: SQLEngine) -> None:
         """Set :class:`~.SQLEngine` for this execution engine.
-        If not set, the default is :meth:`~.default_sql_engine`
+        If not set, the default is :meth:`~.create_default_sql_engine`
 
         :param engine: :class:`~.SQLEngine` instance
         """
@@ -135,9 +219,13 @@ class ExecutionEngine(ABC):
         """File system of this engine instance"""
         raise NotImplementedError
 
-    @property
     @abstractmethod
-    def default_sql_engine(self) -> SQLEngine:  # pragma: no cover
+    def create_default_map_engine(self) -> MapEngine:  # pragma: no cover
+        """Default MapEngine if user doesn't specify"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_default_sql_engine(self) -> SQLEngine:  # pragma: no cover
         """Default SQLEngine if user doesn't specify"""
         raise NotImplementedError
 
@@ -178,39 +266,6 @@ class ExecutionEngine(ABC):
         .. note::
 
             Before implementing please read |PartitionTutorial|
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def map(
-        self,
-        df: DataFrame,
-        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-        metadata: Any = None,
-        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
-    ) -> DataFrame:  # pragma: no cover
-        """Apply a function to each partition after you partition the data in a
-        specified way.
-
-        :param df: input dataframe
-        :param map_func: the function to apply on every logical partition
-        :param output_schema: |SchemaLikeObject| that can't be None.
-          Please also understand :ref:`why we need this
-          <tutorial:tutorials/beginner/interface:schema>`
-        :param partition_spec: partition specification
-        :param metadata: dict-like metadata object to add to the dataframe after the
-          map operation, defaults to None
-        :param on_init: callback function when the physical partition is initializaing,
-          defaults to None
-        :return: the dataframe after the map operation
-
-        .. note::
-
-            Before implementing, you must read
-            :ref:`this <tutorial:tutorials/advanced/execution_engine:map>`
-            to understand what map is used for and how it should work.
         """
         raise NotImplementedError
 
@@ -923,7 +978,7 @@ class ExecutionEngine(ABC):
         cs = _Comap(df, map_func, on_init)
         key_schema = df.schema - list(df.metadata["serialized_cols"].values())
         partition_spec = PartitionSpec(partition_spec, by=list(key_schema.keys()))
-        return self.map(
+        return self.map_engine.map_dataframe(
             df, cs.run, output_schema, partition_spec, metadata, on_init=cs.on_init
         )
 
@@ -1012,7 +1067,9 @@ class ExecutionEngine(ABC):
             schemas={df_name: str(df.schema)},
             serialized_has_name=has_name,
         )
-        return self.map(df, s.run, output_schema, partition_spec, metadata)
+        return self.map_engine.map_dataframe(
+            df, s.run, output_schema, partition_spec, metadata
+        )
 
 
 def _get_file_threshold(size: Any) -> int:

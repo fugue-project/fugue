@@ -4,7 +4,7 @@ import pandas as pd
 import pyarrow as pa
 from fugue import DataFrame, IterableDataFrame, LocalDataFrame
 from fugue.dataframe.dataframe import _input_schema
-from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDatasetEmptyError, FugueDataFrameOperationError
 from triad import Schema
 
 from ._compat import IbisTable
@@ -71,7 +71,7 @@ class IbisDataFrame(DataFrame):
     def peek_array(self) -> Any:
         res = self._to_local_df(self._table.head(1)).as_array()
         if len(res) == 0:
-            raise FugueDataFrameEmptyError()
+            raise FugueDatasetEmptyError()
         return res[0]
 
     def count(self) -> int:

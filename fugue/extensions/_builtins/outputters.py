@@ -121,7 +121,7 @@ class RunOutputTransformer(Outputter):
         tf._key_schema = self.partition_spec.get_key_schema(df.schema)  # type: ignore
         tf._output_schema = Schema(tf.get_output_schema(df))  # type: ignore
         tr = _TransformerRunner(df, tf, self._ignore_errors)  # type: ignore
-        df = self.execution_engine.map(
+        df = self.execution_engine.map_engine.map_dataframe(
             df=df,
             map_func=tr.run,
             output_schema=tf.output_schema,  # type: ignore

@@ -1,13 +1,23 @@
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import duckdb
 import pyarrow as pa
 from duckdb import DuckDBPyConnection
-from fugue import ArrowDataFrame, NativeExecutionEngine
+from triad import SerializableRLock
+from triad.collections.fs import FileSystem
+from triad.utils.assertion import assert_or_throw
+
+from fugue import (
+    ArrowDataFrame,
+    ExecutionEngine,
+    MapEngine,
+    NativeExecutionEngine,
+    PandasMapEngine,
+    SQLEngine,
+)
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
-    PartitionCursor,
     PartitionSpec,
     parse_presort_exp,
 )
@@ -15,19 +25,10 @@ from fugue.dataframe import (
     DataFrame,
     DataFrames,
     LocalBoundedDataFrame,
-    LocalDataFrame,
     PandasDataFrame,
 )
 from fugue.dataframe.utils import get_join_schemas
-from fugue.execution.execution_engine import (
-    _DEFAULT_JOIN_KEYS,
-    ExecutionEngine,
-    SQLEngine,
-)
-from triad import SerializableRLock
-from triad.collections.fs import FileSystem
-from triad.utils.assertion import assert_or_throw
-
+from fugue.execution.execution_engine import _DEFAULT_JOIN_KEYS
 from fugue_duckdb._io import DuckDBIO
 from fugue_duckdb._utils import encode_value_to_expr, get_temp_df_name
 from fugue_duckdb.dataframe import DuckDataFrame
@@ -128,9 +129,11 @@ class DuckExecutionEngine(ExecutionEngine):
     def fs(self) -> FileSystem:
         return self._native_engine.fs
 
-    @property
-    def default_sql_engine(self) -> SQLEngine:
+    def create_default_sql_engine(self) -> SQLEngine:
         return DuckDBEngine(self)
+
+    def create_default_map_engine(self) -> MapEngine:
+        return PandasMapEngine(self._native_engine)
 
     def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DataFrame:
         return self._to_duck_df(df, schema=schema, metadata=metadata)
@@ -140,24 +143,6 @@ class DuckExecutionEngine(ExecutionEngine):
     ) -> DataFrame:  # pragma: no cover
         self.log.warning("%s doesn't respect repartition", self)
         return df
-
-    def map(
-        self,
-        df: DataFrame,
-        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-        metadata: Any = None,
-        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
-    ) -> DataFrame:
-        return self._native_engine.map(
-            df=df,
-            map_func=map_func,
-            output_schema=output_schema,
-            partition_spec=partition_spec,
-            metadata=metadata,
-            on_init=on_init,
-        )
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return df

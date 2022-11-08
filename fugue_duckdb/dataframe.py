@@ -4,7 +4,7 @@ import pandas as pd
 import pyarrow as pa
 from duckdb import DuckDBPyRelation
 from fugue import ArrowDataFrame, DataFrame, LocalBoundedDataFrame, LocalDataFrame
-from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDatasetEmptyError, FugueDataFrameOperationError
 from triad import Schema
 
 from fugue_duckdb._utils import to_duck_type, to_pa_type
@@ -36,7 +36,7 @@ class DuckDataFrame(LocalBoundedDataFrame):
     def peek_array(self) -> Any:
         res = self._rel.fetchone()
         if res is None:
-            raise FugueDataFrameEmptyError()
+            raise FugueDatasetEmptyError()
         return list(res)
 
     def count(self) -> int:

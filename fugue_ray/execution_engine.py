@@ -2,10 +2,14 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 import pyarrow as pa
 from duckdb import DuckDBPyConnection
+from triad import Schema, assert_or_throw, to_uuid
+from triad.utils.threading import RunOnce
+
 from fugue import (
     ArrowDataFrame,
     DataFrame,
     LocalDataFrame,
+    MapEngine,
     PartitionCursor,
     PartitionSpec,
 )
@@ -14,8 +18,6 @@ from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckExecutionEngine
-from triad import Schema, assert_or_throw, to_uuid
-from triad.utils.threading import RunOnce
 
 from ._constants import FUGUE_RAY_CONF_SHUFFLE_PARTITIONS
 from ._utils.dataframe import add_partition_key
@@ -23,6 +25,143 @@ from ._utils.io import RayIO
 from .dataframe import RayDataFrame
 
 _RAY_PARTITION_KEY = "__ray_partition_key__"
+
+
+class RayMapEngine(MapEngine):
+    def map_dataframe(
+        self,
+        df: DataFrame,
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        output_schema: Any,
+        partition_spec: PartitionSpec,
+        metadata: Any = None,
+        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+    ) -> DataFrame:
+        if len(partition_spec.partition_by) == 0:
+            return self._map(
+                df=df,
+                map_func=map_func,
+                output_schema=output_schema,
+                partition_spec=partition_spec,
+                metadata=metadata,
+                on_init=on_init,
+            )
+        else:
+            return self._group_map(
+                df=df,
+                map_func=map_func,
+                output_schema=output_schema,
+                partition_spec=partition_spec,
+                metadata=metadata,
+                on_init=on_init,
+            )
+
+    def _group_map(
+        self,
+        df: DataFrame,
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        output_schema: Any,
+        partition_spec: PartitionSpec,
+        metadata: Any = None,
+        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+    ) -> DataFrame:
+        presort = partition_spec.presort
+        presort_tuples = [
+            (k, "ascending" if v else "descending") for k, v in presort.items()
+        ]
+        output_schema = Schema(output_schema)
+        input_schema = df.schema
+        on_init_once: Any = (
+            None
+            if on_init is None
+            else RunOnce(
+                on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
+            )
+        )
+
+        def _udf(adf: pa.Table) -> pa.Table:  # pragma: no cover
+            if adf.shape[0] == 0:
+                return _build_empty_arrow(output_schema)
+            adf = adf.remove_column(len(input_schema))  # remove partition key
+            if len(presort_tuples) > 0:
+                adf = adf.sort_by(presort_tuples)
+            input_df = ArrowDataFrame(adf)
+            if on_init_once is not None:
+                on_init_once(0, input_df)
+            cursor = partition_spec.get_cursor(input_schema, 0)
+            cursor.set(input_df.peek_array(), 0, 0)
+            output_df = map_func(cursor, input_df)
+            return output_df.as_arrow()
+
+        _df = self.execution_engine._to_ray_df(df)  # type: ignore
+        if partition_spec.num_partitions != "0":
+            _df = self.execution_engine.repartition(_df, partition_spec)  # type: ignore
+        else:
+            n = self.execution_engine.conf.get(FUGUE_RAY_CONF_SHUFFLE_PARTITIONS, -1)
+            if n > 1:
+                _df = self.execution_engine.repartition(  # type: ignore
+                    _df, PartitionSpec(num=n)
+                )
+        rdf, _ = add_partition_key(
+            _df.native,
+            keys=partition_spec.partition_by,
+            input_schema=input_schema,
+            output_key=_RAY_PARTITION_KEY,
+        )
+
+        gdf = rdf.groupby(_RAY_PARTITION_KEY)
+        sdf = gdf.map_groups(
+            _udf,
+            batch_format="pyarrow",
+            **self.execution_engine._get_remote_args(),  # type: ignore
+        )
+        return RayDataFrame(
+            sdf, schema=output_schema, metadata=metadata, internal_schema=True
+        )
+
+    def _map(
+        self,
+        df: DataFrame,
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        output_schema: Any,
+        partition_spec: PartitionSpec,
+        metadata: Any = None,
+        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+    ) -> DataFrame:
+        output_schema = Schema(output_schema)
+        input_schema = df.schema
+        on_init_once: Any = (
+            None
+            if on_init is None
+            else RunOnce(
+                on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
+            )
+        )
+
+        def _udf(adf: pa.Table) -> pa.Table:  # pragma: no cover
+            if adf.shape[0] == 0:
+                return _build_empty_arrow(output_schema)
+            input_df = ArrowDataFrame(adf)
+            if on_init_once is not None:
+                on_init_once(0, input_df)
+            cursor = partition_spec.get_cursor(input_schema, 0)
+            cursor.set(input_df.peek_array(), 0, 0)
+            output_df = map_func(cursor, input_df)
+            return output_df.as_arrow()
+
+        rdf = self.execution_engine._to_ray_df(df)  # type: ignore
+        if not partition_spec.empty:
+            rdf = self.execution_engine.repartition(  # type: ignore
+                rdf, partition_spec=partition_spec
+            )
+        sdf = rdf.native.map_batches(
+            _udf,
+            batch_format="pyarrow",
+            **self.execution_engine._get_remote_args(),  # type: ignore
+        )
+        return RayDataFrame(
+            sdf, schema=output_schema, metadata=metadata, internal_schema=True
+        )
 
 
 class RayExecutionEngine(DuckExecutionEngine):
@@ -38,6 +177,9 @@ class RayExecutionEngine(DuckExecutionEngine):
     ):
         super().__init__(conf, connection)
         self._io = RayIO(self)
+
+    def create_default_map_engine(self) -> MapEngine:
+        return RayMapEngine(self)
 
     def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DataFrame:
         return self._to_ray_df(df, schema=schema, metadata=metadata)
@@ -115,131 +257,6 @@ class RayExecutionEngine(DuckExecutionEngine):
             partition_spec=partition_spec,
             force_single=force_single,
             **kwargs,
-        )
-
-    def map(
-        self,
-        df: DataFrame,
-        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-        metadata: Any = None,
-        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
-    ) -> DataFrame:
-        if len(partition_spec.partition_by) == 0:
-            return self._map(
-                df=df,
-                map_func=map_func,
-                output_schema=output_schema,
-                partition_spec=partition_spec,
-                metadata=metadata,
-                on_init=on_init,
-            )
-        else:
-            return self._group_map(
-                df=df,
-                map_func=map_func,
-                output_schema=output_schema,
-                partition_spec=partition_spec,
-                metadata=metadata,
-                on_init=on_init,
-            )
-
-    def _group_map(
-        self,
-        df: DataFrame,
-        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-        metadata: Any = None,
-        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
-    ) -> DataFrame:
-        presort = partition_spec.presort
-        presort_tuples = [
-            (k, "ascending" if v else "descending") for k, v in presort.items()
-        ]
-        output_schema = Schema(output_schema)
-        input_schema = df.schema
-        on_init_once: Any = (
-            None
-            if on_init is None
-            else RunOnce(
-                on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
-            )
-        )
-
-        def _udf(adf: pa.Table) -> pa.Table:  # pragma: no cover
-            if adf.shape[0] == 0:
-                return _build_empty_arrow(output_schema)
-            adf = adf.remove_column(len(input_schema))  # remove partition key
-            if len(presort_tuples) > 0:
-                adf = adf.sort_by(presort_tuples)
-            input_df = ArrowDataFrame(adf)
-            if on_init_once is not None:
-                on_init_once(0, input_df)
-            cursor = partition_spec.get_cursor(input_schema, 0)
-            cursor.set(input_df.peek_array(), 0, 0)
-            output_df = map_func(cursor, input_df)
-            return output_df.as_arrow()
-
-        _df = self._to_ray_df(df)
-        if partition_spec.num_partitions != "0":
-            _df = self.repartition(_df, partition_spec)  # type: ignore
-        else:
-            n = self.conf.get(FUGUE_RAY_CONF_SHUFFLE_PARTITIONS, -1)
-            if n > 1:
-                _df = self.repartition(_df, PartitionSpec(num=n))  # type: ignore
-        rdf, _ = add_partition_key(
-            _df.native,
-            keys=partition_spec.partition_by,
-            input_schema=input_schema,
-            output_key=_RAY_PARTITION_KEY,
-        )
-
-        gdf = rdf.groupby(_RAY_PARTITION_KEY)
-        sdf = gdf.map_groups(_udf, batch_format="pyarrow", **self._get_remote_args())
-        return RayDataFrame(
-            sdf, schema=output_schema, metadata=metadata, internal_schema=True
-        )
-
-    def _map(
-        self,
-        df: DataFrame,
-        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-        metadata: Any = None,
-        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
-    ) -> DataFrame:
-        output_schema = Schema(output_schema)
-        input_schema = df.schema
-        on_init_once: Any = (
-            None
-            if on_init is None
-            else RunOnce(
-                on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
-            )
-        )
-
-        def _udf(adf: pa.Table) -> pa.Table:  # pragma: no cover
-            if adf.shape[0] == 0:
-                return _build_empty_arrow(output_schema)
-            input_df = ArrowDataFrame(adf)
-            if on_init_once is not None:
-                on_init_once(0, input_df)
-            cursor = partition_spec.get_cursor(input_schema, 0)
-            cursor.set(input_df.peek_array(), 0, 0)
-            output_df = map_func(cursor, input_df)
-            return output_df.as_arrow()
-
-        rdf = self._to_ray_df(df)
-        if not partition_spec.empty:
-            rdf = self.repartition(rdf, partition_spec=partition_spec)  # type: ignore
-        sdf = rdf.native.map_batches(
-            _udf, batch_format="pyarrow", **self._get_remote_args()
-        )
-        return RayDataFrame(
-            sdf, schema=output_schema, metadata=metadata, internal_schema=True
         )
 
     def _to_ray_df(

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from fugue.dataframe import ArrowDataFrame, DataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDatasetEmptyError, FugueDataFrameOperationError
 from pytest import raises
 from triad.collections.schema import Schema
 
@@ -48,8 +48,8 @@ class DataFrameTests(object):
 
         def test_peek(self):
             df = self.df([], "x:str,y:double")
-            raises(FugueDataFrameEmptyError, lambda: df.peek_array())
-            raises(FugueDataFrameEmptyError, lambda: df.peek_dict())
+            raises(FugueDatasetEmptyError, lambda: df.peek_array())
+            raises(FugueDatasetEmptyError, lambda: df.peek_dict())
 
             df = self.df([["a", 1.0], ["b", 2.0]], "x:str,y:double")
             assert not df.is_bounded or 2 == df.count()

@@ -5,8 +5,8 @@ from triad.collections.dict import IndexedOrderedDict, ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw as aot
 from triad.utils.convert import to_size
-from triad.utils.pyarrow import SchemaedDataPartitioner
 from triad.utils.hash import to_uuid
+from triad.utils.pyarrow import SchemaedDataPartitioner
 
 
 def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C901]
@@ -326,45 +326,39 @@ class PartitionSpec(object):
 EMPTY_PARTITION_SPEC = PartitionSpec()
 
 
-class PartitionCursor(object):
-    """The cursor pointing at the first row of each logical partition inside
+class DatasetPartitionCursor:
+    """The cursor pointing at the first item of each logical partition inside
     a physical partition.
 
     It's important to understand the concept of partition, please read
     |PartitionTutorial|
 
-    :param schema: input dataframe schema
-    :param spec: partition spec
     :param physical_partition_no: physical partition number passed in by
       :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
 
-    def __init__(self, schema: Schema, spec: PartitionSpec, physical_partition_no: int):
-        self._orig_schema = schema
-        self._key_index = [schema.index_of_key(key) for key in spec.partition_by]
-        self._schema = schema.extract(spec.partition_by)
+    def __init__(self, physical_partition_no: int):
         self._physical_partition_no = physical_partition_no
         # the following will be set by the framework
-        self._row: List[Any] = []
         self._partition_no = 0
         self._slice_no = 0
 
-    def set(self, row: Any, partition_no: int, slice_no: int) -> None:
+    def set(self, item: Any, partition_no: int, slice_no: int) -> None:
         """reset the cursor to a row (which should be the first row of a
         new logical partition)
 
-        :param row: list-like row data
+        :param item: an item of the dataset
         :param partition_no: logical partition number
         :param slice_no: slice number inside the logical partition (to be deprecated)
         """
-        self._row = list(row)
+        self._item = item
         self._partition_no = partition_no
         self._slice_no = slice_no
 
     @property
-    def row(self) -> List[Any]:
-        """Get current row data"""
-        return self._row
+    def item(self) -> Any:
+        """Get current item"""
+        return self._item
 
     @property
     def partition_no(self) -> int:
@@ -383,6 +377,56 @@ class PartitionCursor(object):
         """
         return self._slice_no
 
+
+class BagPartitionCursor(DatasetPartitionCursor):
+    """The cursor pointing at the first bag item of each logical partition inside
+    a physical partition.
+
+    It's important to understand the concept of partition, please read
+    |PartitionTutorial|
+
+    :param physical_partition_no: physical partition number passed in by
+      :class:`~fugue.execution.execution_engine.ExecutionEngine`
+    """
+
+    pass
+
+
+class PartitionCursor(DatasetPartitionCursor):
+    """The cursor pointing at the first row of each logical partition inside
+    a physical partition.
+
+    It's important to understand the concept of partition, please read
+    |PartitionTutorial|
+
+    :param schema: input dataframe schema
+    :param spec: partition spec
+    :param physical_partition_no: physical partition number passed in by
+      :class:`~fugue.execution.execution_engine.ExecutionEngine`
+    """
+
+    def __init__(self, schema: Schema, spec: PartitionSpec, physical_partition_no: int):
+        self._orig_schema = schema
+        self._key_index = [schema.index_of_key(key) for key in spec.partition_by]
+        self._schema = schema.extract(spec.partition_by)
+        self._physical_partition_no = physical_partition_no
+        super().__init__(physical_partition_no=physical_partition_no)
+
+    def set(self, row: Any, partition_no: int, slice_no: int) -> None:
+        """reset the cursor to a row (which should be the first row of a
+        new logical partition)
+
+        :param row: list-like row data
+        :param partition_no: logical partition number
+        :param slice_no: slice number inside the logical partition (to be deprecated)
+        """
+        super().set(list(row), partition_no=partition_no, slice_no=slice_no)
+
+    @property
+    def row(self) -> List[Any]:
+        """Get current row data"""
+        return self.item
+
     @property
     def row_schema(self) -> Schema:
         """Schema of the current row"""
@@ -396,12 +440,12 @@ class PartitionCursor(object):
     @property
     def key_value_dict(self) -> Dict[str, Any]:
         """Based on current row, get the partition key values as a dict"""
-        return {self.row_schema.names[i]: self._row[i] for i in self._key_index}
+        return {self.row_schema.names[i]: self.row[i] for i in self._key_index}
 
     @property
     def key_value_array(self) -> List[Any]:
         """Based on current row, get the partition key values as an array"""
-        return [self._row[i] for i in self._key_index]
+        return [self.row[i] for i in self._key_index]
 
     def __getitem__(self, key: str) -> Any:
         """Get value by key from the current row
@@ -409,4 +453,4 @@ class PartitionCursor(object):
         :param key: column name
         :return: value in the column
         """
-        return self._row[self.row_schema.index_of_key(key)]
+        return self.row[self.row_schema.index_of_key(key)]

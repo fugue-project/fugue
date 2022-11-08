@@ -10,7 +10,7 @@ from fugue.dataframe.utils import (
     get_dataframe_column_names,
     rename_dataframe_column_names,
 )
-from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDatasetEmptyError, FugueDataFrameOperationError
 from triad import assert_or_throw
 from triad.collections.schema import Schema
 
@@ -162,7 +162,7 @@ class RayDataFrame(DataFrame):
     def peek_array(self) -> Any:
         data = self.native.limit(1).to_pandas().values.tolist()
         if len(data) == 0:
-            raise FugueDataFrameEmptyError
+            raise FugueDatasetEmptyError
         return data[0]
 
     def persist(self, **kwargs: Any) -> "RayDataFrame":

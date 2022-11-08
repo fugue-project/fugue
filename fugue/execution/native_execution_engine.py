@@ -4,6 +4,14 @@ import os
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import pandas as pd
+from qpd_pandas import run_sql_on_pandas
+from qpd_pandas.engine import PandasUtils
+from sqlalchemy import create_engine
+from triad.collections import Schema
+from triad.collections.dict import IndexedOrderedDict, ParamDict
+from triad.collections.fs import FileSystem
+from triad.utils.assertion import assert_or_throw
+
 from fugue._utils.interfaceless import (
     ExecutionEngineParam,
     SimpleAnnotationConverter,
@@ -28,15 +36,9 @@ from fugue.dataframe.utils import get_join_schemas, to_local_df
 from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
     ExecutionEngine,
+    MapEngine,
     SQLEngine,
 )
-from qpd_pandas import run_sql_on_pandas
-from qpd_pandas.engine import PandasUtils
-from sqlalchemy import create_engine
-from triad.collections import Schema
-from triad.collections.dict import IndexedOrderedDict, ParamDict
-from triad.collections.fs import FileSystem
-from triad.utils.assertion import assert_or_throw
 
 
 class SqliteEngine(SQLEngine):
@@ -44,9 +46,6 @@ class SqliteEngine(SQLEngine):
 
     :param execution_engine: the execution engine this sql engine will run on
     """
-
-    def __init__(self, execution_engine: ExecutionEngine):
-        super().__init__(execution_engine)
 
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:
         sql_engine = create_engine("sqlite:///:memory:")
@@ -62,9 +61,6 @@ class QPDPandasEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def __init__(self, execution_engine: ExecutionEngine):
-        super().__init__(execution_engine)
-
     def select(self, dfs: DataFrames, statement: str) -> DataFrame:
         _dfs = {
             k: self.execution_engine.to_df(v).as_pandas()  # type: ignore
@@ -72,6 +68,63 @@ class QPDPandasEngine(SQLEngine):
         }
         df = run_sql_on_pandas(statement, _dfs, ignore_case=True)
         return self.execution_engine.to_df(df)
+
+
+class PandasMapEngine(MapEngine):
+    def map_dataframe(
+        self,
+        df: DataFrame,
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        output_schema: Any,
+        partition_spec: PartitionSpec,
+        metadata: Any = None,
+        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+    ) -> DataFrame:
+        if partition_spec.num_partitions != "0":
+            self.execution_engine.log.warning(
+                "%s doesn't respect num_partitions %s",
+                self,
+                partition_spec.num_partitions,
+            )
+        cursor = partition_spec.get_cursor(df.schema, 0)
+        if on_init is not None:
+            on_init(0, df)
+        if len(partition_spec.partition_by) == 0:  # no partition
+            df = to_local_df(df)
+            cursor.set(df.peek_array(), 0, 0)
+            output_df = map_func(cursor, df)
+            if (
+                isinstance(output_df, PandasDataFrame)
+                and output_df.schema != output_schema
+            ):
+                output_df = PandasDataFrame(output_df.native, output_schema)
+            assert_or_throw(
+                output_df.schema == output_schema,
+                lambda: f"map output {output_df.schema} "
+                f"mismatches given {output_schema}",
+            )
+            output_df._metadata = ParamDict(metadata, deep=True)
+            output_df._metadata.set_readonly()
+            return self.execution_engine._to_native_df(output_df)  # type: ignore
+        presort = partition_spec.presort
+        presort_keys = list(presort.keys())
+        presort_asc = list(presort.values())
+        output_schema = Schema(output_schema)
+
+        def _map(pdf: pd.DataFrame) -> pd.DataFrame:
+            if len(presort_keys) > 0:
+                pdf = pdf.sort_values(presort_keys, ascending=presort_asc).reset_index(
+                    drop=True
+                )
+            input_df = PandasDataFrame(pdf, df.schema, pandas_df_wrapper=True)
+            cursor.set(input_df.peek_array(), cursor.partition_no + 1, 0)
+            output_df = map_func(cursor, input_df)
+            return output_df.as_pandas()
+
+        result = self.execution_engine.pl_utils.safe_groupby_apply(  # type: ignore
+            df.as_pandas(), partition_spec.partition_by, _map
+        )
+        return PandasDataFrame(result, output_schema, metadata)
 
 
 class NativeExecutionEngine(ExecutionEngine):
@@ -99,9 +152,11 @@ class NativeExecutionEngine(ExecutionEngine):
     def fs(self) -> FileSystem:
         return self._fs
 
-    @property
-    def default_sql_engine(self) -> SQLEngine:
+    def create_default_sql_engine(self) -> SQLEngine:
         return QPDPandasEngine(self)
+
+    def create_default_map_engine(self) -> MapEngine:
+        return PandasMapEngine(self)
 
     @property
     def pl_utils(self) -> PandasUtils:
@@ -123,61 +178,6 @@ class NativeExecutionEngine(ExecutionEngine):
     ) -> DataFrame:  # pragma: no cover
         self.log.warning("%s doesn't respect repartition", self)
         return df
-
-    def map(
-        self,
-        df: DataFrame,
-        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-        metadata: Any = None,
-        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
-    ) -> DataFrame:
-        if partition_spec.num_partitions != "0":
-            self.log.warning(
-                "%s doesn't respect num_partitions %s",
-                self,
-                partition_spec.num_partitions,
-            )
-        cursor = partition_spec.get_cursor(df.schema, 0)
-        if on_init is not None:
-            on_init(0, df)
-        if len(partition_spec.partition_by) == 0:  # no partition
-            df = to_local_df(df)
-            cursor.set(df.peek_array(), 0, 0)
-            output_df = map_func(cursor, df)
-            if (
-                isinstance(output_df, PandasDataFrame)
-                and output_df.schema != output_schema
-            ):
-                output_df = PandasDataFrame(output_df.native, output_schema)
-            assert_or_throw(
-                output_df.schema == output_schema,
-                lambda: f"map output {output_df.schema} "
-                f"mismatches given {output_schema}",
-            )
-            output_df._metadata = ParamDict(metadata, deep=True)
-            output_df._metadata.set_readonly()
-            return self._to_native_df(output_df)
-        presort = partition_spec.presort
-        presort_keys = list(presort.keys())
-        presort_asc = list(presort.values())
-        output_schema = Schema(output_schema)
-
-        def _map(pdf: pd.DataFrame) -> pd.DataFrame:
-            if len(presort_keys) > 0:
-                pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
-            input_df = PandasDataFrame(
-                pdf.reset_index(drop=True), df.schema, pandas_df_wrapper=True
-            )
-            cursor.set(input_df.peek_array(), cursor.partition_no + 1, 0)
-            output_df = map_func(cursor, input_df)
-            return output_df.as_pandas()
-
-        result = self.pl_utils.safe_groupby_apply(
-            df.as_pandas(), partition_spec.partition_by, _map
-        )
-        return PandasDataFrame(result, output_schema, metadata)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self._to_native_df(df)

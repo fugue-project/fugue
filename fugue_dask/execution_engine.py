@@ -17,6 +17,7 @@ from fugue.execution.execution_engine import (
     _DEFAULT_JOIN_KEYS,
     ExecutionEngine,
     SQLEngine,
+    MapEngine,
 )
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from qpd_dask import run_sql_on_dask
@@ -57,6 +58,61 @@ class QPDDaskEngine(SQLEngine):
         }
         df = run_sql_on_dask(statement, dask_dfs, ignore_case=True)
         return DaskDataFrame(df)
+
+
+class DaskMapEngine(MapEngine):
+    def map_dataframe(
+        self,
+        df: DataFrame,
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        output_schema: Any,
+        partition_spec: PartitionSpec,
+        metadata: Any = None,
+        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+    ) -> DataFrame:
+        presort = partition_spec.presort
+        presort_keys = list(presort.keys())
+        presort_asc = list(presort.values())
+        output_schema = Schema(output_schema)
+        input_schema = df.schema
+        on_init_once: Any = (
+            None
+            if on_init is None
+            else RunOnce(
+                on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
+            )
+        )
+
+        def _map(pdf: Any) -> dd.DataFrame:
+            if pdf.shape[0] == 0:
+                return PandasDataFrame([], output_schema).as_pandas()
+            if len(presort_keys) > 0:
+                pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
+            input_df = PandasDataFrame(
+                pdf.reset_index(drop=True), input_schema, pandas_df_wrapper=True
+            )
+            if on_init_once is not None:
+                on_init_once(0, input_df)
+            cursor = partition_spec.get_cursor(input_schema, 0)
+            cursor.set(input_df.peek_array(), 0, 0)
+            output_df = map_func(cursor, input_df)
+            return output_df.as_pandas()
+
+        df = self.execution_engine.to_df(df)
+        meta = self.execution_engine.pl_utils.safe_to_pandas_dtype(  # type: ignore
+            output_schema.pa_schema
+        )
+        if len(partition_spec.partition_by) == 0:
+            pdf = self.execution_engine.repartition(df, partition_spec)
+            result = pdf.native.map_partitions(_map, meta=meta)  # type: ignore
+        else:
+            df = self.execution_engine.repartition(
+                df, PartitionSpec(num=partition_spec.num_partitions)
+            )
+            result = self.execution_engine.pl_utils.safe_groupby_apply(  # type: ignore
+                df.native, partition_spec.partition_by, _map, meta=meta  # type: ignore
+            )
+        return DaskDataFrame(result, output_schema, metadata)
 
 
 class DaskExecutionEngine(ExecutionEngine):
@@ -102,9 +158,11 @@ class DaskExecutionEngine(ExecutionEngine):
     def fs(self) -> FileSystem:
         return self._fs
 
-    @property
-    def default_sql_engine(self) -> SQLEngine:
+    def create_default_sql_engine(self) -> SQLEngine:
         return QPDDaskEngine(self)
+
+    def create_default_map_engine(self) -> MapEngine:
+        return DaskMapEngine(self)
 
     @property
     def pl_utils(self) -> DaskUtils:
@@ -177,55 +235,6 @@ class DaskExecutionEngine(ExecutionEngine):
                 ddf, schema=df.schema, metadata=df.metadata, type_safe=False
             )
         return df
-
-    def map(
-        self,
-        df: DataFrame,
-        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-        metadata: Any = None,
-        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
-    ) -> DataFrame:
-        presort = partition_spec.presort
-        presort_keys = list(presort.keys())
-        presort_asc = list(presort.values())
-        output_schema = Schema(output_schema)
-        input_schema = df.schema
-        on_init_once: Any = (
-            None
-            if on_init is None
-            else RunOnce(
-                on_init, lambda *args, **kwargs: to_uuid(id(on_init), id(args[0]))
-            )
-        )
-
-        def _map(pdf: Any) -> dd.DataFrame:
-            if pdf.shape[0] == 0:
-                return PandasDataFrame([], output_schema).as_pandas()
-            if len(presort_keys) > 0:
-                pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
-            input_df = PandasDataFrame(
-                pdf.reset_index(drop=True), input_schema, pandas_df_wrapper=True
-            )
-            if on_init_once is not None:
-                on_init_once(0, input_df)
-            cursor = partition_spec.get_cursor(input_schema, 0)
-            cursor.set(input_df.peek_array(), 0, 0)
-            output_df = map_func(cursor, input_df)
-            return output_df.as_pandas()
-
-        df = self.to_df(df)
-        meta = self.pl_utils.safe_to_pandas_dtype(output_schema.pa_schema)
-        if len(partition_spec.partition_by) == 0:
-            pdf = self.repartition(df, partition_spec)
-            result = pdf.native.map_partitions(_map, meta=meta)
-        else:
-            df = self.repartition(df, PartitionSpec(num=partition_spec.num_partitions))
-            result = self.pl_utils.safe_groupby_apply(
-                df.native, partition_spec.partition_by, _map, meta=meta
-            )
-        return DaskDataFrame(result, output_schema, metadata)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)

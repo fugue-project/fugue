@@ -160,7 +160,7 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
         expected = PandasDataFrame(df.assign(zz=df.xx + df.yy), "xx:int,yy:int,zz:int")
         a = e.to_df(df)
         # no partition
-        c = e.map(a, add, "xx:int,yy:int,zz:int", PartitionSpec(num=16))
+        c = e.map_engine.map_dataframe(a, add, "xx:int,yy:int,zz:int", PartitionSpec(num=16))
         df_eq(c, expected, throw=True)
 
 

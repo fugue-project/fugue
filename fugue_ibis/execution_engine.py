@@ -53,8 +53,7 @@ class IbisExecutionEngine(ExecutionEngine):
     :param conf: |ParamsLikeObject|, read |FugueConfig| to learn Fugue specific options
     """
 
-    @property
-    def default_sql_engine(self) -> SQLEngine:
+    def create_default_sql_engine(self) -> SQLEngine:
         return IbisSQLEngine(self)
 
     @property

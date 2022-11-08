@@ -77,7 +77,7 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
         metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
-        return self._native_engine.map(
+        return self._native_engine.map_engine.map_dataframe(
             df=df,
             map_func=map_func,
             output_schema=output_schema,

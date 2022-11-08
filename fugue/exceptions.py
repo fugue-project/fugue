@@ -18,7 +18,7 @@ class FugueDataFrameInitError(FugueDataFrameError):
     """Fugue dataframe initialization error"""
 
 
-class FugueDataFrameEmptyError(FugueDataFrameError):
+class FugueDatasetEmptyError(FugueDataFrameError):
     """Fugue dataframe is empty"""
 
 

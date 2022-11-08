@@ -1,20 +1,21 @@
 import json
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import pandas as pd
 import pyarrow as pa
-from fugue.collections.yielded import Yielded
-from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
 from triad import SerializableRLock
-from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
 
+from ..collections.yielded import Yielded
+from ..dataset import Dataset
+from ..exceptions import FugueDataFrameOperationError
 
-class DataFrame(ABC):
+
+class DataFrame(Dataset):
     """Base class of Fugue DataFrame. Please read
     |DataFrameTutorial| to understand the concept
 
@@ -31,6 +32,7 @@ class DataFrame(ABC):
     _SHOW_LOCK = SerializableRLock()
 
     def __init__(self, schema: Any = None, metadata: Any = None):
+        super().__init__(metadata)
         if not callable(schema):
             schema = _input_schema(schema).assert_not_empty()
             schema.set_readonly()
@@ -39,18 +41,7 @@ class DataFrame(ABC):
         else:
             self._schema: Union[Schema, Callable[[], Schema]] = schema  # type: ignore
             self._schema_discovered = False
-        self._metadata = (
-            metadata
-            if isinstance(metadata, ParamDict)
-            else ParamDict(metadata, deep=True)
-        )
-        self._metadata.set_readonly()
         self._lazy_schema_lock = SerializableRLock()
-
-    @property
-    def metadata(self) -> ParamDict:
-        """Metadata of the dataframe"""
-        return self._metadata
 
     @property
     def schema(self) -> Schema:
@@ -67,64 +58,26 @@ class DataFrame(ABC):
             self._schema_discovered = True
             return self._schema
 
-    @property
-    def is_local(self) -> bool:  # pragma: no cover
-        """Whether this dataframe is a :class:`.LocalDataFrame`"""
-        return isinstance(self, LocalDataFrame)
-
     @abstractmethod
     def as_local(self) -> "LocalDataFrame":  # pragma: no cover
         """Convert this dataframe to a :class:`.LocalDataFrame`"""
         raise NotImplementedError
 
-    @property
-    @abstractmethod
-    def is_bounded(self) -> bool:  # pragma: no cover
-        """Whether this dataframe is bounded"""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def num_partitions(self) -> int:  # pragma: no cover
-        """Number of physical partitions of this dataframe.
-        Please read |PartitionTutorial|
-        """
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def empty(self) -> bool:  # pragma: no cover
-        """Whether this dataframe is empty"""
-        raise NotImplementedError
-
-    def assert_not_empty(self) -> None:
-        """Assert this dataframe is not empty
-
-        :raises FugueDataFrameEmptyError: if it is empty
-        """
-
-        assert_or_throw(not self.empty, FugueDataFrameEmptyError("dataframe is empty"))
-
     @abstractmethod
     def peek_array(self) -> Any:  # pragma: no cover
         """Peek the first row of the dataframe as array
 
-        :raises FugueDataFrameEmptyError: if it is empty
+        :raises FugueDatasetEmptyError: if it is empty
         """
         raise NotImplementedError
 
     def peek_dict(self) -> Dict[str, Any]:
         """Peek the first row of the dataframe as dict
 
-        :raises FugueDataFrameEmptyError: if it is empty
+        :raises FugueDatasetEmptyError: if it is empty
         """
         arr = self.peek_array()
         return {self.schema.names[i]: arr[i] for i in range(len(self.schema))}
-
-    @abstractmethod
-    def count(self) -> int:  # pragma: no cover
-        """Get number of rows of this dataframe"""
-        raise NotImplementedError
 
     def as_pandas(self) -> pd.DataFrame:
         """Convert to pandas DataFrame"""

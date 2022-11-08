@@ -265,18 +265,22 @@ class ExecutionEngineTests(object):
             )
             a = e.to_df(o)
             # no partition
-            c = e.map(a, noop, a.schema, PartitionSpec(), dict(a=1))
+            c = e.map_engine.map_dataframe(
+                a, noop, a.schema, PartitionSpec(), dict(a=1)
+            )
             df_eq(c, o, throw=True)
             # with key partition
-            c = e.map(
+            c = e.map_engine.map_dataframe(
                 a, noop, a.schema, PartitionSpec(by=["a"], presort="b"), dict(a=1)
             )
             df_eq(c, o, throw=True)
             # select top
-            c = e.map(a, select_top, a.schema, PartitionSpec(by=["a"], presort="b"))
+            c = e.map_engine.map_dataframe(
+                a, select_top, a.schema, PartitionSpec(by=["a"], presort="b")
+            )
             df_eq(c, [[None, 1], [1, 2], [3, 4]], "a:double,b:int", throw=True)
             # select top with another order
-            c = e.map(
+            c = e.map_engine.map_dataframe(
                 a,
                 select_top,
                 a.schema,
@@ -291,7 +295,7 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
             # add num_partitions, on_init should not matter
-            c = e.map(
+            c = e.map_engine.map_dataframe(
                 a,
                 select_top,
                 a.schema,
@@ -314,7 +318,7 @@ class ExecutionEngineTests(object):
                 "a:double,b:double,c:int",
                 dict(a=1),
             )
-            c = e.map(
+            c = e.map_engine.map_dataframe(
                 o, select_top, o.schema, PartitionSpec(by=["a", "b"], presort="c")
             )
             df_eq(
@@ -336,7 +340,7 @@ class ExecutionEngineTests(object):
                 "a:datetime,b:int,c:double",
                 dict(a=1),
             )
-            c = e.map(
+            c = e.map_engine.map_dataframe(
                 o, select_top, o.schema, PartitionSpec(by=["a", "c"], presort="b DESC")
             )
             df_eq(
@@ -345,7 +349,7 @@ class ExecutionEngineTests(object):
                 "a:datetime,b:int,c:double",
                 throw=True,
             )
-            d = e.map(
+            d = e.map_engine.map_dataframe(
                 c, with_nat, "a:datetime,b:int,c:double,nat:datetime", PartitionSpec()
             )
             df_eq(
@@ -356,7 +360,9 @@ class ExecutionEngineTests(object):
             )
             # test list
             o = ArrayDataFrame([[dt, [1, 2]]], "a:datetime,b:[int]")
-            c = e.map(o, select_top, o.schema, PartitionSpec(by=["a"]))
+            c = e.map_engine.map_dataframe(
+                o, select_top, o.schema, PartitionSpec(by=["a"])
+            )
             df_eq(c, o, check_order=True, throw=True)
 
         def test_map_with_dict_col(self):
@@ -364,7 +370,9 @@ class ExecutionEngineTests(object):
             dt = datetime.now()
             # test dict
             o = ArrayDataFrame([[dt, dict(a=1)]], "a:datetime,b:{a:int}")
-            c = e.map(o, select_top, o.schema, PartitionSpec(by=["a"]))
+            c = e.map_engine.map_dataframe(
+                o, select_top, o.schema, PartitionSpec(by=["a"])
+            )
             df_eq(c, o, no_pandas=True, check_order=True, throw=True)
 
         def test_map_with_binary(self):
@@ -373,7 +381,7 @@ class ExecutionEngineTests(object):
                 [[pickle.dumps(BinaryObject("a"))], [pickle.dumps(BinaryObject("b"))]],
                 "a:bytes",
             )
-            c = e.map(o, binary_map, o.schema, PartitionSpec())
+            c = e.map_engine.map_dataframe(o, binary_map, o.schema, PartitionSpec())
             expected = ArrayDataFrame(
                 [
                     [pickle.dumps(BinaryObject("ax"))],
