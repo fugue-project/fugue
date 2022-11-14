@@ -2,7 +2,9 @@
 image: fugueproject/devenv:0.4.4
 
 tasks:
-  - init: make devenv
+  - init: |
+      make devenv
+      sudo chmod -R 777 /usr/local/share/jupyter
 
 github:
   prebuilds:
