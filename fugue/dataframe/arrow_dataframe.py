@@ -210,8 +210,8 @@ class ArrowDataFrame(LocalBoundedDataFrame):
                 yield list(arr)
 
 
-def _build_empty_arrow(schema: Schema) -> pa.Table:
-    if pa.__version__ < "7":  # pragma: no cover
+def _build_empty_arrow(schema: Schema) -> pa.Table:  # pragma: no cover
+    if pa.__version__ < "7":
         arr = [pa.array([])] * len(schema)
         return pa.Table.from_arrays(arr, schema=schema.pa_schema)
     return pa.Table.from_pylist([], schema=schema.pa_schema)

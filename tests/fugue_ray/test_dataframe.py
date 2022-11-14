@@ -5,6 +5,7 @@ import pyarrow as pa
 import ray
 import ray.data as rd
 from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue.dataframe.utils import (
     get_dataframe_column_names,
     rename_dataframe_column_names,
@@ -58,7 +59,7 @@ class RayDataFrameTests(DataFrameTests.Tests):
         assert not df.is_local
         assert df.is_bounded
 
-        df = RayDataFrame(pa.Table.from_pylist([], Schema("x:str,y:double").pa_schema))
+        df = RayDataFrame(_build_empty_arrow(Schema("x:str,y:double")))
         assert df.empty
         assert df.schema == "x:str,y:double"
         assert df.is_bounded
