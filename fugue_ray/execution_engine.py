@@ -173,7 +173,13 @@ class RayExecutionEngine(DuckExecutionEngine):
                 return _build_empty_arrow(output_schema)
             adf = adf.remove_column(len(input_schema))  # remove partition key
             if len(presort_tuples) > 0:
-                adf = adf.sort_by(presort_tuples)
+                if pa.__version__ < "7":  # pragma: no cover
+                    idx = pa.compute.sort_indices(
+                        adf, options=pa.compute.SortOptions(presort_tuples)
+                    )
+                    adf = adf.take(idx)
+                else:
+                    adf = adf.sort_by(presort_tuples)
             input_df = ArrowDataFrame(adf)
             if on_init_once is not None:
                 on_init_once(0, input_df)
