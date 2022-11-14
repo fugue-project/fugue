@@ -2,7 +2,7 @@
 image: fugueproject/devenv:0.4.4
 
 tasks:
-  - init: make
+  - init: make devenv
 
 github:
   prebuilds:
