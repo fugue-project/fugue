@@ -5,10 +5,8 @@ from ..dataset import Dataset
 
 
 class Bag(Dataset):
-    """The base class of Fugue Bags.
-    Bag <https://fugue-tutorials.readthedocs.io/>
-     Bag contains a collection of
-    objects,
+    """The base class of Fugue Bags. Bag contains a collection of
+    unordered objects.
     """
 
     @abstractmethod
