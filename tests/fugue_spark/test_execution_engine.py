@@ -77,6 +77,7 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_persist(self):
         e = self.engine
+
         o = ArrayDataFrame([[1, 2]], "a:int,b:int")
         o.reset_metadata({"a": 1})
         a = e.persist(o)
