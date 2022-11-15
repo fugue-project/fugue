@@ -13,6 +13,7 @@ from fugue.dataframe import (
     LocalDataFrameIterableDataFrame,
     PandasDataFrame,
 )
+from triad import Schema
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.extensions.transformer import Transformer, transformer
 from fugue.workflow.workflow import FugueWorkflow
@@ -34,19 +35,22 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def make_engine(self):
         session = SparkSession.builder.getOrCreate()
-        e = SparkExecutionEngine(session, dict(test=True))
+        e = SparkExecutionEngine(
+            session, {"test": True, "fugue.spark.use_pandas_udf": False}
+        )
         return e
+
+    def test_not_using_pandas_udf(self):
+        assert not self.engine.create_default_map_engine()._should_use_pandas_udf(
+            Schema("a:int")
+        )
 
     def test__join_outer_pandas_incompatible(self):
         return
 
     def test_to_df(self):
         e = self.engine
-        o = ArrayDataFrame(
-            [[1, 2], [None, 3]],
-            "a:double,b:int",
-            dict(a=1),
-        )
+        o = ArrayDataFrame([[1, 2], [None, 3]], "a:double,b:int")
         a = e.to_df(o)
         assert a is not o
         res = a.native.collect()
@@ -54,25 +58,17 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         assert res[1][0] == 1.0 or res[1][0] is None
         df_eq(a, o, throw=True)
 
-        o = ArrowDataFrame(
-            [[1, 2], [None, 3]],
-            "a:double,b:int",
-            dict(a=1),
-        )
+        o = ArrowDataFrame([[1, 2], [None, 3]], "a:double,b:int")
         a = e.to_df(o)
         assert a is not o
         res = a.native.collect()
         assert res[0][0] == 1.0 or res[0][0] is None
         assert res[1][0] == 1.0 or res[1][0] is None
 
-        a = e.to_df([[1, None]], "a:int,b:int", dict(a=1))
-        df_eq(a, [[1, None]], "a:int,b:int", dict(a=1), throw=True)
+        a = e.to_df([[1, None]], "a:int,b:int")
+        df_eq(a, [[1, None]], "a:int,b:int", throw=True)
 
-        o = PandasDataFrame(
-            [[{"a": "b"}, 2]],
-            "a:{a:str},b:int",
-            dict(a=1),
-        )
+        o = PandasDataFrame([[{"a": "b"}, 2]], "a:{a:str},b:int")
         a = e.to_df(o)
         assert a is not o
         res = a.as_array(type_safe=True)
@@ -80,12 +76,10 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_persist(self):
         e = self.engine
-        o = ArrayDataFrame(
-            [[1, 2]],
-            "a:int,b:int",
-            dict(a=1),
-        )
+        o = ArrayDataFrame([[1, 2]], "a:int,b:int")
+        o.reset_metadata({"a": 1})
         a = e.persist(o)
+        assert a.metadata == {"a": 1}
         df_eq(a, o, throw=True)
         a = e.persist(o, level=StorageLevel.MEMORY_ONLY)
         df_eq(a, o, throw=True)
@@ -121,14 +115,16 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
 
     def make_engine(self):
         session = SparkSession.builder.getOrCreate()
-        e = SparkExecutionEngine(
-            session, {"test": True, "fugue.spark.use_pandas_udf": True}
-        )
-        assert e.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
+        e = SparkExecutionEngine(session, {"test": True})
         return e
 
     def test__join_outer_pandas_incompatible(self):
         return
+
+    def test_using_pandas_udf(self):
+        assert self.engine.create_default_map_engine()._should_use_pandas_udf(
+            Schema("a:int")
+        )
 
     def test_sample_n(self):
         engine = self.engine
@@ -142,6 +138,7 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
             return
 
         def add(cursor, data):
+            # assertion for pandas udf input
             assert isinstance(data, LocalDataFrameIterableDataFrame)
 
             def get_dfs():
