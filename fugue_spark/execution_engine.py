@@ -106,7 +106,7 @@ class SparkMapEngine(MapEngine):
             FUGUE_SPARK_CONF_USE_PANDAS_UDF, bool
         )
         if not possible or any(pa.types.is_nested(t) for t in schema.types):
-            if enabled and not possible:
+            if enabled and not possible:  # pragma: no cover
                 self.execution_engine.log.warning(
                     f"{FUGUE_SPARK_CONF_USE_PANDAS_UDF}"
                     " is enabled but the current PySpark session"
