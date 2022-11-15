@@ -4,6 +4,7 @@ from typing import Any
 import pandas as pd
 import pyspark
 import pyspark.sql as ps
+import pytest
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import (
     get_dataframe_column_names,
@@ -11,9 +12,7 @@ from fugue.dataframe.utils import (
 )
 from fugue_test.dataframe_suite import DataFrameTests
 from pyspark.sql import SparkSession
-
 from triad.collections.schema import Schema
-
 
 from fugue_spark import SparkExecutionEngine
 from fugue_spark._utils.convert import to_schema, to_spark_schema
@@ -21,6 +20,10 @@ from fugue_spark.dataframe import SparkDataFrame
 
 
 class SparkDataFrameTests(DataFrameTests.Tests):
+    @pytest.fixture(autouse=True)
+    def init_session(self, spark_session):
+        self.spark_session = spark_session
+
     def df(self, data: Any = None, schema: Any = None) -> SparkDataFrame:
         session = SparkSession.builder.getOrCreate()
         engine = SparkExecutionEngine(session)

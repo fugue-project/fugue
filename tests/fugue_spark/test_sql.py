@@ -6,8 +6,7 @@ from pyspark.sql import SparkSession
 from fugue_spark import SparkExecutionEngine
 
 
-def test_sql():
-    session = SparkSession.builder.getOrCreate()
+def test_sql(spark_session):
     register_execution_engine(
         "s",
         lambda conf, **kwargs: SparkExecutionEngine(conf=conf, spark_session=session),
