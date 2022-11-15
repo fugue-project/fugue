@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional
 from triad import ParamDict, assert_or_throw
 from .exceptions import FugueDatasetEmptyError
 
@@ -8,25 +8,29 @@ class Dataset(ABC):
     """The base class of Fugue :class:`~.fugue.dataframe.dataframe.DataFrame`
     and :class:`~.fugue.bag.bag.Bag`.
 
-    :param metadata: dict-like object with string keys, default ``None``
-
     .. note::
 
         This is for internal use only.
     """
 
-    def __init__(self, metadata: Any = None):
-        self._metadata = (
-            metadata
-            if isinstance(metadata, ParamDict)
-            else ParamDict(metadata, deep=True)
-        )
-        self._metadata.set_readonly()
+    def __init__(self):
+        self._metadata: Optional[ParamDict] = None
 
     @property
     def metadata(self) -> ParamDict:
         """Metadata of the dataset"""
+        if self._metadata is None:
+            self._metadata = ParamDict()
         return self._metadata
+
+    @property
+    def has_metadata(self) -> bool:
+        """Whether this dataframe contains any metadata"""
+        return self._metadata is not None and len(self._metadata) > 0
+
+    def reset_metadata(self, metadata: Any) -> None:
+        """Reset metadata"""
+        self._metadata = ParamDict(metadata) if metadata is not None else None
 
     @property
     @abstractmethod

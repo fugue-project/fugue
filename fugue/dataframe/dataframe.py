@@ -20,7 +20,6 @@ class DataFrame(Dataset):
     |DataFrameTutorial| to understand the concept
 
     :param schema: |SchemaLikeObject|
-    :param metadata: dict-like object with string keys, default ``None``
 
     .. note::
 
@@ -31,8 +30,8 @@ class DataFrame(Dataset):
 
     _SHOW_LOCK = SerializableRLock()
 
-    def __init__(self, schema: Any = None, metadata: Any = None):
-        super().__init__(metadata)
+    def __init__(self, schema: Any = None):
+        super().__init__()
         if not callable(schema):
             schema = _input_schema(schema).assert_not_empty()
             schema.set_readonly()
@@ -263,7 +262,7 @@ class DataFrame(Dataset):
                 "type": "{}.{}".format(
                     self.__class__.__module__, self.__class__.__name__
                 ),
-                "metadata": self.metadata,
+                "metadata": self.metadata if self.has_metadata else {},
             }
         )
 
@@ -294,7 +293,7 @@ class DataFrame(Dataset):
             if count >= 0:
                 print(f"Total count: {count}")
                 print("")
-            if len(self.metadata) > 0:
+            if self.has_metadata > 0:
                 print("Metadata:")
                 try:
                     # try pretty print, but if not convertible to json, print original
@@ -336,7 +335,6 @@ class LocalDataFrame(DataFrame):
     to understand the concept
 
     :param schema: a `schema-like <triad.collections.schema.Schema>`_ object
-    :param metadata: dict-like object with string keys, default ``None``
 
     .. note::
 
@@ -366,7 +364,6 @@ class LocalBoundedDataFrame(LocalDataFrame):
     to understand the concept
 
     :param schema: |SchemaLikeObject|
-    :param metadata: dict-like object with string keys, default ``None``
 
     .. note::
 
@@ -388,7 +385,6 @@ class LocalUnboundedDataFrame(LocalDataFrame):
     to understand the concept
 
     :param schema: |SchemaLikeObject|
-    :param metadata: dict-like object with string keys, default ``None``
 
     .. note::
 

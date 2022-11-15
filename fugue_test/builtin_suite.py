@@ -333,7 +333,7 @@ class BuiltInTests(object):
                 b = dag.df([[1, 3]], "a:int,c:int")
                 c1 = a.zip(b)
                 c2 = dag.zip(a, b)
-                c1.assert_eq(c2, check_metadata=False)
+                c1.assert_eq(c2)
 
                 a = dag.df([[1, 2], [2, 3], [2, 5]], "a:int,b:int")
                 b = dag.df([[1, 3]], "a:int,c:int")
@@ -341,27 +341,25 @@ class BuiltInTests(object):
                 c2 = dag.zip(
                     a, b, how="left_outer", partition=dict(presort="b DESC, c ASC")
                 )
-                c1.assert_eq(c2, check_metadata=False)
+                c1.assert_eq(c2)
 
                 a = dag.df([[1, 2, 0], [1, 3, 1]], "a:int,b:int,c:int")
                 b = dag.df([[1, 2, 1], [1, 3, 2]], "a:int,b:int,d:int")
                 c = dag.df([[1, 4]], "a:int,e:int")
                 e = dag.df([[1, 2], [1, 3]], "a:int,b:int")
-                dag.zip(a, b, c)[["a", "b"]].assert_eq(e, check_metadata=False)
+                dag.zip(a, b, c)[["a", "b"]].assert_eq(e)
             dag.run(self.engine)
 
         def test_transform(self):
             with FugueWorkflow() as dag:
-                a = dag.df([[1, 2], [3, 4]], "a:double,b:int", dict(x=1))
+                a = dag.df([[1, 2], [3, 4]], "a:double,b:int")
                 c = a.transform(mock_tf0)
                 dag.df([[1, 2, 1], [3, 4, 1]], "a:double,b:int,p:int").assert_eq(c)
 
                 c = a.transform(mock_tf0, params=dict(col="x"))
                 dag.df([[1, 2, 1], [3, 4, 1]], "a:double,b:int,x:int").assert_eq(c)
 
-                a = dag.df(
-                    [[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int", dict(x=1)
-                )
+                a = dag.df([[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int")
                 c = a.transform(mock_tf0, params=dict(p="10"))
                 dag.df(
                     [[1, 2, 10], [None, 1, 10], [3, 4, 10], [None, 4, 10]],
@@ -402,7 +400,7 @@ class BuiltInTests(object):
                     yield df.assign(c=2)
 
             with FugueWorkflow() as dag:
-                a = dag.df([[1, 2], [3, 4]], "a:int,b:int", dict(x=1))
+                a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
                 b = a.transform(mt)
                 dag.df([[1, 2, 2], [3, 4, 2]], "a:int,b:int,c:int").assert_eq(b)
             dag.run(self.engine)
@@ -417,9 +415,7 @@ class BuiltInTests(object):
 
         def test_transform_by(self):
             with FugueWorkflow() as dag:
-                a = dag.df(
-                    [[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int", dict(x=1)
-                )
+                a = dag.df([[1, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int")
                 c = a.transform(MockTransform1, pre_partition={"by": ["a"]})
                 dag.df(
                     [[None, 1, 2, 1], [None, 4, 2, 1], [1, 2, 1, 1], [3, 4, 1, 1]],
@@ -450,8 +446,8 @@ class BuiltInTests(object):
 
         def test_cotransform(self):
             with FugueWorkflow() as dag:
-                a = dag.df([[1, 2], [1, 3], [2, 1]], "a:int,b:int", dict(x=1))
-                b = dag.df([[1, 2], [3, 4]], "a:int,c:int", dict(x=1))
+                a = dag.df([[1, 2], [1, 3], [2, 1]], "a:int,b:int")
+                b = dag.df([[1, 2], [3, 4]], "a:int,c:int")
                 c = dag.transform(a.zip(b), using=MockCoTransform1)
                 e = dag.df([[1, 2, 1, 1]], "a:int,ct1:int,ct2:int,p:int")
                 e.assert_eq(c)
@@ -502,8 +498,8 @@ class BuiltInTests(object):
 
         def test_cotransform_with_key(self):
             with FugueWorkflow() as dag:
-                a = dag.df([[1, 2], [1, 3], [2, 1]], "a:int,b:int", dict(x=1))
-                b = dag.df([[1, 2], [3, 4]], "a:int,c:int", dict(x=1))
+                a = dag.df([[1, 2], [1, 3], [2, 1]], "a:int,b:int")
+                b = dag.df([[1, 2], [3, 4]], "a:int,c:int")
                 dag.zip(dict(x=a, y=b)).show()
                 c = dag.zip(dict(x=a, y=b)).transform(
                     MockCoTransform1, params=dict(named=True)
@@ -1618,12 +1614,10 @@ class MockOutputter4(Outputter):
 class MockTransform1(Transformer):
     def get_output_schema(self, df: DataFrame) -> Any:
         assert "test" in self.workflow_conf
-        assert "x" in df.metadata
         return [df.schema, "ct:int,p:int"]
 
     def on_init(self, df: DataFrame) -> None:
         assert "test" in self.workflow_conf
-        assert "x" in df.metadata
         self.pn = self.cursor.physical_partition_no
         self.ks = self.key_schema
         if "on_init_called" not in self.__dict__:
@@ -1634,7 +1628,6 @@ class MockTransform1(Transformer):
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:
         assert 1 == self.on_init_called
         assert "test" in self.workflow_conf
-        assert "x" in df.metadata
         pdf = df.as_pandas()
         pdf["p"] = self.params.get("p", 1)
         pdf["ct"] = pdf.shape[0]

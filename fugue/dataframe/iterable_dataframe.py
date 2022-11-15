@@ -18,7 +18,6 @@ class IterableDataFrame(LocalUnboundedDataFrame):
     :param df: 2-dimensional array, iterable of arrays, or
       :class:`~fugue.dataframe.dataframe.DataFrame`
     :param schema: |SchemaLikeObject|
-    :param metadata: dict-like object with string keys, default ``None``
 
     .. admonition:: Examples
 
@@ -31,9 +30,7 @@ class IterableDataFrame(LocalUnboundedDataFrame):
         invalid operation to count
     """
 
-    def __init__(  # noqa: C901
-        self, df: Any = None, schema: Any = None, metadata: Any = None
-    ):
+    def __init__(self, df: Any = None, schema: Any = None):  # noqa: C901
         if df is None:
             idf: Iterable[Any] = []
             orig_schema: Optional[Schema] = None
@@ -49,7 +46,7 @@ class IterableDataFrame(LocalUnboundedDataFrame):
         else:
             raise ValueError(f"{df} is incompatible with IterableDataFrame")
         schema, pos = _get_schema_change(orig_schema, schema)
-        super().__init__(schema, metadata)
+        super().__init__(schema)
         self._pos = pos
         self._native = make_empty_aware(self._preprocess(idf))
 

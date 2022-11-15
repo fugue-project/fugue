@@ -18,7 +18,6 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
       by :meth:`~fugue.dataframe.dataframe.DataFrame.as_local`
     :param schema: |SchemaLikeObject|, if it is provided, it must match the schema
       of the dataframes
-    :param metadata: dict-like object with string keys, default ``None``
 
     .. admonition:: Examples
 
@@ -47,9 +46,7 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
         set the schema.
     """
 
-    def __init__(  # noqa: C901
-        self, df: Any = None, schema: Any = None, metadata: Any = None
-    ):
+    def __init__(self, df: Any = None, schema: Any = None):  # noqa: C901
         if isinstance(df, Iterable):
             self._native = make_empty_aware(self._dfs_wrapper(df))
             orig_schema: Optional[Schema] = None
@@ -73,7 +70,7 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
                 orig_schema == schema,
                 lambda: f"iterable schema {orig_schema} is different from {schema}",
             )
-        super().__init__(schema, metadata)
+        super().__init__(schema)
 
     def _dfs_wrapper(self, dfs: Iterable[DataFrame]) -> Iterable[LocalDataFrame]:
         last_empty: Any = None

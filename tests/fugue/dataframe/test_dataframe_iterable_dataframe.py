@@ -18,20 +18,18 @@ from triad.exceptions import InvalidOperationError
 
 
 class LocalDataFrameIterableDataFrameTests(DataFrameTests.Tests):
-    def df(
-        self, data: Any = None, schema: Any = None, metadata: Any = None
-    ) -> IterableDataFrame:
+    def df(self, data: Any = None, schema: Any = None) -> IterableDataFrame:
         def get_dfs():
             if isinstance(data, list):
                 for row in data:
-                    yield ArrayDataFrame([], schema, metadata)  # noise
-                    yield ArrayDataFrame([row], schema, metadata)
+                    yield ArrayDataFrame([], schema)  # noise
+                    yield ArrayDataFrame([row], schema)
                 if schema is None:
-                    yield ArrayDataFrame([], schema, metadata)  # noise
+                    yield ArrayDataFrame([], schema)  # noise
             elif data is not None:
-                yield ArrayDataFrame(data, schema, metadata)
+                yield ArrayDataFrame(data, schema)
 
-        return LocalDataFrameIterableDataFrame(get_dfs(), schema, metadata)
+        return LocalDataFrameIterableDataFrame(get_dfs(), schema)
 
 
 def test_init():

@@ -324,13 +324,11 @@ class _TransformerRunner(object):
         self, df: DataFrame, transformer: Transformer, ignore_errors: List[type]
     ):
         self.schema = df.schema
-        self.metadata = df.metadata
         self.transformer = transformer
         self.ignore_errors = tuple(ignore_errors)
 
     def run(self, cursor: PartitionCursor, df: LocalDataFrame) -> LocalDataFrame:
         self.transformer._cursor = cursor  # type: ignore
-        df._metadata = self.metadata
         if len(self.ignore_errors) == 0:
             return self.transformer.transform(df)
         else:
@@ -344,7 +342,6 @@ class _TransformerRunner(object):
         self.transformer._cursor = s.get_cursor(  # type: ignore
             self.schema, partition_no
         )
-        df._metadata = self.metadata
         self.transformer.on_init(df)
 
 
@@ -356,7 +353,6 @@ class _CoTransformerRunner(object):
         ignore_errors: List[Type[Exception]],
     ):
         self.schema = df.schema
-        self.metadata = df.metadata
         self.transformer = transformer
         self.ignore_errors = tuple(ignore_errors)
 

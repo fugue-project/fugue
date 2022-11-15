@@ -28,7 +28,7 @@ class DataFrameTests(object):
             pass
 
         def df(
-            self, data: Any = None, schema: Any = None, metadata: Any = None
+            self, data: Any = None, schema: Any = None
         ) -> DataFrame:  # pragma: no cover
             raise NotImplementedError
 

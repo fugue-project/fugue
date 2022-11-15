@@ -8,7 +8,7 @@ from qpd_pandas import run_sql_on_pandas
 from qpd_pandas.engine import PandasUtils
 from sqlalchemy import create_engine
 from triad.collections import Schema
-from triad.collections.dict import IndexedOrderedDict, ParamDict
+from triad.collections.dict import IndexedOrderedDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 
@@ -77,7 +77,6 @@ class PandasMapEngine(MapEngine):
         map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
-        metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
         if partition_spec.num_partitions != "0":
@@ -103,8 +102,6 @@ class PandasMapEngine(MapEngine):
                 lambda: f"map output {output_df.schema} "
                 f"mismatches given {output_schema}",
             )
-            output_df._metadata = ParamDict(metadata, deep=True)
-            output_df._metadata.set_readonly()
             return self.execution_engine._to_native_df(output_df)  # type: ignore
         presort = partition_spec.presort
         presort_keys = list(presort.keys())
@@ -124,7 +121,7 @@ class PandasMapEngine(MapEngine):
         result = self.execution_engine.pl_utils.safe_groupby_apply(  # type: ignore
             df.as_pandas(), partition_spec.partition_by, _map
         )
-        return PandasDataFrame(result, output_schema, metadata)
+        return PandasDataFrame(result, output_schema)
 
 
 class NativeExecutionEngine(ExecutionEngine):
@@ -163,15 +160,11 @@ class NativeExecutionEngine(ExecutionEngine):
         """Pandas-like dataframe utils"""
         return PandasUtils()
 
-    def to_df(
-        self, df: Any, schema: Any = None, metadata: Any = None
-    ) -> LocalBoundedDataFrame:
-        return self._to_native_df(df, schema, metadata)
+    def to_df(self, df: Any, schema: Any = None) -> LocalBoundedDataFrame:
+        return self._to_native_df(df, schema)
 
-    def _to_native_df(
-        self, df: Any, schema: Any = None, metadata: Any = None
-    ) -> LocalBoundedDataFrame:
-        return to_local_bounded_df(df, schema, metadata)
+    def _to_native_df(self, df: Any, schema: Any = None) -> LocalBoundedDataFrame:
+        return to_local_bounded_df(df, schema)
 
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
@@ -196,34 +189,31 @@ class NativeExecutionEngine(ExecutionEngine):
         df2: DataFrame,
         how: str,
         on: List[str] = _DEFAULT_JOIN_KEYS,
-        metadata: Any = None,
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         d = self.pl_utils.join(
             df1.as_pandas(), df2.as_pandas(), join_type=how, on=key_schema.names
         )
-        return PandasDataFrame(d.reset_index(drop=True), output_schema, metadata)
+        return PandasDataFrame(d.reset_index(drop=True), output_schema)
 
     def union(
         self,
         df1: DataFrame,
         df2: DataFrame,
         distinct: bool = True,
-        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             df1.schema == df2.schema,
             lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
         d = self.pl_utils.union(df1.as_pandas(), df2.as_pandas(), unique=distinct)
-        return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+        return PandasDataFrame(d.reset_index(drop=True), df1.schema)
 
     def subtract(
         self,
         df1: DataFrame,
         df2: DataFrame,
         distinct: bool = True,
-        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             distinct, NotImplementedError("EXCEPT ALL for NativeExecutionEngine")
@@ -233,14 +223,13 @@ class NativeExecutionEngine(ExecutionEngine):
             lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
         d = self.pl_utils.except_df(df1.as_pandas(), df2.as_pandas(), unique=distinct)
-        return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+        return PandasDataFrame(d.reset_index(drop=True), df1.schema)
 
     def intersect(
         self,
         df1: DataFrame,
         df2: DataFrame,
         distinct: bool = True,
-        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             distinct, NotImplementedError("INTERSECT ALL for NativeExecutionEngine")
@@ -250,15 +239,14 @@ class NativeExecutionEngine(ExecutionEngine):
             lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
         d = self.pl_utils.intersect(df1.as_pandas(), df2.as_pandas(), unique=distinct)
-        return PandasDataFrame(d.reset_index(drop=True), df1.schema, metadata)
+        return PandasDataFrame(d.reset_index(drop=True), df1.schema)
 
     def distinct(
         self,
         df: DataFrame,
-        metadata: Any = None,
     ) -> DataFrame:
         d = self.pl_utils.drop_duplicates(df.as_pandas())
-        return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
+        return PandasDataFrame(d.reset_index(drop=True), df.schema)
 
     def dropna(
         self,
@@ -266,7 +254,6 @@ class NativeExecutionEngine(ExecutionEngine):
         how: str = "any",
         thresh: Optional[int] = None,
         subset: List[str] = None,
-        metadata: Any = None,
     ) -> DataFrame:
         kwargs: Dict[str, Any] = dict(axis=0, subset=subset, inplace=False)
         if thresh is None:
@@ -274,14 +261,13 @@ class NativeExecutionEngine(ExecutionEngine):
         else:
             kwargs["thresh"] = thresh
         d = df.as_pandas().dropna(**kwargs)
-        return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
+        return PandasDataFrame(d.reset_index(drop=True), df.schema)
 
     def fillna(
         self,
         df: DataFrame,
         value: Any,
         subset: List[str] = None,
-        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             (not isinstance(value, list)) and (value is not None),
@@ -300,7 +286,7 @@ class NativeExecutionEngine(ExecutionEngine):
             subset = subset or df.schema.names
             mapping = {col: value for col in subset}
         d = df.as_pandas().fillna(mapping, inplace=False)
-        return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
+        return PandasDataFrame(d.reset_index(drop=True), df.schema)
 
     def sample(
         self,
@@ -309,14 +295,13 @@ class NativeExecutionEngine(ExecutionEngine):
         frac: Optional[float] = None,
         replace: bool = False,
         seed: Optional[int] = None,
-        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             (n is None and frac is not None) or (n is not None and frac is None),
             ValueError("one and only one of n and frac should be set"),
         )
         d = df.as_pandas().sample(n=n, frac=frac, replace=replace, random_state=seed)
-        return PandasDataFrame(d.reset_index(drop=True), df.schema, metadata)
+        return PandasDataFrame(d.reset_index(drop=True), df.schema)
 
     def take(
         self,
@@ -325,7 +310,6 @@ class NativeExecutionEngine(ExecutionEngine):
         presort: str,
         na_position: str = "last",
         partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
-        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             isinstance(n, int),
@@ -351,7 +335,7 @@ class NativeExecutionEngine(ExecutionEngine):
             d = d.groupby(by=partition_spec.partition_by, dropna=False).head(n)
 
         return PandasDataFrame(
-            d.reset_index(drop=True), df.schema, metadata, pandas_df_wrapper=True
+            d.reset_index(drop=True), df.schema, pandas_df_wrapper=True
         )
 
     def load_df(

@@ -5,14 +5,14 @@ from .bag import LocalBag
 
 
 class ArrayBag(LocalBag):
-    def __init__(self, data: Any, metadata: Any = None, copy: bool = True):
+    def __init__(self, data: Any, copy: bool = True):
         if isinstance(data, list):
             self._native = list(data) if copy else data
         elif isinstance(data, Iterable):
             self._native = list(data)
         else:
             raise ValueError(f"{type(data)} can't be converted to ArrayBag")
-        super().__init__(metadata)
+        super().__init__()
 
     @property
     def native(self) -> List[Any]:

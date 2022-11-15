@@ -15,9 +15,8 @@ from triad.exceptions import InvalidOperationError
 
 
 class PandasDataFrameTests(DataFrameTests.Tests):
-    def df(self, data: Any = None, schema: Any = None,
-           metadata: Any = None) -> PandasDataFrame:
-        return PandasDataFrame(data, schema, metadata)
+    def df(self, data: Any = None, schema: Any = None) -> PandasDataFrame:
+        return PandasDataFrame(data, schema)
 
 
 def test_init():

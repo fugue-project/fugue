@@ -85,13 +85,10 @@ class WorkflowDataFrame(DataFrame):
 
     :param workflow: the parent workflow it belongs to
     :param task: the task that generates this dataframe
-    :param metadata: dict-like metadata, defaults to None
     """
 
-    def __init__(
-        self, workflow: "FugueWorkflow", task: FugueTask, metadata: Any = None
-    ):
-        super().__init__("_0:int", metadata)
+    def __init__(self, workflow: "FugueWorkflow", task: FugueTask):
+        super().__init__("_0:int")
         self._workflow = workflow
         self._task = task
 
@@ -132,7 +129,7 @@ class WorkflowDataFrame(DataFrame):
                 assert df.partition_spec.empty
                 assert df2.partition_spec == PartitionSpec(by=["a"])
         """
-        return self._metadata.get("pre_partition", PartitionSpec())
+        return self.metadata.get("pre_partition", PartitionSpec())
 
     def compute(self, *args, **kwargs) -> DataFrame:
         """Trigger the parent workflow to
@@ -260,7 +257,6 @@ class WorkflowDataFrame(DataFrame):
         :param check_order: if to compare the row orders, defaults to False
         :param check_schema: if compare schemas, defaults to True
         :param check_content: if to compare the row values, defaults to True
-        :param check_metadata: if to compare the dataframe metadatas, defaults to True
         :param no_pandas: if true, it will compare the string representations of the
           dataframes, otherwise, it will convert both to pandas dataframe to compare,
           defaults to False
@@ -278,7 +274,6 @@ class WorkflowDataFrame(DataFrame):
         :param check_order: if to compare the row orders, defaults to False
         :param check_schema: if compare schemas, defaults to True
         :param check_content: if to compare the row values, defaults to True
-        :param check_metadata: if to compare the dataframe metadatas, defaults to True
         :param no_pandas: if true, it will compare the string representations of the
           dataframes, otherwise, it will convert both to pandas dataframe to compare,
           defaults to False
@@ -1038,13 +1033,9 @@ class WorkflowDataFrame(DataFrame):
             Normally this step is fast because it's to add a partition hint
             for the next step.
         """
-        return self._to_self_type(
-            WorkflowDataFrame(
-                self.workflow,
-                self._task,
-                {"pre_partition": PartitionSpec(*args, **kwargs)},
-            )
-        )
+        res = WorkflowDataFrame(self.workflow, self._task)
+        res.reset_metadata({"pre_partition": PartitionSpec(*args, **kwargs)})
+        return self._to_self_type(res)
 
     def partition_by(self: TDF, *keys: str, **kwargs: Any) -> TDF:
         """Partition the current dataframe by keys. Please read |PartitionTutorial|.
@@ -1668,14 +1659,12 @@ class FugueWorkflow:
         self,
         data: Any,
         schema: Any = None,
-        metadata: Any = None,
         data_determiner: Optional[Callable[[Any], Any]] = None,
     ) -> WorkflowDataFrame:
         """Create dataframe.
 
         :param data: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
         :param schema: |SchemaLikeObject|, defaults to None
-        :param metadata: |ParamsLikeObject|, defaults to None
         :param data_determiner: a function to compute unique id from ``data``
         :return: a dataframe of the current workflow
 
@@ -1695,9 +1684,9 @@ class FugueWorkflow:
                 ),
             )
             assert_or_throw(
-                schema is None and metadata is None,
+                schema is None,
                 FugueWorkflowCompileError(
-                    "schema and metadata must be None when data is WorkflowDataFrame"
+                    "schema must be None when data is WorkflowDataFrame"
                 ),
             )
             return data
@@ -1710,7 +1699,6 @@ class FugueWorkflow:
                 using=CreateData(
                     data,
                     schema=schema,
-                    metadata=metadata,
                     data_determiner=data_determiner,
                 )
             )
@@ -1723,14 +1711,12 @@ class FugueWorkflow:
         self,
         data: Any,
         schema: Any = None,
-        metadata: Any = None,
         data_determiner: Optional[Callable[[Any], str]] = None,
     ) -> WorkflowDataFrame:
         """Create dataframe. Alias of :meth:`~.create_data`
 
         :param data: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
         :param schema: |SchemaLikeObject|, defaults to None
-        :param metadata: |ParamsLikeObject|, defaults to None
         :param data_determiner: a function to compute unique id from ``data``
         :return: a dataframe of the current workflow
 
@@ -1743,7 +1729,7 @@ class FugueWorkflow:
             the unique id of ``data`` using ``data_determiner``
         """
         return self.create_data(
-            data=data, schema=schema, metadata=metadata, data_determiner=data_determiner
+            data=data, schema=schema, data_determiner=data_determiner
         )
 
     def load(
@@ -2099,7 +2085,6 @@ class FugueWorkflow:
         :param check_order: if to compare the row orders, defaults to False
         :param check_schema: if compare schemas, defaults to True
         :param check_content: if to compare the row values, defaults to True
-        :param check_metadata: if to compare the dataframe metadatas, defaults to True
         :param no_pandas: if true, it will compare the string representations of the
           dataframes, otherwise, it will convert both to pandas dataframe to compare,
           defaults to False
@@ -2120,7 +2105,6 @@ class FugueWorkflow:
         :param check_order: if to compare the row orders, defaults to False
         :param check_schema: if compare schemas, defaults to True
         :param check_content: if to compare the row values, defaults to True
-        :param check_metadata: if to compare the dataframe metadatas, defaults to True
         :param no_pandas: if true, it will compare the string representations of the
           dataframes, otherwise, it will convert both to pandas dataframe to compare,
           defaults to False

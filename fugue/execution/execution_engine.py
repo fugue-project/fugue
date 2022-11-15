@@ -86,7 +86,6 @@ class MapEngine(ExecutionEngineFacet, ABC):
         map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
-        metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:  # pragma: no cover
         """Apply a function to each partition after you partition the dataframe in a
@@ -98,8 +97,6 @@ class MapEngine(ExecutionEngineFacet, ABC):
           Please also understand :ref:`why we need this
           <tutorial:tutorials/beginner/interface:schema>`
         :param partition_spec: partition specification
-        :param metadata: dict-like metadata object to add to the dataframe after the
-          map operation, defaults to None
         :param on_init: callback function when the physical partition is initializaing,
           defaults to None
         :return: the dataframe after the map operation
@@ -118,7 +115,6 @@ class MapEngine(ExecutionEngineFacet, ABC):
         bag: Bag,
         map_func: Callable[[BagPartitionCursor, LocalBag], LocalBag],
         partition_spec: PartitionSpec,
-        metadata: Any = None,
         on_init: Optional[Callable[[int, Bag], Any]] = None,
     ) -> Bag:  # pragma: no cover
         """Apply a function to each partition after you partition the bag in a
@@ -127,8 +123,6 @@ class MapEngine(ExecutionEngineFacet, ABC):
         :param df: input dataframe
         :param map_func: the function to apply on every logical partition
         :param partition_spec: partition specification
-        :param metadata: dict-like metadata object to add to the dataframe after the
-          map operation, defaults to None
         :param on_init: callback function when the physical partition is initializaing,
           defaults to None
         :return: the bag after the map operation
@@ -230,16 +224,13 @@ class ExecutionEngine(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def to_df(
-        self, data: Any, schema: Any = None, metadata: Any = None
-    ) -> DataFrame:  # pragma: no cover
+    def to_df(self, data: Any, schema: Any = None) -> DataFrame:  # pragma: no cover
         """Convert a data structure to this engine compatible DataFrame
 
         :param data: :class:`~fugue.dataframe.dataframe.DataFrame`,
           pandas DataFramme or list or iterable of arrays or others that
           is supported by certain engine implementation
         :param schema: |SchemaLikeObject|, defaults to None
-        :param metadata: |ParamsLikeObject|, defaults to None
         :return: engine compatible dataframe
 
         .. note::
@@ -312,7 +303,6 @@ class ExecutionEngine(ABC):
         df2: DataFrame,
         how: str,
         on: List[str] = _DEFAULT_JOIN_KEYS,
-        metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
         """Join two dataframes
 
@@ -322,8 +312,6 @@ class ExecutionEngine(ABC):
           ``inner``, ``left_outer``, ``right_outer``, ``full_outer``, ``cross``
         :param on: it can always be inferred, but if you provide, it will be
           validated against the inferred keys.
-        :param metadata: dict-like object to add to the result dataframe,
-          defaults to None
         :return: the joined dataframe
 
         .. note::
@@ -338,7 +326,6 @@ class ExecutionEngine(ABC):
         df1: DataFrame,
         df2: DataFrame,
         distinct: bool = True,
-        metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
         """Join two dataframes
 
@@ -346,8 +333,6 @@ class ExecutionEngine(ABC):
         :param df2: the second dataframe
         :param distinct: ``true`` for ``UNION`` (== ``UNION DISTINCT``),
           ``false`` for ``UNION ALL``
-        :param metadata: dict-like object to add to the result dataframe,
-          defaults to None
         :return: the unioned dataframe
 
         .. note::
@@ -363,7 +348,6 @@ class ExecutionEngine(ABC):
         df1: DataFrame,
         df2: DataFrame,
         distinct: bool = True,
-        metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
         """``df1 - df2``
 
@@ -371,8 +355,6 @@ class ExecutionEngine(ABC):
         :param df2: the second dataframe
         :param distinct: ``true`` for ``EXCEPT`` (== ``EXCEPT DISTINCT``),
           ``false`` for ``EXCEPT ALL``
-        :param metadata: dict-like object to add to the result dataframe,
-          defaults to None
         :return: the unioned dataframe
 
         .. note::
@@ -388,7 +370,6 @@ class ExecutionEngine(ABC):
         df1: DataFrame,
         df2: DataFrame,
         distinct: bool = True,
-        metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
         """Intersect ``df1`` and ``df2``
 
@@ -396,8 +377,6 @@ class ExecutionEngine(ABC):
         :param df2: the second dataframe
         :param distinct: ``true`` for ``INTERSECT`` (== ``INTERSECT DISTINCT``),
           ``false`` for ``INTERSECT ALL``
-        :param metadata: dict-like object to add to the result dataframe,
-          defaults to None
         :return: the unioned dataframe
 
         .. note::
@@ -411,14 +390,10 @@ class ExecutionEngine(ABC):
     def distinct(
         self,
         df: DataFrame,
-        metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
         """Equivalent to ``SELECT DISTINCT * FROM df``
 
         :param df: dataframe
-        :param metadata: dict-like object to add to the result dataframe,
-          defaults to None
-        :type metadata: Any, optional
         :return: [description]
         :rtype: DataFrame
         """
@@ -431,7 +406,6 @@ class ExecutionEngine(ABC):
         how: str = "any",
         thresh: int = None,
         subset: List[str] = None,
-        metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
         """Drop NA recods from dataframe
 
@@ -440,9 +414,6 @@ class ExecutionEngine(ABC):
           'all' drops rows that contain all nulls.
         :param thresh: int, drops rows that have less than thresh non-null values
         :param subset: list of columns to operate on
-        :param metadata: dict-like object to add to the result dataframe,
-            defaults to None
-        :type metadata: Any, optional
 
         :return: DataFrame with NA records dropped
         :rtype: DataFrame
@@ -451,7 +422,7 @@ class ExecutionEngine(ABC):
 
     @abstractmethod
     def fillna(
-        self, df: DataFrame, value: Any, subset: List[str] = None, metadata: Any = None
+        self, df: DataFrame, value: Any, subset: List[str] = None
     ) -> DataFrame:  # pragma: no cover
         """
         Fill ``NULL``, ``NAN``, ``NAT`` values in a dataframe
@@ -462,9 +433,6 @@ class ExecutionEngine(ABC):
             values as the replacement values.
         :param subset: list of columns to operate on. ignored if value is
             a dictionary
-        :param metadata: dict-like object to add to the result dataframe,
-            defaults to None
-        :type metadata: Any, optional
 
         :return: DataFrame with NA records filled
         :rtype: DataFrame
@@ -479,7 +447,6 @@ class ExecutionEngine(ABC):
         frac: Optional[float] = None,
         replace: bool = False,
         seed: Optional[int] = None,
-        metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
         """
         Sample dataframe by number of rows or by fraction
@@ -492,8 +459,6 @@ class ExecutionEngine(ABC):
         :param replace: whether replacement is allowed. With replacement,
           there may be duplicated rows in the result, defaults to False
         :param seed: seed for randomness, defaults to None
-        :param metadata: dict-like object to add to the result dataframe,
-            defaults to None
 
         :return: sampled dataframe
         :rtype: DataFrame
@@ -508,7 +473,6 @@ class ExecutionEngine(ABC):
         presort: str,
         na_position: str = "last",
         partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
-        metadata: Any = None,
     ) -> DataFrame:  # pragma: no cover
         """
         Get the first n rows of a DataFrame per partition. If a presort is defined,
@@ -523,8 +487,6 @@ class ExecutionEngine(ABC):
         :param na_position: position of null values during the presort.
             can accept ``first`` or ``last``
         :param partition_spec: PartitionSpec to apply the take operation
-        :param metadata: dict-like object to add to the result dataframe,
-            defaults to None
 
         :return: n rows of DataFrame per partition
         :rtype: DataFrame
@@ -537,7 +499,6 @@ class ExecutionEngine(ABC):
         cols: SelectColumns,
         where: Optional[ColumnExpr] = None,
         having: Optional[ColumnExpr] = None,
-        metadata: Any = None,
     ) -> DataFrame:
         """The functional interface for SQL select statement
 
@@ -546,8 +507,6 @@ class ExecutionEngine(ABC):
         :param where: ``WHERE`` condition expression, defaults to None
         :param having: ``having`` condition expression, defaults to None. It
           is used when ``cols`` contains aggregation columns, defaults to None
-        :param metadata: dict-like object to add to the result dataframe,
-            defaults to None. It's currently not used
         :return: the select result as a dataframe
 
         .. admonition:: New Since
@@ -603,15 +562,11 @@ class ExecutionEngine(ABC):
         diff = gen.correct_select_schema(df.schema, cols, res.schema)
         return res if diff is None else res.alter_columns(diff)
 
-    def filter(
-        self, df: DataFrame, condition: ColumnExpr, metadata: Any = None
-    ) -> DataFrame:
+    def filter(self, df: DataFrame, condition: ColumnExpr) -> DataFrame:
         """Filter rows by the given condition
 
         :param df: the dataframe to be filtered
         :param condition: (boolean) column expression
-        :param metadata: dict-like object to add to the result dataframe,
-            defaults to None. It's currently not used
         :return: the filtered dataframe
 
         .. admonition:: New Since
@@ -633,19 +588,13 @@ class ExecutionEngine(ABC):
                 engine.filter(df, (col("a")>1) & (col("b")=="x"))
                 engine.filter(df, f.coalesce(col("a"),col("b"))>1)
         """
-        return self.select(
-            df, cols=SelectColumns(col("*")), where=condition, metadata=metadata
-        )
+        return self.select(df, cols=SelectColumns(col("*")), where=condition)
 
-    def assign(
-        self, df: DataFrame, columns: List[ColumnExpr], metadata: Any = None
-    ) -> DataFrame:
+    def assign(self, df: DataFrame, columns: List[ColumnExpr]) -> DataFrame:
         """Update existing columns with new values and add new columns
 
         :param df: the dataframe to set columns
         :param columns: column expressions
-        :param metadata: dict-like object to add to the result dataframe,
-            defaults to None. It's currently not used
         :return: the updated dataframe
 
         .. tip::
@@ -691,22 +640,19 @@ class ExecutionEngine(ABC):
                 cols.append(c)
             else:
                 cols[df.schema.index_of_key(c.output_name)] = c
-        return self.select(df, SelectColumns(*cols), metadata=metadata)
+        return self.select(df, SelectColumns(*cols))
 
     def aggregate(
         self,
         df: DataFrame,
         partition_spec: Optional[PartitionSpec],
         agg_cols: List[ColumnExpr],
-        metadata: Any = None,
     ):
         """Aggregate on dataframe
 
         :param df: the dataframe to aggregate on
         :param partition_spec: PartitionSpec to specify partition keys
         :param agg_cols: aggregation expressions
-        :param metadata: dict-like object to add to the result dataframe,
-            defaults to None. It's currently not used
         :return: the aggregated result as a dataframe
 
         .. admonition:: New Since
@@ -746,7 +692,7 @@ class ExecutionEngine(ABC):
         if partition_spec is not None and len(partition_spec.partition_by) > 0:
             keys = [col(y) for y in partition_spec.partition_by]
         cols = SelectColumns(*keys, *agg_cols)
-        return self.select(df, cols=cols, metadata=metadata)
+        return self.select(df, cols=cols)
 
     def convert_yield_dataframe(self, df: DataFrame, as_local: bool) -> DataFrame:
         """Convert a yield dataframe to a dataframe that can be used after this
@@ -860,7 +806,9 @@ class ExecutionEngine(ABC):
             schemas=schemas,
             serialized_has_name=df1_name is not None or df2_name is not None,
         )
-        return self.join(df1, df2, how=how, on=on, metadata=metadata)
+        res = self.join(df1, df2, how=how, on=on)
+        res.reset_metadata(metadata)
+        return res
 
     def zip_all(
         self,
@@ -935,7 +883,6 @@ class ExecutionEngine(ABC):
         map_func: Callable[[PartitionCursor, DataFrames], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
-        metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrames], Any]] = None,
     ):
         """Apply a function to each zipped partition on the zipped dataframe.
@@ -948,8 +895,6 @@ class ExecutionEngine(ABC):
           <tutorial:tutorials/beginner/interface:schema>`
         :param partition_spec: partition specification for processing the zipped
           zipped dataframe.
-        :param metadata: dict-like metadata object to add to the dataframe after the
-          map operation, defaults to None
         :param on_init: callback function when the physical partition is initializaing,
           defaults to None
         :return: the dataframe after the comap operation
@@ -979,7 +924,7 @@ class ExecutionEngine(ABC):
         key_schema = df.schema - list(df.metadata["serialized_cols"].values())
         partition_spec = PartitionSpec(partition_spec, by=list(key_schema.keys()))
         return self.map_engine.map_dataframe(
-            df, cs.run, output_schema, partition_spec, metadata, on_init=cs.on_init
+            df, cs.run, output_schema, partition_spec, on_init=cs.on_init
         )
 
     @abstractmethod
@@ -1067,9 +1012,9 @@ class ExecutionEngine(ABC):
             schemas={df_name: str(df.schema)},
             serialized_has_name=has_name,
         )
-        return self.map_engine.map_dataframe(
-            df, s.run, output_schema, partition_spec, metadata
-        )
+        res = self.map_engine.map_dataframe(df, s.run, output_schema, partition_spec)
+        res.reset_metadata(metadata)
+        return res
 
 
 def _get_file_threshold(size: Any) -> int:

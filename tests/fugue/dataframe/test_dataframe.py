@@ -30,7 +30,7 @@ def test_show():
     df.show(best_width=2)
 
     s = " ".join(["x"] * 200)
-    df = ArrayDataFrame([[s, 1], ["b", "s"]], "a:str,b:str", metadata=dict(a=1, b=2))
+    df = ArrayDataFrame([[s, 1], ["b", "s"]], "a:str,b:str")
     df.show(rows=1, show_count=True, title="abc")
 
 
@@ -53,6 +53,6 @@ def test_copy():
 
 
 class MockDF(ArrayDataFrame):
-    def __init__(self, df=None, schema=None, metadata=None):
-        super(). __init__(df=df, schema=schema, metadata=metadata)
+    def __init__(self, df=None, schema=None):
+        super(). __init__(df=df, schema=schema)
         DataFrame.__init__(self, lambda: Schema(schema))

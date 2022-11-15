@@ -19,7 +19,6 @@ class PandasDataFrame(LocalBoundedDataFrame):
 
     :param df: 2-dimensional array, iterable of arrays or pandas DataFrame
     :param schema: |SchemaLikeObject|
-    :param metadata: dict-like object with string keys, default ``None``
     :param pandas_df_wrapper: if this is a simple wrapper, default False
 
     .. admonition:: Examples
@@ -40,7 +39,6 @@ class PandasDataFrame(LocalBoundedDataFrame):
         self,
         df: Any = None,
         schema: Any = None,
-        metadata: Any = None,
         pandas_df_wrapper: bool = False,
     ):
         apply_schema = True
@@ -70,7 +68,7 @@ class PandasDataFrame(LocalBoundedDataFrame):
             raise ValueError(f"{df} is incompatible with PandasDataFrame")
         if apply_schema:
             pdf, schema = self._apply_schema(pdf, schema)
-        super().__init__(schema, metadata)
+        super().__init__(schema)
         self._native = pdf
 
     @property
