@@ -24,12 +24,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    # - name: Install spark
-    #   run: |
-    #     wget https://www.apache.org/dyn/closer.lua/spark/spark-2.4.6/spark-2.4.6-bin-hadoop2.7.tgz -O spark.tgz
-    #     mkdir -p /opt/spark
-    #     tar -xvf spark.tgz -C /opt/spark --strip-components 1
-    #     ls /opt/spark
+    - name: Setup Java 8
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '8'
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
