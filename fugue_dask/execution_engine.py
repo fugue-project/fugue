@@ -67,7 +67,6 @@ class DaskMapEngine(MapEngine):
         map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
-        metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
         presort = partition_spec.presort
@@ -112,7 +111,7 @@ class DaskMapEngine(MapEngine):
             result = self.execution_engine.pl_utils.safe_groupby_apply(  # type: ignore
                 df.native, partition_spec.partition_by, _map, meta=meta  # type: ignore
             )
-        return DaskDataFrame(result, output_schema, metadata)
+        return DaskDataFrame(result, output_schema)
 
 
 class DaskExecutionEngine(ExecutionEngine):
@@ -169,14 +168,13 @@ class DaskExecutionEngine(ExecutionEngine):
         """Pandas-like dataframe utils"""
         return DaskUtils()
 
-    def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DaskDataFrame:
+    def to_df(self, df: Any, schema: Any = None) -> DaskDataFrame:
         """Convert a data structure to :class:`~fugue_dask.dataframe.DaskDataFrame`
 
         :param data: :class:`~fugue.dataframe.dataframe.DataFrame`,
           :class:`dask:dask.dataframe.DataFrame`,
           pandas DataFrame or list or iterable of arrays
         :param schema: |SchemaLikeObject|, defaults to None.
-        :param metadata: |ParamsLikeObject|, defaults to None
         :return: engine compatible dataframe
 
         .. note::
@@ -194,22 +192,21 @@ class DaskExecutionEngine(ExecutionEngine):
         )
         if isinstance(df, DataFrame):
             assert_or_throw(
-                schema is None and metadata is None,
-                ValueError("schema and metadata must be None when df is a DataFrame"),
+                schema is None,
+                ValueError("schema must be None when df is a DataFrame"),
             )
             if isinstance(df, DaskDataFrame):
                 return df
             if isinstance(df, PandasDataFrame):
                 return DaskDataFrame(
-                    df.native, df.schema, df.metadata, num_partitions=default_partitions
+                    df.native, df.schema, num_partitions=default_partitions
                 )
             return DaskDataFrame(
                 df.as_array(type_safe=True),
                 df.schema,
-                df.metadata,
                 num_partitions=default_partitions,
             )
-        return DaskDataFrame(df, schema, metadata, num_partitions=default_partitions)
+        return DaskDataFrame(df, schema, num_partitions=default_partitions)
 
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
@@ -231,9 +228,7 @@ class DaskExecutionEngine(ExecutionEngine):
                 ddf = dd.from_pandas(pdf, npartitions=p, sort=False)
             else:
                 ddf = df.native.repartition(npartitions=p)
-            return DaskDataFrame(
-                ddf, schema=df.schema, metadata=df.metadata, type_safe=False
-            )
+            return DaskDataFrame(ddf, schema=df.schema, type_safe=False)
         return df
 
     def broadcast(self, df: DataFrame) -> DataFrame:
@@ -245,7 +240,9 @@ class DaskExecutionEngine(ExecutionEngine):
         lazy: bool = False,
         **kwargs: Any,
     ) -> DataFrame:
-        return self.to_df(df).persist()
+        res = self.to_df(df)
+        res.reset_metadata(df.metadata)
+        return res.persist()
 
     def join(
         self,
@@ -253,7 +250,6 @@ class DaskExecutionEngine(ExecutionEngine):
         df2: DataFrame,
         how: str,
         on: List[str] = _DEFAULT_JOIN_KEYS,
-        metadata: Any = None,
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         d = self.pl_utils.join(
@@ -262,14 +258,13 @@ class DaskExecutionEngine(ExecutionEngine):
             join_type=how,
             on=key_schema.names,
         )
-        return DaskDataFrame(d, output_schema, metadata)
+        return DaskDataFrame(d, output_schema)
 
     def union(
         self,
         df1: DataFrame,
         df2: DataFrame,
         distinct: bool = True,
-        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             df1.schema == df2.schema,
@@ -278,14 +273,13 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.pl_utils.union(
             self.to_df(df1).native, self.to_df(df2).native, unique=distinct
         )
-        return DaskDataFrame(d, df1.schema, metadata)
+        return DaskDataFrame(d, df1.schema)
 
     def subtract(
         self,
         df1: DataFrame,
         df2: DataFrame,
         distinct: bool = True,
-        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             distinct, NotImplementedError("EXCEPT ALL for DaskExecutionEngine")
@@ -297,14 +291,13 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.pl_utils.except_df(
             self.to_df(df1).native, self.to_df(df2).native, unique=distinct
         )
-        return DaskDataFrame(d, df1.schema, metadata)
+        return DaskDataFrame(d, df1.schema)
 
     def intersect(
         self,
         df1: DataFrame,
         df2: DataFrame,
         distinct: bool = True,
-        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             distinct, NotImplementedError("INTERSECT ALL for DaskExecutionEngine")
@@ -316,15 +309,11 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.pl_utils.intersect(
             self.to_df(df1).native, self.to_df(df2).native, unique=distinct
         )
-        return DaskDataFrame(d, df1.schema, metadata)
+        return DaskDataFrame(d, df1.schema)
 
-    def distinct(
-        self,
-        df: DataFrame,
-        metadata: Any = None,
-    ) -> DataFrame:
+    def distinct(self, df: DataFrame) -> DataFrame:
         d = self.pl_utils.drop_duplicates(self.to_df(df).native)
-        return DaskDataFrame(d, df.schema, metadata)
+        return DaskDataFrame(d, df.schema)
 
     def dropna(
         self,
@@ -332,7 +321,6 @@ class DaskExecutionEngine(ExecutionEngine):
         how: str = "any",
         thresh: int = None,
         subset: List[str] = None,
-        metadata: Any = None,
     ) -> DataFrame:
         kw: Dict[str, Any] = dict(how=how)
         if thresh is not None:
@@ -342,15 +330,9 @@ class DaskExecutionEngine(ExecutionEngine):
         if how == "any" and thresh is not None:
             del kw["how"]  # to deal with a dask logic flaw
         d = self.to_df(df).native.dropna(**kw)
-        return DaskDataFrame(d, df.schema, metadata)
+        return DaskDataFrame(d, df.schema)
 
-    def fillna(
-        self,
-        df: DataFrame,
-        value: Any,
-        subset: List[str] = None,
-        metadata: Any = None,
-    ) -> DataFrame:
+    def fillna(self, df: DataFrame, value: Any, subset: List[str] = None) -> DataFrame:
         assert_or_throw(
             (not isinstance(value, list)) and (value is not None),
             ValueError("fillna value can not be a list or None"),
@@ -368,7 +350,7 @@ class DaskExecutionEngine(ExecutionEngine):
             subset = subset or df.schema.names
             mapping = {col: value for col in subset}
         d = self.to_df(df).native.fillna(mapping)
-        return DaskDataFrame(d, df.schema, metadata)
+        return DaskDataFrame(d, df.schema)
 
     def sample(
         self,
@@ -377,7 +359,6 @@ class DaskExecutionEngine(ExecutionEngine):
         frac: Optional[float] = None,
         replace: bool = False,
         seed: Optional[int] = None,
-        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             (n is None and frac is not None) or (n is not None and frac is None),
@@ -387,7 +368,7 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.to_df(df).native.sample(
             n=n, frac=frac, replace=replace, random_state=seed
         )
-        return DaskDataFrame(d, df.schema, metadata)
+        return DaskDataFrame(d, df.schema)
 
     def take(
         self,
@@ -396,7 +377,6 @@ class DaskExecutionEngine(ExecutionEngine):
         presort: str,
         na_position: str = "last",
         partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
-        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             isinstance(n, int),
@@ -443,7 +423,7 @@ class DaskExecutionEngine(ExecutionEngine):
                 .reset_index(drop=True)
             )
 
-        return DaskDataFrame(d, df.schema, metadata)
+        return DaskDataFrame(d, df.schema)
 
     def load_df(
         self,

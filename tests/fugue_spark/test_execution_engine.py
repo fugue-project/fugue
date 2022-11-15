@@ -101,11 +101,10 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
         with raises(NotImplementedError):
             # replace is not allowed
-            engine.sample(a, n=90, replace=True, metadata=(dict(a=1)))
+            engine.sample(a, n=90, replace=True)
 
-        b = engine.sample(a, n=90, metadata=(dict(a=1)))
+        b = engine.sample(a, n=90)
         assert abs(len(b.as_array()) - 90) < 2
-        assert b.metadata == dict(a=1)
 
     def test_infer_engine(self):
         df = self.spark_session.createDataFrame(pd.DataFrame([[0]], columns=["a"]))
@@ -135,9 +134,8 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
         engine = self.engine
         a = engine.to_df([[x] for x in range(100)], "a:int")
 
-        b = engine.sample(a, n=90, metadata=(dict(a=1)))
+        b = engine.sample(a, n=90)
         assert abs(len(b.as_array()) - 90) < 2
-        assert b.metadata == dict(a=1)
 
     def test_map_in_pandas(self):
         if not hasattr(ps.DataFrame, "mapInPandas"):
@@ -160,7 +158,9 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
         expected = PandasDataFrame(df.assign(zz=df.xx + df.yy), "xx:int,yy:int,zz:int")
         a = e.to_df(df)
         # no partition
-        c = e.map_engine.map_dataframe(a, add, "xx:int,yy:int,zz:int", PartitionSpec(num=16))
+        c = e.map_engine.map_dataframe(
+            a, add, "xx:int,yy:int,zz:int", PartitionSpec(num=16)
+        )
         df_eq(c, expected, throw=True)
 
 

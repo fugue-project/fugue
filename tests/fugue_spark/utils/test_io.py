@@ -137,11 +137,11 @@ def test_save_with_partition(tmpdir, spark_session):
     df_eq(actual, [[2, "1"]], "b:int,a:str")
 
 
-def _df(data, schema=None, metadata=None):
+def _df(data, schema=None):
     session = SparkSession.builder.getOrCreate()
     if schema is not None:
-        pdf = PandasDataFrame(data, to_schema(schema), metadata)
+        pdf = PandasDataFrame(data, to_schema(schema))
         df = session.createDataFrame(pdf.native, to_spark_schema(schema))
     else:
         df = session.createDataFrame(data)
-    return SparkDataFrame(df, schema, metadata)
+    return SparkDataFrame(df, schema)

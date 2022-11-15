@@ -14,15 +14,14 @@ class DuckDataFrame(LocalBoundedDataFrame):
     """DataFrame that wraps DuckDB ``DuckDBPyRelation``.
 
     :param rel: ``DuckDBPyRelation`` object
-    :param metadata: dict-like object with string keys, default ``None``
     """
 
-    def __init__(self, rel: DuckDBPyRelation, metadata: Any = None):
+    def __init__(self, rel: DuckDBPyRelation):
         self._rel = rel
         schema = Schema(
             [pa.field(x, to_pa_type(y)) for x, y in zip(rel.columns, rel.types)]
         )
-        super().__init__(schema=schema, metadata=metadata)
+        super().__init__(schema=schema)
 
     @property
     def native(self) -> DuckDBPyRelation:
@@ -37,7 +36,7 @@ class DuckDataFrame(LocalBoundedDataFrame):
         res = self._rel.fetchone()
         if res is None:
             raise FugueDatasetEmptyError()
-        return list(res)
+        return list(res)  # type: ignore
 
     def count(self) -> int:
         return self._rel.aggregate("count(1) AS ct").fetchone()[0]
@@ -83,7 +82,7 @@ class DuckDataFrame(LocalBoundedDataFrame):
         return self._rel.to_df()
 
     def as_local(self) -> LocalDataFrame:
-        return ArrowDataFrame(self.as_arrow(), metadata=self.metadata)
+        return ArrowDataFrame(self.as_arrow())
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False

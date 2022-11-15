@@ -50,7 +50,6 @@ class SparkDataFrame(DataFrame):
     :param df: :class:`spark:pyspark.sql.DataFrame`
     :param schema: |SchemaLikeObject| or :class:`spark:pyspark.sql.types.StructType`,
       defaults to None.
-    :param metadata: |ParamsLikeObject|, defaults to None
 
     .. note::
 
@@ -60,9 +59,7 @@ class SparkDataFrame(DataFrame):
           the schema is different.
     """
 
-    def __init__(  # noqa: C901
-        self, df: Any = None, schema: Any = None, metadata: Any = None
-    ):
+    def __init__(self, df: Any = None, schema: Any = None):  # noqa: C901
         self._lock = SerializableRLock()
         if isinstance(df, ps.DataFrame):
             if schema is not None:
@@ -73,7 +70,7 @@ class SparkDataFrame(DataFrame):
             else:
                 schema = to_schema(df).assert_not_empty()
             self._native = df
-            super().__init__(schema, metadata)
+            super().__init__(schema)
         else:  # pragma: no cover
             assert_or_throw(schema is not None, SchemaError("schema is None"))
             schema = to_schema(schema).assert_not_empty()
@@ -96,11 +93,10 @@ class SparkDataFrame(DataFrame):
         return True
 
     def as_local(self) -> LocalDataFrame:
-        # TODO: does it make sense to also include the metadata?
         if any(pa.types.is_nested(t) for t in self.schema.types):
             data = list(to_type_safe_input(self.native.collect(), self.schema))
-            return ArrayDataFrame(data, self.schema, self.metadata)
-        return PandasDataFrame(self.native.toPandas(), self.schema, self.metadata)
+            return ArrayDataFrame(data, self.schema)
+        return PandasDataFrame(self.native.toPandas(), self.schema)
 
     @property
     def num_partitions(self) -> int:

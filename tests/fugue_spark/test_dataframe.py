@@ -21,12 +21,10 @@ from fugue_spark.dataframe import SparkDataFrame
 
 
 class SparkDataFrameTests(DataFrameTests.Tests):
-    def df(
-        self, data: Any = None, schema: Any = None, metadata: Any = None
-    ) -> SparkDataFrame:
+    def df(self, data: Any = None, schema: Any = None) -> SparkDataFrame:
         session = SparkSession.builder.getOrCreate()
         engine = SparkExecutionEngine(session)
-        return engine.to_df(data, schema=schema, metadata=metadata)
+        return engine.to_df(data, schema=schema)
 
     def test_alter_columns_invalid(self):
         # TODO: Spark will silently cast invalid data to nulls without exceptions
@@ -112,14 +110,14 @@ def _test_as_array_perf():
     print(nts, ts)
 
 
-def _df(data, schema=None, metadata=None):
+def _df(data, schema=None):
     session = SparkSession.builder.getOrCreate()
     if schema is not None:
-        pdf = PandasDataFrame(data, to_schema(schema), metadata)
+        pdf = PandasDataFrame(data, to_schema(schema))
         df = session.createDataFrame(pdf.native, to_spark_schema(schema))
     else:
         df = session.createDataFrame(data)
-    return SparkDataFrame(df, schema, metadata)
+    return SparkDataFrame(df, schema)
 
 
 def test_get_dataframe_column_names(spark_session):

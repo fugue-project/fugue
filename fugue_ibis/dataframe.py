@@ -15,10 +15,9 @@ class IbisDataFrame(DataFrame):
     """DataFrame that wraps Ibis ``Table``.
 
     :param rel: ``DuckDBPyRelation`` object
-    :param metadata: dict-like object with string keys, default ``None``
     """
 
-    def __init__(self, table: IbisTable, schema: Any = None, metadata: Any = None):
+    def __init__(self, table: IbisTable, schema: Any = None):
         self._table = table
         _schema = to_schema(table.schema())
         if schema is not None:
@@ -27,26 +26,22 @@ class IbisDataFrame(DataFrame):
                 table = self._alter_table_columns(table, _schema, _to_schema)
                 _schema = _to_schema
         self._table = table
-        super().__init__(schema=_schema, metadata=metadata)
+        super().__init__(schema=_schema)
 
     @property
     def native(self) -> IbisTable:
         """Ibis Table object"""
         return self._table
 
-    def _to_local_df(
-        self, table: IbisTable, schema: Any = None, metadata: Any = None
-    ) -> LocalDataFrame:
+    def _to_local_df(self, table: IbisTable, schema: Any = None) -> LocalDataFrame:
         raise NotImplementedError  # pragma: no cover
 
     def _to_iterable_df(
-        self, table: IbisTable, sdhema: Any = None, metadata: Any = None
+        self, table: IbisTable, sdhema: Any = None
     ) -> IterableDataFrame:
         raise NotImplementedError  # pragma: no cover
 
-    def _to_new_df(
-        self, table: IbisTable, schema: Any = None, metadata: Any = None
-    ) -> DataFrame:
+    def _to_new_df(self, table: IbisTable, schema: Any = None) -> DataFrame:
         raise NotImplementedError  # pragma: no cover
 
     def _compute_scalar(self, table: IbisTable) -> Any:
@@ -114,9 +109,7 @@ class IbisDataFrame(DataFrame):
         return self.as_local().as_pandas()
 
     def as_local(self) -> LocalDataFrame:
-        return self._to_local_df(
-            self._table, schema=self.schema, metadata=self.metadata
-        )
+        return self._to_local_df(self._table, schema=self.schema)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False

@@ -18,15 +18,11 @@ class IbisDataFrameTests(DataFrameTests.Tests):
     def setUpClass(cls):
         cls._con = ibis.duckdb.connect()
 
-    def df(
-        self, data: Any = None, schema: Any = None, metadata: Any = None
-    ) -> DuckDataFrame:
-        df = ArrowDataFrame(data, schema, metadata)
+    def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
+        df = ArrowDataFrame(data, schema)
         name = f"_{id(df.native)}"
         self._con.con.execute("register", (name, df.native))
-        return MockDuckDataFrame(
-            self._con.table(name), schema=schema, metadata=metadata
-        )
+        return MockDuckDataFrame(self._con.table(name), schema=schema)
 
     def test_init_df(self):
         df = self.df([["x", 1]], "a:str,b:int")

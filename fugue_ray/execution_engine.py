@@ -34,7 +34,6 @@ class RayMapEngine(MapEngine):
         map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
-        metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
         if len(partition_spec.partition_by) == 0:
@@ -43,7 +42,6 @@ class RayMapEngine(MapEngine):
                 map_func=map_func,
                 output_schema=output_schema,
                 partition_spec=partition_spec,
-                metadata=metadata,
                 on_init=on_init,
             )
         else:
@@ -52,7 +50,6 @@ class RayMapEngine(MapEngine):
                 map_func=map_func,
                 output_schema=output_schema,
                 partition_spec=partition_spec,
-                metadata=metadata,
                 on_init=on_init,
             )
 
@@ -62,7 +59,6 @@ class RayMapEngine(MapEngine):
         map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
-        metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
         presort = partition_spec.presort
@@ -121,9 +117,7 @@ class RayMapEngine(MapEngine):
             batch_format="pyarrow",
             **self.execution_engine._get_remote_args(),  # type: ignore
         )
-        return RayDataFrame(
-            sdf, schema=output_schema, metadata=metadata, internal_schema=True
-        )
+        return RayDataFrame(sdf, schema=output_schema, internal_schema=True)
 
     def _map(
         self,
@@ -131,7 +125,6 @@ class RayMapEngine(MapEngine):
         map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
-        metadata: Any = None,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
         output_schema = Schema(output_schema)
@@ -165,9 +158,7 @@ class RayMapEngine(MapEngine):
             batch_format="pyarrow",
             **self.execution_engine._get_remote_args(),  # type: ignore
         )
-        return RayDataFrame(
-            sdf, schema=output_schema, metadata=metadata, internal_schema=True
-        )
+        return RayDataFrame(sdf, schema=output_schema, internal_schema=True)
 
 
 class RayExecutionEngine(DuckExecutionEngine):
@@ -187,8 +178,8 @@ class RayExecutionEngine(DuckExecutionEngine):
     def create_default_map_engine(self) -> MapEngine:
         return RayMapEngine(self)
 
-    def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DataFrame:
-        return self._to_ray_df(df, schema=schema, metadata=metadata)
+    def to_df(self, df: Any, schema: Any = None) -> DataFrame:
+        return self._to_ray_df(df, schema=schema)
 
     def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
         def _persist_and_count(df: RayDataFrame) -> int:
@@ -210,9 +201,7 @@ class RayExecutionEngine(DuckExecutionEngine):
                 pdf = pdf.repartition(num, shuffle=True)
         else:  # pragma: no cover
             raise NotImplementedError(partition_spec.algo + " is not supported")
-        return RayDataFrame(
-            pdf, schema=rdf.schema, metadata=df.metadata, internal_schema=True
-        )
+        return RayDataFrame(pdf, schema=rdf.schema, internal_schema=True)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return df
@@ -265,26 +254,22 @@ class RayExecutionEngine(DuckExecutionEngine):
             **kwargs,
         )
 
-    def _to_ray_df(
-        self, df: Any, schema: Any = None, metadata: Any = None
-    ) -> RayDataFrame:
+    def _to_ray_df(self, df: Any, schema: Any = None) -> RayDataFrame:
         # TODO: remove this in phase 2
-        res = self._to_auto_df(df, schema, metadata=metadata)
+        res = self._to_auto_df(df, schema)
         if not isinstance(res, RayDataFrame):
-            return RayDataFrame(res, metadata=metadata)
+            return RayDataFrame(res)
         return res
 
-    def _to_auto_df(
-        self, df: Any, schema: Any = None, metadata: Any = None
-    ) -> DataFrame:
+    def _to_auto_df(self, df: Any, schema: Any = None) -> DataFrame:
         # TODO: remove this in phase 2
         if isinstance(df, (DuckDataFrame, RayDataFrame)):
             assert_or_throw(
-                schema is None and metadata is None,
-                ValueError("schema and metadata must be None when df is a DataFrame"),
+                schema is None,
+                ValueError("schema must be None when df is a DataFrame"),
             )
             return df
-        return RayDataFrame(df, schema, metadata=metadata)
+        return RayDataFrame(df, schema)
 
     def _get_remote_args(self) -> Dict[str, Any]:
         res: Dict[str, Any] = {}

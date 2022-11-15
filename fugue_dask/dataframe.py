@@ -43,7 +43,6 @@ class DaskDataFrame(DataFrame):
       pandas DataFrame or list or iterable of arrays
     :param schema: |SchemaLikeObject| or :class:`spark:pyspark.sql.types.StructType`,
       defaults to None.
-    :param metadata: |ParamsLikeObject|, defaults to None
     :param num_partitions: initial number of partitions for the dask dataframe
       defaults to 0 to get the value from `fugue.dask.dataframe.default.partitions`
     :param type_safe: whether to cast input data to ensure type safe, defaults to True
@@ -57,7 +56,6 @@ class DaskDataFrame(DataFrame):
         self,
         df: Any = None,
         schema: Any = None,
-        metadata: Any = None,
         num_partitions: int = 0,
         type_safe=True,
     ):
@@ -69,7 +67,7 @@ class DaskDataFrame(DataFrame):
             schema = _input_schema(schema).assert_not_empty()
             df = []
         if isinstance(df, DaskDataFrame):
-            super().__init__(df.schema, df.metadata if metadata is None else metadata)
+            super().__init__(df.schema)
             self._native: pd.DataFrame = df._native
             return
         elif isinstance(df, (pd.DataFrame, pd.Series)):
@@ -90,7 +88,7 @@ class DaskDataFrame(DataFrame):
         else:
             raise ValueError(f"{df} is incompatible with DaskDataFrame")
         pdf, schema = self._apply_schema(pdf, schema, type_safe)
-        super().__init__(schema, metadata)
+        super().__init__(schema)
         self._native = pdf
 
     @property
@@ -106,7 +104,7 @@ class DaskDataFrame(DataFrame):
         return False
 
     def as_local(self) -> LocalDataFrame:
-        return PandasDataFrame(self.as_pandas(), self.schema, self.metadata)
+        return PandasDataFrame(self.as_pandas(), self.schema)
 
     @property
     def is_bounded(self) -> bool:

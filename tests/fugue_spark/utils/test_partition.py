@@ -125,10 +125,10 @@ def _pc(df):
         yield list(row) + [len(data)]
 
 
-def _df(data, schema=None, metadata=None):
+def _df(data, schema=None):
     session = SparkSession.builder.getOrCreate()
     if schema is not None:
-        pdf = PandasDataFrame(data, to_schema(schema), metadata)
+        pdf = PandasDataFrame(data, to_schema(schema))
         return session.createDataFrame(pdf.native, to_spark_schema(schema))
     else:
         return session.createDataFrame(data)

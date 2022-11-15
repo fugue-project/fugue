@@ -26,10 +26,8 @@ class RayDataFrameTests(DataFrameTests.Tests):
     def tearDownClass(cls):
         ray.shutdown()
 
-    def df(
-        self, data: Any = None, schema: Any = None, metadata: Any = None
-    ) -> RayDataFrame:
-        return RayDataFrame(data, schema, metadata)
+    def df(self, data: Any = None, schema: Any = None) -> RayDataFrame:
+        return RayDataFrame(data, schema)
 
     def test_ray_init(self):
         df = RayDataFrame(schema="a:str,b:int")
@@ -79,15 +77,6 @@ class RayDataFrameTests(DataFrameTests.Tests):
         raises(Exception, lambda: RayDataFrame(123))
 
         raises(NotImplementedError, lambda: RayDataFrame(rd.from_items([1, 2])))
-
-    def test_ray_metadata(self):
-        data = ArrayDataFrame(
-            [["a", "1"], ["b", "2"]], "a:str,b:str", metadata=dict(a=1)
-        )
-        df = RayDataFrame(data)
-        assert df.metadata == dict(a=1)
-        df = RayDataFrame(df)
-        assert df.metadata == dict(a=1)
 
     def test_ray_cast(self):
         data = [["a", "1"], ["b", "2"]]

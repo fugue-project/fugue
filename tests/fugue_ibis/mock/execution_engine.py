@@ -7,6 +7,7 @@ from fugue import (
     ArrowDataFrame,
     DataFrame,
     LocalDataFrame,
+    MapEngine,
     NativeExecutionEngine,
     PartitionCursor,
     PartitionSpec,
@@ -31,24 +32,23 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
     def encode_column_name(self, name: str) -> str:
         return '"' + name.replace('"', '""') + '"'
 
-    def _to_ibis_dataframe(
-        self, df: Any, schema: Any = None, metadata: Any = None
-    ) -> IbisDataFrame:
+    def create_default_map_engine(self) -> MapEngine:
+        return self._native_engine.create_default_map_engine()
+
+    def _to_ibis_dataframe(self, df: Any, schema: Any = None) -> IbisDataFrame:
         if isinstance(df, MockDuckDataFrame):
             return df
         if isinstance(df, DataFrame):
             return self._register_df(
-                df.as_arrow(),
-                schema=schema if schema is not None else df.schema,
-                metadata=metadata if metadata is not None else df.metadata,
+                df.as_arrow(), schema=schema if schema is not None else df.schema
             )
         if isinstance(df, pa.Table):
-            return self._register_df(df, schema=schema, metadata=metadata)
+            return self._register_df(df, schema=schema)
         if isinstance(df, IbisTable):
-            return MockDuckDataFrame(df, schema=schema, metadata=metadata)
+            return MockDuckDataFrame(df, schema=schema)
         if isinstance(df, Iterable):
             adf = ArrowDataFrame(df, schema)
-            return self._register_df(adf.native, schema=schema, metadata=metadata)
+            return self._register_df(adf.native, schema=schema)
         raise NotImplementedError
 
     def __repr__(self) -> str:
@@ -68,24 +68,6 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
         self.log.warning("%s doesn't respect repartition", self)
         return df
 
-    def map(
-        self,
-        df: DataFrame,
-        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-        metadata: Any = None,
-        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
-    ) -> DataFrame:
-        return self._native_engine.map_engine.map_dataframe(
-            df=df,
-            map_func=map_func,
-            output_schema=output_schema,
-            partition_spec=partition_spec,
-            metadata=metadata,
-            on_init=on_init,
-        )
-
     def broadcast(self, df: DataFrame) -> DataFrame:
         return df
 
@@ -96,8 +78,11 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
         **kwargs: Any,
     ) -> DataFrame:
         if isinstance(df, MockDuckDataFrame):
-            return ArrowDataFrame(df.as_arrow(), metadata=df.metadata)
-        return self.to_df(df)
+            res = ArrowDataFrame(df.as_arrow())
+        else:
+            res = self.to_df(df)
+        res.reset_metadata(df.metadata)
+        return res
 
     def sample(
         self,
@@ -106,7 +91,6 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
         frac: Optional[float] = None,
         replace: bool = False,
         seed: Optional[int] = None,
-        metadata: Any = None,
     ) -> DataFrame:
         assert_or_throw(
             (n is None and frac is not None and frac >= 0.0)
@@ -123,7 +107,7 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
         if seed is not None:
             sql += f" REPEATABLE ({seed})"
         idf = self._to_ibis_dataframe(df)
-        return self._to_ibis_dataframe(idf.native.alias(tn).sql(sql), metadata=metadata)
+        return self._to_ibis_dataframe(idf.native.alias(tn).sql(sql))
 
     def load_df(
         self,
@@ -149,11 +133,7 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
         )
 
     def _register_df(
-        self,
-        df: pa.Table,
-        name: Optional[str] = None,
-        schema: Any = None,
-        metadata: Any = None,
+        self, df: pa.Table, name: Optional[str] = None, schema: Any = None
     ) -> MockDuckDataFrame:
         tb = self.backend.register(df, name)
-        return MockDuckDataFrame(tb, metadata=metadata)
+        return MockDuckDataFrame(tb)
