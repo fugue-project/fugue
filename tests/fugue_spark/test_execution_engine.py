@@ -2,6 +2,7 @@ from typing import Any, List
 
 import numpy as np
 import pandas as pd
+import pyspark
 import pyspark.rdd as pr
 import pyspark.sql as ps
 import pytest
@@ -13,7 +14,6 @@ from fugue.dataframe import (
     LocalDataFrameIterableDataFrame,
     PandasDataFrame,
 )
-from triad import Schema
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.extensions.transformer import Transformer, transformer
 from fugue.workflow.workflow import FugueWorkflow
@@ -23,6 +23,7 @@ from pyspark import SparkContext, StorageLevel
 from pyspark.sql import DataFrame as SDataFrame
 from pyspark.sql import SparkSession
 from pytest import raises
+from triad import Schema
 
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
@@ -108,6 +109,7 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         assert isinstance(infer_execution_engine(fdf), SparkSession)
 
 
+@pytest.mark.skipif(pyspark.__version__ < "3", reason="pyspark < 3")
 class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
     @pytest.fixture(autouse=True)
     def init_session(self, spark_session):
