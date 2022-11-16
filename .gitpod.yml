@@ -5,7 +5,7 @@ tasks:
   - init: |
       sudo mkdir -p /usr/local/share/jupyter
       sudo chmod -R 777 /usr/local/share/jupyter
-      make devenv
+      sudo make devenv
 
 github:
   prebuilds:
