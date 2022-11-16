@@ -1,17 +1,15 @@
 # pylint: disable=W0611,W0613
 import html
 import json
-from typing import Any, Callable, Dict, List
+from typing import Any, Dict, List, Optional
 
 import fugue_sql
-import pandas as pd
-from fugue import ExecutionEngine, make_execution_engine
+from fugue import DataFrame, ExecutionEngine, display_dataset, make_execution_engine
 from fugue.dataframe import YieldedDataFrame
-from fugue.extensions._builtins.outputters import Show
 from fugue_sql.exceptions import FugueSQLSyntaxError
 from IPython.core.magic import Magics, cell_magic, magics_class, needs_local_scope
 from IPython.display import HTML, display
-from triad import ParamDict, Schema
+from triad import ParamDict
 from triad.utils.convert import to_instance
 
 
@@ -28,10 +26,6 @@ class NotebookSetup(object):
         must match this dict, otherwise, exceptions will be thrown
         """
         return {}
-
-    def get_pretty_print(self) -> Callable:
-        """Fugue dataframe pretty print handler"""
-        return _default_pretty_print
 
 
 @magics_class
@@ -90,21 +84,24 @@ class _FugueSQLMagics(Magics):
         return make_execution_engine(engine, cf)
 
 
-def _default_pretty_print(
-    schema: Schema,
-    head_rows: List[List[Any]],
-    title: Any,
-    rows: int,
-    count: int,
+@display_dataset.candidate(
+    lambda ds, *args, **kwargs: isinstance(ds, DataFrame), priority=3.0
+)
+def _display_dataframe_in_notebook(
+    ds: DataFrame, n: int = 10, with_count: bool = False, title: Optional[str] = None
 ):
     components: List[Any] = []
     if title is not None:
         components.append(HTML(f"<h3>{html.escape(title)}</h3>"))
-    pdf = pd.DataFrame(head_rows, columns=list(schema.names))
+    if with_count:
+        count = ds.count()
+    else:
+        count = -1
+    pdf = ds.head(n).as_pandas()
     components.append(pdf)
     if count >= 0:
         components.append(HTML(f"<strong>total count: {count}</strong>"))
-    components.append(HTML(f"<small>schema: {schema}</small>"))
+    components.append(HTML(f"<small>schema: {ds.schema}</small>"))
     display(*components)
 
 
@@ -119,4 +116,3 @@ def _setup_fugue_notebook(
         fsql_ignore_case=fsql_ignore_case,
     )
     ipython.register_magics(magics)
-    Show.set_hook(s.get_pretty_print())
