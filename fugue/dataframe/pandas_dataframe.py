@@ -2,11 +2,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 import pyarrow as pa
-from fugue.dataframe.dataframe import (
-    DataFrame,
-    LocalBoundedDataFrame,
-    _input_schema,
-)
+from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
 from fugue.exceptions import FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
@@ -148,17 +144,12 @@ class PandasDataFrame(LocalBoundedDataFrame):
         ):
             yield row
 
-    def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
-        """Get first n rows of the dataframe as 2-dimensional array
-
-        :param n: number of rows
-        :param columns: selected columns, defaults to None (all columns)
-        :return: 2-dimensional array
-        """
-        tdf = PandasDataFrame(
-            self._native.head(n), schema=self.schema, pandas_df_wrapper=True
-        )
-        return [list(row) for row in tdf.as_array_iterable(columns, type_safe=True)]
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
+        pdf = self.native if columns is None else self.native[columns]
+        schema = self.schema if columns is None else self.schema.extract(columns)
+        return PandasDataFrame(pdf.head(n), schema=schema, pandas_df_wrapper=True)
 
     def _apply_schema(
         self, pdf: pd.DataFrame, schema: Optional[Schema]

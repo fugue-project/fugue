@@ -2,9 +2,15 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 import pyarrow as pa
-from fugue import DataFrame, IterableDataFrame, LocalDataFrame
+from fugue import (
+    DataFrame,
+    IterableDataFrame,
+    LocalBoundedDataFrame,
+    LocalDataFrame,
+    to_local_bounded_df,
+)
 from fugue.dataframe.dataframe import _input_schema
-from fugue.exceptions import FugueDatasetEmptyError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from triad import Schema
 
 from ._compat import IbisTable
@@ -128,10 +134,12 @@ class IbisDataFrame(DataFrame):
                 type_safe=type_safe
             )
 
-    def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
         if columns is not None:
             return self[columns].head(n)
-        return self._to_local_df(self._table.head(n)).as_array(type_safe=True)
+        return to_local_bounded_df(self._to_local_df(self._table.head(n)))
 
     def _alter_table_columns(
         self, table: IbisTable, schema: Schema, new_schema: Schema

@@ -3,7 +3,12 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 import pyarrow as pa
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.dataframe import DataFrame, LocalDataFrame, LocalUnboundedDataFrame
+from fugue.dataframe.dataframe import (
+    DataFrame,
+    LocalDataFrame,
+    LocalUnboundedDataFrame,
+    LocalBoundedDataFrame,
+)
 from fugue.exceptions import FugueDataFrameInitError
 from triad import Schema, assert_or_throw
 from triad.utils.iter import EmptyAwareIterable, make_empty_aware
@@ -162,6 +167,19 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
             return ArrayDataFrame([], self.schema).as_arrow()
 
         return pa.concat_tables(df.as_arrow() for df in self.native)
+
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
+        res: List[Any] = []
+        for row in self.as_array_iterable(columns, type_safe=True):
+            if n < 1:
+                break
+            res.append(list(row))
+            n -= 1
+        return ArrayDataFrame(
+            res, self.schema if columns is None else self.schema.extract(columns)
+        )
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         if self.empty:

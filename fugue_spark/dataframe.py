@@ -7,6 +7,7 @@ from fugue.dataframe import (
     ArrayDataFrame,
     DataFrame,
     IterableDataFrame,
+    LocalBoundedDataFrame,
     LocalDataFrame,
     PandasDataFrame,
 )
@@ -143,13 +144,13 @@ class SparkDataFrame(DataFrame):
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:
-        sdf = self._withColumns(columns)
+        sdf = self._select_columns(columns)
         return sdf.as_local().as_array(type_safe=type_safe)
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
-        sdf = self._withColumns(columns)
+        sdf = self._select_columns(columns)
         if not type_safe:
             for row in to_type_safe_input(sdf.native.rdd.toLocalIterator(), sdf.schema):
                 yield row
@@ -158,10 +159,13 @@ class SparkDataFrame(DataFrame):
             for row in df.as_array_iterable(type_safe=True):
                 yield row
 
-    def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
-        sdf = self._withColumns(columns)
-        df = SparkDataFrame(sdf.native.limit(n), sdf.schema)
-        return df.as_array(type_safe=True)
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
+        sdf = self._select_columns(columns)
+        return SparkDataFrame(
+            sdf.native.limit(n), sdf.schema
+        ).as_local()  # type: ignore
 
     @property
     def _first(self) -> Optional[List[Any]]:
@@ -172,7 +176,7 @@ class SparkDataFrame(DataFrame):
                     self._first_row = list(self._first_row)  # type: ignore
             return self._first_row  # type: ignore
 
-    def _withColumns(self, columns: Optional[List[str]]) -> "SparkDataFrame":
+    def _select_columns(self, columns: Optional[List[str]]) -> "SparkDataFrame":
         if columns is None:
             return self
         return SparkDataFrame(self.native.select(*columns))

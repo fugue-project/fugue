@@ -27,11 +27,11 @@ def test_show():
     schema = [f"a{x}:str" for x in range(20)]
     data = [[f"aasdfjasdfka;sdf{x}:str" for x in range(20)]]
     df = ArrayDataFrame(data, schema)
-    df.show(best_width=2)
+    df.show()
 
     s = " ".join(["x"] * 200)
     df = ArrayDataFrame([[s, 1], ["b", "s"]], "a:str,b:str")
-    df.show(rows=1, show_count=True, title="abc")
+    df.show(n=1, with_count=True, title="abc")
 
 
 def test_lazy_schema():

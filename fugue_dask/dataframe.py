@@ -3,7 +3,13 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import dask.dataframe as pd
 import pandas
 import pyarrow as pa
-from fugue.dataframe import ArrowDataFrame, DataFrame, LocalDataFrame, PandasDataFrame
+from fugue.dataframe import (
+    ArrowDataFrame,
+    DataFrame,
+    LocalBoundedDataFrame,
+    LocalDataFrame,
+    PandasDataFrame,
+)
 from fugue.dataframe.dataframe import _input_schema
 from fugue.dataframe.utils import (
     get_dataframe_column_names,
@@ -208,16 +214,12 @@ class DaskDataFrame(DataFrame):
     ) -> Iterable[Any]:
         yield from self.as_array(columns=columns, type_safe=type_safe)
 
-    def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
-        """Get first n rows of the dataframe as 2-dimensional array
-        :param n: number of rows
-        :param columns: selected columns, defaults to None (all columns)
-        :return: 2-dimensional array
-        """
-        tdf = PandasDataFrame(
-            self.native.head(n, compute=True, npartitions=-1), schema=self.schema
-        )
-        return tdf.head(n, columns=columns)
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
+        ddf = self.native if columns is None else self.native[columns]
+        schema = self.schema if columns is None else self.schema.extract(columns)
+        return PandasDataFrame(ddf.head(n, compute=True, npartitions=-1), schema=schema)
 
     def _apply_schema(
         self, pdf: pd.DataFrame, schema: Optional[Schema], type_safe: bool = True

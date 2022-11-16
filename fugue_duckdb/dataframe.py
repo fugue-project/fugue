@@ -3,7 +3,13 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 import pyarrow as pa
 from duckdb import DuckDBPyRelation
-from fugue import ArrowDataFrame, DataFrame, LocalBoundedDataFrame, LocalDataFrame
+from fugue import (
+    ArrowDataFrame,
+    DataFrame,
+    LocalBoundedDataFrame,
+    LocalDataFrame,
+    ArrayDataFrame,
+)
 from fugue.exceptions import FugueDatasetEmptyError, FugueDataFrameOperationError
 from triad import Schema
 
@@ -99,10 +105,12 @@ class DuckDataFrame(LocalBoundedDataFrame):
         else:
             yield from self._fetchall(self._rel)
 
-    def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
         if columns is not None:
             return self[columns].head(n)
-        return self._fetchall(self._rel.limit(n))
+        return ArrayDataFrame(self._fetchall(self._rel.limit(n)), schema=self.schema)
 
     def _fetchall(self, rel: DuckDBPyRelation) -> List[List[Any]]:
         map_pos = [i for i, t in enumerate(self.schema.types) if pa.types.is_map(t)]

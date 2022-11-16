@@ -2,6 +2,34 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional
 from triad import ParamDict, assert_or_throw
 from .exceptions import FugueDatasetEmptyError
+from ._utils.registry import fugue_plugin
+
+
+@fugue_plugin
+def display_dataset(
+    ds: "Dataset", n: int = 10, with_count: bool = False, title: Optional[str] = None
+) -> None:  # pragma: no cover
+    """General function to display a :class:`~.Dataset`
+
+    .. admonition:: Example: how to register a custom display
+
+        .. code-block:: python
+
+            from fugue import display_dataset, DataFrame
+
+            # higher priority will overwrite the existing display functions
+            @display_dataset.candidate(
+                lambda ds, *args, **kwargs: isinstance(ds, DataFrame), priority=1.0)
+            def my_dataframe_display(ds, n=10, with_count=False, title=None):
+                print(type(ds))
+
+    :param ds: the Dataset to be displayed
+    :param n: top n items to display, defaults to 10
+    :param with_count: whether to display the total count, defaults to False
+    :param title: title to display, defaults to None
+    """
+
+    raise NotImplementedError(f"No matching display function registered for {type(ds)}")
 
 
 class Dataset(ABC):
@@ -62,6 +90,24 @@ class Dataset(ABC):
     def count(self) -> int:  # pragma: no cover
         """Get number of rows of this dataframe"""
         raise NotImplementedError
+
+    def show(
+        self, n: int = 10, with_count: bool = False, title: Optional[str] = None
+    ) -> None:
+        """Display the Dataset
+
+        :param rows: number of rows to print, defaults to 10
+        :param with_count: whether to show dataset count, defaults to False
+        :param title: title of the dataset, defaults to None
+
+        .. note::
+
+            When ``with_count`` is True, it can trigger expensive calculation for
+            a distributed dataframe. So if you call this function directly, you may
+            need to :func:`fugue.execution.execution_engine.ExecutionEngine.persist`
+            the dataset.
+        """
+        return display_dataset(self, n=n, with_count=with_count, title=title)
 
     def assert_not_empty(self) -> None:
         """Assert this dataframe is not empty

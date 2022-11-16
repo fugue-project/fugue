@@ -4,13 +4,18 @@ import pandas as pd
 import pyarrow as pa
 import ray
 import ray.data as rd
-from fugue.dataframe import ArrowDataFrame, DataFrame, LocalDataFrame, PandasDataFrame
+from fugue.dataframe import (
+    ArrowDataFrame,
+    DataFrame,
+    LocalBoundedDataFrame,
+    LocalDataFrame,
+)
 from fugue.dataframe.dataframe import _input_schema
 from fugue.dataframe.utils import (
     get_dataframe_column_names,
     rename_dataframe_column_names,
 )
-from fugue.exceptions import FugueDatasetEmptyError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from triad.collections.schema import Schema
 
 from ._utils.dataframe import _build_empty_arrow, build_empty, get_dataset_format
@@ -222,19 +227,13 @@ class RayDataFrame(DataFrame):
     ) -> Iterable[Any]:
         yield from self.as_array(columns=columns, type_safe=type_safe)
 
-    def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
-        """Get first n rows of the dataframe as 2-dimensional array
-        :param n: number of rows
-        :param columns: selected columns, defaults to None (all columns)
-        :return: 2-dimensional array
-        """
-        df: DataFrame = self
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
         if columns is not None:
-            df = df[columns]
-        pdf = df.native.limit(n).to_pandas()  # type: ignore
-        if len(pdf) == 0:
-            return []
-        return PandasDataFrame(pdf, schema=df.schema).head(n)
+            return self[columns].head(n)
+        pdf = RayDataFrame(self.native.limit(n), schema=self.schema)
+        return pdf.as_local()  # type: ignore
 
     def _apply_schema(
         self, rdf: rd.Dataset, schema: Optional[Schema], internal_schema: bool

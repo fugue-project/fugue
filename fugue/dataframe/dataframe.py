@@ -10,8 +10,9 @@ from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
 
+from .._utils.display import PrettyTable
 from ..collections.yielded import Yielded
-from ..dataset import Dataset
+from ..dataset import Dataset, display_dataset
 from ..exceptions import FugueDataFrameOperationError
 
 
@@ -27,8 +28,6 @@ class DataFrame(Dataset):
         unless you are
         implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
-
-    _SHOW_LOCK = SerializableRLock()
 
     def __init__(self, schema: Any = None):
         super().__init__()
@@ -189,49 +188,17 @@ class DataFrame(Dataset):
             raise FugueDataFrameOperationError("must select at least one column")
         return self._select_cols(columns)
 
-    def show(
-        self,
-        rows: int = 10,
-        show_count: bool = False,
-        title: Optional[str] = None,
-        best_width: int = 100,
-    ) -> None:
-        """Print the dataframe to console
-
-        :param rows: number of rows to print, defaults to 10
-        :param show_count: whether to show dataframe count, defaults to False
-        :param title: title of the dataframe, defaults to None
-        :param best_width: max width of the output table, defaults to 100
-
-        .. note::
-
-            When ``show_count`` is True, it can trigger expensive calculation for
-            a distributed dataframe. So if you call this function directly, you may
-            need to :func:`fugue.execution.execution_engine.ExecutionEngine.persist`
-            the dataframe.
-        """
-        self._show(
-            head_rows=self.head(rows),
-            rows=rows,
-            count=self.count() if show_count else -1,
-            title=title,
-            best_width=best_width,
-        )
-
-    def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
-        """Get first n rows of the dataframe as 2-dimensional array
+    @abstractmethod
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> "LocalBoundedDataFrame":  # pragma: no cover
+        """Get first n rows of the dataframe as a new local bounded dataframe
 
         :param n: number of rows
         :param columns: selected columns, defaults to None (all columns)
-        :return: 2-dimensional array
+        :return: a local bounded dataframe
         """
-        res: List[Any] = []
-        for row in self.as_array_iterable(columns, type_safe=True):
-            if n < 1:
-                break
-            res.append(list(row))
-            n -= 1
-        return res
+        raise NotImplementedError
 
     def as_dict_iterable(
         self, columns: Optional[List[str]] = None
@@ -271,36 +238,6 @@ class DataFrame(Dataset):
 
     def __deepcopy__(self, memo: Any) -> "DataFrame":
         return self
-
-    def _show(
-        self,
-        head_rows: List[Any],
-        rows: int = 10,
-        count: int = -1,
-        title: Optional[str] = None,
-        best_width: int = 100,
-    ) -> None:
-        # TODO: this change is temporary, DataFramePrinter should separate
-        n = rows
-        if len(head_rows) < n:
-            count = len(head_rows)
-        with DataFrame._SHOW_LOCK:
-            if title is not None and title != "":
-                print(title)
-            print(type(self).__name__)
-            tb = _PrettyTable(self.schema, head_rows, best_width)
-            print("\n".join(tb.to_string()))
-            if count >= 0:
-                print(f"Total count: {count}")
-                print("")
-            if self.has_metadata > 0:
-                print("Metadata:")
-                try:
-                    # try pretty print, but if not convertible to json, print original
-                    print(self.metadata.to_json(indent=True))
-                except Exception:  # pragma: no cover
-                    print(self.metadata)
-                print("")
 
     def _get_altered_schema(self, subschema: Any) -> Schema:
         sub = Schema(subschema)
@@ -437,87 +374,38 @@ class YieldedDataFrame(Yielded):
         return self._df
 
 
-class _PrettyTable(object):
-    def __init__(
-        self,  # noqa: C901
-        schema: Schema,
-        data: List[Any],
-        best_width: int,
-        truncate_width: int = 500,
-    ):
-        raw: List[List[str]] = []
-        self.titles = str(schema).split(",")
-        col_width_min = [len(t) for t in self.titles]
-        col_width_max = list(col_width_min)
-        self.col_width = list(col_width_min)
-        # Convert all cells to string with truncation
-        for row in data:
-            raw_row: List[str] = []
-            for i in range(len(schema)):
-                d = self._cell_to_raw_str(row[i], truncate_width)
-                col_width_max[i] = max(col_width_max[i], len(d))
-                raw_row.append(d)
-            raw.append(raw_row)
-        # Adjust col width based on best_width
-        # It find the remaining width after fill all cols with min widths,
-        # and redistribute the remaining based on the diff between max and min widths
-        dt = sorted(
-            filter(  # noqa: C407
-                lambda x: x[0] > 0,
-                [(w - col_width_min[i], i) for i, w in enumerate(col_width_max)],
-            )
-        )
-        if len(dt) > 0:
-            remaining = max(0, best_width - sum(col_width_min) - len(col_width_min)) + 1
-            total = sum(x[0] for x in dt)
-            for diff, index in dt:
-                if remaining <= 0:  # pragma: no cover
-                    break
-                given = remaining * diff // total
-                remaining -= given
-                self.col_width[index] += given
-        # construct data -> List[List[List[str]]], make sure on the same row, each cell
-        # has the same length of strings
-        self.data = [
-            [self._wrap(row[i], self.col_width[i]) for i in range(len(schema))]
-            for row in raw
-        ]
-        blank = ["".ljust(self.col_width[i]) for i in range(len(schema))]
-        for row in self.data:
-            max_h = max(len(c) for c in row)
-            for i in range(len(schema)):
-                row[i] += [blank[i]] * (max_h - len(row[i]))
+_SHOW_LOCK = SerializableRLock()
 
-    def to_string(self) -> Iterable[str]:
-        yield "|".join(
-            self.titles[i].ljust(self.col_width[i]) for i in range(len(self.titles))
-        )
-        yield "+".join(
-            "".ljust(self.col_width[i], "-") for i in range(len(self.titles))
-        )
-        for row in self.data:
-            for tp in zip(*row):
-                yield "|".join(tp)
 
-    def _cell_to_raw_str(self, obj: Any, truncate_width: int) -> str:
-        raw = "NULL" if obj is None else str(obj)
-        if len(raw) > truncate_width:
-            raw = raw[: max(0, truncate_width - 3)] + "..."
-        return raw
-
-    def _wrap(self, s: str, width: int) -> List[str]:
-        res: List[str] = []
-        start = 0
-        while start < len(s):
-            end = min(len(s), start + width)
-            sub = s[start:end]
-            if end < len(s):
-                res.append(sub)
-            else:
-                res.append(sub.ljust(width, " "))
-                break
-            start += width
-        return res
+@display_dataset.candidate(
+    lambda ds, *args, **kwargs: isinstance(ds, DataFrame), priority=0.1
+)
+def _display_dataframe(
+    ds: DataFrame, n: int = 10, with_count: bool = False, title: Optional[str] = None
+):
+    best_width = 100
+    head_rows = ds.head(n).as_array(type_safe=True)
+    if len(head_rows) < n:
+        count = len(head_rows)
+    else:
+        count = ds.count() if with_count else -1
+    with _SHOW_LOCK:
+        if title is not None and title != "":
+            print(title)
+        print(type(ds).__name__)
+        tb = PrettyTable(ds.schema, head_rows, best_width)
+        print("\n".join(tb.to_string()))
+        if count >= 0:
+            print(f"Total count: {count}")
+            print("")
+        if ds.has_metadata:
+            print("Metadata:")
+            try:
+                # try pretty print, but if not convertible to json, print original
+                print(ds.metadata.to_json(indent=True))
+            except Exception:  # pragma: no cover
+                print(ds.metadata)
+            print("")
 
 
 def _get_schema_change(

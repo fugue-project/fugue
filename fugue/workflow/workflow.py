@@ -18,7 +18,7 @@ from fugue.constants import (
     FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT,
     FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE,
 )
-from fugue.dataframe import DataFrame, YieldedDataFrame
+from fugue.dataframe import DataFrame, LocalBoundedDataFrame, YieldedDataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
 from fugue.execution.factory import make_execution_engine
@@ -219,10 +219,15 @@ class WorkflowDataFrame(DataFrame):
             self, using=using, params=params, pre_partition=pre_partition
         )
 
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:  # pragma: no cover
+        raise NotImplementedError
+
     def show(
         self,
-        rows: int = 10,
-        show_count: bool = False,
+        n: int = 10,
+        with_count: bool = False,
         title: Optional[str] = None,
         best_width: int = 100,
     ) -> None:
@@ -230,8 +235,8 @@ class WorkflowDataFrame(DataFrame):
         See
         :ref:`examples <tutorial:tutorials/advanced/dag:initialize a workflow>`.
 
-        :param rows: max number of rows, defaults to 10
-        :param show_count: whether to show total count, defaults to False
+        :param n: max number of rows, defaults to 10
+        :param with_count: whether to show total count, defaults to False
         :param title: title to display on top of the dataframe, defaults to None
         :param best_width: max width for the output table, defaults to 100
 
@@ -240,13 +245,13 @@ class WorkflowDataFrame(DataFrame):
             * When you call this method, it means you want the dataframe to be
               printed when the workflow executes. So the dataframe won't show until
               you run the workflow.
-            * When ``show_count`` is True, it can trigger expensive calculation for
+            * When ``with_count`` is True, it can trigger expensive calculation for
               a distributed dataframe. So if you call this function directly, you may
               need to :meth:`~.persist` the dataframe. Or you can turn on
               :ref:`tutorial:tutorials/advanced/useful_config:auto persist`
         """
         # TODO: best_width is not used
-        self.workflow.show(self, rows=rows, show_count=show_count, title=title)
+        self.workflow.show(self, n=n, with_count=with_count, title=title)
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
         """Wrapper of :meth:`fugue.workflow.workflow.FugueWorkflow.assert_eq` to
@@ -1753,8 +1758,8 @@ class FugueWorkflow:
     def show(
         self,
         *dfs: Any,
-        rows: int = 10,
-        show_count: bool = False,
+        n: int = 10,
+        with_count: bool = False,
         title: Optional[str] = None,
     ) -> None:
         """Show the dataframes.
@@ -1762,8 +1767,8 @@ class FugueWorkflow:
         :ref:`examples <tutorial:tutorials/advanced/dag:initialize a workflow>`.
 
         :param dfs: |DataFramesLikeObject|
-        :param rows: max number of rows, defaults to 10
-        :param show_count: whether to show total count, defaults to False
+        :param n: max number of rows, defaults to 10
+        :param with_count: whether to show total count, defaults to False
         :param title: title to display on top of the dataframe, defaults to None
         :param best_width: max width for the output table, defaults to 100
 
@@ -1772,13 +1777,13 @@ class FugueWorkflow:
             * When you call this method, it means you want the dataframe to be
               printed when the workflow executes. So the dataframe won't show until
               you run the workflow.
-            * When ``show_count`` is True, it can trigger expensive calculation for
+            * When ``with_count`` is True, it can trigger expensive calculation for
               a distributed dataframe. So if you call this function directly, you may
               need to :meth:`~.WorkflowDataFrame.persist` the dataframe. Or you can
               turn on |AutoPersist|
         """
         self.output(
-            *dfs, using=Show, params=dict(rows=rows, show_count=show_count, title=title)
+            *dfs, using=Show, params=dict(n=n, with_count=with_count, title=title)
         )
 
     def join(

@@ -107,6 +107,12 @@ class ArrayDataFrame(LocalBoundedDataFrame):
             ):
                 yield item
 
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
+        res = ArrayDataFrame(self.native[:n], self.schema)
+        return res if columns is None else res[columns]  # type: ignore
+
     def _iter_cols(self, pos: List[int]) -> Iterable[List[Any]]:
         if len(pos) == 0:
             for row in self.native:

@@ -121,6 +121,16 @@ class ArrowDataFrame(LocalBoundedDataFrame):
     def as_pandas(self) -> pd.DataFrame:
         return self.native.to_pandas()
 
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
+        adf = self.native if columns is None else self.native.select(columns)
+        n = min(n, self.count())
+        if n == 0:
+            schema = self.schema if columns is None else self.schema.extract(columns)
+            return ArrowDataFrame(None, schema=schema)
+        return ArrowDataFrame(adf.take(list(range(n))))
+
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         return ArrowDataFrame(self.native.drop(cols))
 

@@ -1,7 +1,9 @@
 from typing import Any, Dict, Iterable, List, Optional
 
+from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import (
     DataFrame,
+    LocalBoundedDataFrame,
     LocalUnboundedDataFrame,
     _get_schema_change,
 )
@@ -62,6 +64,19 @@ class IterableDataFrame(LocalUnboundedDataFrame):
     def peek_array(self) -> Any:
         self.assert_not_empty()
         return list(self.native.peek())
+
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
+        res: List[Any] = []
+        for row in self.as_array_iterable(columns, type_safe=True):
+            if n < 1:
+                break
+            res.append(list(row))
+            n -= 1
+        return ArrayDataFrame(
+            res, self.schema if columns is None else self.schema.extract(columns)
+        )
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         return IterableDataFrame(self, self.schema - cols)

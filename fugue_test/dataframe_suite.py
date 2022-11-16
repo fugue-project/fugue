@@ -1,6 +1,6 @@
 # pylint: disable-all
 
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import Any
 from unittest import TestCase
 
@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from fugue.dataframe import ArrowDataFrame, DataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.exceptions import FugueDatasetEmptyError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from pytest import raises
 from triad.collections.schema import Schema
 
@@ -234,16 +234,20 @@ class DataFrameTests(object):
 
         def test_head(self):
             df = self.df([], "a:str,b:int")
-            assert [] == df.head(1)
+            assert [] == df.head(1).as_array()
+            assert [] == df.head(1, ["b"]).as_array()
             df = self.df([["a", 1]], "a:str,b:int")
             if df.is_bounded:
-                assert [["a", 1]] == df.head(1)
-            assert [[1, "a"]] == df.head(1, ["b", "a"])
+                assert [["a", 1]] == df.head(1).as_array()
+            assert [[1, "a"]] == df.head(1, ["b", "a"]).as_array()
+            assert [] == df.head(0).as_array()
 
             df = self.df([[0, 1], [0, 2], [1, 1], [1, 3]], "a:int,b:int")
-            assert 2 == len(df.head(2))
+            assert 2 == df.head(2).count()
             df = self.df([[0, 1], [0, 2], [1, 1], [1, 3]], "a:int,b:int")
-            assert 4 == len(df.head(10))
+            assert 4 == df.head(10).count()
+            h = df.head(10)
+            assert h.is_local and h.is_bounded
 
         def test_show(self):
             df = self.df([["a", 1]], "a:str,b:int")
