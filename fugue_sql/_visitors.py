@@ -545,7 +545,7 @@ class _Extensions(_VisitorBase):
             data["dfs"] = WorkflowDataFrames(self.last)
         params: Dict[str, Any] = {}
         if ctx.rows is not None:
-            params["rows"] = int(self.ctxToStr(ctx.rows))
+            params["n"] = int(self.ctxToStr(ctx.rows))
         if ctx.count is not None:
             params["with_count"] = True
         if ctx.title is not None:
