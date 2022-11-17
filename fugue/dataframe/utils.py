@@ -170,12 +170,10 @@ def _df_eq(
     df: DataFrame,
     data: Any,
     schema: Any = None,
-    metadata: Any = None,
     digits=8,
     check_order: bool = False,
     check_schema: bool = True,
     check_content: bool = True,
-    check_metadata: bool = True,
     no_pandas: bool = False,
     throw=False,
 ) -> bool:
@@ -190,13 +188,10 @@ def _df_eq(
       <tutorial:tutorials/advanced/x-like:dataframe>` object
     :param schema: :ref:`Schema like
       <tutorial:tutorials/advanced/x-like:schema>` object, defaults to None
-    :param metadata: :ref:`Parameteres like
-      <tutorial:tutorials/advanced/x-like:parameters>` object, defaults to None
     :param digits: precision on float number comparison, defaults to 8
     :param check_order: if to compare the row orders, defaults to False
     :param check_schema: if compare schemas, defaults to True
     :param check_content: if to compare the row values, defaults to True
-    :param check_metadata: if to compare the dataframe metadatas, defaults to True
     :param no_pandas: if true, it will compare the string representations of the
       dataframes, otherwise, it will convert both to pandas dataframe to compare,
       defaults to False
@@ -204,7 +199,7 @@ def _df_eq(
     :return: if they equal
     """
     df1 = to_local_bounded_df(df)
-    df2 = to_local_bounded_df(data, schema, metadata)
+    df2 = to_local_bounded_df(data, schema)
     try:
         assert (
             df1.count() == df2.count()
@@ -212,9 +207,6 @@ def _df_eq(
         assert not check_schema or _schema_eq(
             df.schema, df2.schema
         ), f"schema mismatch {df.schema.pa_schema}, {df2.schema.pa_schema}"
-        assert (
-            not check_metadata or df.metadata == df2.metadata
-        ), f"metadata mismatch {df.metadata}, {df2.metadata}"
         if not check_content:
             return True
         if no_pandas:
@@ -240,16 +232,15 @@ def _df_eq(
         return False
 
 
-def to_local_df(df: Any, schema: Any = None, metadata: Any = None) -> LocalDataFrame:
+def to_local_df(df: Any, schema: Any = None) -> LocalDataFrame:
     """Convert a data structure to :class:`~fugue.dataframe.dataframe.LocalDataFrame`
 
     :param df: :class:`~fugue.dataframe.dataframe.DataFrame`, pandas DataFramme and
       list or iterable of arrays
     :param schema: |SchemaLikeObject|, defaults to None, it should not be set for
       :class:`~fugue.dataframe.dataframe.DataFrame` type
-    :param metadata: dict-like object with string keys, defaults to  None
     :raises ValueError: if ``df`` is :class:`~fugue.dataframe.dataframe.DataFrame`
-      but you set ``schema`` or ``metadata``
+      but you set ``schema``
     :raises TypeError: if ``df`` is not compatible
     :return: the dataframe itself if it's
       :class:`~fugue.dataframe.dataframe.LocalDataFrame` else a converted one
@@ -263,22 +254,20 @@ def to_local_df(df: Any, schema: Any = None, metadata: Any = None) -> LocalDataF
     assert_arg_not_none(df, "df")
     if isinstance(df, DataFrame):
         aot(
-            schema is None and metadata is None,
+            schema is None,
             ValueError("schema and metadata must be None when df is a DataFrame"),
         )
         return df.as_local()
     if isinstance(df, pd.DataFrame):
-        return PandasDataFrame(df, schema, metadata)
+        return PandasDataFrame(df, schema)
     if isinstance(df, List):
-        return ArrayDataFrame(df, schema, metadata)
+        return ArrayDataFrame(df, schema)
     if isinstance(df, Iterable):
-        return IterableDataFrame(df, schema, metadata)
+        return IterableDataFrame(df, schema)
     raise TypeError(f"{df} cannot convert to a LocalDataFrame")
 
 
-def to_local_bounded_df(
-    df: Any, schema: Any = None, metadata: Any = None
-) -> LocalBoundedDataFrame:
+def to_local_bounded_df(df: Any, schema: Any = None) -> LocalBoundedDataFrame:
     """Convert a data structure to
     :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`
 
@@ -286,9 +275,8 @@ def to_local_bounded_df(
       list or iterable of arrays
     :param schema: |SchemaLikeObject|, defaults to None, it should not be set for
       :class:`~fugue.dataframe.dataframe.DataFrame` type
-    :param metadata: dict-like object with string keys, defaults to  None
     :raises ValueError: if ``df`` is :class:`~fugue.dataframe.dataframe.DataFrame`
-      but you set ``schema`` or ``metadata``
+      but you set ``schema``
     :raises TypeError: if ``df`` is not compatible
     :return: the dataframe itself if it's
       :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame` else a converted one
@@ -305,10 +293,10 @@ def to_local_bounded_df(
         bounded, so :class:`~fugue.dataframe.iterable_dataframe.IterableDataFrame` will
         be converted although it's local.
     """
-    df = to_local_df(df, schema, metadata)
+    df = to_local_df(df, schema)
     if isinstance(df, LocalBoundedDataFrame):
         return df
-    return ArrayDataFrame(df.as_array(), df.schema, df.metadata)
+    return ArrayDataFrame(df.as_array(), df.schema)
 
 
 def pickle_df(df: DataFrame) -> bytes:

@@ -17,7 +17,6 @@ class ArrayDataFrame(LocalBoundedDataFrame):
     :param df: 2-dimensional array, iterable of arrays, or
       :class:`~fugue.dataframe.dataframe.DataFrame`
     :param schema: |SchemaLikeObject|
-    :param metadata: dict-like object with string keys, default ``None``
 
     .. admonition:: Examples
 
@@ -25,22 +24,20 @@ class ArrayDataFrame(LocalBoundedDataFrame):
         >>> b = ArrayDataFrame(a)
     """
 
-    def __init__(  # noqa: C901
-        self, df: Any = None, schema: Any = None, metadata: Any = None
-    ):
+    def __init__(self, df: Any = None, schema: Any = None):  # noqa: C901
         if df is None:
-            super().__init__(schema, metadata)
+            super().__init__(schema)
             self._native = []
         elif isinstance(df, DataFrame):
             if schema is None:
-                super().__init__(df.schema, metadata)
+                super().__init__(df.schema)
                 self._native = df.as_array(type_safe=False)
             else:
                 schema, _ = _get_schema_change(df.schema, schema)
-                super().__init__(schema, metadata)
+                super().__init__(schema)
                 self._native = df.as_array(schema.names, type_safe=False)
         elif isinstance(df, Iterable):
-            super().__init__(schema, metadata)
+            super().__init__(schema)
             self._native = df if isinstance(df, List) else list(df)
         else:
             raise ValueError(f"{df} is incompatible with ArrayDataFrame")
@@ -109,6 +106,12 @@ class ArrayDataFrame(LocalBoundedDataFrame):
                 str_as_json=True,
             ):
                 yield item
+
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
+        res = ArrayDataFrame(self.native[:n], self.schema)
+        return res if columns is None else res[columns]  # type: ignore
 
     def _iter_cols(self, pos: List[int]) -> Iterable[List[Any]]:
         if len(pos) == 0:

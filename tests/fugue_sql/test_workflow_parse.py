@@ -508,7 +508,7 @@ def test_print():
     a = dag.create(mock_create1, params=dict(n=1))
     a.show()
     b = dag.create(mock_create1, params=dict(n=2))
-    dag.show(a, b, rows=5, show_count=True, title='"b   B')
+    dag.show(a, b, n=5, with_count=True, title='"b   B')
     assert_eq(
         """
     a=create using mock_create1(n=1)

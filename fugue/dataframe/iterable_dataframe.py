@@ -1,7 +1,9 @@
 from typing import Any, Dict, Iterable, List, Optional
 
+from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import (
     DataFrame,
+    LocalBoundedDataFrame,
     LocalUnboundedDataFrame,
     _get_schema_change,
 )
@@ -18,7 +20,6 @@ class IterableDataFrame(LocalUnboundedDataFrame):
     :param df: 2-dimensional array, iterable of arrays, or
       :class:`~fugue.dataframe.dataframe.DataFrame`
     :param schema: |SchemaLikeObject|
-    :param metadata: dict-like object with string keys, default ``None``
 
     .. admonition:: Examples
 
@@ -31,9 +32,7 @@ class IterableDataFrame(LocalUnboundedDataFrame):
         invalid operation to count
     """
 
-    def __init__(  # noqa: C901
-        self, df: Any = None, schema: Any = None, metadata: Any = None
-    ):
+    def __init__(self, df: Any = None, schema: Any = None):  # noqa: C901
         if df is None:
             idf: Iterable[Any] = []
             orig_schema: Optional[Schema] = None
@@ -49,7 +48,7 @@ class IterableDataFrame(LocalUnboundedDataFrame):
         else:
             raise ValueError(f"{df} is incompatible with IterableDataFrame")
         schema, pos = _get_schema_change(orig_schema, schema)
-        super().__init__(schema, metadata)
+        super().__init__(schema)
         self._pos = pos
         self._native = make_empty_aware(self._preprocess(idf))
 
@@ -65,6 +64,19 @@ class IterableDataFrame(LocalUnboundedDataFrame):
     def peek_array(self) -> Any:
         self.assert_not_empty()
         return list(self.native.peek())
+
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
+        res: List[Any] = []
+        for row in self.as_array_iterable(columns, type_safe=True):
+            if n < 1:
+                break
+            res.append(list(row))
+            n -= 1
+        return ArrayDataFrame(
+            res, self.schema if columns is None else self.schema.extract(columns)
+        )
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         return IterableDataFrame(self, self.schema - cols)

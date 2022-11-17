@@ -242,10 +242,10 @@ def make_execution_engine(
 
             register_sql_engine("s", lambda conf: S2(conf))
 
-            # E1 + E1.default_sql_engine
+            # E1 + E1.create_default_sql_engine()
             make_execution_engine()
 
-            # E2 + E2.default_sql_engine
+            # E2 + E2.create_default_sql_engine()
             make_execution_engine(e2)
 
             # E1 + S2

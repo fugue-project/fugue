@@ -6,9 +6,8 @@ import pandas as pd
 from fugue_spark.registry import _is_sparksql
 
 
-def test_importless():
-    spark = SparkSession.builder.getOrCreate()
-    for engine in [spark, "spark"]:
+def test_importless(spark_session):
+    for engine in [spark_session, "spark"]:
         dag = FugueWorkflow()
         dag.df([[0]], "a:int").show()
 
@@ -36,7 +35,7 @@ def test_is_sparksql():
     assert not _is_sparksql("SELECT *")
 
 
-def test_transform_from_sparksql():
+def test_transform_from_sparksql(spark_session):
     # schema: *
     def t(df: pd.DataFrame) -> pd.DataFrame:
         return df

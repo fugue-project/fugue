@@ -3,7 +3,12 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 import pyarrow as pa
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.dataframe import DataFrame, LocalDataFrame, LocalUnboundedDataFrame
+from fugue.dataframe.dataframe import (
+    DataFrame,
+    LocalDataFrame,
+    LocalUnboundedDataFrame,
+    LocalBoundedDataFrame,
+)
 from fugue.exceptions import FugueDataFrameInitError
 from triad import Schema, assert_or_throw
 from triad.utils.iter import EmptyAwareIterable, make_empty_aware
@@ -18,7 +23,6 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
       by :meth:`~fugue.dataframe.dataframe.DataFrame.as_local`
     :param schema: |SchemaLikeObject|, if it is provided, it must match the schema
       of the dataframes
-    :param metadata: dict-like object with string keys, default ``None``
 
     .. admonition:: Examples
 
@@ -47,9 +51,7 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
         set the schema.
     """
 
-    def __init__(  # noqa: C901
-        self, df: Any = None, schema: Any = None, metadata: Any = None
-    ):
+    def __init__(self, df: Any = None, schema: Any = None):  # noqa: C901
         if isinstance(df, Iterable):
             self._native = make_empty_aware(self._dfs_wrapper(df))
             orig_schema: Optional[Schema] = None
@@ -73,7 +75,7 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
                 orig_schema == schema,
                 lambda: f"iterable schema {orig_schema} is different from {schema}",
             )
-        super().__init__(schema, metadata)
+        super().__init__(schema)
 
     def _dfs_wrapper(self, dfs: Iterable[DataFrame]) -> Iterable[LocalDataFrame]:
         last_empty: Any = None
@@ -165,6 +167,19 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
             return ArrayDataFrame([], self.schema).as_arrow()
 
         return pa.concat_tables(df.as_arrow() for df in self.native)
+
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
+        res: List[Any] = []
+        for row in self.as_array_iterable(columns, type_safe=True):
+            if n < 1:
+                break
+            res.append(list(row))
+            n -= 1
+        return ArrayDataFrame(
+            res, self.schema if columns is None else self.schema.extract(columns)
+        )
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         if self.empty:

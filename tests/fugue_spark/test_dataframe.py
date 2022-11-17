@@ -4,6 +4,7 @@ from typing import Any
 import pandas as pd
 import pyspark
 import pyspark.sql as ps
+import pytest
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import (
     get_dataframe_column_names,
@@ -11,9 +12,7 @@ from fugue.dataframe.utils import (
 )
 from fugue_test.dataframe_suite import DataFrameTests
 from pyspark.sql import SparkSession
-
 from triad.collections.schema import Schema
-
 
 from fugue_spark import SparkExecutionEngine
 from fugue_spark._utils.convert import to_schema, to_spark_schema
@@ -21,12 +20,14 @@ from fugue_spark.dataframe import SparkDataFrame
 
 
 class SparkDataFrameTests(DataFrameTests.Tests):
-    def df(
-        self, data: Any = None, schema: Any = None, metadata: Any = None
-    ) -> SparkDataFrame:
+    @pytest.fixture(autouse=True)
+    def init_session(self, spark_session):
+        self.spark_session = spark_session
+
+    def df(self, data: Any = None, schema: Any = None) -> SparkDataFrame:
         session = SparkSession.builder.getOrCreate()
         engine = SparkExecutionEngine(session)
-        return engine.to_df(data, schema=schema, metadata=metadata)
+        return engine.to_df(data, schema=schema)
 
     def test_alter_columns_invalid(self):
         # TODO: Spark will silently cast invalid data to nulls without exceptions
@@ -112,14 +113,14 @@ def _test_as_array_perf():
     print(nts, ts)
 
 
-def _df(data, schema=None, metadata=None):
+def _df(data, schema=None):
     session = SparkSession.builder.getOrCreate()
     if schema is not None:
-        pdf = PandasDataFrame(data, to_schema(schema), metadata)
+        pdf = PandasDataFrame(data, to_schema(schema))
         df = session.createDataFrame(pdf.native, to_spark_schema(schema))
     else:
         df = session.createDataFrame(data)
-    return SparkDataFrame(df, schema, metadata)
+    return SparkDataFrame(df, schema)
 
 
 def test_get_dataframe_column_names(spark_session):

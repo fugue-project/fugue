@@ -5,7 +5,7 @@ from uuid import uuid4
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from duckdb import __version__ as _DUCKDB_VERSION
+from duckdb import __version__ as _DUCKDB_VERSION  # type: ignore
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
 
 _LEGACY_DUCKDB = _DUCKDB_VERSION < "0.3.3"

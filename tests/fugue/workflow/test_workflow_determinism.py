@@ -203,7 +203,7 @@ def test_workflow_determinism_5():
     dag2 = FugueWorkflow()
     a2 = dag2.create_data([[0], [0], [1]], "a:int32")
     b2 = a2.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"], num=2))
-    a2.show(rows=22)  # <---
+    a2.show(n=22)  # <---
 
     assert a1.spec_uuid() == a2.spec_uuid()
     assert b1.spec_uuid() == b2.spec_uuid()

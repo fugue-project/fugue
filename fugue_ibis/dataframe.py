@@ -2,9 +2,15 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 import pyarrow as pa
-from fugue import DataFrame, IterableDataFrame, LocalDataFrame
+from fugue import (
+    DataFrame,
+    IterableDataFrame,
+    LocalBoundedDataFrame,
+    LocalDataFrame,
+    to_local_bounded_df,
+)
 from fugue.dataframe.dataframe import _input_schema
-from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
+from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from triad import Schema
 
 from ._compat import IbisTable
@@ -15,10 +21,9 @@ class IbisDataFrame(DataFrame):
     """DataFrame that wraps Ibis ``Table``.
 
     :param rel: ``DuckDBPyRelation`` object
-    :param metadata: dict-like object with string keys, default ``None``
     """
 
-    def __init__(self, table: IbisTable, schema: Any = None, metadata: Any = None):
+    def __init__(self, table: IbisTable, schema: Any = None):
         self._table = table
         _schema = to_schema(table.schema())
         if schema is not None:
@@ -27,26 +32,22 @@ class IbisDataFrame(DataFrame):
                 table = self._alter_table_columns(table, _schema, _to_schema)
                 _schema = _to_schema
         self._table = table
-        super().__init__(schema=_schema, metadata=metadata)
+        super().__init__(schema=_schema)
 
     @property
     def native(self) -> IbisTable:
         """Ibis Table object"""
         return self._table
 
-    def _to_local_df(
-        self, table: IbisTable, schema: Any = None, metadata: Any = None
-    ) -> LocalDataFrame:
+    def _to_local_df(self, table: IbisTable, schema: Any = None) -> LocalDataFrame:
         raise NotImplementedError  # pragma: no cover
 
     def _to_iterable_df(
-        self, table: IbisTable, sdhema: Any = None, metadata: Any = None
+        self, table: IbisTable, sdhema: Any = None
     ) -> IterableDataFrame:
         raise NotImplementedError  # pragma: no cover
 
-    def _to_new_df(
-        self, table: IbisTable, schema: Any = None, metadata: Any = None
-    ) -> DataFrame:
+    def _to_new_df(self, table: IbisTable, schema: Any = None) -> DataFrame:
         raise NotImplementedError  # pragma: no cover
 
     def _compute_scalar(self, table: IbisTable) -> Any:
@@ -71,7 +72,7 @@ class IbisDataFrame(DataFrame):
     def peek_array(self) -> Any:
         res = self._to_local_df(self._table.head(1)).as_array()
         if len(res) == 0:
-            raise FugueDataFrameEmptyError()
+            raise FugueDatasetEmptyError()
         return res[0]
 
     def count(self) -> int:
@@ -114,9 +115,7 @@ class IbisDataFrame(DataFrame):
         return self.as_local().as_pandas()
 
     def as_local(self) -> LocalDataFrame:
-        return self._to_local_df(
-            self._table, schema=self.schema, metadata=self.metadata
-        )
+        return self._to_local_df(self._table, schema=self.schema)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
@@ -135,10 +134,12 @@ class IbisDataFrame(DataFrame):
                 type_safe=type_safe
             )
 
-    def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
         if columns is not None:
             return self[columns].head(n)
-        return self._to_local_df(self._table.head(n)).as_array(type_safe=True)
+        return to_local_bounded_df(self._to_local_df(self._table.head(n)))
 
     def _alter_table_columns(
         self, table: IbisTable, schema: Schema, new_schema: Schema

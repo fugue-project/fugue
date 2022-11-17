@@ -39,7 +39,7 @@ class Transformer(ExtensionContext):
           * This is the only function in this interface that is facing the entire
             DataFrame that is not necessarily local, for example a SparkDataFrame
           * Normally, you should not consume this dataframe in this step, and you s
-            hould only use its schema and metadata
+            hould only use its schema
           * You can access all properties except for :meth:`~.cursor`
 
         :param df: the entire dataframe you are going to transform.
@@ -138,7 +138,7 @@ class CoTransformer(ExtensionContext):
           * Currently, ``dfs`` is a collection of empty dataframes with the same
             structure and schemas
           * Normally, you should not consume this dataframe in this step, and you s
-            hould only use its schema and metadata
+            hould only use its schema
           * You can access all properties except for :meth:`~.cursor`
 
         :param dfs: the collection of dataframes you are going to transform. They

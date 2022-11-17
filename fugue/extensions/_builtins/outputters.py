@@ -1,9 +1,10 @@
-from typing import Callable, List, Optional, no_type_check
+from typing import List, no_type_check
 
 from fugue.collections.partition import PartitionCursor
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq, to_local_bounded_df
+from fugue.dataset import display_dataset
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution.execution_engine import _generate_comap_empty_dfs
 from fugue.extensions.outputter import Outputter
@@ -19,44 +20,19 @@ from triad.utils.convert import to_type
 
 class Show(Outputter):
     LOCK = SerializableRLock()
-    _hook: Optional[Callable] = None
 
     def process(self, dfs: DataFrames) -> None:
-        # TODO: how do we make sure multiple dfs are printed together?
         title = self.params.get_or_none("title", object)
         title = str(title) if title is not None else None
-        rows = self.params.get("rows", 10)
-        show_count = self.params.get("show_count", False)
-        df_arr = list(dfs.values())
-        heads = [df.head(rows) for df in df_arr]
-        counts = [df.count() if show_count else -1 for df in df_arr]
+        n = self.params.get("n", 10)
+        with_count = self.params.get("with_count", False)
         with Show.LOCK:
-            if Show._hook is None:
-                if title is not None:
-                    print(title)
-                for df, head, count in zip(df_arr, heads, counts):
-                    df._show(head_rows=head, rows=rows, count=count, title=None)
-            else:
-                for df, head, count in zip(df_arr, heads, counts):
-                    Show._hook(  # pylint: disable=E1102
-                        schema=df.schema,
-                        head_rows=head,
-                        title=title,
-                        rows=rows,
-                        count=count,
-                    )
-
-    @staticmethod
-    def set_hook(show_func: Callable):
-        """This is to set the globle show/print method. It is
-        not for users to use directly.
-
-        :param show_func: the print function with `schema:Schema`,
-          `head_rows:List[List[Any]]`, `title:Optional[str]`,
-          `rows:int`, `count:int`. `rows` is the number of rows to display,
-          `count` is -1 if not computed.
-        """
-        Show._hook = show_func
+            n = 0
+            for df in dfs.values():
+                display_dataset(
+                    df, n=n, with_count=with_count, title=title if n == 0 else None
+                )
+                n += 1
 
 
 class AssertEqual(Outputter):
@@ -121,7 +97,7 @@ class RunOutputTransformer(Outputter):
         tf._key_schema = self.partition_spec.get_key_schema(df.schema)  # type: ignore
         tf._output_schema = Schema(tf.get_output_schema(df))  # type: ignore
         tr = _TransformerRunner(df, tf, self._ignore_errors)  # type: ignore
-        df = self.execution_engine.map(
+        df = self.execution_engine.map_engine.map_dataframe(
             df=df,
             map_func=tr.run,
             output_schema=tf.output_schema,  # type: ignore
@@ -157,13 +133,11 @@ class _TransformerRunner(object):
         self, df: DataFrame, transformer: Transformer, ignore_errors: List[type]
     ):
         self.schema = df.schema
-        self.metadata = df.metadata
         self.transformer = transformer
         self.ignore_errors = tuple(ignore_errors)
 
     def run(self, cursor: PartitionCursor, df: LocalDataFrame) -> LocalDataFrame:
         self.transformer._cursor = cursor  # type: ignore
-        df._metadata = self.metadata
         try:
             to_local_bounded_df(self.transformer.transform(df))
             return ArrayDataFrame([], self.transformer.output_schema)
@@ -175,7 +149,6 @@ class _TransformerRunner(object):
         self.transformer._cursor = s.get_cursor(  # type: ignore
             self.schema, partition_no
         )
-        df._metadata = self.metadata
         self.transformer.on_init(df)
 
 
@@ -184,7 +157,6 @@ class _CoTransformerRunner(object):
         self, df: DataFrame, transformer: CoTransformer, ignore_errors: List[type]
     ):
         self.schema = df.schema
-        self.metadata = df.metadata
         self.transformer = transformer
         self.ignore_errors = tuple(ignore_errors)
 

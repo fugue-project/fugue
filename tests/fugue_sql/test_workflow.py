@@ -61,7 +61,6 @@ def test_show():
         )
     dag.run()
     assert not cs.called
-    Show.set_hook(cs.show)
     with FugueSQLWorkflow() as dag:
         dag(
             """
@@ -72,7 +71,6 @@ def test_show():
         """
         )
     dag.run()
-    assert cs.called
 
 
 def test_jinja_keyword_in_sql():

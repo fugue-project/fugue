@@ -18,7 +18,7 @@ from fugue.constants import (
     FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT,
     FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE,
 )
-from fugue.dataframe import DataFrame, YieldedDataFrame
+from fugue.dataframe import DataFrame, LocalBoundedDataFrame, YieldedDataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
 from fugue.execution.factory import make_execution_engine
@@ -85,13 +85,10 @@ class WorkflowDataFrame(DataFrame):
 
     :param workflow: the parent workflow it belongs to
     :param task: the task that generates this dataframe
-    :param metadata: dict-like metadata, defaults to None
     """
 
-    def __init__(
-        self, workflow: "FugueWorkflow", task: FugueTask, metadata: Any = None
-    ):
-        super().__init__("_0:int", metadata)
+    def __init__(self, workflow: "FugueWorkflow", task: FugueTask):
+        super().__init__("_0:int")
         self._workflow = workflow
         self._task = task
 
@@ -132,7 +129,7 @@ class WorkflowDataFrame(DataFrame):
                 assert df.partition_spec.empty
                 assert df2.partition_spec == PartitionSpec(by=["a"])
         """
-        return self._metadata.get("pre_partition", PartitionSpec())
+        return self.metadata.get("pre_partition", PartitionSpec())
 
     def compute(self, *args, **kwargs) -> DataFrame:
         """Trigger the parent workflow to
@@ -222,10 +219,15 @@ class WorkflowDataFrame(DataFrame):
             self, using=using, params=params, pre_partition=pre_partition
         )
 
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:  # pragma: no cover
+        raise NotImplementedError
+
     def show(
         self,
-        rows: int = 10,
-        show_count: bool = False,
+        n: int = 10,
+        with_count: bool = False,
         title: Optional[str] = None,
         best_width: int = 100,
     ) -> None:
@@ -233,8 +235,8 @@ class WorkflowDataFrame(DataFrame):
         See
         :ref:`examples <tutorial:tutorials/advanced/dag:initialize a workflow>`.
 
-        :param rows: max number of rows, defaults to 10
-        :param show_count: whether to show total count, defaults to False
+        :param n: max number of rows, defaults to 10
+        :param with_count: whether to show total count, defaults to False
         :param title: title to display on top of the dataframe, defaults to None
         :param best_width: max width for the output table, defaults to 100
 
@@ -243,13 +245,13 @@ class WorkflowDataFrame(DataFrame):
             * When you call this method, it means you want the dataframe to be
               printed when the workflow executes. So the dataframe won't show until
               you run the workflow.
-            * When ``show_count`` is True, it can trigger expensive calculation for
+            * When ``with_count`` is True, it can trigger expensive calculation for
               a distributed dataframe. So if you call this function directly, you may
               need to :meth:`~.persist` the dataframe. Or you can turn on
               :ref:`tutorial:tutorials/advanced/useful_config:auto persist`
         """
         # TODO: best_width is not used
-        self.workflow.show(self, rows=rows, show_count=show_count, title=title)
+        self.workflow.show(self, n=n, with_count=with_count, title=title)
 
     def assert_eq(self, *dfs: Any, **params: Any) -> None:
         """Wrapper of :meth:`fugue.workflow.workflow.FugueWorkflow.assert_eq` to
@@ -260,7 +262,6 @@ class WorkflowDataFrame(DataFrame):
         :param check_order: if to compare the row orders, defaults to False
         :param check_schema: if compare schemas, defaults to True
         :param check_content: if to compare the row values, defaults to True
-        :param check_metadata: if to compare the dataframe metadatas, defaults to True
         :param no_pandas: if true, it will compare the string representations of the
           dataframes, otherwise, it will convert both to pandas dataframe to compare,
           defaults to False
@@ -278,7 +279,6 @@ class WorkflowDataFrame(DataFrame):
         :param check_order: if to compare the row orders, defaults to False
         :param check_schema: if compare schemas, defaults to True
         :param check_content: if to compare the row values, defaults to True
-        :param check_metadata: if to compare the dataframe metadatas, defaults to True
         :param no_pandas: if true, it will compare the string representations of the
           dataframes, otherwise, it will convert both to pandas dataframe to compare,
           defaults to False
@@ -1038,13 +1038,9 @@ class WorkflowDataFrame(DataFrame):
             Normally this step is fast because it's to add a partition hint
             for the next step.
         """
-        return self._to_self_type(
-            WorkflowDataFrame(
-                self.workflow,
-                self._task,
-                {"pre_partition": PartitionSpec(*args, **kwargs)},
-            )
-        )
+        res = WorkflowDataFrame(self.workflow, self._task)
+        res.reset_metadata({"pre_partition": PartitionSpec(*args, **kwargs)})
+        return self._to_self_type(res)
 
     def partition_by(self: TDF, *keys: str, **kwargs: Any) -> TDF:
         """Partition the current dataframe by keys. Please read |PartitionTutorial|.
@@ -1668,14 +1664,12 @@ class FugueWorkflow:
         self,
         data: Any,
         schema: Any = None,
-        metadata: Any = None,
         data_determiner: Optional[Callable[[Any], Any]] = None,
     ) -> WorkflowDataFrame:
         """Create dataframe.
 
         :param data: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
         :param schema: |SchemaLikeObject|, defaults to None
-        :param metadata: |ParamsLikeObject|, defaults to None
         :param data_determiner: a function to compute unique id from ``data``
         :return: a dataframe of the current workflow
 
@@ -1695,9 +1689,9 @@ class FugueWorkflow:
                 ),
             )
             assert_or_throw(
-                schema is None and metadata is None,
+                schema is None,
                 FugueWorkflowCompileError(
-                    "schema and metadata must be None when data is WorkflowDataFrame"
+                    "schema must be None when data is WorkflowDataFrame"
                 ),
             )
             return data
@@ -1710,7 +1704,6 @@ class FugueWorkflow:
                 using=CreateData(
                     data,
                     schema=schema,
-                    metadata=metadata,
                     data_determiner=data_determiner,
                 )
             )
@@ -1723,14 +1716,12 @@ class FugueWorkflow:
         self,
         data: Any,
         schema: Any = None,
-        metadata: Any = None,
         data_determiner: Optional[Callable[[Any], str]] = None,
     ) -> WorkflowDataFrame:
         """Create dataframe. Alias of :meth:`~.create_data`
 
         :param data: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
         :param schema: |SchemaLikeObject|, defaults to None
-        :param metadata: |ParamsLikeObject|, defaults to None
         :param data_determiner: a function to compute unique id from ``data``
         :return: a dataframe of the current workflow
 
@@ -1743,7 +1734,7 @@ class FugueWorkflow:
             the unique id of ``data`` using ``data_determiner``
         """
         return self.create_data(
-            data=data, schema=schema, metadata=metadata, data_determiner=data_determiner
+            data=data, schema=schema, data_determiner=data_determiner
         )
 
     def load(
@@ -1767,8 +1758,8 @@ class FugueWorkflow:
     def show(
         self,
         *dfs: Any,
-        rows: int = 10,
-        show_count: bool = False,
+        n: int = 10,
+        with_count: bool = False,
         title: Optional[str] = None,
     ) -> None:
         """Show the dataframes.
@@ -1776,8 +1767,8 @@ class FugueWorkflow:
         :ref:`examples <tutorial:tutorials/advanced/dag:initialize a workflow>`.
 
         :param dfs: |DataFramesLikeObject|
-        :param rows: max number of rows, defaults to 10
-        :param show_count: whether to show total count, defaults to False
+        :param n: max number of rows, defaults to 10
+        :param with_count: whether to show total count, defaults to False
         :param title: title to display on top of the dataframe, defaults to None
         :param best_width: max width for the output table, defaults to 100
 
@@ -1786,13 +1777,13 @@ class FugueWorkflow:
             * When you call this method, it means you want the dataframe to be
               printed when the workflow executes. So the dataframe won't show until
               you run the workflow.
-            * When ``show_count`` is True, it can trigger expensive calculation for
+            * When ``with_count`` is True, it can trigger expensive calculation for
               a distributed dataframe. So if you call this function directly, you may
               need to :meth:`~.WorkflowDataFrame.persist` the dataframe. Or you can
               turn on |AutoPersist|
         """
         self.output(
-            *dfs, using=Show, params=dict(rows=rows, show_count=show_count, title=title)
+            *dfs, using=Show, params=dict(n=n, with_count=with_count, title=title)
         )
 
     def join(
@@ -2099,7 +2090,6 @@ class FugueWorkflow:
         :param check_order: if to compare the row orders, defaults to False
         :param check_schema: if compare schemas, defaults to True
         :param check_content: if to compare the row values, defaults to True
-        :param check_metadata: if to compare the dataframe metadatas, defaults to True
         :param no_pandas: if true, it will compare the string representations of the
           dataframes, otherwise, it will convert both to pandas dataframe to compare,
           defaults to False
@@ -2120,7 +2110,6 @@ class FugueWorkflow:
         :param check_order: if to compare the row orders, defaults to False
         :param check_schema: if compare schemas, defaults to True
         :param check_content: if to compare the row values, defaults to True
-        :param check_metadata: if to compare the dataframe metadatas, defaults to True
         :param no_pandas: if true, it will compare the string representations of the
           dataframes, otherwise, it will convert both to pandas dataframe to compare,
           defaults to False

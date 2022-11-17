@@ -9,6 +9,10 @@ from fugue_spark import SparkExecutionEngine, SparkIbisEngine
 
 
 class SparkIbisTests(IbisTests.Tests):
+    @pytest.fixture(autouse=True)
+    def init_session(self, spark_session):
+        self.spark_session = spark_session
+
     def make_engine(self):
         session = SparkSession.builder.getOrCreate()
         e = SparkExecutionEngine(session, dict(test=True))

@@ -12,9 +12,8 @@ from triad.collections.schema import Schema
 
 
 class ArrayDataFrameTests(DataFrameTests.Tests):
-    def df(self, data: Any = None, schema: Any = None,
-           metadata: Any = None) -> ArrayDataFrame:
-        return ArrayDataFrame(data, schema, metadata)
+    def df(self, data: Any = None, schema: Any = None) -> ArrayDataFrame:
+        return ArrayDataFrame(data, schema)
 
 
 def test_init():

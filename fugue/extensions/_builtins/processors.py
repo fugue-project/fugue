@@ -47,7 +47,7 @@ class RunTransformer(Processor):
         tf._key_schema = self.partition_spec.get_key_schema(df.schema)  # type: ignore
         tf._output_schema = Schema(tf.get_output_schema(df))  # type: ignore
         tr = _TransformerRunner(df, tf, self._ignore_errors)  # type: ignore
-        return self.execution_engine.map(
+        return self.execution_engine.map_engine.map_dataframe(
             df=df,
             map_func=tr.run,
             output_schema=tf.output_schema,  # type: ignore
@@ -324,13 +324,11 @@ class _TransformerRunner(object):
         self, df: DataFrame, transformer: Transformer, ignore_errors: List[type]
     ):
         self.schema = df.schema
-        self.metadata = df.metadata
         self.transformer = transformer
         self.ignore_errors = tuple(ignore_errors)
 
     def run(self, cursor: PartitionCursor, df: LocalDataFrame) -> LocalDataFrame:
         self.transformer._cursor = cursor  # type: ignore
-        df._metadata = self.metadata
         if len(self.ignore_errors) == 0:
             return self.transformer.transform(df)
         else:
@@ -344,7 +342,6 @@ class _TransformerRunner(object):
         self.transformer._cursor = s.get_cursor(  # type: ignore
             self.schema, partition_no
         )
-        df._metadata = self.metadata
         self.transformer.on_init(df)
 
 
@@ -356,7 +353,6 @@ class _CoTransformerRunner(object):
         ignore_errors: List[Type[Exception]],
     ):
         self.schema = df.schema
-        self.metadata = df.metadata
         self.transformer = transformer
         self.ignore_errors = tuple(ignore_errors)
 

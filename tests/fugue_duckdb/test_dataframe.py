@@ -17,11 +17,9 @@ class DuckDataFrameTests(DataFrameTests.Tests):
     def setUpClass(cls):
         cls._con = duckdb.connect()
 
-    def df(
-        self, data: Any = None, schema: Any = None, metadata: Any = None
-    ) -> DuckDataFrame:
-        df = ArrowDataFrame(data, schema, metadata)
-        return DuckDataFrame(duckdb.arrow(df.native, self._con), metadata=metadata)
+    def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
+        df = ArrowDataFrame(data, schema)
+        return DuckDataFrame(duckdb.arrow(df.native, self._con))
 
     def test_as_array_special_values(self):
         for func in [
@@ -59,9 +57,8 @@ class DuckDataFrameTests(DataFrameTests.Tests):
         assert df.as_pandas().values.tolist() == [[2.1, {"a": 1}]]
 
     def test_init(self):
-        df = self.df([], "a:int,b:str", metadata={"a": "b"})
+        df = self.df([], "a:int,b:str")
         assert df.schema == "a:int,b:str"
-        assert df.metadata == {"a": "b"}
         assert df.empty
         assert isinstance(df.native, duckdb.DuckDBPyRelation)
         assert df.is_bounded

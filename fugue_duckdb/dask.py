@@ -1,15 +1,16 @@
-from typing import Any, Callable, Optional, Union
-
-import duckdb
-import pyarrow as pa
-from duckdb import DuckDBPyConnection
-from fugue import DataFrame, LocalDataFrame, PartitionCursor, PartitionSpec
-from fugue.collections.partition import EMPTY_PARTITION_SPEC
-from fugue_dask import DaskDataFrame, DaskExecutionEngine
-from triad import assert_or_throw
+from typing import Any, Optional, Union
 
 import dask.dataframe as dd
+import duckdb
+import pyarrow as pa
 from dask.distributed import Client
+from duckdb import DuckDBPyConnection
+from triad import assert_or_throw
+
+from fugue import DataFrame, MapEngine, PartitionSpec
+from fugue.collections.partition import EMPTY_PARTITION_SPEC
+from fugue_dask import DaskDataFrame, DaskExecutionEngine
+from fugue_dask.execution_engine import DaskMapEngine
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckExecutionEngine
 
@@ -33,47 +34,29 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
         super().__init__(conf, connection)
         self._dask_engine = DaskExecutionEngine(dask_client=dask_client, conf=conf)
 
+    def create_default_map_engine(self) -> MapEngine:
+        return DaskMapEngine(self._dask_engine)
+
     @property
     def dask_client(self) -> Client:
         return self._dask_engine.dask_client
 
-    def to_df(self, df: Any, schema: Any = None, metadata: Any = None) -> DuckDataFrame:
+    def to_df(self, df: Any, schema: Any = None) -> DuckDataFrame:
         if isinstance(df, (dd.DataFrame, DaskDataFrame)):
-            ddf = self._to_dask_df(df, schema, metadata)
+            ddf = self._to_dask_df(df, schema)
             if all(not pa.types.is_nested(f.type) for f in ddf.schema.fields):
-                return DuckDataFrame(
-                    self.connection.df(ddf.as_pandas()), metadata=dict(ddf.metadata)
-                )
+                return DuckDataFrame(self.connection.df(ddf.as_pandas()))
             else:
                 return DuckDataFrame(
-                    duckdb.arrow(ddf.as_arrow(), connection=self.connection),
-                    metadata=dict(ddf.metadata),
+                    duckdb.arrow(ddf.as_arrow(), connection=self.connection)
                 )
-        return super().to_df(df, schema, metadata)
+        return super().to_df(df, schema)
 
     def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
         tdf = self._to_auto_df(df)
         if isinstance(tdf, DaskDataFrame):
             return self._dask_engine.repartition(tdf, partition_spec=partition_spec)
         return super().repartition(tdf, partition_spec=partition_spec)
-
-    def map(
-        self,
-        df: DataFrame,
-        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
-        output_schema: Any,
-        partition_spec: PartitionSpec,
-        metadata: Any = None,
-        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
-    ) -> DataFrame:
-        return self._dask_engine.map(
-            df=self._to_dask_df(df),
-            map_func=map_func,
-            output_schema=output_schema,
-            partition_spec=partition_spec,
-            metadata=metadata,
-            on_init=on_init,
-        )
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         if isinstance(df, DaskDataFrame):
@@ -126,21 +109,19 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
         return super().convert_yield_dataframe(df, as_local)
 
     def _to_auto_df(
-        self, df: Any, schema: Any = None, metadata: Any = None
+        self, df: Any, schema: Any = None
     ) -> Union[DuckDataFrame, DaskDataFrame]:
         if isinstance(df, (DuckDataFrame, DaskDataFrame)):
             assert_or_throw(
-                schema is None and metadata is None,
-                ValueError("schema and metadata must be None when df is a DataFrame"),
+                schema is None,
+                ValueError("schema must be None when df is a DataFrame"),
             )
             return df
         if isinstance(df, dd.DataFrame):
-            return self._dask_engine.to_df(df, schema, metadata)
-        return self._to_duck_df(df, schema, metadata)
+            return self._dask_engine.to_df(df, schema)
+        return self._to_duck_df(df, schema)
 
-    def _to_dask_df(
-        self, df: Any, schema: Any = None, metadata: Any = None
-    ) -> DaskDataFrame:
+    def _to_dask_df(self, df: Any, schema: Any = None) -> DaskDataFrame:
         if isinstance(df, DuckDataFrame):
-            return self._dask_engine.to_df(df.as_pandas(), df.schema, metadata)
-        return self._dask_engine.to_df(df, schema, metadata)
+            return self._dask_engine.to_df(df.as_pandas(), df.schema)
+        return self._dask_engine.to_df(df, schema)

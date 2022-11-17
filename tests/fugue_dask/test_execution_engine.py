@@ -42,10 +42,10 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_to_df(self):
         e = self.engine
-        a = e.to_df([[1, 2], [3, 4]], "a:int,b:int", dict(a=1))
-        df_eq(a, [[1, 2], [3, 4]], "a:int,b:int", dict(a=1), throw=True)
-        a = e.to_df(PandasDataFrame([[1, 2], [3, 4]], "a:int,b:int", dict(a=1)))
-        df_eq(a, [[1, 2], [3, 4]], "a:int,b:int", dict(a=1), throw=True)
+        a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
+        df_eq(a, [[1, 2], [3, 4]], "a:int,b:int", throw=True)
+        a = e.to_df(PandasDataFrame([[1, 2], [3, 4]], "a:int,b:int"))
+        df_eq(a, [[1, 2], [3, 4]], "a:int,b:int", throw=True)
         assert a is e.to_df(a)
 
     def test_repartition(self):

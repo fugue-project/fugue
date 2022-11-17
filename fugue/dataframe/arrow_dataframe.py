@@ -16,7 +16,6 @@ class ArrowDataFrame(LocalBoundedDataFrame):
     :param df: 2-dimensional array, iterable of arrays,
       :func:`pyarrow.Table <pa:pyarrow.table>` or pandas DataFrame
     :param schema: |SchemaLikeObject|
-    :param metadata: dict-like object with string keys, default ``None``
 
     .. admonition:: Examples
 
@@ -30,13 +29,12 @@ class ArrowDataFrame(LocalBoundedDataFrame):
         self,
         df: Any = None,
         schema: Any = None,
-        metadata: Any = None,
         pandas_df_wrapper: bool = False,
     ):
         if df is None:
             schema = _input_schema(schema).assert_not_empty()
             self._native: pa.Table = _build_empty_arrow(schema)
-            super().__init__(schema, metadata)
+            super().__init__(schema)
             return
         elif isinstance(df, pa.Table):
             assert_or_throw(
@@ -44,7 +42,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
                 InvalidOperationError("can't reset schema for pa.Table"),
             )
             self._native = df
-            super().__init__(Schema(df.schema), metadata)
+            super().__init__(Schema(df.schema))
             return
         elif isinstance(df, (pd.DataFrame, pd.Series)):
             if isinstance(df, pd.Series):
@@ -69,7 +67,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
                         preserve_index=False,
                         safe=True,
                     )
-            super().__init__(schema, metadata)
+            super().__init__(schema)
             return
         elif isinstance(df, Iterable):
             schema = _input_schema(schema).assert_not_empty()
@@ -93,7 +91,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
                 self._native = pa.Table.from_pandas(
                     pdf, schema=schema.pa_schema, preserve_index=False, safe=True
                 )
-            super().__init__(schema, metadata)
+            super().__init__(schema)
             return
         else:
             raise ValueError(f"{df} is incompatible with ArrowDataFrame")
@@ -122,6 +120,16 @@ class ArrowDataFrame(LocalBoundedDataFrame):
 
     def as_pandas(self) -> pd.DataFrame:
         return self.native.to_pandas()
+
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
+        adf = self.native if columns is None else self.native.select(columns)
+        n = min(n, self.count())
+        if n == 0:
+            schema = self.schema if columns is None else self.schema.extract(columns)
+            return ArrowDataFrame(None, schema=schema)
+        return ArrowDataFrame(adf.take(list(range(n))))
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         return ArrowDataFrame(self.native.drop(cols))

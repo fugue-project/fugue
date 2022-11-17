@@ -21,9 +21,9 @@ from fugue.dataframe.utils import (
 
 class DaskDataFrameTests(DataFrameTests.Tests):
     def df(
-        self, data: Any = None, schema: Any = None, metadata: Any = None
+        self, data: Any = None, schema: Any = None
     ) -> DaskDataFrame:
-        return DaskDataFrame(data, schema, metadata)
+        return DaskDataFrame(data, schema)
 
 
 def test_init():

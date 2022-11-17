@@ -62,20 +62,19 @@ class ExecutionEngineTests(object):
             o = ArrayDataFrame(
                 [[1.1, 2.2], [3.3, 4.4]],
                 "a:double,b:double",
-                dict(a=1),
             )
             # all engines should accept these types of inputs
             # should take fugue.DataFrame
             df_eq(o, e.to_df(o), throw=True)
-            # should take array, shema and metadata
+            # should take array, shema
             df_eq(
                 o,
-                e.to_df([[1.1, 2.2], [3.3, 4.4]], "a:double,b:double", dict(a=1)),
+                e.to_df([[1.1, 2.2], [3.3, 4.4]], "a:double,b:double"),
                 throw=True,
             )
             # should take pandas dataframe
             pdf = pd.DataFrame([[1.1, 2.2], [3.3, 4.4]], columns=["a", "b"])
-            df_eq(o, e.to_df(pdf, metadata=dict(a=1)), throw=True)
+            df_eq(o, e.to_df(pdf), throw=True)
 
             # should convert string to datetime in to_df
             df_eq(
@@ -96,7 +95,6 @@ class ExecutionEngineTests(object):
             o = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
                 "a:double,b:int",
-                dict(a=1),
             )
             a = e.to_df(o)
             b = e.filter(a, col("a").not_null())
@@ -109,9 +107,7 @@ class ExecutionEngineTests(object):
         def test_select(self):
             e = self.engine
             o = ArrayDataFrame(
-                [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
-                "a:double,b:int",
-                dict(a=1),
+                [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
             )
             a = e.to_df(o)
 
@@ -177,9 +173,7 @@ class ExecutionEngineTests(object):
         def test_assign(self):
             e = self.engine
             o = ArrayDataFrame(
-                [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
-                "a:double,b:int",
-                dict(a=1),
+                [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
             )
             a = e.to_df(o)
 
@@ -203,9 +197,7 @@ class ExecutionEngineTests(object):
         def test_aggregate(self):
             e = self.engine
             o = ArrayDataFrame(
-                [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
-                "a:double,b:int",
-                dict(a=1),
+                [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
             )
             a = e.to_df(o)
 
@@ -259,39 +251,37 @@ class ExecutionEngineTests(object):
 
             e = self.engine
             o = ArrayDataFrame(
-                [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
-                "a:double,b:int",
-                dict(a=1),
+                [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
             )
             a = e.to_df(o)
             # no partition
-            c = e.map(a, noop, a.schema, PartitionSpec(), dict(a=1))
+            c = e.map_engine.map_dataframe(a, noop, a.schema, PartitionSpec())
             df_eq(c, o, throw=True)
             # with key partition
-            c = e.map(
-                a, noop, a.schema, PartitionSpec(by=["a"], presort="b"), dict(a=1)
+            c = e.map_engine.map_dataframe(
+                a, noop, a.schema, PartitionSpec(by=["a"], presort="b")
             )
             df_eq(c, o, throw=True)
             # select top
-            c = e.map(a, select_top, a.schema, PartitionSpec(by=["a"], presort="b"))
+            c = e.map_engine.map_dataframe(
+                a, select_top, a.schema, PartitionSpec(by=["a"], presort="b")
+            )
             df_eq(c, [[None, 1], [1, 2], [3, 4]], "a:double,b:int", throw=True)
             # select top with another order
-            c = e.map(
+            c = e.map_engine.map_dataframe(
                 a,
                 select_top,
                 a.schema,
                 PartitionSpec(partition_by=["a"], presort="b DESC"),
-                metadata=dict(a=1),
             )
             df_eq(
                 c,
                 [[None, 4], [1, 2], [3, 4]],
                 "a:double,b:int",
-                metadata=dict(a=1),
                 throw=True,
             )
             # add num_partitions, on_init should not matter
-            c = e.map(
+            c = e.map_engine.map_dataframe(
                 a,
                 select_top,
                 a.schema,
@@ -310,11 +300,9 @@ class ExecutionEngineTests(object):
             e = self.engine
             # test with multiple key with null values
             o = ArrayDataFrame(
-                [[1, None, 1], [1, None, 0], [None, None, 1]],
-                "a:double,b:double,c:int",
-                dict(a=1),
+                [[1, None, 1], [1, None, 0], [None, None, 1]], "a:double,b:double,c:int"
             )
-            c = e.map(
+            c = e.map_engine.map_dataframe(
                 o, select_top, o.schema, PartitionSpec(by=["a", "b"], presort="c")
             )
             df_eq(
@@ -334,9 +322,8 @@ class ExecutionEngineTests(object):
                     [None, 4, None],
                 ],
                 "a:datetime,b:int,c:double",
-                dict(a=1),
             )
-            c = e.map(
+            c = e.map_engine.map_dataframe(
                 o, select_top, o.schema, PartitionSpec(by=["a", "c"], presort="b DESC")
             )
             df_eq(
@@ -345,7 +332,7 @@ class ExecutionEngineTests(object):
                 "a:datetime,b:int,c:double",
                 throw=True,
             )
-            d = e.map(
+            d = e.map_engine.map_dataframe(
                 c, with_nat, "a:datetime,b:int,c:double,nat:datetime", PartitionSpec()
             )
             df_eq(
@@ -356,7 +343,9 @@ class ExecutionEngineTests(object):
             )
             # test list
             o = ArrayDataFrame([[dt, [1, 2]]], "a:datetime,b:[int]")
-            c = e.map(o, select_top, o.schema, PartitionSpec(by=["a"]))
+            c = e.map_engine.map_dataframe(
+                o, select_top, o.schema, PartitionSpec(by=["a"])
+            )
             df_eq(c, o, check_order=True, throw=True)
 
         def test_map_with_dict_col(self):
@@ -364,7 +353,9 @@ class ExecutionEngineTests(object):
             dt = datetime.now()
             # test dict
             o = ArrayDataFrame([[dt, dict(a=1)]], "a:datetime,b:{a:int}")
-            c = e.map(o, select_top, o.schema, PartitionSpec(by=["a"]))
+            c = e.map_engine.map_dataframe(
+                o, select_top, o.schema, PartitionSpec(by=["a"])
+            )
             df_eq(c, o, no_pandas=True, check_order=True, throw=True)
 
         def test_map_with_binary(self):
@@ -373,7 +364,7 @@ class ExecutionEngineTests(object):
                 [[pickle.dumps(BinaryObject("a"))], [pickle.dumps(BinaryObject("b"))]],
                 "a:bytes",
             )
-            c = e.map(o, binary_map, o.schema, PartitionSpec())
+            c = e.map_engine.map_dataframe(o, binary_map, o.schema, PartitionSpec())
             expected = ArrayDataFrame(
                 [
                     [pickle.dumps(BinaryObject("ax"))],
@@ -387,17 +378,16 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
             b = e.to_df([[6], [7]], "c:int")
-            c = e.join(a, b, how="Cross", metadata=dict(a=1))
+            c = e.join(a, b, how="Cross")
             df_eq(
                 c,
                 [[1, 2, 6], [1, 2, 7], [3, 4, 6], [3, 4, 7]],
                 "a:int,b:int,c:int",
-                dict(a=1),
             )
 
             b = e.to_df([], "c:int")
-            c = e.join(a, b, how="Cross", metadata=dict(a=1))
-            df_eq(c, [], "a:int,b:int,c:int", metadata=dict(a=1), throw=True)
+            c = e.join(a, b, how="Cross")
+            df_eq(c, [], "a:int,b:int,c:int", throw=True)
 
             a = e.to_df([], "a:int,b:int")
             b = e.to_df([], "c:int")
@@ -408,8 +398,8 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            c = e.join(a, b, how="INNER", on=["a"], metadata=dict(a=1))
-            df_eq(c, [[1, 2, 6]], "a:int,b:int,c:int", metadata=dict(a=1), throw=True)
+            c = e.join(a, b, how="INNER", on=["a"])
+            df_eq(c, [[1, 2, 6]], "a:int,b:int,c:int", throw=True)
             c = e.join(b, a, how="INNER", on=["a"])
             df_eq(c, [[6, 1, 2]], "c:int,a:int,b:int", throw=True)
 
@@ -423,8 +413,8 @@ class ExecutionEngineTests(object):
 
             a = e.to_df([], "a:int,b:int")
             b = e.to_df([], "c:str,a:int")
-            c = e.join(a, b, how="left_outer", on=["a"], metadata=dict(a=1))
-            df_eq(c, [], "a:int,b:int,c:str", metadata=dict(a=1), throw=True)
+            c = e.join(a, b, how="left_outer", on=["a"])
+            df_eq(c, [], "a:int,b:int,c:str", throw=True)
 
             a = e.to_df([], "a:int,b:str")
             b = e.to_df([], "c:int,a:int")
@@ -474,12 +464,11 @@ class ExecutionEngineTests(object):
 
             a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            c = e.join(a, b, how="left_OUTER", on=["a"], metadata=dict(a=1))
+            c = e.join(a, b, how="left_OUTER", on=["a"])
             df_eq(
                 c,
                 [[1, "2", 6], [3, "4", None]],
                 "a:int,b:str,c:int",
-                metadata=dict(a=1),
                 throw=True,
             )
             c = e.join(b, a, how="left_outer", on=["a"])
@@ -498,8 +487,8 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            c = e.join(a, b, how="semi", on=["a"], metadata=dict(a=1))
-            df_eq(c, [[1, 2]], "a:int,b:int", metadata=dict(a=1), throw=True)
+            c = e.join(a, b, how="semi", on=["a"])
+            df_eq(c, [[1, 2]], "a:int,b:int", throw=True)
             c = e.join(b, a, how="semi", on=["a"])
             df_eq(c, [[6, 1]], "c:int,a:int", throw=True)
 
@@ -516,8 +505,8 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            c = e.join(a, b, how="anti", metadata=dict(a=1), on=["a"])
-            df_eq(c, [[3, 4]], "a:int,b:int", metadata=dict(a=1), throw=True)
+            c = e.join(a, b, how="anti", on=["a"])
+            df_eq(c, [[3, 4]], "a:int,b:int", throw=True)
             c = e.join(b, a, how="anti", on=["a"])
             df_eq(c, [[2, 7]], "c:int,a:int", throw=True)
 
@@ -542,12 +531,11 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
             b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
-            c = e.union(a, b, metadata=dict(a=1))
+            c = e.union(a, b)
             df_eq(
                 c,
                 [[1, 2, 3], [4, None, 6], [1, 2, 33]],
                 "a:double,b:double,c:int",
-                metadata=dict(a=1),
                 throw=True,
             )
             c = e.union(a, b, distinct=False)
@@ -562,12 +550,11 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2, 3], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
             b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
-            c = e.subtract(a, b, metadata=dict(a=1))
+            c = e.subtract(a, b)
             df_eq(
                 c,
                 [[1, 2, 3]],
                 "a:double,b:double,c:int",
-                metadata=dict(a=1),
                 throw=True,
             )
             # TODO: EXCEPT ALL is not implemented (QPD issue)
@@ -588,12 +575,11 @@ class ExecutionEngineTests(object):
                 [[1, 2, 33], [4, None, 6], [4, None, 6], [4, None, 6]],
                 "a:double,b:double,c:int",
             )
-            c = e.intersect(a, b, metadata=dict(a=1))
+            c = e.intersect(a, b)
             df_eq(
                 c,
                 [[4, None, 6]],
                 "a:double,b:double,c:int",
-                metadata=dict(a=1),
                 throw=True,
             )
             # TODO: INTERSECT ALL is not implemented (QPD issue)
@@ -610,12 +596,11 @@ class ExecutionEngineTests(object):
             a = e.to_df(
                 [[4, None, 6], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int"
             )
-            c = e.distinct(a, metadata=dict(a=1))
+            c = e.distinct(a)
             df_eq(
                 c,
                 [[4, None, 6], [1, 2, 3]],
                 "a:double,b:double,c:int",
-                metadata=dict(a=1),
                 throw=True,
             )
 
@@ -624,7 +609,7 @@ class ExecutionEngineTests(object):
             a = e.to_df(
                 [[4, None, 6], [1, 2, 3], [4, None, None]], "a:double,b:double,c:double"
             )
-            c = e.dropna(a, metadata=(dict(a=1)))  # default
+            c = e.dropna(a)  # default
             d = e.dropna(a, how="all")
             f = e.dropna(a, how="any", thresh=2)
             g = e.dropna(a, how="any", subset=["a", "c"])
@@ -633,7 +618,6 @@ class ExecutionEngineTests(object):
                 c,
                 [[1, 2, 3]],
                 "a:double,b:double,c:double",
-                metadata=dict(a=1),
                 throw=True,
             )
             df_eq(
@@ -660,7 +644,7 @@ class ExecutionEngineTests(object):
             a = e.to_df(
                 [[4, None, 6], [1, 2, 3], [4, None, None]], "a:double,b:double,c:double"
             )
-            c = e.fillna(a, value=1, metadata=(dict(a=1)))
+            c = e.fillna(a, value=1)
             d = e.fillna(a, {"b": 99, "c": -99})
             f = e.fillna(a, value=-99, subset=["c"])
             g = e.fillna(a, {"b": 99, "c": -99}, subset=["c"])  # subset ignored
@@ -668,7 +652,6 @@ class ExecutionEngineTests(object):
                 c,
                 [[4, 1, 6], [1, 2, 3], [4, 1, 1]],
                 "a:double,b:double,c:double",
-                metadata=dict(a=1),
                 throw=True,
             )
             df_eq(
@@ -697,16 +680,15 @@ class ExecutionEngineTests(object):
             with raises(ValueError):
                 engine.sample(a, n=90, frac=0.9)  # can't set both
 
-            f = engine.sample(a, frac=0.8, replace=False, metadata=(dict(a=1)))
-            g = engine.sample(a, frac=0.8, replace=True, metadata=(dict(a=1)))
-            h = engine.sample(a, frac=0.8, seed=1, metadata=(dict(a=1)))
-            h2 = engine.sample(a, frac=0.8, seed=1, metadata=(dict(a=1)))
-            i = engine.sample(a, frac=0.8, seed=2, metadata=(dict(a=1)))
+            f = engine.sample(a, frac=0.8, replace=False)
+            g = engine.sample(a, frac=0.8, replace=True)
+            h = engine.sample(a, frac=0.8, seed=1)
+            h2 = engine.sample(a, frac=0.8, seed=1)
+            i = engine.sample(a, frac=0.8, seed=2)
             assert not df_eq(f, g, throw=False)
             df_eq(h, h2, throw=True)
             assert not df_eq(h, i, throw=False)
             assert abs(len(i.as_array()) - 80) < 10
-            assert i.metadata == dict(a=1)
 
         def test_take(self):
             e = self.engine
@@ -723,7 +705,7 @@ class ExecutionEngineTests(object):
                 ],
                 "a:str,b:int,c:long",
             )
-            b = e.take(a, n=1, presort="b desc", metadata=(dict(a=1)))
+            b = e.take(a, n=1, presort="b desc")
             c = e.take(a, n=2, presort="a desc", na_position="first")
             d = e.take(a, n=1, presort="a asc, b desc", partition_spec=ps)
             f = e.take(a, n=1, presort=None, partition_spec=ps2)
@@ -733,7 +715,6 @@ class ExecutionEngineTests(object):
                 b,
                 [[None, 4, 2]],
                 "a:str,b:int,c:long",
-                metadata=dict(a=1),
                 throw=True,
             )
             df_eq(
@@ -775,16 +756,15 @@ class ExecutionEngineTests(object):
             engine = self.engine
             a = engine.to_df([[x] for x in range(100)], "a:int")
 
-            b = engine.sample(a, n=90, replace=False, metadata=(dict(a=1)))
-            c = engine.sample(a, n=90, replace=True, metadata=(dict(a=1)))
-            d = engine.sample(a, n=90, seed=1, metadata=(dict(a=1)))
-            d2 = engine.sample(a, n=90, seed=1, metadata=(dict(a=1)))
-            e = engine.sample(a, n=90, seed=2, metadata=(dict(a=1)))
+            b = engine.sample(a, n=90, replace=False)
+            c = engine.sample(a, n=90, replace=True)
+            d = engine.sample(a, n=90, seed=1)
+            d2 = engine.sample(a, n=90, seed=1)
+            e = engine.sample(a, n=90, seed=2)
             assert not df_eq(b, c, throw=False)
             df_eq(d, d2, throw=True)
             assert not df_eq(d, e, throw=False)
             assert abs(len(e.as_array()) - 90) < 2
-            assert e.metadata == dict(a=1)
 
         def test__serialize_by_partition(self):
             e = self.engine
@@ -837,18 +817,18 @@ class ExecutionEngineTests(object):
 
             # test zip with unserialized dfs
             z3 = e.persist(e.zip(a, b, partition_spec=ps))
-            df_eq(z1, z3, throw=True, check_metadata=False)
+            df_eq(z1, z3, throw=True)
             z3 = e.persist(e.zip(a, sb, partition_spec=ps))
-            df_eq(z1, z3, throw=True, check_metadata=False)
+            df_eq(z1, z3, throw=True)
             z3 = e.persist(e.zip(sa, b, partition_spec=ps))
-            df_eq(z1, z3, throw=True, check_metadata=False)
+            df_eq(z1, z3, throw=True)
 
             z4 = e.persist(e.zip(a, b, how="left_outer", partition_spec=ps))
-            df_eq(z2, z4, throw=True, check_metadata=False)
+            df_eq(z2, z4, throw=True)
             z4 = e.persist(e.zip(a, sb, how="left_outer", partition_spec=ps))
-            df_eq(z2, z4, throw=True, check_metadata=False)
+            df_eq(z2, z4, throw=True)
             z4 = e.persist(e.zip(sa, b, how="left_outer", partition_spec=ps))
-            df_eq(z2, z4, throw=True, check_metadata=False)
+            df_eq(z2, z4, throw=True)
 
             z5 = e.persist(e.zip(a, b, how="cross"))
             assert z5.count() == 1
@@ -934,26 +914,24 @@ class ExecutionEngineTests(object):
                 comap,
                 "a:int,v:str",
                 PartitionSpec(),
-                metadata=dict(a=1),
                 on_init=on_init,
             )
-            df_eq(res, [[1, "_02,_11"]], "a:int,v:str", metadata=dict(a=1), throw=True)
+            df_eq(res, [[1, "_02,_11"]], "a:int,v:str", throw=True)
 
             # for outer joins, the NULL will be filled with empty dataframe
-            res = e.comap(z2, comap, "a:int,v:str", PartitionSpec(), metadata=dict(a=1))
+            res = e.comap(z2, comap, "a:int,v:str", PartitionSpec())
             df_eq(
                 res,
                 [[1, "_02,_11"], [3, "_01,_10"]],
                 "a:int,v:str",
-                metadata=dict(a=1),
                 throw=True,
             )
 
-            res = e.comap(z3, comap, "v:str", PartitionSpec(), metadata=dict(a=1))
-            df_eq(res, [["_03"]], "v:str", metadata=dict(a=1), throw=True)
+            res = e.comap(z3, comap, "v:str", PartitionSpec())
+            df_eq(res, [["_03"]], "v:str", throw=True)
 
-            res = e.comap(z4, comap, "v:str", PartitionSpec(), metadata=dict(a=1))
-            df_eq(res, [["_03,_12"]], "v:str", metadata=dict(a=1), throw=True)
+            res = e.comap(z4, comap, "v:str", PartitionSpec())
+            df_eq(res, [["_03,_12"]], "v:str", throw=True)
 
         def test_comap_with_key(self):
             e = self.engine
@@ -984,30 +962,27 @@ class ExecutionEngineTests(object):
                 comap,
                 "a:int,v:str",
                 PartitionSpec(),
-                metadata=dict(a=1),
                 on_init=on_init,
             )
-            df_eq(res, [[1, "x2,y1"]], "a:int,v:str", metadata=dict(a=1), throw=True)
+            df_eq(res, [[1, "x2,y1"]], "a:int,v:str", throw=True)
 
             res = e.comap(
                 z2,
                 comap,
                 "a:int,v:str",
                 PartitionSpec(),
-                metadata=dict(a=1),
                 on_init=on_init,
             )
-            df_eq(res, [[1, "x2,y1,z1"]], "a:int,v:str", metadata=dict(a=1), throw=True)
+            df_eq(res, [[1, "x2,y1,z1"]], "a:int,v:str", throw=True)
 
             res = e.comap(
                 z3,
                 comap,
                 "a:int,v:str",
                 PartitionSpec(),
-                metadata=dict(a=1),
                 on_init=on_init,
             )
-            df_eq(res, [[1, "z1"]], "a:int,v:str", metadata=dict(a=1), throw=True)
+            df_eq(res, [[1, "z1"]], "a:int,v:str", throw=True)
 
         @pytest.fixture(autouse=True)
         def init_tmpdir(self, tmpdir):

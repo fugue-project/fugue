@@ -2,6 +2,7 @@ from typing import Any, List
 
 import numpy as np
 import pandas as pd
+import pyspark
 import pyspark.rdd as pr
 import pyspark.sql as ps
 import pytest
@@ -22,6 +23,7 @@ from pyspark import SparkContext, StorageLevel
 from pyspark.sql import DataFrame as SDataFrame
 from pyspark.sql import SparkSession
 from pytest import raises
+from triad import Schema
 
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
@@ -34,19 +36,22 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def make_engine(self):
         session = SparkSession.builder.getOrCreate()
-        e = SparkExecutionEngine(session, dict(test=True))
+        e = SparkExecutionEngine(
+            session, {"test": True, "fugue.spark.use_pandas_udf": False}
+        )
         return e
+
+    def test_not_using_pandas_udf(self):
+        assert not self.engine.create_default_map_engine()._should_use_pandas_udf(
+            Schema("a:int")
+        )
 
     def test__join_outer_pandas_incompatible(self):
         return
 
     def test_to_df(self):
         e = self.engine
-        o = ArrayDataFrame(
-            [[1, 2], [None, 3]],
-            "a:double,b:int",
-            dict(a=1),
-        )
+        o = ArrayDataFrame([[1, 2], [None, 3]], "a:double,b:int")
         a = e.to_df(o)
         assert a is not o
         res = a.native.collect()
@@ -54,25 +59,17 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         assert res[1][0] == 1.0 or res[1][0] is None
         df_eq(a, o, throw=True)
 
-        o = ArrowDataFrame(
-            [[1, 2], [None, 3]],
-            "a:double,b:int",
-            dict(a=1),
-        )
+        o = ArrowDataFrame([[1, 2], [None, 3]], "a:double,b:int")
         a = e.to_df(o)
         assert a is not o
         res = a.native.collect()
         assert res[0][0] == 1.0 or res[0][0] is None
         assert res[1][0] == 1.0 or res[1][0] is None
 
-        a = e.to_df([[1, None]], "a:int,b:int", dict(a=1))
-        df_eq(a, [[1, None]], "a:int,b:int", dict(a=1), throw=True)
+        a = e.to_df([[1, None]], "a:int,b:int")
+        df_eq(a, [[1, None]], "a:int,b:int", throw=True)
 
-        o = PandasDataFrame(
-            [[{"a": "b"}, 2]],
-            "a:{a:str},b:int",
-            dict(a=1),
-        )
+        o = PandasDataFrame([[{"a": "b"}, 2]], "a:{a:str},b:int")
         a = e.to_df(o)
         assert a is not o
         res = a.as_array(type_safe=True)
@@ -80,12 +77,11 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_persist(self):
         e = self.engine
-        o = ArrayDataFrame(
-            [[1, 2]],
-            "a:int,b:int",
-            dict(a=1),
-        )
+
+        o = ArrayDataFrame([[1, 2]], "a:int,b:int")
+        o.reset_metadata({"a": 1})
         a = e.persist(o)
+        assert a.metadata == {"a": 1}
         df_eq(a, o, throw=True)
         a = e.persist(o, level=StorageLevel.MEMORY_ONLY)
         df_eq(a, o, throw=True)
@@ -101,11 +97,10 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
         with raises(NotImplementedError):
             # replace is not allowed
-            engine.sample(a, n=90, replace=True, metadata=(dict(a=1)))
+            engine.sample(a, n=90, replace=True)
 
-        b = engine.sample(a, n=90, metadata=(dict(a=1)))
+        b = engine.sample(a, n=90)
         assert abs(len(b.as_array()) - 90) < 2
-        assert b.metadata == dict(a=1)
 
     def test_infer_engine(self):
         df = self.spark_session.createDataFrame(pd.DataFrame([[0]], columns=["a"]))
@@ -115,6 +110,7 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         assert isinstance(infer_execution_engine(fdf), SparkSession)
 
 
+@pytest.mark.skipif(pyspark.__version__ < "3", reason="pyspark < 3")
 class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
     @pytest.fixture(autouse=True)
     def init_session(self, spark_session):
@@ -122,28 +118,33 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
 
     def make_engine(self):
         session = SparkSession.builder.getOrCreate()
-        e = SparkExecutionEngine(
-            session, {"test": True, "fugue.spark.use_pandas_udf": True}
-        )
-        assert e.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
+        e = SparkExecutionEngine(session, {"test": True})
         return e
 
     def test__join_outer_pandas_incompatible(self):
         return
 
+    def test_using_pandas_udf(self):
+        assert self.engine.map_engine._should_use_pandas_udf(  # type: ignore
+            Schema("a:int")
+        )
+        assert not self.engine.map_engine._should_use_pandas_udf(  # type: ignore
+            Schema("a:{x:int}")
+        )
+
     def test_sample_n(self):
         engine = self.engine
         a = engine.to_df([[x] for x in range(100)], "a:int")
 
-        b = engine.sample(a, n=90, metadata=(dict(a=1)))
+        b = engine.sample(a, n=90)
         assert abs(len(b.as_array()) - 90) < 2
-        assert b.metadata == dict(a=1)
 
     def test_map_in_pandas(self):
         if not hasattr(ps.DataFrame, "mapInPandas"):
             return
 
         def add(cursor, data):
+            # assertion for pandas udf input
             assert isinstance(data, LocalDataFrameIterableDataFrame)
 
             def get_dfs():
@@ -160,7 +161,9 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
         expected = PandasDataFrame(df.assign(zz=df.xx + df.yy), "xx:int,yy:int,zz:int")
         a = e.to_df(df)
         # no partition
-        c = e.map(a, add, "xx:int,yy:int,zz:int", PartitionSpec(num=16))
+        c = e.map_engine.map_dataframe(
+            a, add, "xx:int,yy:int,zz:int", PartitionSpec(num=16)
+        )
         df_eq(c, expected, throw=True)
 
 

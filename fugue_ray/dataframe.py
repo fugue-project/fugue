@@ -4,14 +4,18 @@ import pandas as pd
 import pyarrow as pa
 import ray
 import ray.data as rd
-from fugue.dataframe import ArrowDataFrame, DataFrame, LocalDataFrame, PandasDataFrame
+from fugue.dataframe import (
+    ArrowDataFrame,
+    DataFrame,
+    LocalBoundedDataFrame,
+    LocalDataFrame,
+)
 from fugue.dataframe.dataframe import _input_schema
 from fugue.dataframe.utils import (
     get_dataframe_column_names,
     rename_dataframe_column_names,
 )
-from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
-from triad import assert_or_throw
+from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from triad.collections.schema import Schema
 
 from ._utils.dataframe import _build_empty_arrow, build_empty, get_dataset_format
@@ -47,7 +51,6 @@ class RayDataFrame(DataFrame):
       or list or iterable of arrays
     :param schema: |SchemaLikeObject|, defaults to None. If the schema
       is different from the ``df`` schema, then type casts will happen.
-    :param metadata: |ParamsLikeObject|, defaults to None
     :param internal_schema: for internal schema, it means the schema
       is guaranteed by the provider to be consistent with the schema of
       ``df``, so no type cast will happen. Defaults to False. This is
@@ -58,21 +61,20 @@ class RayDataFrame(DataFrame):
         self,
         df: Any = None,
         schema: Any = None,
-        metadata: Any = None,
         internal_schema: bool = False,
     ):
         if internal_schema:
             schema = _input_schema(schema).assert_not_empty()
         if df is None:
             schema = _input_schema(schema).assert_not_empty()
-            super().__init__(schema, metadata)
+            super().__init__(schema)
             self._native = build_empty(schema)
             return
         if isinstance(df, rd.Dataset):
             fmt = get_dataset_format(df)
             if fmt is None:  # empty:
                 schema = _input_schema(schema).assert_not_empty()
-                super().__init__(schema, metadata)
+                super().__init__(schema)
                 self._native = build_empty(schema)
                 return
             elif fmt == "pandas":
@@ -88,13 +90,9 @@ class RayDataFrame(DataFrame):
             if schema is None:
                 schema = df.schema
         elif isinstance(df, RayDataFrame):
-            assert_or_throw(
-                metadata is None, ValueError(f"metadata must be None for {type(df)}")
-            )
             rdf = df._native
             if schema is None:
                 schema = df.schema
-            metadata = df.metadata
         elif isinstance(df, (pd.DataFrame, pd.Series)):
             if isinstance(df, pd.Series):
                 df = df.to_frame()
@@ -107,17 +105,13 @@ class RayDataFrame(DataFrame):
             t = ArrowDataFrame(df, schema)
             rdf = rd.from_arrow(t.as_arrow())
         elif isinstance(df, DataFrame):
-            assert_or_throw(
-                metadata is None, ValueError(f"metadata must be None for {type(df)}")
-            )
             rdf = rd.from_arrow(df.as_arrow(type_safe=True))
             if schema is None:
                 schema = df.schema
-            metadata = df.metadata
         else:
             raise ValueError(f"{df} is incompatible with DaskDataFrame")
         rdf, schema = self._apply_schema(rdf, schema, internal_schema)
-        super().__init__(schema, metadata)
+        super().__init__(schema)
         self._native = rdf
 
     @property
@@ -132,8 +126,8 @@ class RayDataFrame(DataFrame):
     def as_local(self) -> LocalDataFrame:
         adf = self.as_arrow()
         if adf.shape[0] == 0:
-            return ArrowDataFrame([], self.schema, metadata=self.metadata)
-        return ArrowDataFrame(adf, metadata=self.metadata)
+            return ArrowDataFrame([], self.schema)
+        return ArrowDataFrame(adf)
 
     @property
     def is_bounded(self) -> bool:
@@ -162,7 +156,7 @@ class RayDataFrame(DataFrame):
     def peek_array(self) -> Any:
         data = self.native.limit(1).to_pandas().values.tolist()
         if len(data) == 0:
-            raise FugueDataFrameEmptyError
+            raise FugueDatasetEmptyError
         return data[0]
 
     def persist(self, **kwargs: Any) -> "RayDataFrame":
@@ -233,19 +227,13 @@ class RayDataFrame(DataFrame):
     ) -> Iterable[Any]:
         yield from self.as_array(columns=columns, type_safe=type_safe)
 
-    def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
-        """Get first n rows of the dataframe as 2-dimensional array
-        :param n: number of rows
-        :param columns: selected columns, defaults to None (all columns)
-        :return: 2-dimensional array
-        """
-        df: DataFrame = self
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
         if columns is not None:
-            df = df[columns]
-        pdf = df.native.limit(n).to_pandas()  # type: ignore
-        if len(pdf) == 0:
-            return []
-        return PandasDataFrame(pdf, schema=df.schema).head(n)
+            return self[columns].head(n)
+        pdf = RayDataFrame(self.native.limit(n), schema=self.schema)
+        return pdf.as_local()  # type: ignore
 
     def _apply_schema(
         self, rdf: rd.Dataset, schema: Optional[Schema], internal_schema: bool

@@ -6,13 +6,14 @@ from pyspark.sql import SparkSession
 from fugue_spark import SparkExecutionEngine
 
 
-def test_sql():
-    session = SparkSession.builder.getOrCreate()
+def test_sql(spark_session):
     register_execution_engine(
-        "s",
-        lambda conf, **kwargs: SparkExecutionEngine(conf=conf, spark_session=session),
+        "_spark",
+        lambda conf, **kwargs: SparkExecutionEngine(
+            conf=conf, spark_session=spark_session
+        ),
     )
-    df = session.createDataFrame(pd.DataFrame([[0], [1]], columns=["a"]))
+    df = spark_session.createDataFrame(pd.DataFrame([[0], [1]], columns=["a"]))
     dag = FugueSQLWorkflow()
     dag(
         """
@@ -21,4 +22,4 @@ def test_sql():
     """,
         df=df,
     )
-    dag.run("s")
+    dag.run("_spark")

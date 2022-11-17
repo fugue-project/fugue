@@ -3,8 +3,14 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 import pyarrow as pa
 from duckdb import DuckDBPyRelation
-from fugue import ArrowDataFrame, DataFrame, LocalBoundedDataFrame, LocalDataFrame
-from fugue.exceptions import FugueDataFrameEmptyError, FugueDataFrameOperationError
+from fugue import (
+    ArrowDataFrame,
+    DataFrame,
+    LocalBoundedDataFrame,
+    LocalDataFrame,
+    ArrayDataFrame,
+)
+from fugue.exceptions import FugueDatasetEmptyError, FugueDataFrameOperationError
 from triad import Schema
 
 from fugue_duckdb._utils import to_duck_type, to_pa_type
@@ -14,15 +20,14 @@ class DuckDataFrame(LocalBoundedDataFrame):
     """DataFrame that wraps DuckDB ``DuckDBPyRelation``.
 
     :param rel: ``DuckDBPyRelation`` object
-    :param metadata: dict-like object with string keys, default ``None``
     """
 
-    def __init__(self, rel: DuckDBPyRelation, metadata: Any = None):
+    def __init__(self, rel: DuckDBPyRelation):
         self._rel = rel
         schema = Schema(
             [pa.field(x, to_pa_type(y)) for x, y in zip(rel.columns, rel.types)]
         )
-        super().__init__(schema=schema, metadata=metadata)
+        super().__init__(schema=schema)
 
     @property
     def native(self) -> DuckDBPyRelation:
@@ -36,8 +41,8 @@ class DuckDataFrame(LocalBoundedDataFrame):
     def peek_array(self) -> Any:
         res = self._rel.fetchone()
         if res is None:
-            raise FugueDataFrameEmptyError()
-        return list(res)
+            raise FugueDatasetEmptyError()
+        return list(res)  # type: ignore
 
     def count(self) -> int:
         return self._rel.aggregate("count(1) AS ct").fetchone()[0]
@@ -83,7 +88,7 @@ class DuckDataFrame(LocalBoundedDataFrame):
         return self._rel.to_df()
 
     def as_local(self) -> LocalDataFrame:
-        return ArrowDataFrame(self.as_arrow(), metadata=self.metadata)
+        return ArrowDataFrame(self.as_arrow())
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
@@ -100,10 +105,12 @@ class DuckDataFrame(LocalBoundedDataFrame):
         else:
             yield from self._fetchall(self._rel)
 
-    def head(self, n: int, columns: Optional[List[str]] = None) -> List[Any]:
+    def head(
+        self, n: int, columns: Optional[List[str]] = None
+    ) -> LocalBoundedDataFrame:
         if columns is not None:
             return self[columns].head(n)
-        return self._fetchall(self._rel.limit(n))
+        return ArrayDataFrame(self._fetchall(self._rel.limit(n)), schema=self.schema)
 
     def _fetchall(self, rel: DuckDBPyRelation) -> List[List[Any]]:
         map_pos = [i for i, t in enumerate(self.schema.types) if pa.types.is_map(t)]
