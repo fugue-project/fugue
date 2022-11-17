@@ -7,7 +7,7 @@ from triad.collections.schema import Schema
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.sql._visitors import _Extensions, _VisitorBase
-from fugue.sql.exceptions import FugueSQLSyntaxError
+from fugue.exceptions import FugueSQLSyntaxError
 from fugue.workflow.workflow import FugueWorkflow
 
 _PARSE_MODE = "auto"

@@ -111,5 +111,4 @@ make test      - All tests
 make testcore  - All Fugue code not specific to Spark or Dask
 make testspark - Only the Spark specific tests
 make testdask  - Only the Dask specific tests
-make testsql   - For Fugue SQL tests only
 ```

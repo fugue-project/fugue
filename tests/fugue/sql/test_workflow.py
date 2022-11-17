@@ -11,7 +11,7 @@ from fugue import (
     fsql,
 )
 from fugue.dataframe.utils import _df_eq
-from fugue.sql.exceptions import FugueSQLError
+from fugue.exceptions import FugueSQLError
 
 
 def test_workflow_conf():

@@ -31,6 +31,7 @@ from triad.utils.pyarrow import to_pa_datatype
 from triad.utils.string import validate_triad_var_name
 
 from ..collections.partition import PartitionSpec
+from ..exceptions import FugueSQLError, FugueSQLRuntimeError, FugueSQLSyntaxError
 from ..execution.execution_engine import SQLEngine
 from ..extensions.creator.convert import _to_creator
 from ..extensions.outputter.convert import _to_outputter
@@ -39,7 +40,6 @@ from ..extensions.transformer.convert import _to_output_transformer, _to_transfo
 from ..workflow.module import _to_module
 from ..workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 from ._utils import LazyWorkflowDataFrame
-from .exceptions import FugueSQLError, FugueSQLRuntimeError, FugueSQLSyntaxError
 
 
 class FugueSQLHooks(object):

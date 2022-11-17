@@ -22,7 +22,7 @@ from fugue import (
 )
 from fugue.extensions.transformer.convert import _to_output_transformer
 from fugue.sql._visitors import FugueSQLHooks, _Extensions, _VisitorBase
-from fugue.sql.exceptions import FugueSQLError
+from fugue.exceptions import FugueSQLError
 
 
 def test_create_data():

@@ -39,4 +39,4 @@ jobs:
     - name: Install dependencies
       run: make devenv
     - name: Test
-      run: make testcore testsql
+      run: make testcore

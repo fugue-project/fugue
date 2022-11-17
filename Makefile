@@ -92,9 +92,6 @@ testray:
 testduck:
 	python3 -b -m pytest --reruns 2 --only-rerun 'Overflow in cast' tests/fugue_duckdb
 
-testsql:
-	python3 -b -m pytest tests/fugue_sql
-
 testibis:
 	python3 -b -m pytest tests/fugue_ibis
 
