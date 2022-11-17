@@ -7,6 +7,5 @@ from fugue import FugueSQLWorkflow, fsql
 
 warnings.warn(
     "fsql and FugueSQLWorkflow now should be imported directly from fugue, "
-    "fugue_sql will be removed in 0.9.0",
-    DeprecationWarning,
+    "fugue_sql will be removed in 0.9.0"
 )
