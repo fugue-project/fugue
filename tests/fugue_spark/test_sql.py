@@ -1,6 +1,6 @@
 import pandas as pd
 from fugue import register_execution_engine
-from fugue_sql import FugueSQLWorkflow
+from fugue import FugueSQLWorkflow
 from pyspark.sql import SparkSession
 
 from fugue_spark import SparkExecutionEngine

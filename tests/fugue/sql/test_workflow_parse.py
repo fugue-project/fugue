@@ -1,6 +1,12 @@
 import json
 from typing import Any, Iterable, List
 
+from fugue_sql_antlr import FugueSQLParser
+from pytest import raises
+from triad import to_uuid
+from triad.collections.schema import Schema
+from triad.utils.convert import get_caller_global_local_vars
+
 from fugue import (
     DataFrame,
     DataFrames,
@@ -15,14 +21,8 @@ from fugue import (
     register_sql_engine,
 )
 from fugue.extensions.transformer.convert import _to_output_transformer
-from pytest import raises
-from triad import to_uuid
-from triad.collections.schema import Schema
-from triad.utils.convert import get_caller_global_local_vars
-
-from fugue_sql_antlr import FugueSQLParser
-from fugue_sql._visitors import FugueSQLHooks, _Extensions, _VisitorBase
-from fugue_sql.exceptions import FugueSQLError
+from fugue.sql._visitors import FugueSQLHooks, _Extensions, _VisitorBase
+from fugue.sql.exceptions import FugueSQLError
 
 
 def test_create_data():

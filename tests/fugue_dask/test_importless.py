@@ -1,5 +1,5 @@
 from fugue import FugueWorkflow
-from fugue_sql import fsql
+from fugue import fsql
 from dask.distributed import Client
 
 

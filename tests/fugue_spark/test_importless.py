@@ -1,5 +1,5 @@
 from fugue import FugueWorkflow, transform
-from fugue_sql import fsql
+from fugue import fsql
 from pyspark.sql import SparkSession, DataFrame
 import pandas as pd
 

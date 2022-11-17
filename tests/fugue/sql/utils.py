@@ -1,9 +1,11 @@
 import itertools
 
 from antlr4.tree.Tree import TerminalNode
-from fugue_sql.exceptions import FugueSQLSyntaxError
-from fugue_sql._parse import FugueSQL
+
+# from fugue.sql._parse import FugueSQL
 from pytest import raises
+
+from fugue.sql.exceptions import FugueSQLSyntaxError
 
 
 def good_single_syntax(

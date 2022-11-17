@@ -1,4 +1,4 @@
-from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowRuntimeError
+from ..exceptions import FugueWorkflowCompileError, FugueWorkflowRuntimeError
 
 
 class FugueSQLError(FugueWorkflowCompileError):

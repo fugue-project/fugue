@@ -1,21 +1,21 @@
 from builtins import isinstance
 from typing import Any, Dict, Tuple
 
-from fugue import (
-    DataFrame,
-    FugueWorkflow,
-    WorkflowDataFrame,
-    WorkflowDataFrames,
-    Yielded,
-)
-from fugue.constants import FUGUE_CONF_SQL_IGNORE_CASE
-from fugue.workflow import is_acceptable_raw_df
 from fugue_sql_antlr import FugueSQLParser
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars
 
-from fugue_sql._utils import LazyWorkflowDataFrame, fill_sql_template
-from fugue_sql._visitors import FugueSQLHooks, _Extensions
+from ..collections.yielded import Yielded
+from ..constants import FUGUE_CONF_SQL_IGNORE_CASE
+from ..dataframe.dataframe import DataFrame
+from ..workflow.workflow import (
+    FugueWorkflow,
+    WorkflowDataFrame,
+    WorkflowDataFrames,
+    is_acceptable_raw_df,
+)
+from ._utils import LazyWorkflowDataFrame, fill_sql_template
+from ._visitors import FugueSQLHooks, _Extensions
 
 
 class FugueSQLWorkflow(FugueWorkflow):

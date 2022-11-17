@@ -1,7 +1,7 @@
 import pandas as pd
 from fugue import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames, module
 from fugue.workflow.module import _to_module, _ModuleFunctionWrapper
-from fugue_sql import FugueSQLWorkflow
+from fugue import FugueSQLWorkflow
 from pytest import raises
 from fugue.exceptions import FugueInterfacelessError
 
