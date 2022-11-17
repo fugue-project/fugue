@@ -5,7 +5,8 @@ tasks:
   - init: |
       sudo mkdir -p /usr/local/share/jupyter
       sudo chmod -R 777 /usr/local/share/jupyter
-      sudo make devenv
+      sudo chmod -R 777 /usr/local/lib/python3.8/site-packages/pyspark
+      make devenv
 
 github:
   prebuilds:
