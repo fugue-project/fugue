@@ -1,8 +1,9 @@
 # flake8: noqa
-from fugue_version import __version__
 from triad.collections import Schema
 from triad.collections.fs import FileSystem
 
+from fugue.bag.array_bag import ArrayBag
+from fugue.bag.bag import Bag
 from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.collections.yielded import Yielded, YieldedFile
 from fugue.constants import register_global_conf
@@ -74,5 +75,6 @@ from fugue.rpc import (
 from fugue.workflow._workflow_context import FugueWorkflowContext
 from fugue.workflow.module import module
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
+from fugue_version import __version__
 
 _register()
