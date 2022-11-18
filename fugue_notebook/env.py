@@ -11,6 +11,7 @@ from IPython.core.magic import Magics, cell_magic, magics_class, needs_local_sco
 from IPython.display import HTML, display
 from triad import ParamDict
 from triad.utils.convert import to_instance
+from triad.utils.pyarrow import _field_to_expression
 
 
 class NotebookSetup(object):
@@ -98,6 +99,8 @@ def _display_dataframe_in_notebook(
     else:
         count = -1
     pdf = ds.head(n).as_pandas()
+    cols = [_field_to_expression(f) for f in ds.schema.fields]
+    pdf.columns = cols
     components.append(pdf)
     if count >= 0:
         components.append(HTML(f"<strong>total count: {count}</strong>"))

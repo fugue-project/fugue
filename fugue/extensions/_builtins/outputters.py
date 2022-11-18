@@ -27,12 +27,12 @@ class Show(Outputter):
         n = self.params.get("n", 10)
         with_count = self.params.get("with_count", False)
         with Show.LOCK:
-            n = 0
+            m = 0
             for df in dfs.values():
                 display_dataset(
-                    df, n=n, with_count=with_count, title=title if n == 0 else None
+                    df, n=n, with_count=with_count, title=title if m == 0 else None
                 )
-                n += 1
+                m += 1
 
 
 class AssertEqual(Outputter):
