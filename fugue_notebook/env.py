@@ -3,14 +3,23 @@ import html
 import json
 from typing import Any, Dict, List, Optional
 
-import fugue_sql
-from fugue import DataFrame, ExecutionEngine, display_dataset, make_execution_engine
-from fugue.dataframe import YieldedDataFrame
-from fugue.exceptions import FugueSQLSyntaxError
 from IPython.core.magic import Magics, cell_magic, magics_class, needs_local_scope
+from IPython import get_ipython
 from IPython.display import HTML, display
 from triad import ParamDict
 from triad.utils.convert import to_instance
+from triad.utils.pyarrow import _field_to_expression
+
+import fugue_sql
+from fugue import (
+    DataFrame,
+    DataFrameDisplay,
+    ExecutionEngine,
+    get_dataset_display,
+    make_execution_engine,
+)
+from fugue.dataframe import YieldedDataFrame
+from fugue.exceptions import FugueSQLSyntaxError
 
 
 class NotebookSetup(object):
@@ -84,25 +93,41 @@ class _FugueSQLMagics(Magics):
         return make_execution_engine(engine, cf)
 
 
-@display_dataset.candidate(
-    lambda ds, *args, **kwargs: isinstance(ds, DataFrame), priority=3.0
+class JupyterDataFrameDisplay(DataFrameDisplay):
+    def show(
+        self, n: int = 10, with_count: bool = False, title: Optional[str] = None
+    ) -> None:
+        components: List[Any] = []
+        if title is not None:
+            components.append(HTML(f"<h3>{html.escape(title)}</h3>"))
+        if with_count:
+            count = self.df.count()
+        else:
+            count = -1
+        components.append(HTML(self._generate_df_html(n)))
+        if count >= 0:
+            components.append(HTML(f"<strong>total count: {count}</strong>"))
+        display(*components)
+
+    def repr_html(self) -> str:
+        return self._generate_df_html(10)
+
+    def _generate_df_html(self, n: int) -> str:
+        res: List[str] = []
+        pdf = self.df.head(n).as_pandas()
+        cols = [_field_to_expression(f) for f in self.df.schema.fields]
+        pdf.columns = cols
+        res.append(pdf._repr_html_())
+        schema = type(self.df).__name__ + ": " + str(self.df.schema)
+        res.append('<font size="-1">' + html.escape(schema) + "</font>")
+        return "\n".join(res)
+
+
+@get_dataset_display.candidate(
+    lambda ds: get_ipython() is not None and isinstance(ds, DataFrame), priority=3.0
 )
-def _display_dataframe_in_notebook(
-    ds: DataFrame, n: int = 10, with_count: bool = False, title: Optional[str] = None
-):
-    components: List[Any] = []
-    if title is not None:
-        components.append(HTML(f"<h3>{html.escape(title)}</h3>"))
-    if with_count:
-        count = ds.count()
-    else:
-        count = -1
-    pdf = ds.head(n).as_pandas()
-    components.append(pdf)
-    if count >= 0:
-        components.append(HTML(f"<strong>total count: {count}</strong>"))
-    components.append(HTML(f"<small>schema: {ds.schema}</small>"))
-    display(*components)
+def _get_jupyter_dataframe_display(ds: DataFrame):
+    return JupyterDataFrameDisplay(ds)
 
 
 def _setup_fugue_notebook(

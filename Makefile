@@ -74,6 +74,13 @@ jupyter:
 	jupyter nbextension enable fugue_notebook --py
 	jupyter notebook --port=8888 --ip=0.0.0.0 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*'
 
+lab:
+	mkdir -p tmp
+	pip install .
+	pip install fugue-jupyter
+	fugue-jupyter install startup
+	jupyter lab --port=8888 --ip=0.0.0.0 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*'
+
 test:
 	python3 -b -m pytest --reruns 2 --only-rerun 'Overflow in cast' --only-rerun 'Table or view not found' tests/
 

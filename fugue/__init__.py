@@ -3,19 +3,24 @@ from triad.collections import Schema
 from triad.collections.fs import FileSystem
 
 from fugue.bag.array_bag import ArrayBag
-from fugue.bag.bag import Bag
+from fugue.bag.bag import Bag, BagDisplay
 from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.collections.yielded import Yielded, YieldedFile
 from fugue.constants import register_global_conf
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.arrow_dataframe import ArrowDataFrame
-from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, LocalDataFrame
+from fugue.dataframe.dataframe import (
+    DataFrame,
+    DataFrameDisplay,
+    LocalBoundedDataFrame,
+    LocalDataFrame,
+)
 from fugue.dataframe.dataframe_iterable_dataframe import LocalDataFrameIterableDataFrame
 from fugue.dataframe.dataframes import DataFrames
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import to_local_bounded_df, to_local_df
-from fugue.dataset import Dataset, display_dataset
+from fugue.dataset import Dataset, DatasetDisplay, get_dataset_display
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 from fugue.execution.factory import (
     infer_execution_engine,

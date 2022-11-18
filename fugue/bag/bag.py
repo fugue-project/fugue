@@ -1,9 +1,7 @@
 from abc import abstractmethod
 from typing import Any, List, Optional
 
-from triad import SerializableRLock
-
-from ..dataset import Dataset, display_dataset
+from ..dataset import Dataset, DatasetDisplay, get_dataset_display
 
 
 class Bag(Dataset):
@@ -66,33 +64,40 @@ class LocalBoundedBag(LocalBag):
         return True
 
 
-_SHOW_LOCK = SerializableRLock()
+class BagDisplay(DatasetDisplay):
+    """:class:`~.Bag` plain display class"""
+
+    @property
+    def bg(self) -> Bag:
+        """The target :class:`~.Bag`"""
+        return self._ds  # type: ignore
+
+    def show(
+        self, n: int = 10, with_count: bool = False, title: Optional[str] = None
+    ) -> None:
+        head_rows = self.bg.head(n).as_array()
+        if len(head_rows) < n:
+            count = len(head_rows)
+        else:
+            count = self.bg.count() if with_count else -1
+        with DatasetDisplay._SHOW_LOCK:
+            if title is not None and title != "":
+                print(title)
+            print(type(self.bg).__name__)
+            print(head_rows)
+            if count >= 0:
+                print(f"Total count: {count}")
+                print("")
+            if self.bg.has_metadata:
+                print("Metadata:")
+                try:
+                    # try pretty print, but if not convertible to json, print original
+                    print(self.bg.metadata.to_json(indent=True))
+                except Exception:  # pragma: no cover
+                    print(self.bg.metadata)
+                print("")
 
 
-@display_dataset.candidate(
-    lambda ds, *args, **kwargs: isinstance(ds, Bag), priority=0.1
-)
-def _display_bag(
-    ds: Bag, n: int = 10, with_count: bool = False, title: Optional[str] = None
-):
-    head_rows = ds.head(n).as_array()
-    if len(head_rows) < n:
-        count = len(head_rows)
-    else:
-        count = ds.count() if with_count else -1
-    with _SHOW_LOCK:
-        if title is not None and title != "":
-            print(title)
-        print(type(ds).__name__)
-        print(head_rows)
-        if count >= 0:
-            print(f"Total count: {count}")
-            print("")
-        if ds.has_metadata:
-            print("Metadata:")
-            try:
-                # try pretty print, but if not convertible to json, print original
-                print(ds.metadata.to_json(indent=True))
-            except Exception:  # pragma: no cover
-                print(ds.metadata)
-            print("")
+@get_dataset_display.candidate(lambda ds: isinstance(ds, Bag), priority=0.1)
+def _get_bag_display(ds: Bag):
+    return BagDisplay(ds)

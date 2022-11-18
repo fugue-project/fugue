@@ -7,6 +7,8 @@ def test_show():
     df = ArrayDataFrame(schema="a:str,b:str")
     df.show()
 
+    assert repr(df) == df._repr_html_()
+
     s = " ".join(["x"] * 2)
     df = ArrayDataFrame([[s, 1], ["b", 2]], "a:str,b:str")
     df.show()
