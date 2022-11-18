@@ -7,7 +7,7 @@ import pyarrow as pa
 from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, PartitionSpec
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_dask import DaskDataFrame
-from fugue_sql import fsql
+from fugue import fsql
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 from pytest import raises

@@ -48,3 +48,15 @@ class FugueWorkflowRuntimeError(FugueWorkflowError):
 
 class FugueWorkflowRuntimeValidationError(FugueWorkflowRuntimeError):
     """Fugue workflow runtime validation error"""
+
+
+class FugueSQLError(FugueWorkflowCompileError):
+    """Fugue SQL error"""
+
+
+class FugueSQLSyntaxError(FugueSQLError):
+    """Fugue SQL syntax error"""
+
+
+class FugueSQLRuntimeError(FugueWorkflowRuntimeError):
+    """Fugue SQL runtime error"""

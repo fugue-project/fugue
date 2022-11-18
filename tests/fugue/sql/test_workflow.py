@@ -1,15 +1,17 @@
 import os
 
 import pandas as pd
-from fugue.dataframe import DataFrame
-from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.utils import _df_eq
-from fugue.execution.native_execution_engine import NativeExecutionEngine
-from fugue.extensions._builtins.outputters import Show
 from pytest import raises
 
-from fugue_sql import FugueSQLWorkflow, fsql
-from fugue_sql.exceptions import FugueSQLError, FugueSQLSyntaxError
+from fugue import (
+    ArrayDataFrame,
+    DataFrame,
+    FugueSQLWorkflow,
+    NativeExecutionEngine,
+    fsql,
+)
+from fugue.dataframe.utils import _df_eq
+from fugue.exceptions import FugueSQLError
 
 
 def test_workflow_conf():

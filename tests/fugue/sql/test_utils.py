@@ -1,4 +1,4 @@
-from fugue_sql._utils import fill_sql_template
+from fugue.sql._utils import fill_sql_template
 
 
 def test_fill_sql_template():

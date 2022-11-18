@@ -2,11 +2,12 @@ import re
 from typing import Any, Dict, Optional
 
 import jinja2
-from fugue import FugueWorkflow, WorkflowDataFrame, Yielded
 from jinja2 import Template
 from triad import assert_or_throw
 
-from fugue_sql.exceptions import FugueSQLError
+from ..collections import Yielded
+from ..exceptions import FugueSQLError
+from ..workflow.workflow import FugueWorkflow, WorkflowDataFrame
 
 MATCH_QUOTED_STRING = r"([\"'])(({|%|})*)\1"
 

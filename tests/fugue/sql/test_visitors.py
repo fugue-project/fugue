@@ -1,13 +1,14 @@
 import json
 
-from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
-from fugue.workflow.workflow import FugueWorkflow
-from fugue_sql.exceptions import FugueSQLSyntaxError
 from fugue_sql_antlr import FugueSQLParser
-from fugue_sql._visitors import _Extensions, _VisitorBase
 from pytest import raises
 from triad.collections.schema import Schema
+
+from fugue.collections.partition import PartitionSpec
+from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
+from fugue.sql._visitors import _Extensions, _VisitorBase
+from fugue.exceptions import FugueSQLSyntaxError
+from fugue.workflow.workflow import FugueWorkflow
 
 _PARSE_MODE = "auto"
 

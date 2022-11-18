@@ -1,7 +1,7 @@
 import dask.dataframe as dd
 import pandas as pd
 from fugue import register_execution_engine
-from fugue_sql import FugueSQLWorkflow
+from fugue import FugueSQLWorkflow
 
 from fugue_dask import DaskExecutionEngine
 

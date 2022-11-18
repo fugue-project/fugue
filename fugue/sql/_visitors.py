@@ -11,23 +11,13 @@ from typing import (
     Union,
     no_type_check,
 )
-from antlr4 import ParserRuleContext
 
 import pyarrow as pa
+from antlr4 import ParserRuleContext
 from antlr4.Token import CommonToken
 from antlr4.tree.Tree import TerminalNode, Token, Tree
-from fugue import (
-    FugueWorkflow,
-    PartitionSpec,
-    SQLEngine,
-    WorkflowDataFrame,
-    WorkflowDataFrames,
-)
-from fugue.extensions.creator.convert import _to_creator
-from fugue.extensions.outputter.convert import _to_outputter
-from fugue.extensions.processor.convert import _to_processor
-from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
-from fugue.workflow.module import _to_module
+from fugue_sql_antlr import FugueSQLParser, FugueSQLVisitor
+from fugue_sql_antlr._parser.fugue_sqlParser import fugue_sqlParser as fp
 from triad import to_uuid
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
@@ -40,14 +30,16 @@ from triad.utils.convert import (
 from triad.utils.pyarrow import to_pa_datatype
 from triad.utils.string import validate_triad_var_name
 
-from fugue_sql_antlr._parser.fugue_sqlParser import fugue_sqlParser as fp
-from fugue_sql_antlr import FugueSQLVisitor, FugueSQLParser
-from fugue_sql._utils import LazyWorkflowDataFrame
-from fugue_sql.exceptions import (
-    FugueSQLError,
-    FugueSQLRuntimeError,
-    FugueSQLSyntaxError,
-)
+from ..collections.partition import PartitionSpec
+from ..exceptions import FugueSQLError, FugueSQLRuntimeError, FugueSQLSyntaxError
+from ..execution.execution_engine import SQLEngine
+from ..extensions.creator.convert import _to_creator
+from ..extensions.outputter.convert import _to_outputter
+from ..extensions.processor.convert import _to_processor
+from ..extensions.transformer.convert import _to_output_transformer, _to_transformer
+from ..workflow.module import _to_module
+from ..workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
+from ._utils import LazyWorkflowDataFrame
 
 
 class FugueSQLHooks(object):

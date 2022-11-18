@@ -51,7 +51,7 @@ def register_execution_engine(
 
             from pyspark.sql import SparkSession
             from fugue_spark import SparkExecutionEngine
-            from fugue_sql import fsql
+            from fugue import fsql
 
             register_execution_engine(
                 SparkSession,

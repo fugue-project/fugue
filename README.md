@@ -153,7 +153,7 @@ This syntax is simpler, cleaner, and more maintainable than the PySpark equivale
 A SQL-based language capable of expressing end-to-end workflows. The `map_letter_to_food()` function above is used in the SQL expression below. This is how to use a Python-defined transformer along with the standard SQL `SELECT` statement.
 
 ```python
-from fugue_sql import fsql
+from fugue import fsql
 import json
 
 query = """

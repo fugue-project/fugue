@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import fugue_sql
 from fugue import DataFrame, ExecutionEngine, display_dataset, make_execution_engine
 from fugue.dataframe import YieldedDataFrame
-from fugue_sql.exceptions import FugueSQLSyntaxError
+from fugue.exceptions import FugueSQLSyntaxError
 from IPython.core.magic import Magics, cell_magic, magics_class, needs_local_scope
 from IPython.display import HTML, display
 from triad import ParamDict
