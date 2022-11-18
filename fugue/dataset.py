@@ -1,35 +1,11 @@
+import html
 from abc import ABC, abstractmethod
 from typing import Any, Optional
-from triad import ParamDict, assert_or_throw
-from .exceptions import FugueDatasetEmptyError
+
+from triad import ParamDict, SerializableRLock, assert_or_throw
+
 from ._utils.registry import fugue_plugin
-
-
-@fugue_plugin
-def display_dataset(
-    ds: "Dataset", n: int = 10, with_count: bool = False, title: Optional[str] = None
-) -> None:  # pragma: no cover
-    """General function to display a :class:`~.Dataset`
-
-    .. admonition:: Example: how to register a custom display
-
-        .. code-block:: python
-
-            from fugue import display_dataset, DataFrame
-
-            # higher priority will overwrite the existing display functions
-            @display_dataset.candidate(
-                lambda ds, *args, **kwargs: isinstance(ds, DataFrame), priority=1.0)
-            def my_dataframe_display(ds, n=10, with_count=False, title=None):
-                print(type(ds))
-
-    :param ds: the Dataset to be displayed
-    :param n: top n items to display, defaults to 10
-    :param with_count: whether to display the total count, defaults to False
-    :param title: title to display, defaults to None
-    """
-
-    raise NotImplementedError(f"No matching display function registered for {type(ds)}")
+from .exceptions import FugueDatasetEmptyError
 
 
 class Dataset(ABC):
@@ -91,6 +67,13 @@ class Dataset(ABC):
         """Get number of rows of this dataframe"""
         raise NotImplementedError
 
+    def assert_not_empty(self) -> None:
+        """Assert this dataframe is not empty
+
+        :raises FugueDatasetEmptyError: if it is empty
+        """
+        assert_or_throw(not self.empty, FugueDatasetEmptyError("dataframe is empty"))
+
     def show(
         self, n: int = 10, with_count: bool = False, title: Optional[str] = None
     ) -> None:
@@ -107,11 +90,60 @@ class Dataset(ABC):
             need to :func:`fugue.execution.execution_engine.ExecutionEngine.persist`
             the dataset.
         """
-        return display_dataset(self, n=n, with_count=with_count, title=title)
+        return get_dataset_display(self).show(n=n, with_count=with_count, title=title)
 
-    def assert_not_empty(self) -> None:
-        """Assert this dataframe is not empty
+    def __repr__(self):
+        """String representation of the Dataset"""
+        return get_dataset_display(self).repr()
 
-        :raises FugueDatasetEmptyError: if it is empty
+    def _repr_html_(self):
+        """HTML representation of the Dataset"""
+        return get_dataset_display(self).repr_html()
+
+
+class DatasetDisplay(ABC):
+    """The base class for display handlers of :class:`~.Dataset`
+
+    :param ds: the Dataset
+    """
+
+    _SHOW_LOCK = SerializableRLock()
+
+    def __init__(self, ds: Dataset):
+        self._ds = ds
+
+    @abstractmethod
+    def show(
+        self, n: int = 10, with_count: bool = False, title: Optional[str] = None
+    ) -> None:  # pragma: no cover
+        """Show the :class:`~.Dataset`
+
+        :param n: top n items to display, defaults to 10
+        :param with_count: whether to display the total count, defaults to False
+        :param title: title to display, defaults to None
         """
-        assert_or_throw(not self.empty, FugueDatasetEmptyError("dataframe is empty"))
+        raise NotImplementedError
+
+    def repr(self) -> str:
+        """The string representation of the :class:`~.Dataset`
+
+        :return: the string representation
+        """
+        return str(type(self._ds).__name__)
+
+    def repr_html(self) -> str:
+        """The HTML representation of the :class:`~.Dataset`
+
+        :return: the HTML representation
+        """
+        return html.escape(self.repr())
+
+
+@fugue_plugin
+def get_dataset_display(ds: "Dataset") -> DatasetDisplay:  # pragma: no cover
+    """Get the display class to display a :class:`~.Dataset`
+
+    :param ds: the Dataset to be displayed
+    """
+
+    raise NotImplementedError(f"No matching DatasetDisplay registered for {type(ds)}")

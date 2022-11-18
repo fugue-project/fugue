@@ -1,21 +1,18 @@
 from typing import List, no_type_check
 
+from triad import ParamDict, Schema, SerializableRLock, assert_or_throw
+from triad.utils.convert import to_type
+
 from fugue.collections.partition import PartitionCursor
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq, to_local_bounded_df
-from fugue.dataset import display_dataset
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution.execution_engine import _generate_comap_empty_dfs
 from fugue.extensions.outputter import Outputter
 from fugue.extensions.transformer.convert import _to_output_transformer
 from fugue.extensions.transformer.transformer import CoTransformer, Transformer
 from fugue.rpc import EmptyRPCHandler, to_rpc_handler
-from triad import SerializableRLock
-from triad.collections.dict import ParamDict
-from triad.collections.schema import Schema
-from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import to_type
 
 
 class Show(Outputter):
@@ -29,9 +26,7 @@ class Show(Outputter):
         with Show.LOCK:
             m = 0
             for df in dfs.values():
-                display_dataset(
-                    df, n=n, with_count=with_count, title=title if m == 0 else None
-                )
+                df.show(n=n, with_count=with_count, title=title if m == 0 else None)
                 m += 1
 
 

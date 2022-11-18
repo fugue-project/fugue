@@ -12,7 +12,7 @@ from triad.utils.pandas_like import PD_UTILS
 
 from .._utils.display import PrettyTable
 from ..collections.yielded import Yielded
-from ..dataset import Dataset, display_dataset
+from ..dataset import Dataset, DatasetDisplay, get_dataset_display
 from ..exceptions import FugueDataFrameOperationError
 
 
@@ -374,38 +374,45 @@ class YieldedDataFrame(Yielded):
         return self._df
 
 
-_SHOW_LOCK = SerializableRLock()
+class DataFrameDisplay(DatasetDisplay):
+    """:class:`~.DataFrame` plain display class"""
+
+    @property
+    def df(self) -> DataFrame:
+        """The target :class:`~.DataFrame`"""
+        return self._ds  # type: ignore
+
+    def show(
+        self, n: int = 10, with_count: bool = False, title: Optional[str] = None
+    ) -> None:
+        best_width = 100
+        head_rows = self.df.head(n).as_array(type_safe=True)
+        if len(head_rows) < n:
+            count = len(head_rows)
+        else:
+            count = self.df.count() if with_count else -1
+        with DatasetDisplay._SHOW_LOCK:
+            if title is not None and title != "":
+                print(title)
+            print(type(self.df).__name__)
+            tb = PrettyTable(self.df.schema, head_rows, best_width)
+            print("\n".join(tb.to_string()))
+            if count >= 0:
+                print(f"Total count: {count}")
+                print("")
+            if self.df.has_metadata:
+                print("Metadata:")
+                try:
+                    # try pretty print, but if not convertible to json, print original
+                    print(self.df.metadata.to_json(indent=True))
+                except Exception:  # pragma: no cover
+                    print(self.df.metadata)
+                print("")
 
 
-@display_dataset.candidate(
-    lambda ds, *args, **kwargs: isinstance(ds, DataFrame), priority=0.1
-)
-def _display_dataframe(
-    ds: DataFrame, n: int = 10, with_count: bool = False, title: Optional[str] = None
-):
-    best_width = 100
-    head_rows = ds.head(n).as_array(type_safe=True)
-    if len(head_rows) < n:
-        count = len(head_rows)
-    else:
-        count = ds.count() if with_count else -1
-    with _SHOW_LOCK:
-        if title is not None and title != "":
-            print(title)
-        print(type(ds).__name__)
-        tb = PrettyTable(ds.schema, head_rows, best_width)
-        print("\n".join(tb.to_string()))
-        if count >= 0:
-            print(f"Total count: {count}")
-            print("")
-        if ds.has_metadata:
-            print("Metadata:")
-            try:
-                # try pretty print, but if not convertible to json, print original
-                print(ds.metadata.to_json(indent=True))
-            except Exception:  # pragma: no cover
-                print(ds.metadata)
-            print("")
+@get_dataset_display.candidate(lambda ds: isinstance(ds, DataFrame), priority=0.1)
+def _get_dataframe_display(ds: DataFrame):
+    return DataFrameDisplay(ds)
 
 
 def _get_schema_change(
