@@ -1,11 +1,36 @@
-from typing import Any, Callable, Optional, Type, Union
+from typing import Any, Callable, List, Optional, Type, Union
 
-from fugue._utils.registry import fugue_plugin
-from fugue.exceptions import FuguePluginsRegistrationError
-from fugue.execution.execution_engine import ExecutionEngine, SQLEngine
-from fugue.execution.native_execution_engine import NativeExecutionEngine
+import pandas as pd
 from triad import ParamDict, assert_or_throw
 from triad.utils.convert import to_instance
+
+from .._utils.registry import fugue_plugin
+from ..exceptions import FuguePluginsRegistrationError
+from .execution_engine import (
+    _FUGUE_EXECUTION_ENGINE_CONTEXT,
+    ExecutionEngine,
+    SQLEngine,
+)
+from .native_execution_engine import NativeExecutionEngine
+
+
+def get_context_default_execution_engine() -> Optional[ExecutionEngine]:
+    """Get the default execution engine of the current context
+
+    .. admonition:: Examples
+
+        Alias registration examples:
+
+        .. code-block:: python
+
+            engine = NativeExecutionEngine()
+            with engine.as_default():
+                get_context_default_execution_engine()  # engine
+            get_context_default_execution_engine()  # None
+
+    :return: the ExecutionEngine if within a context otherwise None
+    """
+    return _FUGUE_EXECUTION_ENGINE_CONTEXT.get()  # type: ignore
 
 
 def register_execution_engine(
@@ -336,12 +361,31 @@ def parse_execution_engine(
         ) from e
 
 
+def is_pandas_or(objs: List[Any], obj_type: Any) -> bool:
+    """Check whether the input contains at least one ``obj_type`` object and the
+    rest are Pandas DataFrames. This function is a utility function for extending
+    :func:`~.infer_execution_engine`
+
+    :param objs: the list of objects to check
+    :return: whether all objs are of type ``obj_type`` or pandas DataFrame and at
+      least one is of type ``obj_type``
+    """
+    tc = 0
+    for obj in objs:
+        if not isinstance(obj, pd.DataFrame):
+            if isinstance(obj, obj_type):
+                tc += 1
+            else:
+                return False
+    return tc > 0
+
+
 @fugue_plugin
-def infer_execution_engine(obj: Any) -> Any:
-    """Infer the correspondent ExecutionEngine based on the input object. This is
+def infer_execution_engine(obj: List[Any]) -> Any:
+    """Infer the correspondent ExecutionEngine based on the input objects. This is
     used in interfaceless functions.
 
-    :param obj: the object
+    :param objs: the objects
     :return: if the inference succeeded, it returns an object that can be used by
       :func:`~.parse_execution_engine` in the ``engine`` field to construct an
       ExecutionEngine. Otherwise, it returns None.

@@ -1,5 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
+from contextvars import ContextVar, Token
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 from uuid import uuid4
 
@@ -23,6 +24,10 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
 from fugue.exceptions import FugueBug
+
+_FUGUE_EXECUTION_ENGINE_CONTEXT = ContextVar(
+    "_FUGUE_EXECUTION_ENGINE_CONTEXT", default=None
+)
 
 _DEFAULT_JOIN_KEYS: List[str] = []
 
@@ -149,6 +154,7 @@ class ExecutionEngine(ABC):
         self._compile_conf = ParamDict()
         self._sql_engine: Optional[SQLEngine] = None
         self._map_engine: Optional[MapEngine] = None
+        self._context_token: Optional[Token] = None
 
     def stop(self) -> None:
         """Stop this execution engine, do not override

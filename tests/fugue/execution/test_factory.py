@@ -21,8 +21,10 @@ from fugue.execution.factory import (
     register_default_sql_engine,
     register_execution_engine,
     register_sql_engine,
+    is_pandas_or,
 )
 from pytest import raises
+import pandas as pd
 
 
 class _MockExecutionEngine(NativeExecutionEngine):
@@ -241,6 +243,16 @@ def test_make_execution_engine():
 
     # MUST HAVE THIS STEP, or other tests will fail
     _reset()
+
+
+def test_is_pandas_or():
+    assert not is_pandas_or([], int)
+    assert is_pandas_or([1], int)
+    assert not is_pandas_or([pd.DataFrame()], int)
+    assert is_pandas_or([1, pd.DataFrame()], int)
+    assert is_pandas_or([1, pd.DataFrame()], (int, bool))
+    assert is_pandas_or([1, pd.DataFrame(), False], (int, bool))
+    assert not is_pandas_or([pd.DataFrame(), pd.DataFrame()], (int, bool))
 
 
 def _reset():
