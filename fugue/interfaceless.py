@@ -223,6 +223,7 @@ def out_transform(
     :param engine_conf: |ParamsLikeObject|, defaults to None
 
     .. note::
+
       This function can only take parquet file paths in `df`. Csv and other file
       formats are disallowed.
 

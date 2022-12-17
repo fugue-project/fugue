@@ -237,6 +237,8 @@ def make_execution_engine(
       engine and the second value represents the sql engine (you can use ``None``
       for either of them to use the default one), defaults to None
     :param conf: |ParamsLikeObject|, defaults to None
+    :param infer_by: List of objects that can be used to infer the execution
+      engine using :func:`~.infer_execution_engine`
     :param kwargs: additional parameters to initialize the execution engine
 
     :return: the :class:`~fugue.execution.execution_engine.ExecutionEngine`
@@ -285,6 +287,14 @@ def make_execution_engine(
 
             # SparkExecutionEngine + S2
             make_execution_engine((SparkExecutionEngine, "s"))
+
+            # assume object e2_df can infer E2 engine
+            make_execution_engine(infer_by=[e2_df])  # an E2 engine
+
+            # context
+            with E2(conf).as_context() as ec:
+                make_execution_engine()  # ec
+            make_execution_engine()  # the default execution engine
     """
     if engine is None:
         engine = _FUGUE_EXECUTION_ENGINE_CONTEXT.get()

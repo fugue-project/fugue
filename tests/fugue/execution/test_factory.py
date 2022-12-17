@@ -264,7 +264,7 @@ def test_context_and_infer_execution_engine():
             assert isinstance(e, _MockExecutionEngine)
             assert not isinstance(e, _MockExecutionEngine2)
             assert not e.conf["x"]
-        
+
         e = make_execution_engine(None, conf={"x": True})
         assert isinstance(e, _MockExecutionEngine2)
 
