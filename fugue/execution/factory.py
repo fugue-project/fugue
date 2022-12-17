@@ -14,8 +14,8 @@ from .execution_engine import (
 from .native_execution_engine import NativeExecutionEngine
 
 
-def get_context_default_execution_engine() -> Optional[ExecutionEngine]:
-    """Get the default execution engine of the current context
+def get_context_execution_engine() -> Optional[ExecutionEngine]:
+    """Get the execution engine set as the current context
 
     .. admonition:: Examples
 
@@ -24,9 +24,9 @@ def get_context_default_execution_engine() -> Optional[ExecutionEngine]:
         .. code-block:: python
 
             engine = NativeExecutionEngine()
-            with engine.as_default():
-                get_context_default_execution_engine()  # engine
-            get_context_default_execution_engine()  # None
+            with engine.as_context():
+                get_context_execution_engine()  # engine
+            get_context_execution_engine()  # None
 
     :return: the ExecutionEngine if within a context otherwise None
     """
