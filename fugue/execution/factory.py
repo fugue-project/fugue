@@ -14,25 +14,6 @@ from .execution_engine import (
 from .native_execution_engine import NativeExecutionEngine
 
 
-def get_context_execution_engine() -> Optional[ExecutionEngine]:
-    """Get the execution engine set as the current context
-
-    .. admonition:: Examples
-
-        Alias registration examples:
-
-        .. code-block:: python
-
-            engine = NativeExecutionEngine()
-            with engine.as_context():
-                get_context_execution_engine()  # engine
-            get_context_execution_engine()  # None
-
-    :return: the ExecutionEngine if within a context otherwise None
-    """
-    return _FUGUE_EXECUTION_ENGINE_CONTEXT.get()  # type: ignore
-
-
 def register_execution_engine(
     name_or_type: Union[str, Type], func: Callable, on_dup="overwrite"
 ) -> None:
@@ -240,7 +221,10 @@ def register_default_sql_engine(func: Callable, on_dup="overwrite") -> None:
 
 
 def make_execution_engine(
-    engine: Any = None, conf: Any = None, **kwargs: Any
+    engine: Any = None,
+    conf: Any = None,
+    infer_by: Optional[List[Any]] = None,
+    **kwargs: Any,
 ) -> ExecutionEngine:
     """Create :class:`~fugue.execution.execution_engine.ExecutionEngine`
     with specified ``engine``
@@ -257,6 +241,22 @@ def make_execution_engine(
 
     :return: the :class:`~fugue.execution.execution_engine.ExecutionEngine`
       instance
+
+    .. note::
+
+        This function finds/constructs the engine in the following order:
+
+        * If ``engine`` is None, it first try to see if there is any defined
+          context engine to use (=> engine)
+        * If ``engine`` is still empty, then if ``infer_by``
+          is given, it will try to infer the execution engine (=> engine)
+        * If ``engine`` is still empty, then it will construct the default
+          engine defined by :func:`~.register_default_execution_engine`  (=> engine)
+        * Now, ``engine`` must not be empty, if it is an object other than
+          :class:`~fugue.execution.execution_engine.ExecutionEngine`, we will use
+          :func:`~.parse_execution_engine` to construct (=> engine)
+        * Now, ``engine`` must have been an ExecutionEngine object. We update its
+          SQL engine if specified, then update its config using ``conf`` and ``kwargs``
 
     .. admonition:: Examples
 
@@ -286,6 +286,11 @@ def make_execution_engine(
             # SparkExecutionEngine + S2
             make_execution_engine((SparkExecutionEngine, "s"))
     """
+    if engine is None:
+        engine = _FUGUE_EXECUTION_ENGINE_CONTEXT.get()
+        if engine is None and infer_by is not None:
+            engine = infer_execution_engine(infer_by)
+
     if isinstance(engine, tuple):
         execution_engine = make_execution_engine(engine[0], conf=conf, **kwargs)
         sql_engine = make_sql_engine(engine[1], execution_engine)

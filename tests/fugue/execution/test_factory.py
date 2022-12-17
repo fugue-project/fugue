@@ -1,4 +1,7 @@
-from typing import Any
+from typing import Any, List
+
+import pandas as pd
+from pytest import raises
 
 from fugue import (
     NativeExecutionEngine,
@@ -13,6 +16,8 @@ from fugue import (
 from fugue.constants import FUGUE_CONF_SQL_IGNORE_CASE
 from fugue.exceptions import FuguePluginsRegistrationError
 from fugue.execution.factory import (
+    infer_execution_engine,
+    is_pandas_or,
     make_execution_engine,
     make_sql_engine,
     parse_execution_engine,
@@ -21,10 +26,7 @@ from fugue.execution.factory import (
     register_default_sql_engine,
     register_execution_engine,
     register_sql_engine,
-    is_pandas_or,
 )
-from pytest import raises
-import pandas as pd
 
 
 class _MockExecutionEngine(NativeExecutionEngine):
@@ -52,6 +54,11 @@ class _MockSQlEngine(SqliteEngine):
     def __init__(self, execution_engine, other: int = 1):
         super().__init__(execution_engine)
         self.other = other
+
+
+@infer_execution_engine.candidate(lambda objs: is_pandas_or(objs, Dummy2))
+def _infer_dummy_engine(objs: List[Any]) -> Any:
+    return _MockExecutionEngine2(Dummy2(), {})
 
 
 def test_execution_engine_alias():
@@ -243,6 +250,33 @@ def test_make_execution_engine():
 
     # MUST HAVE THIS STEP, or other tests will fail
     _reset()
+
+
+def test_context_and_infer_execution_engine():
+    e1 = _MockExecutionEngine({})
+    e2 = _MockExecutionEngine2(Dummy2(), {})
+    with e2.as_context():
+        with e1.as_context() as ex:
+            assert ex is e1
+            e = make_execution_engine(
+                None, conf={"x": False}, infer_by=[pd.DataFrame(), Dummy2()]
+            )
+            assert isinstance(e, _MockExecutionEngine)
+            assert not isinstance(e, _MockExecutionEngine2)
+            assert not e.conf["x"]
+        
+        e = make_execution_engine(None, conf={"x": True})
+        assert isinstance(e, _MockExecutionEngine2)
+
+    e = make_execution_engine(None)
+    assert isinstance(e, NativeExecutionEngine)
+    assert not isinstance(e, _MockExecutionEngine)
+
+    e = make_execution_engine(
+        None, conf={"x": True}, infer_by=[pd.DataFrame(), Dummy2()]
+    )
+    assert isinstance(e, _MockExecutionEngine2)
+    assert e.conf["x"]
 
 
 def test_is_pandas_or():
