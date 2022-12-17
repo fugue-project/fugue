@@ -45,7 +45,7 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
         if isinstance(df, (dd.DataFrame, DaskDataFrame)):
             ddf = self._to_dask_df(df, schema)
             if all(not pa.types.is_nested(f.type) for f in ddf.schema.fields):
-                return DuckDataFrame(self.connection.df(ddf.as_pandas()))
+                return DuckDataFrame(self.connection.from_df(ddf.as_pandas()))
             else:
                 return DuckDataFrame(
                     duckdb.arrow(ddf.as_arrow(), connection=self.connection)

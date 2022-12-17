@@ -429,7 +429,7 @@ class DuckExecutionEngine(ExecutionEngine):
             if isinstance(df, PandasDataFrame) and all(
                 not pa.types.is_nested(f.type) for f in df.schema.fields
             ):
-                rdf = DuckDataFrame(self.connection.df(df.as_pandas()))
+                rdf = DuckDataFrame(self.connection.from_df(df.as_pandas()))
             else:
                 rdf = DuckDataFrame(
                     duckdb.arrow(df.as_arrow(), connection=self.connection)

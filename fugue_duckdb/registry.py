@@ -2,10 +2,13 @@ import inspect
 from typing import Any, Optional
 
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
+from triad import run_at_def
+
 from fugue import (
     DataFrame,
     ExecutionEngine,
     infer_execution_engine,
+    is_pandas_or,
     register_execution_engine,
     register_sql_engine,
 )
@@ -16,16 +19,14 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.workflow import register_raw_df_type
-from triad import run_at_def
-
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
 
 
 @infer_execution_engine.candidate(
-    lambda obj: isinstance(obj, (DuckDBPyRelation, DuckDataFrame))
+    lambda objs: is_pandas_or(objs, (DuckDBPyRelation, DuckDataFrame))
 )
-def _infer_duckdb_client(obj: Any) -> Any:
+def _infer_duckdb_client(objs: Any) -> Any:
     return "duckdb"
 
 

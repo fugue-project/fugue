@@ -6,7 +6,7 @@ from fugue.collections.yielded import Yielded
 from fugue.constants import FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT
 from fugue.dataframe import DataFrame
 from fugue.exceptions import FugueInterfacelessError, FugueWorkflowCompileError
-from fugue.execution import infer_execution_engine
+from fugue.execution import make_execution_engine
 from fugue.workflow import FugueWorkflow
 
 
@@ -170,10 +170,7 @@ def transform(  # noqa: C901
         else:
             tdf.save(save_path, fmt="parquet")
 
-    if engine is None:
-        engine = infer_execution_engine(df)
-
-    dag.run(engine, conf=engine_conf)
+    dag.run(make_execution_engine(engine, conf=engine_conf, infer_by=[df]))
     if checkpoint:
         result = dag.yields["result"].result  # type:ignore
     else:
@@ -226,6 +223,7 @@ def out_transform(
     :param engine_conf: |ParamsLikeObject|, defaults to None
 
     .. note::
+
       This function can only take parquet file paths in `df`. Csv and other file
       formats are disallowed.
 
@@ -248,7 +246,4 @@ def out_transform(
         ignore_errors=ignore_errors or [],
     )
 
-    if engine is None:
-        engine = infer_execution_engine(df)
-
-    dag.run(engine, conf=engine_conf)
+    dag.run(make_execution_engine(engine, conf=engine_conf, infer_by=[df]))

@@ -6,6 +6,10 @@ class FugueBug(FugueError):
     """Fugue internal bug"""
 
 
+class FugueInvalidOperation(FugueError):
+    """Invalid operation on the Fugue framework"""
+
+
 class FuguePluginsRegistrationError(FugueError):
     """Fugue plugins registration error"""
 

@@ -1,6 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Union
 from uuid import uuid4
 
 from triad import ParamDict, Schema, assert_or_throw
@@ -23,6 +25,10 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
 from fugue.exceptions import FugueBug
+
+_FUGUE_EXECUTION_ENGINE_CONTEXT = ContextVar(
+    "_FUGUE_EXECUTION_ENGINE_CONTEXT", default=None
+)
 
 _DEFAULT_JOIN_KEYS: List[str] = []
 
@@ -149,6 +155,25 @@ class ExecutionEngine(ABC):
         self._compile_conf = ParamDict()
         self._sql_engine: Optional[SQLEngine] = None
         self._map_engine: Optional[MapEngine] = None
+
+    @contextmanager
+    def as_context(self) -> Iterator["ExecutionEngine"]:
+        """Set this execution engine as the context engine. This function
+        is thread safe and async safe.
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                with engine.as_context():
+                    transform(df, func)  # will use engine in this transformation
+
+        """
+        token = _FUGUE_EXECUTION_ENGINE_CONTEXT.set(self)  # type: ignore
+        try:
+            yield self
+        finally:
+            _FUGUE_EXECUTION_ENGINE_CONTEXT.reset(token)
 
     def stop(self) -> None:
         """Stop this execution engine, do not override

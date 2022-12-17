@@ -104,10 +104,10 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_infer_engine(self):
         df = self.spark_session.createDataFrame(pd.DataFrame([[0]], columns=["a"]))
-        assert isinstance(infer_execution_engine(df), SparkSession)
+        assert isinstance(infer_execution_engine([df]), SparkSession)
 
         fdf = SparkDataFrame(df)
-        assert isinstance(infer_execution_engine(fdf), SparkSession)
+        assert isinstance(infer_execution_engine([fdf]), SparkSession)
 
 
 @pytest.mark.skipif(pyspark.__version__ < "3", reason="pyspark < 3")
