@@ -177,7 +177,7 @@ def test_sql_yield():
 
 def test_infer_engine():
     con = duckdb.connect()
-    df = con.df(pd.DataFrame([[0]], columns=["a"]))
+    df = con.from_df(pd.DataFrame([[0]], columns=["a"]))
     assert infer_execution_engine([df])=="duckdb"
 
     fdf = DuckDataFrame(df)
