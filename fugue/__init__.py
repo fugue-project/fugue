@@ -24,6 +24,7 @@ from fugue.dataset import Dataset, DatasetDisplay, get_dataset_display
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 from fugue.execution.factory import (
     infer_execution_engine,
+    is_pandas_or,
     make_execution_engine,
     make_sql_engine,
     parse_execution_engine,

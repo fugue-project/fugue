@@ -3,12 +3,17 @@ from typing import Any, Optional
 
 import pyspark.rdd as pr
 import pyspark.sql as ps
+from pyspark import SparkContext
+from pyspark.sql import SparkSession
+from triad import run_at_def
+
 from fugue import (
     DataFrame,
     ExecutionEngine,
     infer_execution_engine,
-    register_execution_engine,
+    is_pandas_or,
     parse_creator,
+    register_execution_engine,
 )
 from fugue._utils.interfaceless import (
     DataFrameParam,
@@ -17,10 +22,6 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.workflow import register_raw_df_type
-from pyspark import SparkContext
-from pyspark.sql import SparkSession
-from triad import run_at_def
-
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
@@ -33,7 +34,8 @@ def _is_sparksql(obj: Any) -> bool:
 
 
 @infer_execution_engine.candidate(
-    lambda obj: isinstance(obj, (ps.DataFrame, SparkDataFrame)) or _is_sparksql(obj)
+    lambda objs: is_pandas_or(objs, (ps.DataFrame, SparkDataFrame))
+    or any(_is_sparksql(obj) for obj in objs)
 )
 def _infer_spark_client(obj: Any) -> Any:
     return SparkSession.builder.getOrCreate()

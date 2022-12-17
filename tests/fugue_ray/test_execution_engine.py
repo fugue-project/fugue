@@ -152,10 +152,10 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_infer_engine(self):
         df = rd.from_pandas(pd.DataFrame([[0]], columns=["a"]))
-        assert infer_execution_engine(df) == "ray"
+        assert infer_execution_engine([df]) == "ray"
 
         fdf = RayDataFrame(df)
-        assert infer_execution_engine(fdf) == "ray"
+        assert infer_execution_engine([fdf]) == "ray"
 
 
 class RayBuiltInTests(BuiltInTests.Tests):

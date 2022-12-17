@@ -95,10 +95,10 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_infer_engine(self):
         ddf = dd.from_pandas(pd.DataFrame([[0]], columns=["a"]), npartitions=2)
-        assert isinstance(infer_execution_engine(ddf), Client)
+        assert isinstance(infer_execution_engine([ddf]), Client)
 
         fdf = DaskDataFrame(ddf)
-        assert isinstance(infer_execution_engine(fdf), Client)
+        assert isinstance(infer_execution_engine([fdf]), Client)
 
 
 class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):

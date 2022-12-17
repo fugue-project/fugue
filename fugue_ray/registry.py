@@ -2,7 +2,14 @@ import inspect
 from typing import Any, Optional
 
 import ray.data as rd
-from fugue import DataFrame, infer_execution_engine, register_execution_engine
+from triad import run_at_def
+
+from fugue import (
+    DataFrame,
+    infer_execution_engine,
+    is_pandas_or,
+    register_execution_engine,
+)
 from fugue._utils.interfaceless import (
     DataFrameParam,
     ExecutionEngineParam,
@@ -10,16 +17,15 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.workflow import register_raw_df_type
-from triad import run_at_def
 
 from .dataframe import RayDataFrame
 from .execution_engine import RayExecutionEngine
 
 
 @infer_execution_engine.candidate(
-    lambda obj: isinstance(obj, (rd.Dataset, RayDataFrame))
+    lambda objs: is_pandas_or(objs, (rd.Dataset, RayDataFrame))
 )
-def _infer_ray_client(obj: Any) -> Any:
+def _infer_ray_client(objs: Any) -> Any:
     return "ray"
 
 

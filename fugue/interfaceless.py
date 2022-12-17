@@ -171,7 +171,7 @@ def transform(  # noqa: C901
             tdf.save(save_path, fmt="parquet")
 
     if engine is None:
-        engine = infer_execution_engine(df)
+        engine = infer_execution_engine([df])
 
     dag.run(engine, conf=engine_conf)
     if checkpoint:
@@ -249,6 +249,6 @@ def out_transform(
     )
 
     if engine is None:
-        engine = infer_execution_engine(df)
+        engine = infer_execution_engine([df])
 
     dag.run(engine, conf=engine_conf)
