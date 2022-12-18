@@ -511,7 +511,7 @@ def as_dict_iterable(
 
         The default implementation enforces ``type_safe`` True
     """
-    return as_fugue_df(df).as_array_iterable(columns=columns)
+    return as_fugue_df(df).as_dict_iterable(columns=columns)
 
 
 @fugue_plugin
@@ -535,52 +535,66 @@ def peek_dict(df: Any) -> Dict[str, Any]:
 
 
 @fugue_plugin
-def head(df: Any, n: int, columns: Optional[List[str]] = None) -> Any:
+def head(
+    df: Any, n: int, columns: Optional[List[str]] = None, as_fugue: bool = False
+) -> Any:
     """Get first n rows of the dataframe as a new local bounded dataframe
 
     :param n: number of rows
     :param columns: selected columns, defaults to None (all columns)
+    :param as_fugue: whether return a Fugue :class:`~.DataFrame`, default to
+        False. If False, then if the input ``df`` is not a Fugue DataFrame
+        then it will return the underlying DataFrame object.
     :return: a local bounded dataframe
     """
     res = as_fugue_df(df).head(n=n, columns=columns)
-    if isinstance(df, DataFrame):
+    if as_fugue or isinstance(df, DataFrame):
         return res
     return res.as_pandas()
 
 
 @fugue_plugin
-def alter_columns(df: Any, columns: Any) -> Any:
+def alter_columns(df: Any, columns: Any, as_fugue: bool = False) -> Any:
     """Change column types
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :param columns: |SchemaLikeObject|,
         all columns should be contained by the dataframe schema
+    :param as_fugue: whether return a Fugue :class:`~.DataFrame`, default to
+        False. If False, then if the input ``df`` is not a Fugue DataFrame
+        then it will return the underlying DataFrame object.
     :return: a new dataframe with altered columns, the order of the
         original schema will not change
     """
-    return _adjust_df(df, as_fugue_df(df).alter_columns(columns))
+    return _adjust_df(df, as_fugue_df(df).alter_columns(columns), as_fugue=as_fugue)
 
 
 @fugue_plugin
-def drop_columns(df: Any, columns: List[str]) -> Any:
+def drop_columns(df: Any, columns: List[str], as_fugue: bool = False) -> Any:
     """Drop certain columns and return a new dataframe
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :param columns: columns to drop
+    :param as_fugue: whether return a Fugue :class:`~.DataFrame`, default to
+        False. If False, then if the input ``df`` is not a Fugue DataFrame
+        then it will return the underlying DataFrame object.
     :return: a new dataframe removing the columns
     """
-    return _adjust_df(df, as_fugue_df(df).drop(columns))
+    return _adjust_df(df, as_fugue_df(df).drop(columns), as_fugue=as_fugue)
 
 
 @fugue_plugin
-def select_columns(df: Any, columns: List[Any]) -> Any:
+def select_columns(df: Any, columns: List[Any], as_fugue: bool = False) -> Any:
     """Select certain columns and return a new dataframe
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :param columns: columns to return
+    :param as_fugue: whether return a Fugue :class:`~.DataFrame`, default to
+        False. If False, then if the input ``df`` is not a Fugue DataFrame
+        then it will return the underlying DataFrame object.
     :return: a new dataframe with the selected the columns
     """
-    return _adjust_df(df, as_fugue_df(df)[columns])
+    return _adjust_df(df, as_fugue_df(df)[columns], as_fugue=as_fugue)
 
 
 @fugue_plugin
@@ -605,11 +619,14 @@ def get_column_names(df: Any) -> List[Any]:  # pragma: no cover
 
 
 @fugue_plugin
-def rename(df: Any, names: Dict[str, Any]) -> Any:
+def rename(df: Any, columns: Dict[str, Any], as_fugue: bool = False) -> Any:
     """A generic function to rename column names of any dataframe
 
     :param df: the dataframe object
-    :param names: the rename operations as a dict: ``old name => new name``
+    :param columns: the rename operations as a dict: ``old name => new name``
+    :param as_fugue: whether return a Fugue :class:`~.DataFrame`, default to
+        False. If False, then if the input ``df`` is not a Fugue DataFrame
+        then it will return the underlying DataFrame object.
     :return: the renamed dataframe
 
     .. note::
@@ -623,15 +640,15 @@ def rename(df: Any, names: Dict[str, Any]) -> Any:
                 lambda df, *args, **kwargs: isinstance(df, pd.DataFrame)
             )
             def _rename_pandas_dataframe(
-                df: pd.DataFrame, names: Dict[str, Any]
+                df: pd.DataFrame, columns: Dict[str, Any]
             ) -> pd.DataFrame:
-                if len(names) == 0:
+                if len(columns) == 0:
                     return df
-                return df.rename(columns=names)
+                return df.rename(columns=columns)
     """
-    if len(names) == 0:
+    if len(columns) == 0:
         return df
-    return _adjust_df(df, as_fugue_df(df).rename(names))
+    return _adjust_df(df, as_fugue_df(df).rename(columns), as_fugue=as_fugue)
 
 
 def normalize_column_names(df: Any) -> Tuple[Any, Dict[str, Any]]:
@@ -703,7 +720,7 @@ def _input_schema(schema: Any) -> Schema:
     return schema if isinstance(schema, Schema) else Schema(schema)
 
 
-def _adjust_df(input_df: Any, output_df: DataFrame) -> Any:
-    if isinstance(input_df, DataFrame):
+def _adjust_df(input_df: Any, output_df: DataFrame, as_fugue: bool) -> Any:
+    if as_fugue or isinstance(input_df, DataFrame):
         return output_df
     return output_df.native  # type: ignore

@@ -221,25 +221,52 @@ def _get_pandas_dataframe_schema(df: pd.DataFrame) -> Schema:
 
 
 @rename.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
-def _rename_pandas_dataframe(df: pd.DataFrame, names: Dict[str, Any]) -> pd.DataFrame:
-    if len(names) == 0:
+def _rename_pandas_dataframe(
+    df: pd.DataFrame, columns: Dict[str, Any], as_fugue: bool = False
+) -> Any:
+    if len(columns) == 0:
         return df
-    return df.rename(columns=names)
+    _assert_no_missing(df, columns.keys())
+    return _adjust_df(df.rename(columns=columns), as_fugue=as_fugue)
 
 
 @drop_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
-def _drop_pd_columns(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
+def _drop_pd_columns(
+    df: pd.DataFrame, columns: List[str], as_fugue: bool = False
+) -> Any:
     cols = [x for x in df.columns if x not in columns]
-    return df[cols]
+    if len(cols) == 0:
+        raise FugueDataFrameOperationError("cannot drop all columns")
+    if len(cols) + len(columns) != len(df.columns):
+        _assert_no_missing(df, columns)
+    return _adjust_df(df[cols], as_fugue=as_fugue)
 
 
 @select_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
-def _select_pd_columns(df: pd.DataFrame, columns: List[Any]) -> pd.DataFrame:
-    return df[columns]
+def _select_pd_columns(
+    df: pd.DataFrame, columns: List[Any], as_fugue: bool = False
+) -> Any:
+    _assert_no_missing(df, columns)
+    return _adjust_df(df[columns], as_fugue=as_fugue)
 
 
 @head.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
-def _pd_head(df: Any, n: int, columns: Optional[List[str]] = None) -> pd.DataFrame:
+def _pd_head(
+    df: pd.DataFrame,
+    n: int,
+    columns: Optional[List[str]] = None,
+    as_fugue: bool = False,
+) -> pd.DataFrame:
     if columns is not None:
         df = df[columns]
-    return df.head(n)
+    return _adjust_df(df.head(n), as_fugue=as_fugue)
+
+
+def _adjust_df(res: pd.DataFrame, as_fugue: bool):
+    return res if not as_fugue else PandasDataFrame(res)
+
+
+def _assert_no_missing(df: pd.DataFrame, columns: Iterable[Any]) -> None:
+    missing = [x for x in columns if x not in df.columns]
+    if len(missing) > 0:
+        raise FugueDataFrameOperationError("cannot drop nonexistent columns: {missing}")

@@ -79,7 +79,7 @@ class Dataset(ABC):
     ) -> None:
         """Display the Dataset
 
-        :param rows: number of rows to print, defaults to 10
+        :param n: number of rows to print, defaults to 10
         :param with_count: whether to show dataset count, defaults to False
         :param title: title of the dataset, defaults to None
 
@@ -158,6 +158,26 @@ def as_fugue_dataset(data: Any) -> Dataset:
     if isinstance(data, Dataset):
         return data
     raise NotImplementedError(f"no registered dataset conversion for {type(data)}")
+
+
+def show(
+    data: Any, n: int = 10, with_count: bool = False, title: Optional[str] = None
+) -> None:
+    """Display the Dataset
+
+    :param data: the data that can be recognized by Fugue
+    :param n: number of rows to print, defaults to 10
+    :param with_count: whether to show dataset count, defaults to False
+    :param title: title of the dataset, defaults to None
+
+    .. note::
+
+        When ``with_count`` is True, it can trigger expensive calculation for
+        a distributed dataframe. So if you call this function directly, you may
+        need to :func:`fugue.execution.execution_engine.ExecutionEngine.persist`
+        the dataset.
+    """
+    return as_fugue_dataset(data).show(n=n, with_count=with_count, title=title)
 
 
 @fugue_plugin

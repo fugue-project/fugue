@@ -6,11 +6,12 @@ from unittest import TestCase
 
 import numpy as np
 import pandas as pd
-from fugue.dataframe import ArrowDataFrame, DataFrame
+from pytest import raises
+
+import fugue.interfaceless as fi
+from fugue.dataframe import ArrowDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
-from pytest import raises
-from triad.collections.schema import Schema
 
 
 class DataFrameTests(object):
@@ -27,100 +28,97 @@ class DataFrameTests(object):
         def tearDownClass(cls):
             pass
 
-        def df(
-            self, data: Any = None, schema: Any = None
-        ) -> DataFrame:  # pragma: no cover
+        def df(self, data: Any = None, schema: Any = None) -> Any:  # pragma: no cover
             raise NotImplementedError
-
-        def test_init_basic(self):
-            raises(Exception, lambda: self.df())
-            raises(Exception, lambda: self.df([]))
-            raises(Exception, lambda: self.df([[]], Schema()))
-            raises(Exception, lambda: self.df([[1]], Schema()))
-            # raises(SchemaError, lambda: self.df([[1]]))  # schema can be inferred
-
-            df = self.df([], "a:str,b:int")
-            assert df.empty
-
-        def test_datetime(self):
-            df = self.df([["2020-01-01"], [None]], "a:datetime")
-            assert [[datetime(2020, 1, 1)], [None]] == df.as_array(type_safe=True)
 
         def test_peek(self):
             df = self.df([], "x:str,y:double")
-            raises(FugueDatasetEmptyError, lambda: df.peek_array())
-            raises(FugueDatasetEmptyError, lambda: df.peek_dict())
+            raises(FugueDatasetEmptyError, lambda: fi.peek_array(df))
+            raises(FugueDatasetEmptyError, lambda: fi.peek_dict(df))
 
             df = self.df([["a", 1.0], ["b", 2.0]], "x:str,y:double")
-            assert not df.is_bounded or 2 == df.count()
-            assert not df.empty
-            assert ["a", 1.0] == df.peek_array()
-            assert dict(x="a", y=1.0) == df.peek_dict()
+            assert not fi.is_bounded(df) or 2 == fi.count(df)
+            assert not fi.is_empty(df)
+            assert ["a", 1.0] == fi.peek_array(df)
+            assert dict(x="a", y=1.0) == fi.peek_dict(df)
 
         def test_as_pandas(self):
             df = self.df([["a", 1.0], ["b", 2.0]], "x:str,y:double")
-            pdf = df.as_pandas()
+            pdf = fi.as_pandas(df)
             assert [["a", 1.0], ["b", 2.0]] == pdf.values.tolist()
 
             df = self.df([], "x:str,y:double")
-            pdf = df.as_pandas()
+            pdf = fi.as_pandas(df)
             assert [] == pdf.values.tolist()
 
-        def test_drop(self):
-            df = self.df([], "a:str,b:int").drop(["a"])
-            assert df.schema == "b:int"
+        def test_drop_columns(self):
+            df = fi.drop_columns(self.df([], "a:str,b:int"), ["a"])
+            assert fi.get_schema(df) == "b:int"
             raises(
-                FugueDataFrameOperationError, lambda: df.drop(["b"])
+                FugueDataFrameOperationError, lambda: fi.drop_columns(df, ["b"])
             )  # can't be empty
             raises(
-                FugueDataFrameOperationError, lambda: df.drop(["x"])
+                FugueDataFrameOperationError, lambda: fi.drop_columns(df, ["x"])
             )  # cols must exist
 
-            df = self.df([["a", 1]], "a:str,b:int").drop(["a"])
-            assert df.schema == "b:int"
+            df = fi.drop_columns(self.df([["a", 1]], "a:str,b:int"), ["a"])
+            assert fi.get_schema(df) == "b:int"
             raises(
-                FugueDataFrameOperationError, lambda: df.drop(["b"])
+                FugueDataFrameOperationError, lambda: fi.drop_columns(df, ["b"])
             )  # can't be empty
             raises(
-                FugueDataFrameOperationError, lambda: df.drop(["x"])
+                FugueDataFrameOperationError, lambda: fi.drop_columns(df, ["x"])
             )  # cols must exist
-            assert [[1]] == df.as_array(type_safe=True)
+            assert [[1]] == fi.as_array(df, type_safe=True)
 
         def test_select(self):
-            df = self.df([], "a:str,b:int")[["b"]]
-            assert df.schema == "b:int"
-            raises(FugueDataFrameOperationError, lambda: df[["a"]])  # not existed
-            raises(FugueDataFrameOperationError, lambda: df[[]])  # empty
+            df = fi.select_columns(self.df([], "a:str,b:int"), ["b"])
+            assert fi.get_schema(df) == "b:int"
+            raises(
+                FugueDataFrameOperationError, lambda: fi.select_columns(df, ["a"])
+            )  # not existed
+            raises(
+                FugueDataFrameOperationError, lambda: fi.select_columns(df, ["a"])
+            )  # empty
 
-            df = self.df([["a", 1]], "a:str,b:int")[["b"]]
-            assert df.schema == "b:int"
-            raises(FugueDataFrameOperationError, lambda: df[["a"]])  # not existed
-            raises(FugueDataFrameOperationError, lambda: df[[]])  # empty
-            assert [[1]] == df.as_array(type_safe=True)
+            df = fi.select_columns(self.df([["a", 1]], "a:str,b:int"), ["b"])
+            assert fi.get_schema(df) == "b:int"
+            raises(
+                FugueDataFrameOperationError, lambda: fi.select_columns(df, ["a"])
+            )  # not existed
+            raises(
+                FugueDataFrameOperationError, lambda: fi.select_columns(df, ["a"])
+            )  # empty
+            assert [[1]] == fi.as_array(df, type_safe=True)
 
             df = self.df([["a", 1, 2]], "a:str,b:int,c:int")
-            df_eq(df[["c", "a"]], [[2, "a"]], "a:str,c:int")
+            df_eq(
+                fi.as_fugue_df(fi.select_columns(df, ["c", "a"])),
+                [[2, "a"]],
+                "a:str,c:int",
+            )
 
         def test_rename(self):
             for data in [[["a", 1]], []]:
                 df = self.df(data, "a:str,b:int")
-                df2 = df.rename(columns=dict(a="aa"))
-                assert df.schema == "a:str,b:int"
-                df_eq(df2, data, "aa:str,b:int", throw=True)
+                df2 = fi.rename(df, columns=dict(a="aa"))
+                assert fi.get_schema(df) == "a:str,b:int"
+                df_eq(fi.as_fugue_df(df2), data, "aa:str,b:int", throw=True)
 
         def test_rename_invalid(self):
             df = self.df([["a", 1]], "a:str,b:int")
             raises(
-                FugueDataFrameOperationError, lambda: df.rename(columns=dict(aa="ab"))
+                FugueDataFrameOperationError,
+                lambda: fi.rename(df, columns=dict(aa="ab")),
             )
 
         def test_as_array(self):
             for func in [
-                lambda df, *args, **kwargs: df.as_array(
-                    *args, **kwargs, type_safe=True
+                lambda df, *args, **kwargs: fi.as_array(
+                    df, *args, **kwargs, type_safe=True
                 ),
                 lambda df, *args, **kwargs: list(
-                    df.as_array_iterable(*args, **kwargs, type_safe=True)
+                    fi.as_array_iterable(df, *args, **kwargs, type_safe=True)
                 ),
             ]:
                 df = self.df([], "a:str,b:int")
@@ -142,11 +140,11 @@ class DataFrameTests(object):
 
         def test_as_array_special_values(self):
             for func in [
-                lambda df, *args, **kwargs: df.as_array(
-                    *args, **kwargs, type_safe=True
+                lambda df, *args, **kwargs: fi.as_array(
+                    df, *args, **kwargs, type_safe=True
                 ),
                 lambda df, *args, **kwargs: list(
-                    df.as_array_iterable(*args, **kwargs, type_safe=True)
+                    fi.as_array_iterable(df, *args, **kwargs, type_safe=True)
                 ),
             ]:
                 df = self.df([[pd.Timestamp("2020-01-01"), 1]], "a:datetime,b:int")
@@ -166,92 +164,92 @@ class DataFrameTests(object):
 
         def test_as_dict_iterable(self):
             df = self.df([[pd.NaT, 1]], "a:datetime,b:int")
-            assert [dict(a=None, b=1)] == list(df.as_dict_iterable())
+            assert [dict(a=None, b=1)] == list(fi.as_dict_iterable(df))
             df = self.df([[pd.Timestamp("2020-01-01"), 1]], "a:datetime,b:int")
-            assert [dict(a=datetime(2020, 1, 1), b=1)] == list(df.as_dict_iterable())
+            assert [dict(a=datetime(2020, 1, 1), b=1)] == list(fi.as_dict_iterable(df))
 
         def test_list_type(self):
             data = [[[30, 40]]]
             df = self.df(data, "a:[int]")
-            a = df.as_array(type_safe=True)
+            a = fi.as_array(df, type_safe=True)
             assert data == a
 
         def test_struct_type(self):
             data = [[{"a": 1}], [{"a": 2}]]
             df = self.df(data, "x:{a:int}")
-            a = df.as_array(type_safe=True)
+            a = fi.as_array(df, type_safe=True)
             assert data == a
 
         def test_map_type(self):
             data = [[[("a", 1), ("b", 3)]], [[("b", 2)]]]
             df = self.df(data, "x:<str,int>")
-            a = df.as_array(type_safe=True)
+            a = fi.as_array(df, type_safe=True)
             assert data == a
 
         def test_deep_nested_types(self):
             data = [[dict(a="1", b=[3, 4], d=1.0)], [dict(b=[30, 40])]]
             df = self.df(data, "a:{a:str,b:[int]}")
-            a = df.as_array(type_safe=True)
+            a = fi.as_array(df, type_safe=True)
             assert [[dict(a="1", b=[3, 4])], [dict(a=None, b=[30, 40])]] == a
 
             data = [[[dict(b=[30, 40])]]]
             df = self.df(data, "a:[{a:str,b:[int]}]")
-            a = df.as_array(type_safe=True)
+            a = fi.as_array(df, type_safe=True)
             assert [[[dict(a=None, b=[30, 40])]]] == a
 
         def test_binary_type(self):
             data = [[b"\x01\x05"]]
             df = self.df(data, "a:bytes")
-            a = df.as_array(type_safe=True)
+            a = fi.as_array(df, type_safe=True)
             assert data == a
 
         def test_as_arrow(self):
             # empty
             df = self.df([], "a:int,b:int")
-            assert [] == list(ArrowDataFrame(df.as_arrow()).as_dict_iterable())
+            assert [] == list(ArrowDataFrame(fi.as_arrow(df)).as_dict_iterable())
             # pd.Nat
             df = self.df([[pd.NaT, 1]], "a:datetime,b:int")
             assert [dict(a=None, b=1)] == list(
-                ArrowDataFrame(df.as_arrow()).as_dict_iterable()
+                ArrowDataFrame(fi.as_arrow(df)).as_dict_iterable()
             )
             # pandas timestamps
             df = self.df([[pd.Timestamp("2020-01-01"), 1]], "a:datetime,b:int")
             assert [dict(a=datetime(2020, 1, 1), b=1)] == list(
-                ArrowDataFrame(df.as_arrow()).as_dict_iterable()
+                ArrowDataFrame(fi.as_arrow(df)).as_dict_iterable()
             )
             # float nan, list
             data = [[[float("nan"), 2.0]]]
             df = self.df(data, "a:[float]")
-            assert [[[None, 2.0]]] == ArrowDataFrame(df.as_arrow()).as_array()
+            assert [[[None, 2.0]]] == ArrowDataFrame(fi.as_arrow(df)).as_array()
             # dict
             data = [[dict(b="x")]]
             df = self.df(data, "a:{b:str}")
-            assert data == ArrowDataFrame(df.as_arrow()).as_array()
+            assert data == ArrowDataFrame(fi.as_arrow(df)).as_array()
             # list[dict]
             data = [[[dict(b=[30, 40])]]]
             df = self.df(data, "a:[{b:[int]}]")
-            assert data == ArrowDataFrame(df.as_arrow()).as_array()
+            assert data == ArrowDataFrame(fi.as_arrow(df)).as_array()
 
         def test_head(self):
             df = self.df([], "a:str,b:int")
-            assert [] == df.head(1).as_array()
-            assert [] == df.head(1, ["b"]).as_array()
+            assert [] == fi.as_array(fi.head(df, 1))
+            assert [] == fi.as_array(fi.head(df, 1, ["b"]))
             df = self.df([["a", 1]], "a:str,b:int")
-            if df.is_bounded:
-                assert [["a", 1]] == df.head(1).as_array()
-            assert [[1, "a"]] == df.head(1, ["b", "a"]).as_array()
-            assert [] == df.head(0).as_array()
+            if fi.is_bounded(df):
+                assert [["a", 1]] == fi.as_array(fi.head(df, 1))
+            assert [[1, "a"]] == fi.as_array(fi.head(df, 1, ["b", "a"]))
+            assert [] == fi.as_array(fi.head(df, 0))
 
             df = self.df([[0, 1], [0, 2], [1, 1], [1, 3]], "a:int,b:int")
-            assert 2 == df.head(2).count()
+            assert 2 == fi.count(fi.head(df, 2))
             df = self.df([[0, 1], [0, 2], [1, 1], [1, 3]], "a:int,b:int")
-            assert 4 == df.head(10).count()
-            h = df.head(10)
-            assert h.is_local and h.is_bounded
+            assert 4 == fi.count(fi.head(df, 10))
+            h = fi.head(df, 10)
+            assert fi.is_local(h) and fi.is_bounded(h)
 
         def test_show(self):
             df = self.df([["a", 1]], "a:str,b:int")
-            df.show()
+            fi.show(df)
 
         def test_get_altered_schema(self):
             df = self.df([["a", 1]], "a:str,b:int")
@@ -270,47 +268,55 @@ class DataFrameTests(object):
         def test_alter_columns(self):
             # empty
             df = self.df([], "a:str,b:int")
-            ndf = df.alter_columns("a:str,b:str")
-            assert [] == ndf.as_array(type_safe=True)
-            assert ndf.schema == "a:str,b:str"
+            ndf = fi.alter_columns(df, "a:str,b:str")
+            assert [] == fi.as_array(ndf, type_safe=True)
+            assert fi.get_schema(ndf) == "a:str,b:str"
 
             # no change
             df = self.df([["a", 1], ["c", None]], "a:str,b:int")
-            ndf = df.alter_columns("b:int,a:str")
-            assert [["a", 1], ["c", None]] == ndf.as_array(type_safe=True)
-            assert ndf.schema == df.schema
+            ndf = fi.alter_columns(df, "b:int,a:str", as_fugue=True)
+            assert [["a", 1], ["c", None]] == fi.as_array(ndf, type_safe=True)
+            assert fi.get_schema(ndf) == "a:str,b:int"
 
             # bool -> str
             df = self.df([["a", True], ["b", False], ["c", None]], "a:str,b:bool")
-            ndf = df.alter_columns("b:str")
-            actual = ndf.as_array(type_safe=True)
+            ndf = fi.alter_columns(df, "b:str", as_fugue=True)
+            actual = fi.as_array(ndf, type_safe=True)
             # Capitalization doesn't matter
             # and dataframes don't need to be consistent on capitalization
             expected1 = [["a", "True"], ["b", "False"], ["c", None]]
             expected2 = [["a", "true"], ["b", "false"], ["c", None]]
             assert expected1 == actual or expected2 == actual
-            assert ndf.schema == "a:str,b:str"
+            assert fi.get_schema(ndf) == "a:str,b:str"
 
             # int -> str
             df = self.df([["a", 1], ["c", None]], "a:str,b:int")
-            ndf = df.alter_columns("b:str")
-            assert [["a", "1"], ["c", None]] == ndf.as_array(type_safe=True)
-            assert ndf.schema == "a:str,b:str"
+            ndf = fi.alter_columns(df, "b:str", as_fugue=True)
+            arr = fi.as_array(ndf, type_safe=True)
+            assert [["a", "1"], ["c", None]] == arr or [
+                ["a", "1.0"],
+                ["c", None],
+            ] == arr  # in pandas case, it can't treat [1, None] as an int col
+            assert fi.get_schema(ndf) == "a:str,b:str"
 
             # int -> double
             df = self.df([["a", 1], ["c", None]], "a:str,b:int")
-            ndf = df.alter_columns("b:double")
-            assert [["a", 1], ["c", None]] == ndf.as_array(type_safe=True)
-            assert ndf.schema == "a:str,b:double"
+            ndf = fi.alter_columns(df, "b:double", as_fugue=True)
+            assert [["a", 1], ["c", None]] == fi.as_array(ndf, type_safe=True)
+            assert fi.get_schema(ndf) == "a:str,b:double"
 
             # double -> str
             df = self.df([["a", 1.1], ["b", None]], "a:str,b:double")
-            data = df.alter_columns("b:str").as_array(type_safe=True)
+            data = fi.as_array(
+                fi.alter_columns(df, "b:str", as_fugue=True), type_safe=True
+            )
             assert [["a", "1.1"], ["b", None]] == data
 
             # double -> int
             df = self.df([["a", 1.0], ["b", None]], "a:str,b:double")
-            data = df.alter_columns("b:int").as_array(type_safe=True)
+            data = fi.as_array(
+                fi.alter_columns(df, "b:int", as_fugue=True), type_safe=True
+            )
             assert [["a", 1], ["b", None]] == data
 
             # date -> str
@@ -318,7 +324,9 @@ class DataFrameTests(object):
                 [["a", date(2020, 1, 1)], ["b", date(2020, 1, 2)], ["c", None]],
                 "a:str,b:date",
             )
-            data = df.alter_columns("b:str").as_array(type_safe=True)
+            data = fi.as_array(
+                fi.alter_columns(df, "b:str", as_fugue=True), type_safe=True
+            )
             assert [["a", "2020-01-01"], ["b", "2020-01-02"], ["c", None]] == data
 
             # datetime -> str
@@ -330,7 +338,9 @@ class DataFrameTests(object):
                 ],
                 "a:str,b:datetime",
             )
-            data = df.alter_columns("b:str").as_array(type_safe=True)
+            data = fi.as_array(
+                fi.alter_columns(df, "b:str", as_fugue=True), type_safe=True
+            )
             assert [
                 ["a", "2020-01-01 03:04:05"],
                 ["b", "2020-01-02 16:07:08"],
@@ -339,49 +349,51 @@ class DataFrameTests(object):
 
             # str -> bool
             df = self.df([["a", "trUe"], ["b", "False"], ["c", None]], "a:str,b:str")
-            ndf = df.alter_columns("b:bool,a:str")
-            assert [["a", True], ["b", False], ["c", None]] == ndf.as_array(
-                type_safe=True
+            ndf = fi.alter_columns(df, "b:bool,a:str", as_fugue=True)
+            assert [["a", True], ["b", False], ["c", None]] == fi.as_array(
+                ndf, type_safe=True
             )
-            assert ndf.schema == "a:str,b:bool"
+            assert fi.get_schema(ndf) == "a:str,b:bool"
 
             # str -> int
             df = self.df([["a", "1"]], "a:str,b:str")
-            ndf = df.alter_columns("b:int,a:str")
-            assert [["a", 1]] == ndf.as_array(type_safe=True)
-            assert ndf.schema == "a:str,b:int"
+            ndf = fi.alter_columns(df, "b:int,a:str")
+            assert [["a", 1]] == fi.as_array(ndf, type_safe=True)
+            assert fi.get_schema(ndf) == "a:str,b:int"
 
             # str -> double
             df = self.df([["a", "1.1"], ["b", "2"], ["c", None]], "a:str,b:str")
-            ndf = df.alter_columns("b:double")
-            assert [["a", 1.1], ["b", 2.0], ["c", None]] == ndf.as_array(type_safe=True)
-            assert ndf.schema == "a:str,b:double"
+            ndf = fi.alter_columns(df, "b:double", as_fugue=True)
+            assert [["a", 1.1], ["b", 2.0], ["c", None]] == fi.as_array(
+                ndf, type_safe=True
+            )
+            assert fi.get_schema(ndf) == "a:str,b:double"
 
             # str -> date
             df = self.df(
                 [["1", "2020-01-01"], ["2", "2020-01-02 01:02:03"], ["3", None]],
                 "a:str,b:str",
             )
-            ndf = df.alter_columns("b:date,a:int")
+            ndf = fi.alter_columns(df, "b:date,a:int", as_fugue=True)
             assert [
                 [1, date(2020, 1, 1)],
                 [2, date(2020, 1, 2)],
                 [3, None],
-            ] == ndf.as_array(type_safe=True)
-            assert ndf.schema == "a:int,b:date"
+            ] == fi.as_array(ndf, type_safe=True)
+            assert fi.get_schema(ndf) == "a:int,b:date"
 
             # str -> datetime
             df = self.df(
                 [["1", "2020-01-01"], ["2", "2020-01-02 01:02:03"], ["3", None]],
                 "a:str,b:str",
             )
-            ndf = df.alter_columns("b:datetime,a:int")
+            ndf = fi.alter_columns(df, "b:datetime,a:int", as_fugue=True)
             assert [
                 [1, datetime(2020, 1, 1)],
                 [2, datetime(2020, 1, 2, 1, 2, 3)],
                 [3, None],
-            ] == ndf.as_array(type_safe=True)
-            assert ndf.schema == "a:int,b:datetime"
+            ] == fi.as_array(ndf, type_safe=True)
+            assert fi.get_schema(ndf) == "a:int,b:datetime"
 
         def test_alter_columns_invalid(self):
             # invalid conversion
@@ -390,5 +402,5 @@ class DataFrameTests(object):
                     [["1", "x"], ["2", "y"], ["3", None]],
                     "a:str,b:str",
                 )
-                ndf = df.alter_columns("b:int")
-                ndf.show()  # lazy dataframes will force to materialize
+                ndf = fi.alter_columns(df, "b:int")
+                fi.show(ndf)  # lazy dataframes will force to materialize

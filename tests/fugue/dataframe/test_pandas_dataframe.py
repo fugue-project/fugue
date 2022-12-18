@@ -5,7 +5,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from fugue.dataframe import PandasDataFrame
+from fugue.dataframe import PandasDataFrame, ArrowDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_test.dataframe_suite import DataFrameTests
@@ -17,6 +17,17 @@ from triad.exceptions import InvalidOperationError
 class PandasDataFrameTests(DataFrameTests.Tests):
     def df(self, data: Any = None, schema: Any = None) -> PandasDataFrame:
         return PandasDataFrame(data, schema)
+
+
+class NativePandasDataFrameTests(DataFrameTests.Tests):
+    def df(self, data: Any = None, schema: Any = None) -> pd.DataFrame:
+        return ArrowDataFrame(data, schema).as_pandas()
+
+    def test_get_altered_schema(self):
+        pass
+
+    def test_map_type(self):
+        pass
 
 
 def test_init():
@@ -76,10 +87,10 @@ def test_simple_methods():
 
 
 def test_nested():
-    #data = [[dict(a=1, b=[3, 4], d=1.0)], [json.dumps(dict(b=[30, "40"]))]]
-    #df = PandasDataFrame(data, "a:{a:str,b:[int]}")
-    #a = df.as_array(type_safe=True)
-    #assert [[dict(a="1", b=[3, 4])], [dict(a=None, b=[30, 40])]] == a
+    # data = [[dict(a=1, b=[3, 4], d=1.0)], [json.dumps(dict(b=[30, "40"]))]]
+    # df = PandasDataFrame(data, "a:{a:str,b:[int]}")
+    # a = df.as_array(type_safe=True)
+    # assert [[dict(a="1", b=[3, 4])], [dict(a=None, b=[30, 40])]] == a
 
     data = [[[json.dumps(dict(b=[30, "40"]))]]]
     df = PandasDataFrame(data, "a:[{a:str,b:[int]}]")

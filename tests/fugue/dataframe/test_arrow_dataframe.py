@@ -17,6 +17,14 @@ class ArrowDataFrameTests(DataFrameTests.Tests):
         return ArrowDataFrame(data, schema)
 
 
+class NativeArrowDataFrameTests(DataFrameTests.Tests):
+    def df(self, data: Any = None, schema: Any = None) -> pd.DataFrame:
+        return ArrowDataFrame(data, schema).as_arrow()
+
+    def test_get_altered_schema(self):
+        pass
+
+
 def test_init():
     df = ArrowDataFrame(schema="a:str,b:int")
     assert df.empty

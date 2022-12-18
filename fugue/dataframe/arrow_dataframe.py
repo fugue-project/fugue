@@ -266,20 +266,26 @@ def _get_pyarrow_table_schema(df: pa.Table) -> Schema:
 
 
 @rename.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
-def _rename_pyarrow_dataframe(df: pa.Table, names: Dict[str, Any]) -> pa.Table:
-    if len(names) == 0:
+def _rename_pyarrow_dataframe(df: pa.Table, columns: Dict[str, Any]) -> pa.Table:
+    if len(columns) == 0:
         return df
-    return df.rename_columns([names.get(f.name, f.name) for f in df.schema])
+    _assert_no_missing(df, columns.keys())
+    return df.rename_columns([columns.get(f.name, f.name) for f in df.schema])
 
 
 @drop_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
 def _drop_pa_columns(df: pa.Table, columns: List[str]) -> pa.Table:
     cols = [x for x in df.schema.names if x not in columns]
+    if len(cols) == 0:
+        raise FugueDataFrameOperationError("cannot drop all columns")
+    if len(cols) + len(columns) != len(df.columns):
+        _assert_no_missing(df, columns)
     return df.select(cols)
 
 
 @select_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
 def _select_pa_columns(df: pa.Table, columns: List[Any]) -> pa.Table:
+    _assert_no_missing(df, columns=columns)
     return df.select(columns)
 
 
@@ -288,3 +294,9 @@ def _build_empty_arrow(schema: Schema) -> pa.Table:  # pragma: no cover
         arr = [pa.array([])] * len(schema)
         return pa.Table.from_arrays(arr, schema=schema.pa_schema)
     return pa.Table.from_pylist([], schema=schema.pa_schema)
+
+
+def _assert_no_missing(df: pa.Table, columns: Iterable[Any]) -> None:
+    missing = [x for x in columns if x not in df.schema.names]
+    if len(missing) > 0:
+        raise FugueDataFrameOperationError("cannot drop nonexistent columns: {missing}")

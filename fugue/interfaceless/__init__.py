@@ -24,6 +24,7 @@ from fugue.dataset import (
     is_bounded,
     is_empty,
     is_local,
+    show,
 )
 
 from .transformation import out_transform, transform
