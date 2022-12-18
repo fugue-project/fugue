@@ -3,15 +3,15 @@ import pickle
 import duckdb
 import pandas as pd
 import pyarrow as pa
-from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, infer_execution_engine
-from fugue.dataframe.utils import _df_eq as df_eq
-from fugue import fsql
-from fugue_test.builtin_suite import BuiltInTests
-from fugue_test.execution_suite import ExecutionEngineTests
 from pytest import raises
 
+from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, fsql
+from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.plugins import infer_execution_engine
 from fugue_duckdb import DuckExecutionEngine
 from fugue_duckdb.dataframe import DuckDataFrame
+from fugue_test.builtin_suite import BuiltInTests
+from fugue_test.execution_suite import ExecutionEngineTests
 
 
 class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -178,9 +178,9 @@ def test_sql_yield():
 def test_infer_engine():
     con = duckdb.connect()
     df = con.from_df(pd.DataFrame([[0]], columns=["a"]))
-    assert infer_execution_engine([df])=="duckdb"
+    assert infer_execution_engine([df]) == "duckdb"
 
     fdf = DuckDataFrame(df)
-    assert infer_execution_engine([fdf])=="duckdb"
+    assert infer_execution_engine([fdf]) == "duckdb"
 
     con.close()

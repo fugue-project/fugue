@@ -24,7 +24,8 @@ def parse_creator(obj: Any) -> Any:
 
         .. code-block:: python
 
-            from fugue import Creator, parse_creator, FugueWorkflow
+            from fugue import Creator, FugueWorkflow
+            from fugue.plugins import parse_creator
             from triad import to_uuid
 
             class My(Creator):

@@ -285,6 +285,8 @@ def _drop_pa_columns(df: pa.Table, columns: List[str]) -> pa.Table:
 
 @select_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
 def _select_pa_columns(df: pa.Table, columns: List[Any]) -> pa.Table:
+    if len(columns) == 0:
+        raise FugueDataFrameOperationError("must select at least one column")
     _assert_no_missing(df, columns=columns)
     return df.select(columns)
 

@@ -50,6 +50,7 @@ class DataFrameTests(object):
             df = self.df([], "x:str,y:double")
             pdf = fi.as_pandas(df)
             assert [] == pdf.values.tolist()
+            assert fi.is_local(pdf)
 
         def test_drop_columns(self):
             df = fi.drop_columns(self.df([], "a:str,b:int"), ["a"])
@@ -74,6 +75,9 @@ class DataFrameTests(object):
         def test_select(self):
             df = fi.select_columns(self.df([], "a:str,b:int"), ["b"])
             assert fi.get_schema(df) == "b:int"
+            raises(
+                FugueDataFrameOperationError, lambda: fi.select_columns(df, [])
+            )  # select empty
             raises(
                 FugueDataFrameOperationError, lambda: fi.select_columns(df, ["a"])
             )  # not existed
@@ -207,6 +211,7 @@ class DataFrameTests(object):
             # empty
             df = self.df([], "a:int,b:int")
             assert [] == list(ArrowDataFrame(fi.as_arrow(df)).as_dict_iterable())
+            assert fi.is_local(fi.as_arrow(df))
             # pd.Nat
             df = self.df([[pd.NaT, 1]], "a:datetime,b:int")
             assert [dict(a=None, b=1)] == list(

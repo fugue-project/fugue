@@ -4,18 +4,14 @@ from typing import Any, Optional
 import ray.data as rd
 from triad import run_at_def
 
-from fugue import (
-    DataFrame,
-    infer_execution_engine,
-    is_pandas_or,
-    register_execution_engine,
-)
+from fugue import DataFrame, is_pandas_or, register_execution_engine
 from fugue._utils.interfaceless import (
     DataFrameParam,
     ExecutionEngineParam,
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
+from fugue.plugins import infer_execution_engine
 from fugue.workflow import register_raw_df_type
 
 from .dataframe import RayDataFrame

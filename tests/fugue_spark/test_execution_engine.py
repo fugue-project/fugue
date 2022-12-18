@@ -6,7 +6,13 @@ import pyspark
 import pyspark.rdd as pr
 import pyspark.sql as ps
 import pytest
-from fugue import infer_execution_engine, transform
+from pyspark import SparkContext, StorageLevel
+from pyspark.sql import DataFrame as SDataFrame
+from pyspark.sql import SparkSession
+from pytest import raises
+from triad import Schema
+
+from fugue import transform
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import (
     ArrayDataFrame,
@@ -16,17 +22,12 @@ from fugue.dataframe import (
 )
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.extensions.transformer import Transformer, transformer
+from fugue.plugins import infer_execution_engine
 from fugue.workflow.workflow import FugueWorkflow
-from fugue_test.builtin_suite import BuiltInTests
-from fugue_test.execution_suite import ExecutionEngineTests
-from pyspark import SparkContext, StorageLevel
-from pyspark.sql import DataFrame as SDataFrame
-from pyspark.sql import SparkSession
-from pytest import raises
-from triad import Schema
-
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
+from fugue_test.builtin_suite import BuiltInTests
+from fugue_test.execution_suite import ExecutionEngineTests
 
 
 class SparkExecutionEngineTests(ExecutionEngineTests.Tests):

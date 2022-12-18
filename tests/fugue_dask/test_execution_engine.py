@@ -5,16 +5,17 @@ from typing import Any, List, Optional
 import dask.dataframe as dd
 import pandas as pd
 from dask.distributed import Client
-from fugue import infer_execution_engine, transform
+
+from fugue import transform
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.plugins import infer_execution_engine
 from fugue.workflow.workflow import FugueWorkflow
-from fugue_test.builtin_suite import BuiltInTests
-from fugue_test.execution_suite import ExecutionEngineTests
-
 from fugue_dask.dataframe import DaskDataFrame
 from fugue_dask.execution_engine import DaskExecutionEngine
+from fugue_test.builtin_suite import BuiltInTests
+from fugue_test.execution_suite import ExecutionEngineTests
 
 _CONF = {
     "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
@@ -192,6 +193,3 @@ def test_transform():
     assert not res.is_local
     assert 5 == res.count()
     assert 5 == cb.n
-
-
-

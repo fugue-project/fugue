@@ -4,21 +4,15 @@ import duckdb
 import pandas as pd
 import ray
 import ray.data as rd
-from fugue import (
-    ArrayDataFrame,
-    FugueWorkflow,
-    transform,
-    DataFrame,
-    infer_execution_engine,
-)
-from fugue.dataframe.utils import _df_eq as df_eq
-from fugue import fsql
-from fugue_test.builtin_suite import BuiltInTests
-from fugue_test.execution_suite import ExecutionEngineTests
 from pytest import raises
 from triad import FileSystem
 
-from fugue_ray import RayExecutionEngine, RayDataFrame
+from fugue import ArrayDataFrame, DataFrame, FugueWorkflow, fsql, transform
+from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.plugins import infer_execution_engine
+from fugue_ray import RayDataFrame, RayExecutionEngine
+from fugue_test.builtin_suite import BuiltInTests
+from fugue_test.execution_suite import ExecutionEngineTests
 
 _CONF = {
     "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",

@@ -1,6 +1,16 @@
-from fugue.dataframe import ArrayDataFrame, DataFrame
-from triad.collections.schema import Schema
 import copy
+import pandas as pd
+from triad.collections.schema import Schema
+from pytest import raises
+from fugue.dataframe import ArrayDataFrame, DataFrame
+from fugue.interfaceless import as_fugue_df
+
+
+def test_as_fugue_df():
+    with raises(NotImplementedError):
+        as_fugue_df(10)
+    df = pd.DataFrame([[0]], columns=["a"])
+    assert isinstance(as_fugue_df(df), DataFrame)
 
 
 def test_show():
@@ -56,5 +66,5 @@ def test_copy():
 
 class MockDF(ArrayDataFrame):
     def __init__(self, df=None, schema=None):
-        super(). __init__(df=df, schema=schema)
+        super().__init__(df=df, schema=schema)
         DataFrame.__init__(self, lambda: Schema(schema))

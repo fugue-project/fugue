@@ -7,20 +7,14 @@ from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from triad import run_at_def
 
-from fugue import (
-    DataFrame,
-    ExecutionEngine,
-    infer_execution_engine,
-    is_pandas_or,
-    parse_creator,
-    register_execution_engine,
-)
+from fugue import DataFrame, ExecutionEngine, is_pandas_or, register_execution_engine
 from fugue._utils.interfaceless import (
     DataFrameParam,
     ExecutionEngineParam,
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
+from fugue.plugins import infer_execution_engine, parse_creator
 from fugue.workflow import register_raw_df_type
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine

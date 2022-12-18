@@ -246,6 +246,8 @@ def _drop_pd_columns(
 def _select_pd_columns(
     df: pd.DataFrame, columns: List[Any], as_fugue: bool = False
 ) -> Any:
+    if len(columns) == 0:
+        raise FugueDataFrameOperationError("must select at least one column")
     _assert_no_missing(df, columns)
     return _adjust_df(df[columns], as_fugue=as_fugue)
 
