@@ -24,7 +24,7 @@ import sphinx_rtd_theme
 project = "Fugue"
 version = __version__
 copyright = "2022, Fugue Development Team"  # noqa: A001
-author = "Han Wang"
+author = "The Fugue Development Team"
 
 
 # -- General configuration ---------------------------------------------------
@@ -80,6 +80,8 @@ html_theme_options = {
 }
 
 master_doc = "index"
+
+html_favicon = '_static/fugue_logo_trimmed.svg'
 
 intersphinx_mapping = {
     "triad": ("https://triad.readthedocs.io/en/latest", None),

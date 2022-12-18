@@ -10,7 +10,5 @@ Fugue Documentation
    :maxdepth: 3
 
    introduction
-   tutorials
-   community
    api
 
