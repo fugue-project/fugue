@@ -69,7 +69,7 @@ class IbisDataFrame(DataFrame):
     def num_partitions(self) -> int:
         return 1  # pragma: no cover
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         res = self._to_local_df(self._table.head(1)).as_array()
         if len(res) == 0:
             raise FugueDatasetEmptyError()

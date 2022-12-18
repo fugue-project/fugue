@@ -1312,7 +1312,7 @@ class WorkflowDataFrame(DataFrame):
         """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
-    def peek_array(self) -> Any:  # pragma: no cover
+    def peek_array(self) -> List[Any]:  # pragma: no cover
         """
         :raises NotImplementedError: don't call this method
         """

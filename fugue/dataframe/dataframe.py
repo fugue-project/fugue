@@ -9,8 +9,12 @@ from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
+from triad.utils.rename import normalize_names
+
+from fugue.dataset import as_fugue_dataset
 
 from .._utils.display import PrettyTable
+from .._utils.registry import fugue_plugin
 from ..collections.yielded import Yielded
 from ..dataset import Dataset, DatasetDisplay, get_dataset_display
 from ..exceptions import FugueDataFrameOperationError
@@ -62,7 +66,7 @@ class DataFrame(Dataset):
         raise NotImplementedError
 
     @abstractmethod
-    def peek_array(self) -> Any:  # pragma: no cover
+    def peek_array(self) -> List[Any]:  # pragma: no cover
         """Peek the first row of the dataframe as array
 
         :raises FugueDatasetEmptyError: if it is empty
@@ -410,6 +414,260 @@ class DataFrameDisplay(DatasetDisplay):
                 print("")
 
 
+def as_fugue_df(df: Any) -> DataFrame:
+    """Wrap the object as a Fugue DataFrame. This is a wrapper
+    of :func:`~fugue.dataset.as_fugue_dataset`
+
+    :param df: the object to wrap
+    """
+    res = as_fugue_dataset(df)
+    assert_or_throw(
+        isinstance(res, DataFrame),
+        TypeError(f"{type(df)} can't be converted to a Fugue DataFrame"),
+    )
+    return res  # type: ignore
+
+
+@fugue_plugin
+def get_schema(df: Any) -> Schema:
+    """Get the schema of the ``df``
+
+    :param df: the object that can be recognized as a dataframe by Fugue
+    :return: the Schema object
+    """
+    return as_fugue_df(df).schema
+
+
+@fugue_plugin
+def as_pandas(df: Any) -> pd.DataFrame:
+    """Convert ``df`` to a Pandas DataFrame
+
+    :param df: the object that can be recognized as a dataframe by Fugue
+    :return: the Pandas DataFrame
+    """
+    return as_fugue_df(df).as_pandas()
+
+
+@fugue_plugin
+def as_arrow(df: Any) -> pa.Table:
+    """Convert ``df`` to a PyArrow Table
+
+    :param df: the object that can be recognized as a dataframe by Fugue
+    :return: the PyArrow Table
+    """
+    return as_fugue_df(df).as_arrow()
+
+
+@fugue_plugin
+def as_array(
+    df: Any, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> List[Any]:  # pragma: no cover
+    """Convert df to 2-dimensional native python array
+
+    :param df: the object that can be recognized as a dataframe by Fugue
+    :param columns: columns to extract, defaults to None
+    :param type_safe: whether to ensure output conforms with its schema,
+        defaults to False
+    :return: 2-dimensional native python array
+
+    .. note::
+
+        If ``type_safe`` is False, then the returned values are 'raw' values.
+    """
+    return as_fugue_df(df).as_array(columns=columns, type_safe=type_safe)
+
+
+@fugue_plugin
+def as_array_iterable(
+    df: Any, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> Iterable[Any]:  # pragma: no cover
+    """Convert df to iterable of native python arrays
+
+    :param df: the object that can be recognized as a dataframe by Fugue
+    :param columns: columns to extract, defaults to None
+    :param type_safe: whether to ensure output conforms with its schema,
+        defaults to False
+    :return: iterable of native python arrays
+
+    .. note::
+
+        If ``type_safe`` is False, then the returned values are 'raw' values.
+    """
+
+    return as_fugue_df(df).as_array_iterable(columns=columns, type_safe=type_safe)
+
+
+@fugue_plugin
+def as_dict_iterable(
+    df: Any, columns: Optional[List[str]] = None
+) -> Iterable[Dict[str, Any]]:
+    """Convert df to iterable of native python dicts
+
+    :param df: the object that can be recognized as a dataframe by Fugue
+    :param columns: columns to extract, defaults to None
+    :return: iterable of native python dicts
+
+    .. note::
+
+        The default implementation enforces ``type_safe`` True
+    """
+    return as_fugue_df(df).as_array_iterable(columns=columns)
+
+
+@fugue_plugin
+def peek_array(df: Any) -> List[Any]:
+    """Peek the first row of the dataframe as an array
+
+    :param df: the object that can be recognized as a dataframe by Fugue
+    :return: the first row as an array
+    """
+    return as_fugue_df(df).peek_array()
+
+
+@fugue_plugin
+def peek_dict(df: Any) -> Dict[str, Any]:
+    """Peek the first row of the dataframe as a array
+
+    :param df: the object that can be recognized as a dataframe by Fugue
+    :return: the first row as a dict
+    """
+    return as_fugue_df(df).peek_dict()
+
+
+@fugue_plugin
+def head(df: Any, n: int, columns: Optional[List[str]] = None) -> Any:
+    """Get first n rows of the dataframe as a new local bounded dataframe
+
+    :param n: number of rows
+    :param columns: selected columns, defaults to None (all columns)
+    :return: a local bounded dataframe
+    """
+    res = as_fugue_df(df).head(n=n, columns=columns)
+    if isinstance(df, DataFrame):
+        return res
+    return res.as_pandas()
+
+
+@fugue_plugin
+def alter_columns(df: Any, columns: Any) -> Any:
+    """Change column types
+
+    :param df: the object that can be recognized as a dataframe by Fugue
+    :param columns: |SchemaLikeObject|,
+        all columns should be contained by the dataframe schema
+    :return: a new dataframe with altered columns, the order of the
+        original schema will not change
+    """
+    return _adjust_df(df, as_fugue_df(df).alter_columns(columns))
+
+
+@fugue_plugin
+def drop_columns(df: Any, columns: List[str]) -> Any:
+    """Drop certain columns and return a new dataframe
+
+    :param df: the object that can be recognized as a dataframe by Fugue
+    :param columns: columns to drop
+    :return: a new dataframe removing the columns
+    """
+    return _adjust_df(df, as_fugue_df(df).drop(columns))
+
+
+@fugue_plugin
+def select_columns(df: Any, columns: List[Any]) -> Any:
+    """Select certain columns and return a new dataframe
+
+    :param df: the object that can be recognized as a dataframe by Fugue
+    :param columns: columns to return
+    :return: a new dataframe with the selected the columns
+    """
+    return _adjust_df(df, as_fugue_df(df)[columns])
+
+
+@fugue_plugin
+def get_column_names(df: Any) -> List[Any]:  # pragma: no cover
+    """A generic function to get column names of any dataframe
+
+    :param df: the dataframe object
+    :return: the column names
+
+    .. note::
+
+        In order to support a new type of dataframe, an implementation must
+        be registered, for example
+
+        .. code-block::python
+
+            @get_column_names.candidate(lambda df: isinstance(df, pa.Table))
+            def _get_pyarrow_dataframe_columns(df: pa.Table) -> List[Any]:
+                return [f.name for f in df.schema]
+    """
+    return get_schema(df).names
+
+
+@fugue_plugin
+def rename(df: Any, names: Dict[str, Any]) -> Any:
+    """A generic function to rename column names of any dataframe
+
+    :param df: the dataframe object
+    :param names: the rename operations as a dict: ``old name => new name``
+    :return: the renamed dataframe
+
+    .. note::
+
+        In order to support a new type of dataframe, an implementation must
+        be registered, for example
+
+        .. code-block::python
+
+            @rename.candidate(
+                lambda df, *args, **kwargs: isinstance(df, pd.DataFrame)
+            )
+            def _rename_pandas_dataframe(
+                df: pd.DataFrame, names: Dict[str, Any]
+            ) -> pd.DataFrame:
+                if len(names) == 0:
+                    return df
+                return df.rename(columns=names)
+    """
+    if len(names) == 0:
+        return df
+    return _adjust_df(df, as_fugue_df(df).rename(names))
+
+
+def normalize_column_names(df: Any) -> Tuple[Any, Dict[str, Any]]:
+    """A generic function to normalize any dataframe's column names to follow
+    Fugue naming rules
+
+    .. note::
+
+        This is a temporary solution before
+        :class:`~triad:triad.collections.schema.Schema`
+        can take arbitrary names
+
+    .. admonition:: Examples
+
+        * ``[0,1]`` => ``{"_0":0, "_1":1}``
+        * ``["1a","2b"]`` => ``{"_1a":"1a", "_2b":"2b"}``
+        * ``["*a","-a"]`` => ``{"_a":"*a", "_a_1":"-a"}``
+
+    :param df: a dataframe object
+    :return: the renamed dataframe and the rename operations as a dict that
+        can **undo** the change
+
+    .. seealso::
+
+        * :func:`~.get_column_names`
+        * :func:`~.rename`
+        * :func:`~triad:triad.utils.rename.normalize_names`
+    """
+    cols = get_column_names(df)
+    names = normalize_names(cols)
+    if len(names) == 0:
+        return df, {}
+    undo = {v: k for k, v in names.items()}
+    return (rename(df, names), undo)
+
+
 @get_dataset_display.candidate(lambda ds: isinstance(ds, DataFrame), priority=0.1)
 def _get_dataframe_display(ds: DataFrame):
     return DataFrameDisplay(ds)
@@ -443,3 +701,9 @@ def _get_schema_change(
 
 def _input_schema(schema: Any) -> Schema:
     return schema if isinstance(schema, Schema) else Schema(schema)
+
+
+def _adjust_df(input_df: Any, output_df: DataFrame) -> Any:
+    if isinstance(input_df, DataFrame):
+        return output_df
+    return output_df.native  # type: ignore

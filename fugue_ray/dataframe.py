@@ -12,8 +12,8 @@ from fugue.dataframe import (
 )
 from fugue.dataframe.dataframe import _input_schema
 from fugue.dataframe.utils import (
-    get_dataframe_column_names,
-    rename_dataframe_column_names,
+    get_column_names,
+    rename,
 )
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from triad.collections.schema import Schema
@@ -21,7 +21,7 @@ from triad.collections.schema import Schema
 from ._utils.dataframe import _build_empty_arrow, build_empty, get_dataset_format
 
 
-@get_dataframe_column_names.candidate(lambda df: isinstance(df, rd.Dataset))
+@get_column_names.candidate(lambda df: isinstance(df, rd.Dataset))
 def _get_ray_dataframe_columns(df: rd.Dataset) -> List[Any]:
     fmt = get_dataset_format(df)
     if fmt == "pandas":
@@ -31,9 +31,7 @@ def _get_ray_dataframe_columns(df: rd.Dataset) -> List[Any]:
     raise NotImplementedError(f"{fmt} is not supported")  # pragma: no cover
 
 
-@rename_dataframe_column_names.candidate(
-    lambda df, *args, **kwargs: isinstance(df, rd.Dataset)
-)
+@rename.candidate(lambda df, *args, **kwargs: isinstance(df, rd.Dataset))
 def _rename_ray_dataframe(df: rd.Dataset, names: Dict[str, Any]) -> rd.Dataset:
     if len(names) == 0:
         return df
@@ -153,7 +151,7 @@ class RayDataFrame(DataFrame):
         )
         return RayDataFrame(rdf, self.schema.extract(cols), internal_schema=True)
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         data = self.native.limit(1).to_pandas().values.tolist()
         if len(data) == 0:
             raise FugueDatasetEmptyError

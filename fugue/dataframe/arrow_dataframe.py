@@ -2,11 +2,23 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 import pyarrow as pa
-from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
-from fugue.exceptions import FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
+
+from fugue.dataset import as_fugue_dataset, count, is_bounded, is_empty, is_local
+from fugue.exceptions import FugueDataFrameOperationError
+
+from .dataframe import (
+    DataFrame,
+    LocalBoundedDataFrame,
+    _input_schema,
+    drop_columns,
+    get_column_names,
+    get_schema,
+    rename,
+    select_columns,
+)
 
 
 class ArrowDataFrame(LocalBoundedDataFrame):
@@ -105,7 +117,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
     def empty(self) -> bool:
         return self.count() == 0
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         self.assert_not_empty()
         data = self.native.take([0]).to_pydict()
         return [v[0] for v in data.values()]
@@ -216,6 +228,59 @@ class ArrowDataFrame(LocalBoundedDataFrame):
             cols = [d[n] for n in self.schema.names]
             for arr in zip(*cols):
                 yield list(arr)
+
+
+@as_fugue_dataset.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_as_fugue_df(df: pa.Table) -> "ArrowDataFrame":
+    return ArrowDataFrame(df)
+
+
+@count.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_count(df: pa.Table) -> int:
+    return df.shape[0]
+
+
+@is_bounded.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_is_bounded(df: pa.Table) -> bool:
+    return True
+
+
+@is_empty.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_is_empty(df: pa.Table) -> bool:
+    return df.shape[0] == 0
+
+
+@is_local.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_is_local(df: pa.Table) -> bool:
+    return True
+
+
+@get_column_names.candidate(lambda df: isinstance(df, pa.Table))
+def _get_pyarrow_table_columns(df: pa.Table) -> List[Any]:
+    return [f.name for f in df.schema]
+
+
+@get_schema.candidate(lambda df: isinstance(df, pa.Table))
+def _get_pyarrow_table_schema(df: pa.Table) -> Schema:
+    return Schema(df.schema)
+
+
+@rename.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
+def _rename_pyarrow_dataframe(df: pa.Table, names: Dict[str, Any]) -> pa.Table:
+    if len(names) == 0:
+        return df
+    return df.rename_columns([names.get(f.name, f.name) for f in df.schema])
+
+
+@drop_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
+def _drop_pa_columns(df: pa.Table, columns: List[str]) -> pa.Table:
+    cols = [x for x in df.schema.names if x not in columns]
+    return df.select(cols)
+
+
+@select_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
+def _select_pa_columns(df: pa.Table, columns: List[Any]) -> pa.Table:
+    return df.select(columns)
 
 
 def _build_empty_arrow(schema: Schema) -> pa.Table:  # pragma: no cover

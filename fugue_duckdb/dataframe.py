@@ -38,7 +38,7 @@ class DuckDataFrame(LocalBoundedDataFrame):
     def empty(self) -> bool:
         return self._rel.fetchone() is None
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         res = self._rel.fetchone()
         if res is None:
             raise FugueDatasetEmptyError()

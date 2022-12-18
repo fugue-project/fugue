@@ -12,8 +12,8 @@ from fugue.dataframe import (
     PandasDataFrame,
 )
 from fugue.dataframe.utils import (
-    get_dataframe_column_names,
-    rename_dataframe_column_names,
+    get_column_names,
+    rename,
 )
 from fugue.exceptions import FugueDataFrameOperationError
 from pyspark.sql.functions import col
@@ -24,14 +24,12 @@ from triad.utils.assertion import assert_or_throw
 from fugue_spark._utils.convert import to_cast_expression, to_schema, to_type_safe_input
 
 
-@get_dataframe_column_names.candidate(lambda df: isinstance(df, ps.DataFrame))
+@get_column_names.candidate(lambda df: isinstance(df, ps.DataFrame))
 def _get_spark_dataframe_columns(df: ps.DataFrame) -> List[Any]:
     return [f.name for f in df.schema]
 
 
-@rename_dataframe_column_names.candidate(
-    lambda df, *args, **kwargs: isinstance(df, ps.DataFrame)
-)
+@rename.candidate(lambda df, *args, **kwargs: isinstance(df, ps.DataFrame))
 def _rename_spark_dataframe(df: ps.DataFrame, names: Dict[str, Any]) -> ps.DataFrame:
     if len(names) == 0:
         return df

@@ -20,7 +20,7 @@ from fugue.dataframe.dataframes import DataFrames
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import to_local_bounded_df, to_local_df
-from fugue.dataset import Dataset, DatasetDisplay, get_dataset_display
+from fugue.dataset import Dataset, DatasetDisplay, as_fugue_dataset, get_dataset_display
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 from fugue.execution.factory import (
     infer_execution_engine,

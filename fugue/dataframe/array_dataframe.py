@@ -51,7 +51,7 @@ class ArrayDataFrame(LocalBoundedDataFrame):
     def empty(self) -> bool:
         return self.count() == 0
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         self.assert_not_empty()
         return list(self.native[0])
 

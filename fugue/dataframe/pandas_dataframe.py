@@ -2,11 +2,24 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 import pyarrow as pa
-from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
-from fugue.exceptions import FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
+
+from fugue.dataset import as_fugue_dataset, count, is_bounded, is_empty, is_local
+from fugue.exceptions import FugueDataFrameOperationError
+
+from .dataframe import (
+    DataFrame,
+    LocalBoundedDataFrame,
+    _input_schema,
+    drop_columns,
+    get_column_names,
+    get_schema,
+    head,
+    rename,
+    select_columns,
+)
 
 
 class PandasDataFrame(LocalBoundedDataFrame):
@@ -76,7 +89,7 @@ class PandasDataFrame(LocalBoundedDataFrame):
     def empty(self) -> bool:
         return self.native.empty
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         self.assert_not_empty()
         return self.native.iloc[0].values.tolist()
 
@@ -170,3 +183,63 @@ class PandasDataFrame(LocalBoundedDataFrame):
             )
             pdf.columns = schema.names
         return PD_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True), schema
+
+
+@as_fugue_dataset.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_as_fugue_df(df: pd.DataFrame) -> "PandasDataFrame":
+    return PandasDataFrame(df)
+
+
+@count.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_count(df: pd.DataFrame) -> int:
+    return df.shape[0]
+
+
+@is_bounded.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_is_bounded(df: pd.DataFrame) -> bool:
+    return True
+
+
+@is_empty.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_is_empty(df: pd.DataFrame) -> bool:
+    return df.shape[0] == 0
+
+
+@is_local.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_is_local(df: pd.DataFrame) -> bool:
+    return True
+
+
+@get_column_names.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _get_pandas_dataframe_columns(df: pd.DataFrame) -> List[Any]:
+    return list(df.columns)
+
+
+@get_schema.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _get_pandas_dataframe_schema(df: pd.DataFrame) -> Schema:
+    return Schema(df)
+
+
+@rename.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
+def _rename_pandas_dataframe(df: pd.DataFrame, names: Dict[str, Any]) -> pd.DataFrame:
+    if len(names) == 0:
+        return df
+    return df.rename(columns=names)
+
+
+@drop_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
+def _drop_pd_columns(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
+    cols = [x for x in df.columns if x not in columns]
+    return df[cols]
+
+
+@select_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
+def _select_pd_columns(df: pd.DataFrame, columns: List[Any]) -> pd.DataFrame:
+    return df[columns]
+
+
+@head.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
+def _pd_head(df: Any, n: int, columns: Optional[List[str]] = None) -> pd.DataFrame:
+    if columns is not None:
+        df = df[columns]
+    return df.head(n)

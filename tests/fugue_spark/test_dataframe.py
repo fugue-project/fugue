@@ -7,8 +7,8 @@ import pyspark.sql as ps
 import pytest
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import (
-    get_dataframe_column_names,
-    rename_dataframe_column_names,
+    get_column_names,
+    rename,
 )
 from fugue_test.dataframe_suite import DataFrameTests
 from pyspark.sql import SparkSession
@@ -123,24 +123,24 @@ def _df(data, schema=None):
     return SparkDataFrame(df, schema)
 
 
-def test_get_dataframe_column_names(spark_session):
+def test_get_column_names(spark_session):
     df = spark_session.createDataFrame(
         pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"])
     )
-    assert get_dataframe_column_names(df) == ["0", "1", "2"]
+    assert get_column_names(df) == ["0", "1", "2"]
 
 
-def test_rename_dataframe_column_names(spark_session):
+def test_rename(spark_session):
     pdf = spark_session.createDataFrame(
         pd.DataFrame([[0, 1, 2]], columns=["a", "b", "c"])
     )
-    df = rename_dataframe_column_names(pdf, {})
+    df = rename(pdf, {})
     assert isinstance(df, ps.DataFrame)
-    assert get_dataframe_column_names(df) == ["a", "b", "c"]
+    assert get_column_names(df) == ["a", "b", "c"]
 
     pdf = spark_session.createDataFrame(
         pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"])
     )
-    df = rename_dataframe_column_names(pdf, {"0": "_0", "1": "_1", "2": "_2"})
+    df = rename(pdf, {"0": "_0", "1": "_1", "2": "_2"})
     assert isinstance(df, ps.DataFrame)
-    assert get_dataframe_column_names(df) == ["_0", "_1", "_2"]
+    assert get_column_names(df) == ["_0", "_1", "_2"]

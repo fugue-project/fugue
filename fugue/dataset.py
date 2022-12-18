@@ -39,7 +39,7 @@ class Dataset(ABC):
     @property
     @abstractmethod
     def is_local(self) -> bool:  # pragma: no cover
-        """Whether this dataframe is a :class:`.LocalDataFrame`"""
+        """Whether this dataframe is a local Dataset"""
         raise NotImplementedError
 
     @property
@@ -146,4 +146,51 @@ def get_dataset_display(ds: "Dataset") -> DatasetDisplay:  # pragma: no cover
     :param ds: the Dataset to be displayed
     """
 
-    raise NotImplementedError(f"No matching DatasetDisplay registered for {type(ds)}")
+    raise NotImplementedError(f"no matching DatasetDisplay registered for {type(ds)}")
+
+
+@fugue_plugin
+def as_fugue_dataset(data: Any) -> Dataset:
+    """Wrap the input as a :class:`~.Dataset`
+
+    :param data: the data to be wrapped
+    """
+    if isinstance(data, Dataset):
+        return data
+    raise NotImplementedError(f"no registered dataset conversion for {type(data)}")
+
+
+@fugue_plugin
+def is_local(data: Any) -> bool:
+    """Whether the dataset is local
+
+    :param data: the data that can be recognized by Fugue
+    """
+    return as_fugue_dataset(data).is_local
+
+
+@fugue_plugin
+def is_bounded(data: Any) -> bool:
+    """Whether the dataset is local
+
+    :param data: the data that can be recognized by Fugue
+    """
+    return as_fugue_dataset(data).is_bounded
+
+
+@fugue_plugin
+def is_empty(data: Any) -> bool:
+    """Whether the dataset is empty
+
+    :param data: the data that can be recognized by Fugue
+    """
+    return as_fugue_dataset(data).empty
+
+
+@fugue_plugin
+def count(data: Any) -> int:
+    """The number of elements in the dataset
+
+    :param data: the data that can be recognized by Fugue
+    """
+    return as_fugue_dataset(data).count()

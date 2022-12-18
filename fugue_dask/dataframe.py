@@ -12,8 +12,8 @@ from fugue.dataframe import (
 )
 from fugue.dataframe.dataframe import _input_schema
 from fugue.dataframe.utils import (
-    get_dataframe_column_names,
-    rename_dataframe_column_names,
+    get_column_names,
+    rename,
 )
 from fugue.exceptions import FugueDataFrameOperationError
 from triad.collections.schema import Schema
@@ -27,14 +27,12 @@ from fugue_dask._constants import (
 from fugue_dask._utils import DASK_UTILS
 
 
-@get_dataframe_column_names.candidate(lambda df: isinstance(df, pd.DataFrame))
+@get_column_names.candidate(lambda df: isinstance(df, pd.DataFrame))
 def _get_dask_dataframe_columns(df: pd.DataFrame) -> List[Any]:
     return list(df.columns)
 
 
-@rename_dataframe_column_names.candidate(
-    lambda df, *args, **kwargs: isinstance(df, pd.DataFrame)
-)
+@rename.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
 def _rename_dask_dataframe(df: pd.DataFrame, names: Dict[str, Any]) -> pd.DataFrame:
     if len(names) == 0:
         return df
@@ -132,7 +130,7 @@ class DaskDataFrame(DataFrame):
         schema = self.schema.extract(cols)
         return DaskDataFrame(self.native[schema.names], schema, type_safe=False)
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         self.assert_not_empty()
         return self.as_pandas().iloc[0].values.tolist()
 
