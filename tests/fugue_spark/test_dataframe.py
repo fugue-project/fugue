@@ -5,18 +5,16 @@ import pandas as pd
 import pyspark
 import pyspark.sql as ps
 import pytest
-from fugue.dataframe.pandas_dataframe import PandasDataFrame
-from fugue.dataframe.utils import (
-    get_column_names,
-    rename,
-)
-from fugue_test.dataframe_suite import DataFrameTests
 from pyspark.sql import SparkSession
 from triad.collections.schema import Schema
 
+import fugue.interfaceless as fi
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
+from fugue.plugins import get_column_names, rename
 from fugue_spark import SparkExecutionEngine
 from fugue_spark._utils.convert import to_schema, to_spark_schema
 from fugue_spark.dataframe import SparkDataFrame
+from fugue_test.dataframe_suite import DataFrameTests
 
 
 class SparkDataFrameTests(DataFrameTests.Tests):
@@ -47,6 +45,9 @@ class NativeSparkDataFrameTests(DataFrameTests.Tests):
         session = SparkSession.builder.getOrCreate()
         engine = SparkExecutionEngine(session)
         return engine.to_df(data, schema=schema).native
+
+    def test_not_local(self):
+        assert not fi.is_local(self.df([], "a:int,b:str"))
 
     def test_alter_columns_invalid(self):
         # TODO: Spark will silently cast invalid data to nulls without exceptions

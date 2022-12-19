@@ -31,24 +31,6 @@ from fugue.plugins import (
 from fugue_spark._utils.convert import to_cast_expression, to_schema, to_type_safe_input
 
 
-@get_column_names.candidate(lambda df: isinstance(df, ps.DataFrame))
-def _get_spark_dataframe_columns(df: ps.DataFrame) -> List[Any]:
-    return [f.name for f in df.schema]
-
-
-@rename.candidate(lambda df, *args, **kwargs: isinstance(df, ps.DataFrame))
-def _rename_spark_dataframe(df: ps.DataFrame, names: Dict[str, Any]) -> ps.DataFrame:
-    if len(names) == 0:
-        return df
-    cols: List[ps.Column] = []
-    for f in df.schema:
-        c = col(f.name)
-        if f.name in names:
-            c = c.alias(names[f.name])
-        cols.append(c)
-    return df.select(cols)
-
-
 class SparkDataFrame(DataFrame):
     """DataFrame that wraps Spark DataFrame. Please also read
     |DataFrameTutorial| to understand this Fugue concept
@@ -255,6 +237,16 @@ def _spark_df_head(
         df = df[columns]
     res = df.limit(n)
     return SparkDataFrame(res).as_local() if as_fugue else res.toPandas()
+
+
+def _rename_spark_dataframe(df: ps.DataFrame, names: Dict[str, Any]) -> ps.DataFrame:
+    cols: List[ps.Column] = []
+    for f in df.schema:
+        c = col(f.name)
+        if f.name in names:
+            c = c.alias(names[f.name])
+        cols.append(c)
+    return df.select(cols)
 
 
 def _assert_no_missing(df: ps.DataFrame, columns: Iterable[Any]) -> None:
