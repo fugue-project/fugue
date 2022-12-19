@@ -6,6 +6,7 @@ from typing import Any
 import dask.dataframe as pd
 import numpy as np
 import pandas
+import fugue.interfaceless as fi
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -20,10 +21,40 @@ from fugue.dataframe.utils import (
 
 
 class DaskDataFrameTests(DataFrameTests.Tests):
-    def df(
-        self, data: Any = None, schema: Any = None
-    ) -> DaskDataFrame:
+    def df(self, data: Any = None, schema: Any = None) -> DaskDataFrame:
         return DaskDataFrame(data, schema)
+
+
+class NativeDaskDataFrameTests(DataFrameTests.Tests):
+    def df(self, data: Any = None, schema: Any = None):
+        return DaskDataFrame(data, schema).native
+
+    def test_not_local(self):
+        assert not fi.is_local(self.df([], "a:int,b:str"))
+
+    def test_get_altered_schema(self):
+        pass
+
+    def test_alter_columns(self):
+        pass
+
+    def test_as_arrow(self):
+        pass
+
+    def test_binary_type(self):
+        pass
+
+    def test_deep_nested_types(self):
+        pass
+
+    def test_list_type(self):
+        pass
+
+    def test_map_type(self):
+        pass
+
+    def test_struct_type(self):
+        pass
 
 
 def test_init():

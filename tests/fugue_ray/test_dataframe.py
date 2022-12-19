@@ -120,3 +120,21 @@ class RayDataFrameTests(DataFrameTests.Tests):
         df = rename(pdf, {"0": "_0", "1": "_1", "2": "_2"})
         assert isinstance(df, rd.Dataset)
         assert get_column_names(df) == ["_0", "_1", "_2"]
+
+
+class NativeRayDataFrameTests(DataFrameTests.Tests):
+    @classmethod
+    def setUpClass(cls):
+        ray.init(num_cpus=2)
+
+    @classmethod
+    def tearDownClass(cls):
+        ray.shutdown()
+
+    def df(self, data: Any = None, schema: Any = None):
+        res = RayDataFrame(data, schema)
+        # native ray dataset can't handle the schema when empty
+        return res if res.empty else res.native
+
+    def test_get_altered_schema(self):
+        pass

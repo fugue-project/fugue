@@ -12,7 +12,7 @@ from fugue._utils.interfaceless import (
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
-from fugue.plugins import infer_execution_engine
+from fugue.plugins import infer_execution_engine, as_fugue_dataset
 from fugue.workflow import register_raw_df_type
 from fugue_dask._utils import DASK_UTILS
 from fugue_dask.dataframe import DaskDataFrame
@@ -24,6 +24,11 @@ from fugue_dask.execution_engine import DaskExecutionEngine
 )
 def _infer_dask_client(objs: Any) -> Any:
     return DASK_UTILS.get_or_create_client()
+
+
+@as_fugue_dataset.candidate(lambda df: isinstance(df, dd.DataFrame))
+def _dask_as_fugue_df(df: dd.DataFrame) -> DaskDataFrame:
+    return DaskDataFrame(df)
 
 
 def _register_raw_dataframes() -> None:

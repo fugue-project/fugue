@@ -32,6 +32,10 @@ _DUCK_TYPES_TO_PA: Dict[str, pa.DataType] = {
 _PA_TYPES_TO_DUCK: Dict[pa.DataType, str] = {v: k for k, v in _DUCK_TYPES_TO_PA.items()}
 
 
+def encode_column_name(name: str) -> str:
+    return '"' + name.replace('"', '""') + '"'
+
+
 def encode_value_to_expr(value: Any) -> str:  # noqa: C901
     if isinstance(value, list):
         return "[" + ", ".join(encode_value_to_expr(x) for x in value) + "]"

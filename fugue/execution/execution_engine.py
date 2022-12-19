@@ -30,8 +30,6 @@ _FUGUE_EXECUTION_ENGINE_CONTEXT = ContextVar(
     "_FUGUE_EXECUTION_ENGINE_CONTEXT", default=None
 )
 
-_DEFAULT_JOIN_KEYS: List[str] = []
-
 
 class ExecutionEngineFacet:
     """The base class for different factes of the execution engines.
@@ -307,7 +305,6 @@ class ExecutionEngine(ABC):
         :param lazy: ``True``: first usage of the output will trigger persisting
           to happen; ``False`` (eager): persist is forced to happend immediately.
           Default to ``False``
-        :param args: parameter to pass to the underlying persist implementation
         :param kwargs: parameter to pass to the underlying persist implementation
         :return: the persisted dataframe
 
@@ -327,7 +324,7 @@ class ExecutionEngine(ABC):
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        on: List[str] = _DEFAULT_JOIN_KEYS,
+        on: Optional[List[str]] = None,
     ) -> DataFrame:  # pragma: no cover
         """Join two dataframes
 
@@ -341,7 +338,7 @@ class ExecutionEngine(ABC):
 
         .. note::
 
-            Please read :func:`this <fugue.dataframe.utils.get_join_schemas>`
+            Please read :func:`~.fugue.dataframe.utils.get_join_schemas`
         """
         raise NotImplementedError
 

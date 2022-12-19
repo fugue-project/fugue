@@ -1,6 +1,10 @@
-from typing import Any, List, Optional, Dict
+import itertools
+from typing import Any, Dict, List, Optional
 
 import ibis
+from ibis import BaseBackend
+from triad.utils.assertion import assert_or_throw
+
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionSpec,
@@ -8,17 +12,10 @@ from fugue.collections.partition import (
 )
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.utils import get_join_schemas
-from fugue.execution.execution_engine import (
-    _DEFAULT_JOIN_KEYS,
-    ExecutionEngine,
-    SQLEngine,
-)
-from ibis import BaseBackend
-from triad.utils.assertion import assert_or_throw
+from fugue.execution.execution_engine import ExecutionEngine, SQLEngine
 
-from .dataframe import IbisDataFrame
 from ._compat import IbisTable
-import itertools
+from .dataframe import IbisDataFrame
 
 _JOIN_RIGHT_SUFFIX = "_ibis_y__"
 _GEN_TABLE_NAMES = (f"_fugue_temp_table_{i:d}" for i in itertools.count())
@@ -82,7 +79,7 @@ class IbisExecutionEngine(ExecutionEngine):
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        on: List[str] = _DEFAULT_JOIN_KEYS,
+        on: Optional[List[str]] = None,
     ) -> DataFrame:
         _df1 = self._to_ibis_dataframe(df1)
         _df2 = self._to_ibis_dataframe(df2)

@@ -28,7 +28,6 @@ from fugue.dataframe import (
     PandasDataFrame,
 )
 from fugue.dataframe.utils import get_join_schemas
-from fugue.execution.execution_engine import _DEFAULT_JOIN_KEYS
 from fugue_duckdb._io import DuckDBIO
 from fugue_duckdb._utils import encode_value_to_expr, get_temp_df_name
 from fugue_duckdb.dataframe import DuckDataFrame
@@ -167,7 +166,7 @@ class DuckExecutionEngine(ExecutionEngine):
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        on: List[str] = _DEFAULT_JOIN_KEYS,
+        on: Optional[List[str]] = None,
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         t1, t2, t3 = (

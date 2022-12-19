@@ -75,6 +75,7 @@ class DataFrameTests(object):
         def test_select(self):
             df = fi.select_columns(self.df([], "a:str,b:int"), ["b"])
             assert fi.get_schema(df) == "b:int"
+            assert fi.get_column_names(df) == ["b"]
             raises(
                 FugueDataFrameOperationError, lambda: fi.select_columns(df, [])
             )  # select empty

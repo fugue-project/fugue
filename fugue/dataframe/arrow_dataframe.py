@@ -301,4 +301,4 @@ def _build_empty_arrow(schema: Schema) -> pa.Table:  # pragma: no cover
 def _assert_no_missing(df: pa.Table, columns: Iterable[Any]) -> None:
     missing = [x for x in columns if x not in df.schema.names]
     if len(missing) > 0:
-        raise FugueDataFrameOperationError("cannot drop nonexistent columns: {missing}")
+        raise FugueDataFrameOperationError("found nonexistent columns: {missing}")

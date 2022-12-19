@@ -34,7 +34,6 @@ from fugue.dataframe import (
 )
 from fugue.dataframe.utils import get_join_schemas, to_local_df
 from fugue.execution.execution_engine import (
-    _DEFAULT_JOIN_KEYS,
     ExecutionEngine,
     MapEngine,
     SQLEngine,
@@ -188,7 +187,7 @@ class NativeExecutionEngine(ExecutionEngine):
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        on: List[str] = _DEFAULT_JOIN_KEYS,
+        on: Optional[List[str]] = None,
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         d = self.pl_utils.join(

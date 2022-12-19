@@ -64,6 +64,19 @@ class DuckDataFrameTests(DataFrameTests.Tests):
         assert df.is_bounded
         assert df.is_local
 
-    def test_duck_as_locak(self):
+    def test_duck_as_local(self):
         df = self.df([[2.1, 1]], "a:double,b:int")
         assert isinstance(df.as_local(), ArrowDataFrame)
+
+
+class NativeDuckDataFrameTests(DataFrameTests.Tests):
+    @classmethod
+    def setUpClass(cls):
+        cls._con = duckdb.connect()
+
+    def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
+        df = ArrowDataFrame(data, schema)
+        return DuckDataFrame(duckdb.arrow(df.native, self._con)).native
+
+    def test_get_altered_schema(self):
+        pass

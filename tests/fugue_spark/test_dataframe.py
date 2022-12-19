@@ -38,6 +38,28 @@ class SparkDataFrameTests(DataFrameTests.Tests):
             return super().test_map_type()
 
 
+class NativeSparkDataFrameTests(DataFrameTests.Tests):
+    @pytest.fixture(autouse=True)
+    def init_session(self, spark_session):
+        self.spark_session = spark_session
+
+    def df(self, data: Any = None, schema: Any = None):
+        session = SparkSession.builder.getOrCreate()
+        engine = SparkExecutionEngine(session)
+        return engine.to_df(data, schema=schema).native
+
+    def test_alter_columns_invalid(self):
+        # TODO: Spark will silently cast invalid data to nulls without exceptions
+        pass
+
+    def test_map_type(self):
+        if pyspark.__version__ >= "3":
+            return super().test_map_type()
+
+    def test_get_altered_schema(self):
+        pass
+
+
 def test_init(spark_session):
     sdf = spark_session.createDataFrame([["a", 1]])
     df = SparkDataFrame(sdf, "a:str,b:double")

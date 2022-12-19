@@ -4,8 +4,8 @@ from uuid import uuid4
 
 import pandas as pd
 import pyarrow as pa
-import pyspark.sql as ps
 import pyspark
+import pyspark.sql as ps
 from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
@@ -37,12 +37,7 @@ from fugue.dataframe import (
 )
 from fugue.dataframe.utils import get_join_schemas
 from fugue.exceptions import FugueDataFrameInitError
-from fugue.execution.execution_engine import (
-    _DEFAULT_JOIN_KEYS,
-    ExecutionEngine,
-    MapEngine,
-    SQLEngine,
-)
+from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 from fugue_spark._constants import (
     FUGUE_SPARK_CONF_USE_PANDAS_UDF,
     FUGUE_SPARK_DEFAULT_CONF,
@@ -444,7 +439,7 @@ class SparkExecutionEngine(ExecutionEngine):
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        on: List[str] = _DEFAULT_JOIN_KEYS,
+        on: Optional[List[str]] = None,
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         how = how.lower().replace("_", "").replace(" ", "")

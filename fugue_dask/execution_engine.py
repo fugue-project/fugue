@@ -4,6 +4,14 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 import dask.dataframe as dd
 from distributed import Client
+from qpd_dask import run_sql_on_dask
+from triad.collections import Schema
+from triad.collections.dict import IndexedOrderedDict, ParamDict
+from triad.collections.fs import FileSystem
+from triad.utils.assertion import assert_or_throw
+from triad.utils.hash import to_uuid
+from triad.utils.threading import RunOnce
+
 from fugue.collections.partition import (
     EMPTY_PARTITION_SPEC,
     PartitionCursor,
@@ -13,21 +21,8 @@ from fugue.collections.partition import (
 from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
 from fugue.dataframe.utils import get_join_schemas
-from fugue.execution.execution_engine import (
-    _DEFAULT_JOIN_KEYS,
-    ExecutionEngine,
-    SQLEngine,
-    MapEngine,
-)
+from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 from fugue.execution.native_execution_engine import NativeExecutionEngine
-from qpd_dask import run_sql_on_dask
-from triad.collections import Schema
-from triad.collections.dict import IndexedOrderedDict, ParamDict
-from triad.collections.fs import FileSystem
-from triad.utils.assertion import assert_or_throw
-from triad.utils.hash import to_uuid
-from triad.utils.threading import RunOnce
-
 from fugue_dask._constants import (
     CPU_COUNT,
     FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS,
@@ -249,7 +244,7 @@ class DaskExecutionEngine(ExecutionEngine):
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        on: List[str] = _DEFAULT_JOIN_KEYS,
+        on: Optional[List[str]] = None,
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         d = self.pl_utils.join(

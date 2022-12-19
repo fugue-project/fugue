@@ -3,6 +3,11 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
+from pyspark.sql.functions import col
+from triad import SerializableRLock
+from triad.collections.schema import SchemaError
+from triad.utils.assertion import assert_or_throw
+
 from fugue.dataframe import (
     ArrayDataFrame,
     DataFrame,
@@ -11,16 +16,18 @@ from fugue.dataframe import (
     LocalDataFrame,
     PandasDataFrame,
 )
-from fugue.dataframe.utils import (
-    get_column_names,
-    rename,
-)
 from fugue.exceptions import FugueDataFrameOperationError
-from pyspark.sql.functions import col
-from triad import SerializableRLock
-from triad.collections.schema import SchemaError
-from triad.utils.assertion import assert_or_throw
-
+from fugue.plugins import (
+    count,
+    drop_columns,
+    get_column_names,
+    head,
+    is_bounded,
+    is_empty,
+    is_local,
+    rename,
+    select_columns,
+)
 from fugue_spark._utils.convert import to_cast_expression, to_schema, to_type_safe_input
 
 
@@ -178,3 +185,83 @@ class SparkDataFrame(DataFrame):
         if columns is None:
             return self
         return SparkDataFrame(self.native.select(*columns))
+
+
+@count.candidate(lambda df: isinstance(df, ps.DataFrame))
+def _spark_df_count(df: ps.DataFrame) -> int:
+    return df.count()
+
+
+@is_bounded.candidate(lambda df: isinstance(df, ps.DataFrame))
+def _spark_df_is_bounded(df: ps.DataFrame) -> bool:
+    return True
+
+
+@is_empty.candidate(lambda df: isinstance(df, ps.DataFrame))
+def _spark_df_is_empty(df: ps.DataFrame) -> bool:
+    return df.first() is None
+
+
+@is_local.candidate(lambda df: isinstance(df, ps.DataFrame))
+def _spark_df_is_local(df: ps.DataFrame) -> bool:
+    return False
+
+
+@get_column_names.candidate(lambda df: isinstance(df, ps.DataFrame))
+def _get_spark_df_columns(df: ps.DataFrame) -> List[Any]:
+    return df.columns
+
+
+@rename.candidate(lambda df, *args, **kwargs: isinstance(df, ps.DataFrame))
+def _rename_spark_df(
+    df: ps.DataFrame, columns: Dict[str, Any], as_fugue: bool = False
+) -> ps.DataFrame:
+    if len(columns) == 0:
+        return df
+    _assert_no_missing(df, columns.keys())
+    return _adjust_df(_rename_spark_dataframe(df, columns), as_fugue=as_fugue)
+
+
+@drop_columns.candidate(lambda df, *args, **kwargs: isinstance(df, ps.DataFrame))
+def _drop_spark_df_columns(
+    df: ps.DataFrame, columns: List[str], as_fugue: bool = False
+) -> Any:
+    cols = [x for x in df.columns if x not in columns]
+    if len(cols) == 0:
+        raise FugueDataFrameOperationError("cannot drop all columns")
+    if len(cols) + len(columns) != len(df.columns):
+        _assert_no_missing(df, columns)
+    return _adjust_df(df[cols], as_fugue=as_fugue)
+
+
+@select_columns.candidate(lambda df, *args, **kwargs: isinstance(df, ps.DataFrame))
+def _select_spark_df_columns(
+    df: ps.DataFrame, columns: List[Any], as_fugue: bool = False
+) -> Any:
+    if len(columns) == 0:
+        raise FugueDataFrameOperationError("must select at least one column")
+    _assert_no_missing(df, columns)
+    return _adjust_df(df[columns], as_fugue=as_fugue)
+
+
+@head.candidate(lambda df, *args, **kwargs: isinstance(df, ps.DataFrame))
+def _spark_df_head(
+    df: ps.DataFrame,
+    n: int,
+    columns: Optional[List[str]] = None,
+    as_fugue: bool = False,
+) -> pd.DataFrame:
+    if columns is not None:
+        df = df[columns]
+    res = df.limit(n)
+    return SparkDataFrame(res).as_local() if as_fugue else res.toPandas()
+
+
+def _assert_no_missing(df: ps.DataFrame, columns: Iterable[Any]) -> None:
+    missing = set(columns) - set(df.columns)
+    if len(missing) > 0:
+        raise FugueDataFrameOperationError("found nonexistent columns: {missing}")
+
+
+def _adjust_df(res: ps.DataFrame, as_fugue: bool):
+    return res if not as_fugue else SparkDataFrame(res)

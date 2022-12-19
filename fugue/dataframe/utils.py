@@ -294,7 +294,7 @@ def deserialize_df(
 
 
 def get_join_schemas(
-    df1: DataFrame, df2: DataFrame, how: str, on: Iterable[str]
+    df1: DataFrame, df2: DataFrame, how: str, on: Optional[Iterable[str]]
 ) -> Tuple[Schema, Schema]:
     """Get :class:`~triad:triad.collections.schema.Schema` object after
     joining ``df1`` and ``df2``. If ``on`` is not empty, it's mainly for
@@ -332,7 +332,7 @@ def get_join_schemas(
         ],
         ValueError(f"{how} is not a valid join type"),
     )
-    on = list(on)
+    on = list(on) if on is not None else []
     aot(len(on) == len(set(on)), f"{on} has duplication")
     if how != "cross" and len(on) == 0:
         on = list(df1.schema.intersect(df2.schema.names).names)

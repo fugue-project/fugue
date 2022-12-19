@@ -271,4 +271,4 @@ def _adjust_df(res: pd.DataFrame, as_fugue: bool):
 def _assert_no_missing(df: pd.DataFrame, columns: Iterable[Any]) -> None:
     missing = [x for x in columns if x not in df.columns]
     if len(missing) > 0:
-        raise FugueDataFrameOperationError("cannot drop nonexistent columns: {missing}")
+        raise FugueDataFrameOperationError("found nonexistent columns: {missing}")

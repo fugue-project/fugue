@@ -26,5 +26,14 @@ from fugue.dataset import (
     is_local,
     show,
 )
+from fugue.execution.interfaceless import (
+    broadcast,
+    intersect,
+    join,
+    persist,
+    repartition,
+    subtract,
+    union,
+)
 
 from .transformation import out_transform, transform

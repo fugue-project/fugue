@@ -3,17 +3,19 @@ from typing import Any, Dict, Iterable, List, Optional
 import pandas as pd
 import pyarrow as pa
 from duckdb import DuckDBPyRelation
+from triad import Schema
+
 from fugue import (
+    ArrayDataFrame,
     ArrowDataFrame,
     DataFrame,
     LocalBoundedDataFrame,
     LocalDataFrame,
-    ArrayDataFrame,
 )
-from fugue.exceptions import FugueDatasetEmptyError, FugueDataFrameOperationError
-from triad import Schema
+from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
+from fugue.plugins import get_column_names
 
-from fugue_duckdb._utils import to_duck_type, to_pa_type
+from ._utils import encode_column_name, to_duck_type, to_pa_type
 
 
 class DuckDataFrame(LocalBoundedDataFrame):
@@ -24,10 +26,15 @@ class DuckDataFrame(LocalBoundedDataFrame):
 
     def __init__(self, rel: DuckDBPyRelation):
         self._rel = rel
-        schema = Schema(
-            [pa.field(x, to_pa_type(y)) for x, y in zip(rel.columns, rel.types)]
+        super().__init__(schema=self._get_schema)
+
+    def _get_schema(self) -> Schema:
+        return Schema(
+            [
+                pa.field(x, to_pa_type(y))
+                for x, y in zip(self._rel.columns, self._rel.types)
+            ]
         )
-        super().__init__(schema=schema)
 
     @property
     def native(self) -> DuckDBPyRelation:
@@ -48,21 +55,23 @@ class DuckDataFrame(LocalBoundedDataFrame):
         return self._rel.aggregate("count(1) AS ct").fetchone()[0]
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
-        schema = self.schema.exclude(cols)
-        rel = self._rel.project(",".join(n for n in schema.names))
+        cols = [col for col in self._rel.columns if col not in cols]
+        rel = self._rel.project(",".join(encode_column_name(n) for n in cols))
         return DuckDataFrame(rel)
 
     def _select_cols(self, keys: List[Any]) -> DataFrame:
-        schema = self.schema.extract(keys)
-        rel = self._rel.project(",".join(n for n in schema.names))
+        rel = self._rel.project(",".join(encode_column_name(n) for n in keys))
         return DuckDataFrame(rel)
 
     def rename(self, columns: Dict[str, str]) -> DataFrame:
-        try:
-            schema = self.schema.rename(columns)
-        except Exception as e:
-            raise FugueDataFrameOperationError from e
-        expr = ", ".join(f"{a} AS {b}" for a, b in zip(self.schema.names, schema.names))
+        _assert_no_missing(self._rel, columns.keys())
+        expr = ", ".join(
+            f"{a} AS {b}"
+            for a, b in [
+                (encode_column_name(name), encode_column_name(columns.get(name, name)))
+                for name in self._rel.columns
+            ]
+        )
         return DuckDataFrame(self._rel.project(expr))
 
     def alter_columns(self, columns: Any) -> DataFrame:
@@ -75,7 +84,9 @@ class DuckDataFrame(LocalBoundedDataFrame):
                 fields.append(f1.name)
             else:
                 tp = to_duck_type(f2.type)
-                fields.append(f"CAST({f1.name} AS {tp}) AS {f1.name}")
+                fields.append(
+                    f"CAST({encode_column_name(f1.name)} AS {tp}) AS {f1.name}"
+                )
         return DuckDataFrame(self._rel.project(", ".join(fields)))
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
@@ -125,3 +136,14 @@ class DuckDataFrame(LocalBoundedDataFrame):
                 return res
 
             return [to_list(x) for x in rel.fetchall()]
+
+
+@get_column_names.candidate(lambda df: isinstance(df, DuckDBPyRelation))
+def _get_duckdb_columns(df: DuckDBPyRelation) -> List[Any]:
+    return list(df.columns)
+
+
+def _assert_no_missing(df: DuckDBPyRelation, columns: Iterable[Any]) -> None:
+    missing = set(columns) - set(df.columns)
+    if len(missing) > 0:
+        raise FugueDataFrameOperationError("found nonexistent columns: {missing}")

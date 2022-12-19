@@ -11,7 +11,7 @@ from fugue._utils.interfaceless import (
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
-from fugue.plugins import infer_execution_engine
+from fugue.plugins import infer_execution_engine, as_fugue_dataset
 from fugue.workflow import register_raw_df_type
 
 from .dataframe import RayDataFrame
@@ -23,6 +23,11 @@ from .execution_engine import RayExecutionEngine
 )
 def _infer_ray_client(objs: Any) -> Any:
     return "ray"
+
+
+@as_fugue_dataset.candidate(lambda df: isinstance(df, rd.Dataset))
+def _ray_as_fugue_df(df: rd.Dataset) -> RayDataFrame:
+    return RayDataFrame(df)
 
 
 def _register_raw_dataframes() -> None:

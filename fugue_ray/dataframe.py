@@ -4,6 +4,8 @@ import pandas as pd
 import pyarrow as pa
 import ray
 import ray.data as rd
+from triad.collections.schema import Schema
+
 from fugue.dataframe import (
     ArrowDataFrame,
     DataFrame,
@@ -11,32 +13,10 @@ from fugue.dataframe import (
     LocalDataFrame,
 )
 from fugue.dataframe.dataframe import _input_schema
-from fugue.dataframe.utils import (
-    get_column_names,
-    rename,
-)
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
-from triad.collections.schema import Schema
+from fugue.plugins import get_column_names, rename
 
 from ._utils.dataframe import _build_empty_arrow, build_empty, get_dataset_format
-
-
-@get_column_names.candidate(lambda df: isinstance(df, rd.Dataset))
-def _get_ray_dataframe_columns(df: rd.Dataset) -> List[Any]:
-    fmt = get_dataset_format(df)
-    if fmt == "pandas":
-        return list(df.schema(True).names)
-    elif fmt == "arrow":
-        return [f.name for f in df.schema(True)]
-    raise NotImplementedError(f"{fmt} is not supported")  # pragma: no cover
-
-
-@rename.candidate(lambda df, *args, **kwargs: isinstance(df, rd.Dataset))
-def _rename_ray_dataframe(df: rd.Dataset, names: Dict[str, Any]) -> rd.Dataset:
-    if len(names) == 0:
-        return df
-    new_cols = [names.get(name, name) for name in _get_ray_dataframe_columns(df)]
-    return df.map_batches(lambda b: b.rename_columns(new_cols), batch_format="pyarrow")
 
 
 class RayDataFrame(DataFrame):
@@ -254,3 +234,25 @@ class RayDataFrame(DataFrame):
 
     def _remote_args(self) -> Dict[str, Any]:
         return {"num_cpus": 1}
+
+
+@get_column_names.candidate(lambda df: isinstance(df, rd.Dataset))
+def _get_ray_dataframe_columns(df: rd.Dataset) -> List[Any]:
+    fmt = get_dataset_format(df)
+    if fmt == "pandas":
+        return list(df.schema(True).names)
+    elif fmt == "arrow":
+        return [f.name for f in df.schema(True)]
+    raise NotImplementedError(f"{fmt} is not supported")  # pragma: no cover
+
+
+@rename.candidate(lambda df, *args, **kwargs: isinstance(df, rd.Dataset))
+def _rename_ray_dataframe(df: rd.Dataset, columns: Dict[str, Any]) -> rd.Dataset:
+    if len(columns) == 0:
+        return df
+    cols = _get_ray_dataframe_columns(df)
+    missing = set(columns.keys()) - set(cols)
+    if len(missing) > 0:
+        raise FugueDataFrameOperationError("found nonexistent columns: {missing}")
+    new_cols = [columns.get(name, name) for name in cols]
+    return df.map_batches(lambda b: b.rename_columns(new_cols), batch_format="pyarrow")

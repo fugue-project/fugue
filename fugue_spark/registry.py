@@ -14,7 +14,7 @@ from fugue._utils.interfaceless import (
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
-from fugue.plugins import infer_execution_engine, parse_creator
+from fugue.plugins import as_fugue_dataset, infer_execution_engine, parse_creator
 from fugue.workflow import register_raw_df_type
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
@@ -33,6 +33,11 @@ def _is_sparksql(obj: Any) -> bool:
 )
 def _infer_spark_client(obj: Any) -> Any:
     return SparkSession.builder.getOrCreate()
+
+
+@as_fugue_dataset.candidate(lambda df: isinstance(df, ps.DataFrame))
+def _spark_as_fugue_df(df: ps.DataFrame) -> SparkDataFrame:
+    return SparkDataFrame(df)
 
 
 @parse_creator.candidate(lambda obj: _is_sparksql(obj))

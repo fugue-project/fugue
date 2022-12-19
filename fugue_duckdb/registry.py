@@ -17,7 +17,7 @@ from fugue._utils.interfaceless import (
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
-from fugue.plugins import infer_execution_engine
+from fugue.plugins import infer_execution_engine, as_fugue_dataset
 from fugue.workflow import register_raw_df_type
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
@@ -28,6 +28,11 @@ from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
 )
 def _infer_duckdb_client(objs: Any) -> Any:
     return "duckdb"
+
+
+@as_fugue_dataset.candidate(lambda df: isinstance(df, DuckDBPyRelation))
+def _duckdb_as_fugue_df(df: DuckDBPyRelation) -> DuckDataFrame:
+    return DuckDataFrame(df)
 
 
 def _register_raw_dataframes() -> None:
