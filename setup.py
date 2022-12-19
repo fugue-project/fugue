@@ -33,7 +33,7 @@ setup(
     install_requires=[
         "triad>=0.7.0",
         "adagio>=0.2.4",
-        "qpd>=0.3.1",
+        "qpd>=0.3.4",
         "fugue-sql-antlr>=0.1.1",
         "sqlalchemy",
         "pyarrow>=0.15.1",
@@ -43,7 +43,7 @@ setup(
     extras_require={
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.1"],
         "spark": ["pyspark"],
-        "dask": ["dask[distributed,dataframe]", "qpd[dask]>=0.3.1"],
+        "dask": ["dask[distributed,dataframe]", "qpd[dask]>=0.3.4"],
         "ray": ["ray[data]>=2.0.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
         "duckdb": [
             "duckdb>=0.5.0",
@@ -60,7 +60,7 @@ setup(
             "pyspark",
             "dask[distributed,dataframe]",
             "ray[data]>=2.0.0",
-            "qpd[dask]>=0.3.1",
+            "qpd[dask]>=0.3.4",
             "notebook",
             "jupyterlab",
             "ipython>=7.10.0",
