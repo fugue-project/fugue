@@ -17,6 +17,7 @@ from .dataframe import (
     get_column_names,
     get_schema,
     head,
+    is_df,
     rename,
     select_columns,
 )
@@ -83,6 +84,9 @@ class PandasDataFrame(LocalBoundedDataFrame):
     @property
     def native(self) -> pd.DataFrame:
         """Pandas DataFrame"""
+        return self._native
+
+    def native_as_df(self) -> pd.DataFrame:
         return self._native
 
     @property
@@ -188,6 +192,11 @@ class PandasDataFrame(LocalBoundedDataFrame):
 @as_fugue_dataset.candidate(lambda df: isinstance(df, pd.DataFrame))
 def _pd_as_fugue_df(df: pd.DataFrame) -> "PandasDataFrame":
     return PandasDataFrame(df)
+
+
+@is_df.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_is_df(df: pd.DataFrame) -> bool:
+    return True
 
 
 @count.candidate(lambda df: isinstance(df, pd.DataFrame))

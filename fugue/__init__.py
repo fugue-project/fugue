@@ -52,7 +52,7 @@ from fugue.extensions.transformer import (
     register_transformer,
     transformer,
 )
-from fugue.interfaceless import out_transform, transform
+from fugue.express import out_transform, transform
 from fugue.registry import _register
 from fugue.rpc import (
     EmptyRPCHandler,

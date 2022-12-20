@@ -9,8 +9,10 @@ from fugue.dataframe.dataframe import (
     as_pandas,
     drop_columns,
     get_column_names,
+    get_native_as_df,
     get_schema,
     head,
+    is_df,
     normalize_column_names,
     peek_array,
     peek_dict,
@@ -26,7 +28,7 @@ from fugue.dataset import (
     is_local,
     show,
 )
-from fugue.execution.interfaceless import (
+from fugue.execution.express import (
     broadcast,
     intersect,
     join,

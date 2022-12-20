@@ -2,6 +2,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 import pyarrow as pa
+from triad import Schema
+
 from fugue import (
     DataFrame,
     IterableDataFrame,
@@ -11,7 +13,7 @@ from fugue import (
 )
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
-from triad import Schema
+from fugue.plugins import is_df
 
 from ._compat import IbisTable
 from ._utils import _pa_to_ibis_type, to_schema
@@ -37,6 +39,9 @@ class IbisDataFrame(DataFrame):
     @property
     def native(self) -> IbisTable:
         """Ibis Table object"""
+        return self._table
+
+    def native_as_df(self) -> IbisTable:
         return self._table
 
     def _to_local_df(self, table: IbisTable, schema: Any = None) -> LocalDataFrame:
@@ -152,3 +157,8 @@ class IbisDataFrame(DataFrame):
 
     def _type_equal(self, tp1: pa.DataType, tp2: pa.DataType) -> bool:
         return tp1 == tp2
+
+
+@is_df.candidate(lambda df: isinstance(df, IbisTable))
+def _ibis_is_df(df: IbisTable) -> bool:
+    return True

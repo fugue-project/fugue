@@ -64,10 +64,10 @@ fugue.exceptions
    :undoc-members:
    :show-inheritance:
 
-fugue.interfaceless
+fugue.express
 -------------------
 
-.. automodule:: fugue.interfaceless
+.. automodule:: fugue.express
    :members:
    :undoc-members:
    :show-inheritance:

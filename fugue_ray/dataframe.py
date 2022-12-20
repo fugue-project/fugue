@@ -14,7 +14,7 @@ from fugue.dataframe import (
 )
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
-from fugue.plugins import get_column_names, rename
+from fugue.plugins import get_column_names, rename, is_df
 
 from ._utils.dataframe import _build_empty_arrow, build_empty, get_dataset_format
 
@@ -95,6 +95,9 @@ class RayDataFrame(DataFrame):
     @property
     def native(self) -> rd.Dataset:
         """The wrapped ray Dataset"""
+        return self._native
+
+    def native_as_df(self) -> rd.Dataset:
         return self._native
 
     @property
@@ -234,6 +237,11 @@ class RayDataFrame(DataFrame):
 
     def _remote_args(self) -> Dict[str, Any]:
         return {"num_cpus": 1}
+
+
+@is_df.candidate(lambda df: isinstance(df, rd.Dataset))
+def _rd_is_df(df: rd.Dataset) -> bool:
+    return True
 
 
 @get_column_names.candidate(lambda df: isinstance(df, rd.Dataset))

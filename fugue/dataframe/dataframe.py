@@ -47,7 +47,7 @@ class DataFrame(Dataset):
 
     @property
     def schema(self) -> Schema:
-        """Schema of the dataframe"""
+        """The schema of the dataframe"""
         if self._schema_discovered:
             # we must keep it simple because it could be called on every row by a user
             assert isinstance(self._schema, Schema)
@@ -59,6 +59,16 @@ class DataFrame(Dataset):
             self._schema.set_readonly()
             self._schema_discovered = True
             return self._schema
+
+    @abstractmethod
+    def native_as_df(self) -> Any:  # pragma: no cover
+        """The dataframe form of the native object this Dataset class wraps.
+        Dataframe form means the object contains schema information. For example
+        the native an ArrayDataFrame is a python array, it doesn't contain schema
+        information, and its ``native_as_df`` should be either a pandas dataframe
+        or an arrow dataframe.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def as_local(self) -> "LocalDataFrame":  # pragma: no cover
@@ -284,6 +294,9 @@ class LocalDataFrame(DataFrame):
         implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
 
+    def native_as_df(self) -> Any:
+        return self.as_pandas()
+
     @property
     def is_local(self) -> bool:
         """Always True because it's a LocalDataFrame"""
@@ -426,6 +439,25 @@ def as_fugue_df(df: Any) -> DataFrame:
         TypeError(f"{type(df)} can't be converted to a Fugue DataFrame"),
     )
     return res  # type: ignore
+
+
+@fugue_plugin
+def is_df(df: Any) -> bool:
+    """Whether ``df`` is a DataFrame like object"""
+    return isinstance(df, DataFrame)
+
+
+def get_native_as_df(df: Any) -> Any:
+    """Return the dataframe form of the input ``df``.
+    If ``df`` is a :class:`~.DataFrame`, then call the
+    :meth:`~.DataFrame.native_as_df`, otherwise, it depends on whether there is
+    a correspondent function handling it.
+    """
+    if isinstance(df, DataFrame):
+        return df.native_as_df()
+    if is_df(df):
+        return df
+    raise NotImplementedError(f"cannot get a dataframe like object from {type(df)}")
 
 
 @fugue_plugin

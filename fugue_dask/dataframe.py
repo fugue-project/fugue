@@ -22,6 +22,7 @@ from fugue.plugins import (
     get_column_names,
     head,
     is_bounded,
+    is_df,
     is_empty,
     is_local,
     rename,
@@ -92,10 +93,10 @@ class DaskDataFrame(DataFrame):
 
     @property
     def native(self) -> dd.DataFrame:
-        """The wrapped Dask DataFrame
+        """The wrapped Dask DataFrame"""
+        return self._native
 
-        :rtype: :class:`dask:dask.dataframe.DataFrame`
-        """
+    def native_as_df(self) -> dd.DataFrame:
         return self._native
 
     @property
@@ -237,6 +238,11 @@ class DaskDataFrame(DataFrame):
             )
             pdf.columns = schema.names
         return DASK_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True), schema
+
+
+@is_df.candidate(lambda df: isinstance(df, dd.DataFrame))
+def _dd_is_df(df: dd.DataFrame) -> bool:
+    return True
 
 
 @count.candidate(lambda df: isinstance(df, dd.DataFrame))

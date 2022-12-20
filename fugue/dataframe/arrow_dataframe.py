@@ -16,6 +16,7 @@ from .dataframe import (
     drop_columns,
     get_column_names,
     get_schema,
+    is_df,
     rename,
     select_columns,
 )
@@ -111,6 +112,9 @@ class ArrowDataFrame(LocalBoundedDataFrame):
     @property
     def native(self) -> pa.Table:
         """:func:`pyarrow.Table <pa:pyarrow.table>`"""
+        return self._native
+
+    def native_as_df(self) -> pa.Table:
         return self._native
 
     @property
@@ -233,6 +237,11 @@ class ArrowDataFrame(LocalBoundedDataFrame):
 @as_fugue_dataset.candidate(lambda df: isinstance(df, pa.Table))
 def _pa_table_as_fugue_df(df: pa.Table) -> "ArrowDataFrame":
     return ArrowDataFrame(df)
+
+
+@is_df.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_is_df(df: pa.Table) -> bool:
+    return True
 
 
 @count.candidate(lambda df: isinstance(df, pa.Table))

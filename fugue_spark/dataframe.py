@@ -23,6 +23,7 @@ from fugue.plugins import (
     get_column_names,
     head,
     is_bounded,
+    is_df,
     is_empty,
     is_local,
     rename,
@@ -70,6 +71,9 @@ class SparkDataFrame(DataFrame):
 
         :rtype: :class:`spark:pyspark.sql.DataFrame`
         """
+        return self._native
+
+    def native_as_df(self) -> ps.DataFrame:
         return self._native
 
     @property
@@ -167,6 +171,11 @@ class SparkDataFrame(DataFrame):
         if columns is None:
             return self
         return SparkDataFrame(self.native.select(*columns))
+
+
+@is_df.candidate(lambda df: isinstance(df, ps.DataFrame))
+def _spark_is_df(df: ps.DataFrame) -> bool:
+    return True
 
 
 @count.candidate(lambda df: isinstance(df, ps.DataFrame))

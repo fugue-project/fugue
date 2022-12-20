@@ -1,9 +1,11 @@
 import copy
+
 import pandas as pd
-from triad.collections.schema import Schema
 from pytest import raises
+from triad.collections.schema import Schema
+
 from fugue.dataframe import ArrayDataFrame, DataFrame
-from fugue.interfaceless import as_fugue_df
+from fugue.express import as_fugue_df, get_native_as_df
 
 
 def test_as_fugue_df():
@@ -11,6 +13,12 @@ def test_as_fugue_df():
         as_fugue_df(10)
     df = pd.DataFrame([[0]], columns=["a"])
     assert isinstance(as_fugue_df(df), DataFrame)
+
+
+def test_get_native_as_df():
+    with raises(NotImplementedError):
+        get_native_as_df(10)
+    # other tests are in the suites
 
 
 def test_show():

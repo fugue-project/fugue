@@ -13,7 +13,7 @@ from fugue import (
     LocalDataFrame,
 )
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
-from fugue.plugins import get_column_names
+from fugue.plugins import get_column_names, is_df
 
 from ._utils import encode_column_name, to_duck_type, to_pa_type
 
@@ -39,6 +39,9 @@ class DuckDataFrame(LocalBoundedDataFrame):
     @property
     def native(self) -> DuckDBPyRelation:
         """DuckDB relation object"""
+        return self._rel
+
+    def native_as_df(self) -> DuckDBPyRelation:
         return self._rel
 
     @property
@@ -136,6 +139,11 @@ class DuckDataFrame(LocalBoundedDataFrame):
                 return res
 
             return [to_list(x) for x in rel.fetchall()]
+
+
+@is_df.candidate(lambda df: isinstance(df, DuckDBPyRelation))
+def _duck_is_df(df: DuckDBPyRelation) -> bool:
+    return True
 
 
 @get_column_names.candidate(lambda df: isinstance(df, DuckDBPyRelation))

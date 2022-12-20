@@ -398,7 +398,7 @@ def is_pandas_or(objs: List[Any], obj_type: Any) -> bool:
 @fugue_plugin
 def infer_execution_engine(obj: List[Any]) -> Any:
     """Infer the correspondent ExecutionEngine based on the input objects. This is
-    used in interfaceless functions.
+    used in express functions.
 
     :param objs: the objects
     :return: if the inference succeeded, it returns an object that can be used by

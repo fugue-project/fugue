@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 from pytest import raises
 
-import fugue.interfaceless as fi
-from fugue.dataframe import ArrowDataFrame
+import fugue.express as fi
+from fugue.dataframe import ArrowDataFrame, DataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 
@@ -30,6 +30,18 @@ class DataFrameTests(object):
 
         def df(self, data: Any = None, schema: Any = None) -> Any:  # pragma: no cover
             raise NotImplementedError
+
+        def test_native(self):
+            df = self.df([1], "a:int")
+            assert fi.is_df(df)
+            fdf = fi.as_fugue_df(df)
+            assert isinstance(fdf, DataFrame)
+            assert fi.is_df(fdf)
+            ndf = fi.get_native_as_df(fdf)
+            assert fi.is_df(ndf)
+            assert not isinstance(ndf, DataFrame)
+            ndf2 = fi.get_native_as_df(ndf)
+            assert ndf2 is ndf
 
         def test_peek(self):
             df = self.df([], "x:str,y:double")

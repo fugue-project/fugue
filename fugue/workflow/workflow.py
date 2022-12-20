@@ -97,6 +97,13 @@ class WorkflowDataFrame(DataFrame):
         return self._task.__uuid__()
 
     @property
+    def native(self) -> Any:  # pragma: no cover
+        raise NotImplementedError
+
+    def native_as_df(self) -> Any:  # pragma: no cover
+        raise NotImplementedError
+
+    @property
     def name(self) -> str:
         """Name of its task spec"""
         return self._task.name

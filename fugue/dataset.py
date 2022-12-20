@@ -38,6 +38,12 @@ class Dataset(ABC):
 
     @property
     @abstractmethod
+    def native(self) -> Any:  # pragma: no cover
+        """The native object this Dataset class wraps"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
     def is_local(self) -> bool:  # pragma: no cover
         """Whether this dataframe is a local Dataset"""
         raise NotImplementedError

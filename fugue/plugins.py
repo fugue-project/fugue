@@ -11,6 +11,7 @@ from fugue.dataframe.dataframe import (
     get_column_names,
     get_schema,
     head,
+    is_df,
     peek_array,
     peek_dict,
     rename,
