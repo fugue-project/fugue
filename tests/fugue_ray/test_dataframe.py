@@ -101,7 +101,7 @@ class RayDataFrameTests(DataFrameTests.Tests):
         df = RayDataFrame(rdf.repartition(5))
         assert 5 == df.num_partitions
 
-    def test_get_column_names(self):
+    def _test_get_column_names(self):
         df = rd.from_pandas(pd.DataFrame([[0, 10, 20]], columns=["0", "1", "2"]))
         assert get_column_names(df) == ["0", "1", "2"]
 
@@ -110,7 +110,7 @@ class RayDataFrameTests(DataFrameTests.Tests):
         )
         assert get_column_names(df) == ["0", "1", "2"]
 
-    def test_rename(self):
+    def _test_rename(self):
         rdf = rd.from_pandas(pd.DataFrame([[0, 10, 20]], columns=["a", "b", "c"]))
         df = rename(rdf, {})
         assert isinstance(df, rd.Dataset)
@@ -122,7 +122,7 @@ class RayDataFrameTests(DataFrameTests.Tests):
         assert get_column_names(df) == ["_0", "_1", "_2"]
 
 
-class NativeRayDataFrameTests(DataFrameTests.Tests):
+class NativeRayDataFrameTests(DataFrameTests.NativeTests):
     @classmethod
     def setUpClass(cls):
         ray.init(num_cpus=2)
@@ -136,5 +136,5 @@ class NativeRayDataFrameTests(DataFrameTests.Tests):
         # native ray dataset can't handle the schema when empty
         return res if res.empty else res.native
 
-    def test_get_altered_schema(self):
-        pass
+    def to_native_df(self, pdf: pd.DataFrame) -> Any:
+        return rd.from_pandas(pdf)

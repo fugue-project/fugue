@@ -69,7 +69,7 @@ class DuckDataFrameTests(DataFrameTests.Tests):
         assert isinstance(df.as_local(), ArrowDataFrame)
 
 
-class NativeDuckDataFrameTests(DataFrameTests.Tests):
+class NativeDuckDataFrameTests(DataFrameTests.NativeTests):
     @classmethod
     def setUpClass(cls):
         cls._con = duckdb.connect()
@@ -78,5 +78,5 @@ class NativeDuckDataFrameTests(DataFrameTests.Tests):
         df = ArrowDataFrame(data, schema)
         return DuckDataFrame(duckdb.arrow(df.native, self._con)).native
 
-    def test_get_altered_schema(self):
-        pass
+    def to_native_df(self, pdf: pd.DataFrame) -> Any:
+        return duckdb.from_df(pdf)

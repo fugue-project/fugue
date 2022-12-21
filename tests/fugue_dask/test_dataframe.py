@@ -25,15 +25,15 @@ class DaskDataFrameTests(DataFrameTests.Tests):
         return DaskDataFrame(data, schema)
 
 
-class NativeDaskDataFrameTests(DataFrameTests.Tests):
+class NativeDaskDataFrameTests(DataFrameTests.NativeTests):
     def df(self, data: Any = None, schema: Any = None):
         return DaskDataFrame(data, schema).native
 
+    def to_native_df(self, pdf: pandas.DataFrame) -> Any:
+        return pd.from_pandas(pdf, npartitions=2)
+
     def test_not_local(self):
         assert not fi.is_local(self.df([], "a:int,b:str"))
-
-    def test_get_altered_schema(self):
-        pass
 
     def test_alter_columns(self):
         pass
@@ -232,12 +232,12 @@ def _test_as_array_perf():
     print(nts, ts)
 
 
-def test_get_column_names():
+def _test_get_column_names():
     df = pd.from_pandas(pandas.DataFrame([[0, 1, 2]]), npartitions=1)
     assert get_column_names(df) == [0, 1, 2]
 
 
-def test_rename():
+def _test_rename():
     pdf = pd.from_pandas(
         pandas.DataFrame([[0, 1, 2]], columns=["a", "b", "c"]), npartitions=1
     )

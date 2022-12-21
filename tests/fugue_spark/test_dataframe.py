@@ -36,15 +36,17 @@ class SparkDataFrameTests(DataFrameTests.Tests):
             return super().test_map_type()
 
 
-class NativeSparkDataFrameTests(DataFrameTests.Tests):
+class NativeSparkDataFrameTests(DataFrameTests.NativeTests):
     @pytest.fixture(autouse=True)
     def init_session(self, spark_session):
         self.spark_session = spark_session
 
     def df(self, data: Any = None, schema: Any = None):
-        session = SparkSession.builder.getOrCreate()
-        engine = SparkExecutionEngine(session)
+        engine = SparkExecutionEngine(self.spark_session)
         return engine.to_df(data, schema=schema).native
+
+    def to_native_df(self, pdf: pd.DataFrame) -> Any:
+        return self.spark_session.createDataFrame(pdf)
 
     def test_not_local(self):
         assert not fi.is_local(self.df([], "a:int,b:str"))
@@ -56,9 +58,6 @@ class NativeSparkDataFrameTests(DataFrameTests.Tests):
     def test_map_type(self):
         if pyspark.__version__ >= "3":
             return super().test_map_type()
-
-    def test_get_altered_schema(self):
-        pass
 
 
 def test_init(spark_session):
@@ -146,14 +145,14 @@ def _df(data, schema=None):
     return SparkDataFrame(df, schema)
 
 
-def test_get_column_names(spark_session):
+def _test_get_column_names(spark_session):
     df = spark_session.createDataFrame(
         pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"])
     )
     assert get_column_names(df) == ["0", "1", "2"]
 
 
-def test_rename(spark_session):
+def _test_rename(spark_session):
     pdf = spark_session.createDataFrame(
         pd.DataFrame([[0, 1, 2]], columns=["a", "b", "c"])
     )

@@ -4,6 +4,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 from fugue.dataframe import ArrowDataFrame, PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_test.dataframe_suite import DataFrameTests
@@ -17,12 +18,12 @@ class ArrowDataFrameTests(DataFrameTests.Tests):
         return ArrowDataFrame(data, schema)
 
 
-class NativeArrowDataFrameTests(DataFrameTests.Tests):
+class NativeArrowDataFrameTests(DataFrameTests.NativeTests):
     def df(self, data: Any = None, schema: Any = None) -> pd.DataFrame:
         return ArrowDataFrame(data, schema).as_arrow()
 
-    def test_get_altered_schema(self):
-        pass
+    def to_native_df(self, pdf: pd.DataFrame) -> Any:  # pragma: no cover
+        return pa.Table.from_pandas(pdf)
 
 
 def test_init():

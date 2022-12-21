@@ -19,12 +19,12 @@ class PandasDataFrameTests(DataFrameTests.Tests):
         return PandasDataFrame(data, schema)
 
 
-class NativePandasDataFrameTests(DataFrameTests.Tests):
+class NativePandasDataFrameTests(DataFrameTests.NativeTests):
     def df(self, data: Any = None, schema: Any = None) -> pd.DataFrame:
         return ArrowDataFrame(data, schema).as_pandas()
 
-    def test_get_altered_schema(self):
-        pass
+    def to_native_df(self, pdf: pd.DataFrame) -> Any:  # pragma: no cover
+        return pdf
 
     def test_map_type(self):
         pass

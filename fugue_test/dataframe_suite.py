@@ -422,3 +422,23 @@ class DataFrameTests(object):
                 )
                 ndf = fi.alter_columns(df, "b:int")
                 fi.show(ndf)  # lazy dataframes will force to materialize
+
+    class NativeTests(Tests):
+        def to_native_df(self, pdf: pd.DataFrame) -> Any:  # pragma: no cover
+            raise NotImplementedError
+
+        def test_get_altered_schema(self):
+            pass
+
+        def _test_get_column_names(self):
+            df = self.to_native_df(pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"]))
+            assert fi.get_column_names(df) == ["0", "1", "2"]
+
+        def test_rename_any_names(self):
+            pdf = self.to_native_df(pd.DataFrame([[0, 1, 2]], columns=["a", "b", "c"]))
+            df = fi.rename(pdf, {})
+            assert fi.get_column_names(df) == ["a", "b", "c"]
+
+            pdf = self.to_native_df(pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"]))
+            df = fi.rename(pdf, {"0": "_0", "1": "_1", "2": "_2"})
+            assert fi.get_column_names(df) == ["_0", "_1", "_2"]

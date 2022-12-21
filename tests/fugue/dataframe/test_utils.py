@@ -200,7 +200,7 @@ def test_serialize_df(tmpdir):
     raises(ValueError, lambda: deserialize_df('{"x":1}'))
 
 
-def test_get_column_names():
+def _test_get_column_names():
     df = pd.DataFrame([[0, 1, 2]])
     assert get_column_names(df) == [0, 1, 2]
 
@@ -211,7 +211,7 @@ def test_get_column_names():
     assert get_column_names(pdf) == ["a", "b"]
 
 
-def test_rename():
+def _test_rename():
     assert rename("dummy", {}) == "dummy"
     pdf = pd.DataFrame([[0, 1, 2]], columns=["a", "b", "c"])
     df = rename(pdf, {})
