@@ -13,7 +13,6 @@ from fugue import (
     PartitionCursor,
     PartitionSpec,
 )
-from fugue.collections.partition import EMPTY_PARTITION_SPEC
 from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue_duckdb.dataframe import DuckDataFrame
@@ -239,10 +238,11 @@ class RayExecutionEngine(DuckExecutionEngine):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        partition_spec = partition_spec or PartitionSpec()
         df = self._to_ray_df(df)
         self._io.save_df(
             df,

@@ -8,7 +8,6 @@ from duckdb import DuckDBPyConnection
 from triad import assert_or_throw
 
 from fugue import DataFrame, MapEngine, PartitionSpec
-from fugue.collections.partition import EMPTY_PARTITION_SPEC
 from fugue_dask import DaskDataFrame, DaskExecutionEngine
 from fugue_dask.execution_engine import DaskMapEngine
 from fugue_duckdb.dataframe import DuckDataFrame
@@ -79,10 +78,11 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        partition_spec = partition_spec or PartitionSpec()
         if isinstance(df, DaskDataFrame) or not partition_spec.empty:
             return self._dask_engine.save_df(
                 self._to_dask_df(df),

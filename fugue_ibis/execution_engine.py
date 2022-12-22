@@ -6,7 +6,6 @@ from ibis import BaseBackend
 from triad.utils.assertion import assert_or_throw
 
 from fugue.collections.partition import (
-    EMPTY_PARTITION_SPEC,
     PartitionSpec,
     parse_presort_exp,
 )
@@ -210,8 +209,9 @@ class IbisExecutionEngine(ExecutionEngine):
         n: int,
         presort: str,
         na_position: str = "last",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
     ) -> DataFrame:
+        partition_spec = partition_spec or PartitionSpec()
         assert_or_throw(
             isinstance(n, int),
             ValueError("n needs to be an integer"),

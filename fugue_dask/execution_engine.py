@@ -13,7 +13,6 @@ from triad.utils.hash import to_uuid
 from triad.utils.threading import RunOnce
 
 from fugue.collections.partition import (
-    EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
     parse_presort_exp,
@@ -371,8 +370,9 @@ class DaskExecutionEngine(ExecutionEngine):
         n: int,
         presort: str,
         na_position: str = "last",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
     ) -> DataFrame:
+        partition_spec = partition_spec or PartitionSpec()
         assert_or_throw(
             isinstance(n, int),
             ValueError("n needs to be an integer"),
@@ -439,10 +439,11 @@ class DaskExecutionEngine(ExecutionEngine):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        partition_spec = partition_spec or PartitionSpec()
         if force_single:
             self._native.save_df(
                 df,

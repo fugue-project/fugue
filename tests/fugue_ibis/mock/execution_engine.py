@@ -12,7 +12,6 @@ from fugue import (
     PartitionCursor,
     PartitionSpec,
 )
-from fugue.collections.partition import EMPTY_PARTITION_SPEC
 from fugue_ibis import IbisDataFrame, IbisExecutionEngine, IbisTable
 from triad import FileSystem, assert_or_throw
 
@@ -124,10 +123,11 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        partition_spec = partition_spec or PartitionSpec()
         return self._native_engine.save_df(
             df, path, format_hint, mode, partition_spec, force_single, **kwargs
         )

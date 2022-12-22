@@ -323,9 +323,6 @@ class PartitionSpec(object):
             d[k] = v
 
 
-EMPTY_PARTITION_SPEC = PartitionSpec()
-
-
 class DatasetPartitionCursor:
     """The cursor pointing at the first item of each logical partition inside
     a physical partition.

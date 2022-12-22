@@ -19,7 +19,6 @@ from fugue._utils.interfaceless import (
 )
 from fugue._utils.io import load_df, save_df
 from fugue.collections.partition import (
-    EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
     parse_presort_exp,
@@ -308,8 +307,9 @@ class NativeExecutionEngine(ExecutionEngine):
         n: int,
         presort: str,
         na_position: str = "last",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
     ) -> DataFrame:
+        partition_spec = partition_spec or PartitionSpec()
         assert_or_throw(
             isinstance(n, int),
             ValueError("n needs to be an integer"),
@@ -356,10 +356,11 @@ class NativeExecutionEngine(ExecutionEngine):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        partition_spec = partition_spec or PartitionSpec()
         if not force_single and not partition_spec.empty:
             kwargs["partition_cols"] = partition_spec.partition_by
         self.fs.makedirs(os.path.dirname(path), recreate=True)

@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 
 import duckdb
 import pyarrow as pa
-from duckdb import DuckDBPyConnection
+from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from triad import SerializableRLock
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
@@ -16,11 +16,7 @@ from fugue import (
     PandasMapEngine,
     SQLEngine,
 )
-from fugue.collections.partition import (
-    EMPTY_PARTITION_SPEC,
-    PartitionSpec,
-    parse_presort_exp,
-)
+from fugue.collections.partition import PartitionSpec, parse_presort_exp
 from fugue.dataframe import (
     DataFrame,
     DataFrames,
@@ -336,8 +332,9 @@ class DuckExecutionEngine(ExecutionEngine):
         n: int,
         presort: str,
         na_position: str = "last",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
     ) -> DataFrame:
+        partition_spec = partition_spec or PartitionSpec()
         assert_or_throw(
             isinstance(n, int),
             ValueError("n needs to be an integer"),
@@ -399,10 +396,11 @@ class DuckExecutionEngine(ExecutionEngine):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        partition_spec = partition_spec or PartitionSpec()
         if not partition_spec.empty and not force_single:
             kwargs["partition_cols"] = partition_spec.partition_by
         dio = DuckDBIO(self.fs, self.connection)
@@ -417,6 +415,12 @@ class DuckExecutionEngine(ExecutionEngine):
             return DuckDataFrame(df.native)  # type: ignore
 
     def _to_duck_df(self, df: Any, schema: Any = None) -> DuckDataFrame:
+        if isinstance(df, DuckDBPyRelation):
+            assert_or_throw(
+                schema is None,
+                ValueError("schema must be None when df is a DuckDBPyRelation"),
+            )
+            return DuckDataFrame(df)
         if isinstance(df, DataFrame):
             assert_or_throw(
                 schema is None,

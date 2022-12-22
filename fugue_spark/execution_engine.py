@@ -19,7 +19,6 @@ from triad.utils.pandas_like import PD_UTILS
 from triad.utils.threading import RunOnce
 
 from fugue.collections.partition import (
-    EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
     parse_presort_exp,
@@ -579,8 +578,9 @@ class SparkExecutionEngine(ExecutionEngine):
         n: int,
         presort: str,
         na_position: str = "last",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
     ) -> DataFrame:
+        partition_spec = partition_spec or PartitionSpec()
         assert_or_throw(
             isinstance(n, int),
             ValueError("n needs to be an integer"),
@@ -650,10 +650,11 @@ class SparkExecutionEngine(ExecutionEngine):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        partition_spec = partition_spec or PartitionSpec()
         df = self.to_df(df)
         self._io.save_df(
             df,

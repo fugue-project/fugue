@@ -30,11 +30,18 @@ from fugue.dataset import (
 )
 from fugue.execution.express import (
     broadcast,
+    distinct,
+    dropna,
+    fillna,
     intersect,
     join,
+    load,
     persist,
     repartition,
+    sample,
+    save,
     subtract,
+    take,
     union,
 )
 

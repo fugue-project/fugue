@@ -13,7 +13,6 @@ from triad.utils.string import validate_triad_var_name
 
 from fugue.bag import Bag, LocalBag
 from fugue.collections.partition import (
-    EMPTY_PARTITION_SPEC,
     BagPartitionCursor,
     PartitionCursor,
     PartitionSpec,
@@ -494,7 +493,7 @@ class ExecutionEngine(ABC):
         n: int,
         presort: str,
         na_position: str = "last",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
     ) -> DataFrame:  # pragma: no cover
         """
         Get the first n rows of a DataFrame per partition. If a presort is defined,
@@ -742,7 +741,7 @@ class ExecutionEngine(ABC):
         df1: DataFrame,
         df2: DataFrame,
         how: str = "inner",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         temp_path: Optional[str] = None,
         to_file_threshold: Any = -1,
         df1_name: Optional[str] = None,
@@ -780,6 +779,7 @@ class ExecutionEngine(ABC):
 
             For more details and examples, read |ZipComap|.
         """
+        partition_spec = partition_spec or PartitionSpec()
         on = list(partition_spec.partition_by)
         how = how.lower()
         assert_or_throw(
@@ -806,7 +806,7 @@ class ExecutionEngine(ABC):
             if not df.metadata.get("serialized", False):
                 df = self._serialize_by_partition(
                     df,
-                    partition_spec,
+                    partition_spec or PartitionSpec(),
                     name,
                     temp_path,
                     to_file_threshold,
@@ -836,7 +836,7 @@ class ExecutionEngine(ABC):
         self,
         dfs: DataFrames,
         how: str = "inner",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         temp_path: Optional[str] = None,
         to_file_threshold: Any = -1,
     ) -> DataFrame:
@@ -865,6 +865,7 @@ class ExecutionEngine(ABC):
 
             For more details and examples, read |ZipComap|
         """
+        partition_spec = partition_spec or PartitionSpec()
         assert_or_throw(len(dfs) > 0, "can't zip 0 dataframes")
         pairs = list(dfs.items())
         has_name = dfs.has_key
@@ -977,7 +978,7 @@ class ExecutionEngine(ABC):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:  # pragma: no cover
