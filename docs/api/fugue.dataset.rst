@@ -1,5 +1,5 @@
-fugue.workflow 
-===============
+fugue.dataset 
+==============
 
 .. |SchemaLikeObject| replace:: :ref:`Schema like object <tutorial:tutorials/advanced/x-like:schema>`
 .. |ParamsLikeObject| replace:: :ref:`Parameters like object <tutorial:tutorials/advanced/x-like:parameters>`
@@ -27,34 +27,18 @@ fugue.workflow
 .. |FugueDataTypes| replace:: :doc:`Fugue Data Types <tutorial:tutorials/appendix/generate_types>`
 
 
-fugue.workflow.api
-------------------
+fugue.dataset.api
+-----------------
 
-.. automodule:: fugue.workflow.api
+.. automodule:: fugue.dataset.api
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.workflow.input
---------------------
-
-.. automodule:: fugue.workflow.input
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-fugue.workflow.module
+fugue.dataset.dataset
 ---------------------
 
-.. automodule:: fugue.workflow.module
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-fugue.workflow.workflow
------------------------
-
-.. automodule:: fugue.workflow.workflow
+.. automodule:: fugue.dataset.dataset
    :members:
    :undoc-members:
    :show-inheritance:

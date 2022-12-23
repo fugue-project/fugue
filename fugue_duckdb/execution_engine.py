@@ -407,7 +407,9 @@ class DuckExecutionEngine(ExecutionEngine):
         dio.save_df(self._to_duck_df(df), path, format_hint, mode, **kwargs)
 
     def convert_yield_dataframe(self, df: DataFrame, as_local: bool) -> DataFrame:
-        return df.as_local() if not self._external_con or as_local else df
+        if as_local:
+            return df.as_local()
+        return df.as_local() if not self.in_context and not self._external_con else df
 
     def _sql(self, sql: str, dfs: Dict[str, DataFrame]) -> DuckDataFrame:
         with self._context_lock:

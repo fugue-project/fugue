@@ -6,13 +6,10 @@ from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 
-from fugue.dataset import as_fugue_dataset, count, is_bounded, is_empty, is_local
+from fugue.dataset.api import as_fugue_dataset, count, is_bounded, is_empty, is_local
 from fugue.exceptions import FugueDataFrameOperationError
 
-from .dataframe import (
-    DataFrame,
-    LocalBoundedDataFrame,
-    _input_schema,
+from .api import (
     drop_columns,
     get_column_names,
     get_schema,
@@ -20,6 +17,7 @@ from .dataframe import (
     rename,
     select_columns,
 )
+from .dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
 
 
 class ArrowDataFrame(LocalBoundedDataFrame):

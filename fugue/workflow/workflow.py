@@ -2066,7 +2066,7 @@ class FugueWorkflow:
         for s in statements:
             if isinstance(s, str):
                 s_str.append(s)
-            if isinstance(s, DataFrame):
+            else:
                 ws = self.df(s)
                 dfs[ws.name] = ws
                 s_str.append(ws.name)

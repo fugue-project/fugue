@@ -12,6 +12,7 @@ from fugue_duckdb import DuckExecutionEngine
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
+from fugue.api import engine_context
 
 
 class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -173,6 +174,20 @@ def test_sql_yield():
 
     assert isinstance(res["a"], ArrowDataFrame)
     assert isinstance(res["b"], ArrowDataFrame)
+
+    # in context
+    with engine_context("duck"):
+        res = fsql(
+            """
+        CREATE [[0]] SCHEMA a:int
+        YIELD DATAFRAME AS a
+        CREATE [[0]] SCHEMA b:int
+        YIELD LOCAL DATAFRAME AS b
+        """
+        ).run()
+
+        assert isinstance(res["a"], DuckDataFrame)
+        assert isinstance(res["b"], ArrowDataFrame)
 
 
 def test_infer_engine():

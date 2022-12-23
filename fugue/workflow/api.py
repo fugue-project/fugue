@@ -1,13 +1,14 @@
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from triad.utils.assertion import assert_or_throw
 
-from fugue.collections.yielded import Yielded
-from fugue.constants import FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT
-from fugue.dataframe import DataFrame
-from fugue.exceptions import FugueInterfacelessError, FugueWorkflowCompileError
-from fugue.execution import make_execution_engine
-from fugue.workflow import FugueWorkflow
+from ..collections.yielded import Yielded
+from ..constants import FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT
+from ..dataframe import DataFrame
+from ..dataframe.api import get_native_as_df
+from ..exceptions import FugueInterfacelessError, FugueWorkflowCompileError
+from ..execution import make_execution_engine
+from .workflow import FugueWorkflow
 
 
 def _check_valid_input(df: Any, save_path: Optional[str]) -> None:
@@ -38,13 +39,13 @@ def transform(  # noqa: C901
     partition: Any = None,
     callback: Any = None,
     ignore_errors: Optional[List[Any]] = None,
-    engine: Any = None,
-    engine_conf: Any = None,
-    force_output_fugue_dataframe: bool = False,
     persist: bool = False,
     as_local: bool = False,
     save_path: Optional[str] = None,
     checkpoint: bool = False,
+    engine: Any = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
 ) -> Any:
     """Transform this dataframe using transformer. It's a wrapper of
     :meth:`~fugue.workflow.workflow.FugueWorkflow.transform` and
@@ -77,7 +78,7 @@ def transform(  # noqa: C901
       engine and the second value represents the sql engine (you can use ``None``
       for either of them to use the default one), defaults to None
     :param engine_conf: |ParamsLikeObject|, defaults to None
-    :param force_output_fugue_dataframe: If true, the function will always return
+    :param as_fugue: If true, the function will always return
       a ``FugueDataFrame``, otherwise, if ``df`` is in native dataframe types such
       as pandas dataframe, then the output will also in its native format. Defaults
       to False
@@ -178,7 +179,7 @@ def transform(  # noqa: C901
             result = dag.yields["result"].result  # type:ignore
         else:
             return save_path
-    if force_output_fugue_dataframe or isinstance(df, (DataFrame, Yielded)):
+    if as_fugue or isinstance(df, (DataFrame, Yielded)):
         return result
     return result.as_pandas() if result.is_local else result.native  # type:ignore
 
@@ -247,3 +248,32 @@ def out_transform(
     )
 
     dag.run(make_execution_engine(engine, conf=engine_conf, infer_by=[df]))
+
+
+def raw_sql(
+    *statements: Any,
+    engine: Any = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    as_local: bool = False,
+):
+    dag = FugueWorkflow(compile_conf={FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 0})
+    sp: List[Any] = []
+    infer_by: List[Any] = []
+    inputs: Dict[int, Any] = {}
+    for x in statements:
+        if isinstance(x, str):
+            sp.append(x)
+        else:
+            if id(x) in inputs:
+                sp.append(inputs[id(x)])
+            else:
+                inputs[id(x)] = dag.create(x)
+                sp.append(inputs[id(x)])
+                infer_by.append(x)
+
+    engine = make_execution_engine(engine, engine_conf, infer_by=infer_by)
+    dag.select(*sp).yield_dataframe_as("result", as_local=as_local)
+    res = dag.run(engine)
+
+    return res["result"] if as_fugue else get_native_as_df(res["result"])

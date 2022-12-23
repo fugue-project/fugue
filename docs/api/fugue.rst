@@ -8,6 +8,7 @@ fugue
    fugue.collections
    fugue.column
    fugue.dataframe
+   fugue.dataset
    fugue.execution
    fugue.extensions
    fugue.rpc
@@ -40,18 +41,18 @@ fugue
 .. |FugueDataTypes| replace:: :doc:`Fugue Data Types <tutorial:tutorials/appendix/generate_types>`
 
 
-fugue.constants
----------------
+fugue.api
+---------
 
-.. automodule:: fugue.constants
+.. automodule:: fugue.api
    :members:
    :undoc-members:
    :show-inheritance:
 
-fugue.dataset
--------------
+fugue.constants
+---------------
 
-.. automodule:: fugue.dataset
+.. automodule:: fugue.constants
    :members:
    :undoc-members:
    :show-inheritance:
@@ -64,10 +65,10 @@ fugue.exceptions
    :undoc-members:
    :show-inheritance:
 
-fugue.express
--------------------
+fugue.plugins
+-------------
 
-.. automodule:: fugue.express
+.. automodule:: fugue.plugins
    :members:
    :undoc-members:
    :show-inheritance:

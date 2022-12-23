@@ -1,6 +1,6 @@
 # flake8: noqa
 # pylint: disable-all
-from fugue.dataframe.dataframe import (
+from fugue.dataframe import (
     alter_columns,
     as_array,
     as_array_iterable,

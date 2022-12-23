@@ -255,8 +255,11 @@ def test_make_execution_engine():
 def test_context_and_infer_execution_engine():
     e1 = _MockExecutionEngine({})
     e2 = _MockExecutionEngine2(Dummy2(), {})
+    assert not e1.in_context and not e2.in_context
     with e2.as_context():
+        assert not e1.in_context and e2.in_context
         with e1.as_context() as ex:
+            assert e1.in_context and e2.in_context
             assert ex is e1
             e = make_execution_engine(
                 None, conf={"x": False}, infer_by=[pd.DataFrame(), Dummy2()]
@@ -264,9 +267,12 @@ def test_context_and_infer_execution_engine():
             assert isinstance(e, _MockExecutionEngine)
             assert not isinstance(e, _MockExecutionEngine2)
             assert not e.conf["x"]
+        assert not e1.in_context and e2.in_context
 
         e = make_execution_engine(None, conf={"x": True})
         assert isinstance(e, _MockExecutionEngine2)
+
+    assert not e1.in_context and not e2.in_context
 
     e = make_execution_engine(None)
     assert isinstance(e, NativeExecutionEngine)

@@ -6,7 +6,7 @@ from typing import Any
 import dask.dataframe as pd
 import numpy as np
 import pandas
-import fugue.express as fi
+import fugue.api as fi
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq

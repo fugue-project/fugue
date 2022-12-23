@@ -1,8 +1,35 @@
-from typing import Any, List, Optional, Union
+from contextlib import contextmanager
+from typing import Any, Callable, Iterator, List, Optional, Union
 
 from ..collections.partition import PartitionSpec
 from ..dataframe.dataframe import DataFrame
+from .execution_engine import ExecutionEngine
 from .factory import make_execution_engine
+
+
+@contextmanager
+def engine_context(
+    engine: Any = None, engine_conf: Any = None, infer_by: Optional[List[Any]] = None
+) -> Iterator[ExecutionEngine]:
+    e = make_execution_engine(engine, engine_conf, infer_by=infer_by)
+    return e._as_context()
+
+
+def run_engine_function(
+    func: Callable[[ExecutionEngine], Any],
+    engine: Any = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    infer_by: Optional[List[Any]] = None,
+) -> Any:
+    with engine_context(engine, engine_conf, infer_by=infer_by) as e:
+        res = func(e)
+
+        if isinstance(res, DataFrame):
+            if as_fugue or any(isinstance(x, DataFrame) for x in (infer_by or [])):
+                return res
+            return res.native_as_df()
+        return res
 
 
 def repartition(
@@ -18,10 +45,12 @@ def repartition(
     :param partition_spec: how you want to partition the dataframe
     :return: the repartitioned dataframe
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df])
-    edf = e.to_df(df)
-    return _adjust_df(
-        [df], e.repartition(edf, partition_spec=partition_spec), as_fugue=as_fugue
+    return run_engine_function(
+        lambda e: e.repartition(e.to_df(df), partition_spec=partition_spec),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
+        as_fugue=as_fugue,
     )
 
 
@@ -36,9 +65,13 @@ def broadcast(
     :param df: an input dataframe that can be recognized by Fugue
     :return: the broadcasted dataframe
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df])
-    edf = e.to_df(df)
-    return _adjust_df([df], e.broadcast(edf), as_fugue=as_fugue)
+    return run_engine_function(
+        lambda e: e.broadcast(e.to_df(df)),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
+        as_fugue=as_fugue,
+    )
 
 
 def persist(
@@ -58,9 +91,13 @@ def persist(
     :param kwargs: parameter to pass to the underlying persist implementation
     :return: the persisted dataframe
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df])
-    edf = e.to_df(df)
-    return _adjust_df([df], e.persist(edf, lazy=lazy, **kwargs), as_fugue=as_fugue)
+    return run_engine_function(
+        lambda e: e.persist(e.to_df(df), lazy=lazy, **kwargs),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
+        as_fugue=as_fugue,
+    )
 
 
 def distinct(
@@ -71,9 +108,13 @@ def distinct(
     :param df: an input dataframe that can be recognized by Fugue
     :return: [description]
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df])
-    edf = e.distinct(e.to_df(df))
-    return _adjust_df([df], edf, as_fugue=as_fugue)
+    return run_engine_function(
+        lambda e: e.distinct(e.to_df(df)),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
+        as_fugue=as_fugue,
+    )
 
 
 def dropna(
@@ -95,9 +136,13 @@ def dropna(
 
     :return: DataFrame with NA records dropped
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df])
-    edf = e.dropna(e.to_df(df), how=how, thresh=thresh, subset=subset)
-    return _adjust_df([df], edf, as_fugue=as_fugue)
+    return run_engine_function(
+        lambda e: e.dropna(e.to_df(df), how=how, thresh=thresh, subset=subset),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
+        as_fugue=as_fugue,
+    )
 
 
 def fillna(
@@ -120,9 +165,13 @@ def fillna(
 
     :return: DataFrame with NA records filled
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df])
-    edf = e.fillna(e.to_df(df), value=value, subset=subset)
-    return _adjust_df([df], edf, as_fugue=as_fugue)
+    return run_engine_function(
+        lambda e: e.fillna(e.to_df(df), value=value, subset=subset),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
+        as_fugue=as_fugue,
+    )
 
 
 def sample(
@@ -149,9 +198,13 @@ def sample(
 
     :return: the sampled dataframe
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df])
-    edf = e.sample(e.to_df(df), n=n, frac=frac, replace=replace, seed=seed)
-    return _adjust_df([df], edf, as_fugue=as_fugue)
+    return run_engine_function(
+        lambda e: e.sample(e.to_df(df), n=n, frac=frac, replace=replace, seed=seed),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
+        as_fugue=as_fugue,
+    )
 
 
 def take(
@@ -181,15 +234,20 @@ def take(
 
     :return: n rows of DataFrame per partition
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df])
-    edf = e.take(
-        e.to_df(df),
-        n=n,
-        presort=presort,
-        na_position=na_position,
-        partition_spec=partition_spec,
+
+    return run_engine_function(
+        lambda e: e.take(
+            e.to_df(df),
+            n=n,
+            presort=presort,
+            na_position=na_position,
+            partition_spec=partition_spec,
+        ),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
+        as_fugue=as_fugue,
     )
-    return _adjust_df([df], edf, as_fugue=as_fugue)
 
 
 def load(
@@ -212,9 +270,14 @@ def load(
 
     For more details and examples, read |ZipComap|.
     """
-    e = make_execution_engine(engine, engine_conf)
-    res = e.load_df(path=path, format_hint=format_hint, columns=columns, **kwargs)
-    return _adjust_df([], res, as_fugue=as_fugue)
+    return run_engine_function(
+        lambda e: e.load_df(
+            path=path, format_hint=format_hint, columns=columns, **kwargs
+        ),
+        engine=engine,
+        engine_conf=engine_conf,
+        as_fugue=as_fugue,
+    )
 
 
 def save(
@@ -243,16 +306,19 @@ def save(
 
     For more details and examples, read |LoadSave|.
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df])
-    edf = e.to_df(df)
-    e.save_df(
-        edf,
-        path=path,
-        format_hint=format_hint,
-        mode=mode,
-        partition_spec=partition_spec,
-        force_single=force_single,
-        **kwargs,
+    run_engine_function(
+        lambda e: e.save_df(
+            e.to_df(df),
+            path=path,
+            format_hint=format_hint,
+            mode=mode,
+            partition_spec=partition_spec,
+            force_single=force_single,
+            **kwargs,
+        ),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
     )
 
 
@@ -281,13 +347,22 @@ def join(
 
         Please read :func:`~.fugue.dataframe.utils.get_join_schemas`
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df1, df2])
-    edf1 = e.to_df(df1)
-    edf2 = e.to_df(df2)
-    res = e.join(edf1, edf2, how=how, on=on)
-    for odf in dfs:
-        res = e.join(res, e.to_df(odf), how=how, on=on)
-    return _adjust_df([df1, df2, *dfs], res, as_fugue=as_fugue)
+
+    def _join(e: ExecutionEngine):
+        edf1 = e.to_df(df1)
+        edf2 = e.to_df(df2)
+        res = e.join(edf1, edf2, how=how, on=on)
+        for odf in dfs:
+            res = e.join(res, e.to_df(odf), how=how, on=on)
+        return res
+
+    run_engine_function(
+        _join,
+        engine=engine,
+        engine_conf=engine_conf,
+        as_fugue=as_fugue,
+        infer_by=[df1, df2, *dfs],
+    )
 
 
 def union(
@@ -313,13 +388,22 @@ def union(
         Currently, the schema of all dataframes must be identical, or
         an exception will be thrown.
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df1, df2])
-    edf1 = e.to_df(df1)
-    edf2 = e.to_df(df2)
-    res = e.union(edf1, edf2, distinct=distinct)
-    for odf in dfs:
-        res = e.union(res, e.to_df(odf), distinct=distinct)
-    return _adjust_df([df1, df2, *dfs], res, as_fugue=as_fugue)
+
+    def _union(e: ExecutionEngine):
+        edf1 = e.to_df(df1)
+        edf2 = e.to_df(df2)
+        res = e.union(edf1, edf2, distinct=distinct)
+        for odf in dfs:
+            res = e.union(res, e.to_df(odf), distinct=distinct)
+        return res
+
+    run_engine_function(
+        _union,
+        engine=engine,
+        engine_conf=engine_conf,
+        as_fugue=as_fugue,
+        infer_by=[df1, df2, *dfs],
+    )
 
 
 def subtract(
@@ -345,13 +429,22 @@ def subtract(
         Currently, the schema of all datafrmes must be identical, or
         an exception will be thrown.
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df1, df2])
-    edf1 = e.to_df(df1)
-    edf2 = e.to_df(df2)
-    res = e.subtract(edf1, edf2, distinct=distinct)
-    for odf in dfs:
-        res = e.subtract(edf1, e.to_df(odf), distinct=distinct)
-    return _adjust_df([df1, df2, *dfs], res, as_fugue=as_fugue)
+
+    def _subtract(e: ExecutionEngine):
+        edf1 = e.to_df(df1)
+        edf2 = e.to_df(df2)
+        res = e.subtract(edf1, edf2, distinct=distinct)
+        for odf in dfs:
+            res = e.subtract(res, e.to_df(odf), distinct=distinct)
+        return res
+
+    run_engine_function(
+        _subtract,
+        engine=engine,
+        engine_conf=engine_conf,
+        as_fugue=as_fugue,
+        infer_by=[df1, df2, *dfs],
+    )
 
 
 def intersect(
@@ -377,13 +470,22 @@ def intersect(
         Currently, the schema of ``df1`` and ``df2`` must be identical, or
         an exception will be thrown.
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=[df1, df2])
-    edf1 = e.to_df(df1)
-    edf2 = e.to_df(df2)
-    res = e.intersect(edf1, edf2, distinct=distinct)
-    for odf in dfs:
-        res = e.intersect(res, e.to_df(odf), distinct=distinct)
-    return _adjust_df([df1, df2, *dfs], res, as_fugue=as_fugue)
+
+    def _intersect(e: ExecutionEngine):
+        edf1 = e.to_df(df1)
+        edf2 = e.to_df(df2)
+        res = e.intersect(edf1, edf2, distinct=distinct)
+        for odf in dfs:
+            res = e.intersect(res, e.to_df(odf), distinct=distinct)
+        return res
+
+    run_engine_function(
+        _intersect,
+        engine=engine,
+        engine_conf=engine_conf,
+        as_fugue=as_fugue,
+        infer_by=[df1, df2, *dfs],
+    )
 
 
 def _adjust_df(input_dfs: Any, output_df: DataFrame, as_fugue: bool) -> Any:

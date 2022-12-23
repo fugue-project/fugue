@@ -8,7 +8,7 @@ import pytest
 from pyspark.sql import SparkSession
 from triad.collections.schema import Schema
 
-import fugue.express as fi
+import fugue.api as fi
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.plugins import get_column_names, rename
 from fugue_spark import SparkExecutionEngine

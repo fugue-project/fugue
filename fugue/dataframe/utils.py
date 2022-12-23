@@ -13,15 +13,9 @@ from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.assertion import assert_or_throw as aot
 
+from .api import get_column_names, normalize_column_names, rename
 from .array_dataframe import ArrayDataFrame
-from .dataframe import (
-    DataFrame,
-    LocalBoundedDataFrame,
-    LocalDataFrame,
-    get_column_names,
-    normalize_column_names,
-    rename,
-)
+from .dataframe import DataFrame, LocalBoundedDataFrame, LocalDataFrame
 from .iterable_dataframe import IterableDataFrame
 from .pandas_dataframe import PandasDataFrame
 

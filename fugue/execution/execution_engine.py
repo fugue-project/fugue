@@ -5,7 +5,7 @@ from contextvars import ContextVar
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Union
 from uuid import uuid4
 
-from triad import ParamDict, Schema, assert_or_throw
+from triad import ParamDict, Schema, SerializableRLock, assert_or_throw
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 from triad.utils.convert import to_size
@@ -28,6 +28,8 @@ from fugue.exceptions import FugueBug
 _FUGUE_EXECUTION_ENGINE_CONTEXT = ContextVar(
     "_FUGUE_EXECUTION_ENGINE_CONTEXT", default=None
 )
+
+_CONTEXT_LOCK = SerializableRLock()
 
 
 class ExecutionEngineFacet:
@@ -152,6 +154,7 @@ class ExecutionEngine(ABC):
         self._compile_conf = ParamDict()
         self._sql_engine: Optional[SQLEngine] = None
         self._map_engine: Optional[MapEngine] = None
+        self._ctx_count = 0
 
     @contextmanager
     def as_context(self) -> Iterator["ExecutionEngine"]:
@@ -166,11 +169,12 @@ class ExecutionEngine(ABC):
                     transform(df, func)  # will use engine in this transformation
 
         """
-        token = _FUGUE_EXECUTION_ENGINE_CONTEXT.set(self)  # type: ignore
-        try:
-            yield self
-        finally:
-            _FUGUE_EXECUTION_ENGINE_CONTEXT.reset(token)
+        return self._as_context()
+
+    @property
+    def in_context(self) -> bool:
+        with _CONTEXT_LOCK:
+            return self._ctx_count > 0
 
     def stop(self) -> None:
         """Stop this execution engine, do not override
@@ -1004,6 +1008,28 @@ class ExecutionEngine(ABC):
 
     def __deepcopy__(self, memo: Any) -> "ExecutionEngine":
         return self
+
+    def _as_context(self) -> Iterator["ExecutionEngine"]:
+        """Set this execution engine as the context engine. This function
+        is thread safe and async safe.
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                with engine.as_context():
+                    transform(df, func)  # will use engine in this transformation
+
+        """
+        with _CONTEXT_LOCK:
+            token = _FUGUE_EXECUTION_ENGINE_CONTEXT.set(self)  # type: ignore
+            self._ctx_count += 1
+        try:
+            yield self
+        finally:
+            with _CONTEXT_LOCK:
+                self._ctx_count -= 1
+                _FUGUE_EXECUTION_ENGINE_CONTEXT.reset(token)
 
     def _serialize_by_partition(
         self,

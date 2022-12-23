@@ -55,7 +55,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             partition="per_row",
             engine="ray",
             as_local=True,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
         )
         df_eq(
             res,
@@ -71,7 +71,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             partition=dict(num=3, algo="rand"),
             engine="ray",
             as_local=True,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
         )
         df_eq(
             res,
@@ -87,7 +87,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             partition=dict(num=40),
             engine="ray",
             as_local=True,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
         )
         df_eq(
             res,
@@ -113,7 +113,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
                 "fugue.ray.remote.num_cpus": 1,
             },
             as_local=True,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
         )
         df_eq(
             res,

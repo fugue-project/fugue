@@ -42,7 +42,7 @@ def test_transform():
     assert isinstance(result, pd.DataFrame)
     assert sorted(result.values.tolist(), key=lambda x: x[0]) == [[0, 0], [1, 1]]
     result = transform(
-        pdf, f2, partition=dict(by=["a"]), force_output_fugue_dataframe=True
+        pdf, f2, partition=dict(by=["a"]), as_fugue=True
     )
     assert isinstance(result, DataFrame)
 
@@ -93,7 +93,7 @@ def test_transform_from_file(tmpdir):
     def f(df: pd.DataFrame) -> pd.DataFrame:
         return df.assign(x=1)
 
-    result = transform(fp, f, force_output_fugue_dataframe=True)
+    result = transform(fp, f, as_fugue=True)
     assert result.as_array(type_safe=True) == [[2, 1]]
 
     with raises(FugueInterfacelessError):
@@ -116,7 +116,7 @@ def test_transform_to_file(tmpdir):
 
     # checkpoint is True, save_path is None
     result = transform(
-        tdf, f, force_output_fugue_dataframe=True, checkpoint=True, engine=engine
+        tdf, f, as_fugue=True, checkpoint=True, engine=engine
     )
     assert result.as_array() == [[2, 1]]
 
@@ -124,7 +124,7 @@ def test_transform_to_file(tmpdir):
     result = transform(
         tdf,
         f,
-        force_output_fugue_dataframe=True,
+        as_fugue=True,
         checkpoint=True,
         save_path=fp,
         engine=engine,
@@ -136,7 +136,7 @@ def test_transform_to_file(tmpdir):
     result = transform(
         tdf,
         f,
-        force_output_fugue_dataframe=True,
+        as_fugue=True,
         save_path=fp,
         engine=engine,
     )
@@ -163,7 +163,7 @@ def test_transform_to_file(tmpdir):
         transform(
             tdf,
             f,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
             save_path="f.csv",
             engine=engine,
         )
@@ -171,7 +171,7 @@ def test_transform_to_file(tmpdir):
         transform(
             tdf,
             f,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
             save_path="f.json",
             engine=engine,
         )

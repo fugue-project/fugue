@@ -5,7 +5,7 @@ from pytest import raises
 from triad.collections.schema import Schema
 
 from fugue.dataframe import ArrayDataFrame, DataFrame
-from fugue.express import as_fugue_df, get_native_as_df
+from fugue.api import as_fugue_df, get_native_as_df
 
 
 def test_as_fugue_df():

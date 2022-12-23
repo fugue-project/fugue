@@ -7,7 +7,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import fugue.express as fe
+import fugue.api as fe
 from fugue import ArrowDataFrame
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_test.dataframe_suite import DataFrameTests

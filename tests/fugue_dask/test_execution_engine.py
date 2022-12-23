@@ -160,7 +160,7 @@ def test_transform():
         schema="b:binary",
         callback=cb.add,
         as_local=True,
-        force_output_fugue_dataframe=True,
+        as_fugue=True,
         engine="dask",
         engine_conf=_CONF,
     )
@@ -172,7 +172,7 @@ def test_transform():
         pdf,
         tr,
         schema="b:binary",
-        force_output_fugue_dataframe=True,
+        as_fugue=True,
         engine="dask",
     )
     assert not res.is_local
@@ -185,7 +185,7 @@ def test_transform():
         tr,
         schema="b:binary",
         callback=cb.add,
-        force_output_fugue_dataframe=True,
+        as_fugue=True,
         engine="dask",
         engine_conf=_CONF,
         persist=True,  # when you have a persist, you can use callback
