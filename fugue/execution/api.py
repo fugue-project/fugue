@@ -1,15 +1,23 @@
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator, List, Optional, Union
+
 from triad import assert_or_throw
+
 from ..collections.partition import PartitionSpec
-from ..dataframe.dataframe import DataFrame
-from .execution_engine import ExecutionEngine, _FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT
+from ..dataframe.dataframe import AnyDataFrame, DataFrame
+from .execution_engine import (
+    _FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT,
+    AnyExecutionEngine,
+    ExecutionEngine,
+)
 from .factory import make_execution_engine
 
 
 @contextmanager
 def engine_context(
-    engine: Any = None, engine_conf: Any = None, infer_by: Optional[List[Any]] = None
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    infer_by: Optional[List[Any]] = None,
 ) -> Iterator[ExecutionEngine]:
     """Make an execution engine and set it as the context engine. This function
     is thread safe and async safe.
@@ -37,7 +45,9 @@ def engine_context(
     return e._as_context()
 
 
-def set_global_engine(engine: Any, engine_conf: Any = None) -> ExecutionEngine:
+def set_global_engine(
+    engine: AnyExecutionEngine, engine_conf: Any = None
+) -> ExecutionEngine:
     """Make an execution engine and set it as the global execution engine
 
     :param engine: an engine like object, must not be None
@@ -84,11 +94,24 @@ def get_current_engine() -> ExecutionEngine:
 
 def run_engine_function(
     func: Callable[[ExecutionEngine], Any],
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
     infer_by: Optional[List[Any]] = None,
 ) -> Any:
+    """Run a lambda function based on the engine provided
+
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
+    :param infer_by: a list of objects to infer the engine, defaults to None
+
+    :return: None or a Fugue :class:`~.fugue.dataframe.dataframe.DataFrame` if
+        ``as_fugue`` is True, otherwise if ``infer_by`` contains any
+        Fugue DataFrame, then return the Fugue DataFrame, otherwise
+        it returns the underlying dataframe using
+        :meth:`~.fugue.dataframe.dataframe.DataFrame.native_as_df`
+    """
     with engine_context(engine, engine_conf, infer_by=infer_by) as e:
         res = func(e)
 
@@ -100,16 +123,19 @@ def run_engine_function(
 
 
 def repartition(
-    df: Any,
+    df: AnyDataFrame,
     partition_spec: PartitionSpec,
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
-) -> Any:
+) -> AnyDataFrame:
     """Partition the input dataframe using ``partition_spec``.
 
     :param df: an input dataframe that can be recognized by Fugue
     :param partition_spec: how you want to partition the dataframe
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
     :return: the repartitioned dataframe
     """
     return run_engine_function(
@@ -122,14 +148,17 @@ def repartition(
 
 
 def broadcast(
-    df: Any,
-    engine: Any = None,
+    df: AnyDataFrame,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
-) -> Any:
+) -> AnyDataFrame:
     """Broadcast the dataframe to all workers for a distributed computing framework
 
     :param df: an input dataframe that can be recognized by Fugue
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
     :return: the broadcasted dataframe
     """
     return run_engine_function(
@@ -142,13 +171,13 @@ def broadcast(
 
 
 def persist(
-    df: Any,
+    df: AnyDataFrame,
     lazy: bool = False,
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
     **kwargs: Any,
-) -> Any:
+) -> AnyDataFrame:
     """Force materializing and caching the dataframe
 
     :param df: an input dataframe that can be recognized by Fugue
@@ -156,6 +185,9 @@ def persist(
         to happen; ``False`` (eager): persist is forced to happend immediately.
         Default to ``False``
     :param kwargs: parameter to pass to the underlying persist implementation
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
     :return: the persisted dataframe
     """
     return run_engine_function(
@@ -168,12 +200,18 @@ def persist(
 
 
 def distinct(
-    df: Any, engine: Any = None, engine_conf: Any = None, as_fugue: bool = False
-) -> Any:
+    df: AnyDataFrame,
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+) -> AnyDataFrame:
     """Equivalent to ``SELECT DISTINCT * FROM df``
 
     :param df: an input dataframe that can be recognized by Fugue
-    :return: [description]
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
+    :return: the result with distinct rows
     """
     return run_engine_function(
         lambda e: e.distinct(e.to_df(df)),
@@ -185,14 +223,14 @@ def distinct(
 
 
 def dropna(
-    df: Any,
+    df: AnyDataFrame,
     how: str = "any",
     thresh: int = None,
     subset: List[str] = None,
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
-) -> Any:
+) -> AnyDataFrame:
     """Drop NA recods from dataframe
 
     :param df: an input dataframe that can be recognized by Fugue
@@ -200,6 +238,9 @@ def dropna(
         'all' drops rows that contain all nulls.
     :param thresh: int, drops rows that have less than thresh non-null values
     :param subset: list of columns to operate on
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
 
     :return: DataFrame with NA records dropped
     """
@@ -213,13 +254,13 @@ def dropna(
 
 
 def fillna(
-    df: Any,
+    df: AnyDataFrame,
     value: Any,
     subset: List[str] = None,
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
-) -> Any:
+) -> AnyDataFrame:
     """
     Fill ``NULL``, ``NAN``, ``NAT`` values in a dataframe
 
@@ -229,6 +270,9 @@ def fillna(
         values as the replacement values.
     :param subset: list of columns to operate on. ignored if value is
         a dictionary
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
 
     :return: DataFrame with NA records filled
     """
@@ -242,15 +286,15 @@ def fillna(
 
 
 def sample(
-    df: Any,
+    df: AnyDataFrame,
     n: Optional[int] = None,
     frac: Optional[float] = None,
     replace: bool = False,
     seed: Optional[int] = None,
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
-) -> Any:
+) -> AnyDataFrame:
     """
     Sample dataframe by number of rows or by fraction
 
@@ -262,6 +306,9 @@ def sample(
     :param replace: whether replacement is allowed. With replacement,
         there may be duplicated rows in the result, defaults to False
     :param seed: seed for randomness, defaults to None
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
 
     :return: the sampled dataframe
     """
@@ -275,15 +322,15 @@ def sample(
 
 
 def take(
-    df: Any,
+    df: AnyDataFrame,
     n: int,
     presort: str,
     na_position: str = "last",
     partition_spec: Optional[PartitionSpec] = None,
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
-) -> Any:
+) -> AnyDataFrame:
     """
     Get the first n rows of a DataFrame per partition. If a presort is defined,
     use the presort before applying take. presort overrides partition_spec.presort.
@@ -298,6 +345,9 @@ def take(
         can accept ``first`` or ``last``
     :param partition_spec: PartitionSpec to apply the take operation,
         defaults to None
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
 
     :return: n rows of DataFrame per partition
     """
@@ -321,11 +371,11 @@ def load(
     path: Union[str, List[str]],
     format_hint: Any = None,
     columns: Any = None,
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
     **kwargs: Any,
-) -> Any:
+) -> AnyDataFrame:
     """Load dataframe from persistent storage
 
     :param path: the path to the dataframe
@@ -333,6 +383,10 @@ def load(
         defaults to None, meaning to infer
     :param columns: list of columns or a |SchemaLikeObject|, defaults to None
     :param kwargs: parameters to pass to the underlying framework
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
+
     :return: an engine compatible dataframe
 
     For more details and examples, read |ZipComap|.
@@ -348,13 +402,13 @@ def load(
 
 
 def save(
-    df: Any,
+    df: AnyDataFrame,
     path: str,
     format_hint: Any = None,
     mode: str = "overwrite",
     partition_spec: Optional[PartitionSpec] = None,
     force_single: bool = False,
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     **kwargs: Any,
 ) -> None:
@@ -370,6 +424,8 @@ def save(
         defaults to empty
     :param force_single: force the output as a single file, defaults to False
     :param kwargs: parameters to pass to the underlying framework
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
 
     For more details and examples, read |LoadSave|.
     """
@@ -390,15 +446,15 @@ def save(
 
 
 def join(
-    df1: Any,
-    df2: Any,
-    *dfs: Any,
+    df1: AnyDataFrame,
+    df2: AnyDataFrame,
+    *dfs: AnyDataFrame,
     how: str,
     on: Optional[List[str]] = None,
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
-) -> Any:
+) -> AnyDataFrame:
     """Join two dataframes
 
     :param df1: the first dataframe
@@ -408,6 +464,10 @@ def join(
         ``inner``, ``left_outer``, ``right_outer``, ``full_outer``, ``cross``
     :param on: it can always be inferred, but if you provide, it will be
         validated against the inferred keys.
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
+
     :return: the joined dataframe
 
     .. note::
@@ -433,14 +493,14 @@ def join(
 
 
 def union(
-    df1: Any,
-    df2: Any,
-    *dfs: Any,
+    df1: AnyDataFrame,
+    df2: AnyDataFrame,
+    *dfs: AnyDataFrame,
     distinct: bool = True,
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
-) -> Any:
+) -> AnyDataFrame:
     """Join two dataframes
 
     :param df1: the first dataframe
@@ -448,6 +508,10 @@ def union(
     :param dfs: more dataframes to union
     :param distinct: ``true`` for ``UNION`` (== ``UNION DISTINCT``),
         ``false`` for ``UNION ALL``
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
+
     :return: the unioned dataframe
 
     .. note::
@@ -474,14 +538,14 @@ def union(
 
 
 def subtract(
-    df1: Any,
-    df2: Any,
-    *dfs: Any,
+    df1: AnyDataFrame,
+    df2: AnyDataFrame,
+    *dfs: AnyDataFrame,
     distinct: bool = True,
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
-) -> Any:
+) -> AnyDataFrame:
     """``df1 - df2``
 
     :param df1: the first dataframe
@@ -489,6 +553,10 @@ def subtract(
     :param dfs: more dataframes to subtract
     :param distinct: ``true`` for ``EXCEPT`` (== ``EXCEPT DISTINCT``),
         ``false`` for ``EXCEPT ALL``
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
+
     :return: the unioned dataframe
 
     .. note::
@@ -515,14 +583,14 @@ def subtract(
 
 
 def intersect(
-    df1: Any,
-    df2: Any,
-    *dfs: Any,
+    df1: AnyDataFrame,
+    df2: AnyDataFrame,
+    *dfs: AnyDataFrame,
     distinct: bool = True,  # pylint: disable-all
-    engine: Any = None,
+    engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
-) -> Any:
+) -> AnyDataFrame:
     """Intersect ``df1`` and ``df2``
 
     :param df1: the first dataframe
@@ -530,6 +598,10 @@ def intersect(
     :param dfs: more dataframes to intersect with
     :param distinct: ``true`` for ``INTERSECT`` (== ``INTERSECT DISTINCT``),
         ``false`` for ``INTERSECT ALL``
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame
+
     :return: the unioned dataframe
 
     .. note::
@@ -555,7 +627,9 @@ def intersect(
     )
 
 
-def _adjust_df(input_dfs: Any, output_df: DataFrame, as_fugue: bool) -> Any:
+def _adjust_df(
+    input_dfs: List[AnyDataFrame], output_df: DataFrame, as_fugue: bool
+) -> AnyDataFrame:
     if as_fugue or any(isinstance(x, DataFrame) for x in input_dfs):
         return output_df
-    return output_df.native  # type: ignore
+    return output_df.native_as_df()

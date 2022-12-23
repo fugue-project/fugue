@@ -9,10 +9,10 @@ from triad.utils.rename import normalize_names
 from fugue.dataset.api import as_fugue_dataset
 
 from .._utils.registry import fugue_plugin
-from .dataframe import DataFrame
+from .dataframe import DataFrame, AnyDataFrame
 
 
-def as_fugue_df(df: Any) -> DataFrame:
+def as_fugue_df(df: AnyDataFrame) -> DataFrame:
     """Wrap the object as a Fugue DataFrame. This is a wrapper
     of :func:`~fugue.dataset.as_fugue_dataset`
 
@@ -27,12 +27,12 @@ def as_fugue_df(df: Any) -> DataFrame:
 
 
 @fugue_plugin
-def is_df(df: Any) -> bool:
+def is_df(df: AnyDataFrame) -> bool:
     """Whether ``df`` is a DataFrame like object"""
     return isinstance(df, DataFrame)
 
 
-def get_native_as_df(df: Any) -> Any:
+def get_native_as_df(df: AnyDataFrame) -> AnyDataFrame:
     """Return the dataframe form of the input ``df``.
     If ``df`` is a :class:`~.DataFrame`, then call the
     :meth:`~.DataFrame.native_as_df`, otherwise, it depends on whether there is
@@ -46,7 +46,7 @@ def get_native_as_df(df: Any) -> Any:
 
 
 @fugue_plugin
-def get_schema(df: Any) -> Schema:
+def get_schema(df: AnyDataFrame) -> Schema:
     """Get the schema of the ``df``
 
     :param df: the object that can be recognized as a dataframe by Fugue
@@ -56,7 +56,7 @@ def get_schema(df: Any) -> Schema:
 
 
 @fugue_plugin
-def as_pandas(df: Any) -> pd.DataFrame:
+def as_pandas(df: AnyDataFrame) -> pd.DataFrame:
     """Convert ``df`` to a Pandas DataFrame
 
     :param df: the object that can be recognized as a dataframe by Fugue
@@ -66,7 +66,7 @@ def as_pandas(df: Any) -> pd.DataFrame:
 
 
 @fugue_plugin
-def as_arrow(df: Any) -> pa.Table:
+def as_arrow(df: AnyDataFrame) -> pa.Table:
     """Convert ``df`` to a PyArrow Table
 
     :param df: the object that can be recognized as a dataframe by Fugue
@@ -77,7 +77,7 @@ def as_arrow(df: Any) -> pa.Table:
 
 @fugue_plugin
 def as_array(
-    df: Any, columns: Optional[List[str]] = None, type_safe: bool = False
+    df: AnyDataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
 ) -> List[Any]:  # pragma: no cover
     """Convert df to 2-dimensional native python array
 
@@ -96,7 +96,7 @@ def as_array(
 
 @fugue_plugin
 def as_array_iterable(
-    df: Any, columns: Optional[List[str]] = None, type_safe: bool = False
+    df: AnyDataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
 ) -> Iterable[Any]:  # pragma: no cover
     """Convert df to iterable of native python arrays
 
@@ -116,7 +116,7 @@ def as_array_iterable(
 
 @fugue_plugin
 def as_dict_iterable(
-    df: Any, columns: Optional[List[str]] = None
+    df: AnyDataFrame, columns: Optional[List[str]] = None
 ) -> Iterable[Dict[str, Any]]:
     """Convert df to iterable of native python dicts
 
@@ -132,7 +132,7 @@ def as_dict_iterable(
 
 
 @fugue_plugin
-def peek_array(df: Any) -> List[Any]:
+def peek_array(df: AnyDataFrame) -> List[Any]:
     """Peek the first row of the dataframe as an array
 
     :param df: the object that can be recognized as a dataframe by Fugue
@@ -142,7 +142,7 @@ def peek_array(df: Any) -> List[Any]:
 
 
 @fugue_plugin
-def peek_dict(df: Any) -> Dict[str, Any]:
+def peek_dict(df: AnyDataFrame) -> Dict[str, Any]:
     """Peek the first row of the dataframe as a array
 
     :param df: the object that can be recognized as a dataframe by Fugue
@@ -153,8 +153,11 @@ def peek_dict(df: Any) -> Dict[str, Any]:
 
 @fugue_plugin
 def head(
-    df: Any, n: int, columns: Optional[List[str]] = None, as_fugue: bool = False
-) -> Any:
+    df: AnyDataFrame,
+    n: int,
+    columns: Optional[List[str]] = None,
+    as_fugue: bool = False,
+) -> AnyDataFrame:
     """Get first n rows of the dataframe as a new local bounded dataframe
 
     :param n: number of rows
@@ -167,11 +170,13 @@ def head(
     res = as_fugue_df(df).head(n=n, columns=columns)
     if as_fugue or isinstance(df, DataFrame):
         return res
-    return res.as_pandas()
+    return res.native_as_df()
 
 
 @fugue_plugin
-def alter_columns(df: Any, columns: Any, as_fugue: bool = False) -> Any:
+def alter_columns(
+    df: AnyDataFrame, columns: Any, as_fugue: bool = False
+) -> AnyDataFrame:
     """Change column types
 
     :param df: the object that can be recognized as a dataframe by Fugue
@@ -187,7 +192,9 @@ def alter_columns(df: Any, columns: Any, as_fugue: bool = False) -> Any:
 
 
 @fugue_plugin
-def drop_columns(df: Any, columns: List[str], as_fugue: bool = False) -> Any:
+def drop_columns(
+    df: AnyDataFrame, columns: List[str], as_fugue: bool = False
+) -> AnyDataFrame:
     """Drop certain columns and return a new dataframe
 
     :param df: the object that can be recognized as a dataframe by Fugue
@@ -201,7 +208,9 @@ def drop_columns(df: Any, columns: List[str], as_fugue: bool = False) -> Any:
 
 
 @fugue_plugin
-def select_columns(df: Any, columns: List[Any], as_fugue: bool = False) -> Any:
+def select_columns(
+    df: AnyDataFrame, columns: List[Any], as_fugue: bool = False
+) -> AnyDataFrame:
     """Select certain columns and return a new dataframe
 
     :param df: the object that can be recognized as a dataframe by Fugue
@@ -215,7 +224,7 @@ def select_columns(df: Any, columns: List[Any], as_fugue: bool = False) -> Any:
 
 
 @fugue_plugin
-def get_column_names(df: Any) -> List[Any]:  # pragma: no cover
+def get_column_names(df: AnyDataFrame) -> List[Any]:  # pragma: no cover
     """A generic function to get column names of any dataframe
 
     :param df: the dataframe object
@@ -236,7 +245,9 @@ def get_column_names(df: Any) -> List[Any]:  # pragma: no cover
 
 
 @fugue_plugin
-def rename(df: Any, columns: Dict[str, Any], as_fugue: bool = False) -> Any:
+def rename(
+    df: AnyDataFrame, columns: Dict[str, Any], as_fugue: bool = False
+) -> AnyDataFrame:
     """A generic function to rename column names of any dataframe
 
     :param df: the dataframe object
@@ -268,7 +279,7 @@ def rename(df: Any, columns: Dict[str, Any], as_fugue: bool = False) -> Any:
     return _adjust_df(df, as_fugue_df(df).rename(columns), as_fugue=as_fugue)
 
 
-def normalize_column_names(df: Any) -> Tuple[Any, Dict[str, Any]]:
+def normalize_column_names(df: AnyDataFrame) -> Tuple[AnyDataFrame, Dict[str, Any]]:
     """A generic function to normalize any dataframe's column names to follow
     Fugue naming rules
 
@@ -302,7 +313,9 @@ def normalize_column_names(df: Any) -> Tuple[Any, Dict[str, Any]]:
     return (rename(df, names), undo)
 
 
-def _adjust_df(input_df: Any, output_df: DataFrame, as_fugue: bool) -> Any:
+def _adjust_df(
+    input_df: AnyDataFrame, output_df: DataFrame, as_fugue: bool
+) -> AnyDataFrame:
     if as_fugue or isinstance(input_df, DataFrame):
         return output_df
-    return output_df.native  # type: ignore
+    return output_df.native_as_df()

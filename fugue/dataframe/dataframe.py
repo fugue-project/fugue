@@ -1,6 +1,6 @@
 import json
 from abc import abstractmethod
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union, TypeVar
 
 import pandas as pd
 import pyarrow as pa
@@ -14,6 +14,9 @@ from .._utils.display import PrettyTable
 from ..collections.yielded import Yielded
 from ..dataset import Dataset, DatasetDisplay, get_dataset_display
 from ..exceptions import FugueDataFrameOperationError
+
+
+AnyDataFrame = TypeVar("AnyDataFrame", "DataFrame", object)
 
 
 class DataFrame(Dataset):
@@ -57,7 +60,7 @@ class DataFrame(Dataset):
             return self._schema
 
     @abstractmethod
-    def native_as_df(self) -> Any:  # pragma: no cover
+    def native_as_df(self) -> AnyDataFrame:  # pragma: no cover
         """The dataframe form of the native object this Dataset class wraps.
         Dataframe form means the object contains schema information. For example
         the native an ArrayDataFrame is a python array, it doesn't contain schema
@@ -290,7 +293,7 @@ class LocalDataFrame(DataFrame):
         implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
 
-    def native_as_df(self) -> Any:
+    def native_as_df(self) -> AnyDataFrame:
         return self.as_pandas()
 
     @property

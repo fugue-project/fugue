@@ -3,6 +3,7 @@ from .api import *
 from .array_dataframe import ArrayDataFrame
 from .arrow_dataframe import ArrowDataFrame
 from .dataframe import (
+    AnyDataFrame,
     DataFrame,
     LocalBoundedDataFrame,
     LocalDataFrame,

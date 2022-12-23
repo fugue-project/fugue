@@ -2,7 +2,17 @@ import logging
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+)
 from uuid import uuid4
 
 from triad import ParamDict, Schema, SerializableRLock, assert_or_throw
@@ -24,6 +34,8 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
 from fugue.exceptions import FugueBug
+
+AnyExecutionEngine = TypeVar("AnyExecutionEngine", object, None)
 
 _FUGUE_EXECUTION_ENGINE_CONTEXT = ContextVar(
     "_FUGUE_EXECUTION_ENGINE_CONTEXT", default=None

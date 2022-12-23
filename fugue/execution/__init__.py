@@ -1,6 +1,6 @@
 # flake8: noqa
 from .api import *
-from .execution_engine import ExecutionEngine, MapEngine, SQLEngine
+from .execution_engine import AnyExecutionEngine, ExecutionEngine, MapEngine, SQLEngine
 from .factory import (
     infer_execution_engine,
     make_execution_engine,

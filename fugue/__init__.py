@@ -2,6 +2,7 @@
 from triad.collections import Schema
 from triad.collections.fs import FileSystem
 
+from fugue.api import out_transform, transform
 from fugue.bag.array_bag import ArrayBag
 from fugue.bag.bag import Bag, BagDisplay
 from fugue.collections.partition import PartitionCursor, PartitionSpec
@@ -10,6 +11,7 @@ from fugue.constants import register_global_conf
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.arrow_dataframe import ArrowDataFrame
 from fugue.dataframe.dataframe import (
+    AnyDataFrame,
     DataFrame,
     DataFrameDisplay,
     LocalBoundedDataFrame,
@@ -21,7 +23,12 @@ from fugue.dataframe.iterable_dataframe import IterableDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import to_local_bounded_df, to_local_df
 from fugue.dataset import Dataset, DatasetDisplay, as_fugue_dataset, get_dataset_display
-from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
+from fugue.execution.execution_engine import (
+    AnyExecutionEngine,
+    ExecutionEngine,
+    MapEngine,
+    SQLEngine,
+)
 from fugue.execution.factory import (
     is_pandas_or,
     make_execution_engine,
@@ -52,7 +59,6 @@ from fugue.extensions.transformer import (
     register_transformer,
     transformer,
 )
-from fugue.api import out_transform, transform
 from fugue.registry import _register
 from fugue.rpc import (
     EmptyRPCHandler,
