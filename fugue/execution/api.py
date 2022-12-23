@@ -111,6 +111,10 @@ def run_engine_function(
         Fugue DataFrame, then return the Fugue DataFrame, otherwise
         it returns the underlying dataframe using
         :meth:`~.fugue.dataframe.dataframe.DataFrame.native_as_df`
+
+    .. note::
+
+        This function is for deveopment use. Users should not need it.
     """
     with engine_context(engine, engine_conf, infer_by=infer_by) as e:
         res = func(e)
@@ -136,7 +140,12 @@ def repartition(
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
     :param as_fugue: whether to force return a Fugue DataFrame
+
     :return: the repartitioned dataframe
+
+    .. caution::
+
+        This function is experimental, and may be removed in the future.
     """
     return run_engine_function(
         lambda e: e.repartition(e.to_df(df), partition_spec=partition_spec),
@@ -159,6 +168,7 @@ def broadcast(
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
     :param as_fugue: whether to force return a Fugue DataFrame
+
     :return: the broadcasted dataframe
     """
     return run_engine_function(
@@ -188,6 +198,7 @@ def persist(
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
     :param as_fugue: whether to force return a Fugue DataFrame
+
     :return: the persisted dataframe
     """
     return run_engine_function(
@@ -211,6 +222,7 @@ def distinct(
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
     :param as_fugue: whether to force return a Fugue DataFrame
+
     :return: the result with distinct rows
     """
     return run_engine_function(
