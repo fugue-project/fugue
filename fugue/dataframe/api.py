@@ -27,7 +27,7 @@ def as_fugue_df(df: AnyDataFrame) -> DataFrame:
 
 
 @fugue_plugin
-def is_df(df: AnyDataFrame) -> bool:
+def is_df(df: Any) -> bool:
     """Whether ``df`` is a DataFrame like object"""
     return isinstance(df, DataFrame)
 

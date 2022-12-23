@@ -12,5 +12,6 @@ Fugue Documentation
    introduction
    tutorials
    community
+   top_api
    api
 
