@@ -32,6 +32,27 @@ _FUGUE_EXECUTION_ENGINE_CONTEXT = ContextVar(
 _CONTEXT_LOCK = SerializableRLock()
 
 
+class _GlobalExecutionEngineContext:
+    def __init__(self):
+        self._engine: Optional["ExecutionEngine"] = None
+
+    def set(self, engine: Optional["ExecutionEngine"]):
+        with _CONTEXT_LOCK:
+            if self._engine is not None:
+                self._engine._is_global = False
+                self._engine._ctx_count -= 1
+            self._engine = engine
+            if engine is not None:
+                engine._is_global = True
+                engine._ctx_count += 1
+
+    def get(self) -> Optional["ExecutionEngine"]:
+        return self._engine
+
+
+_FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT = _GlobalExecutionEngineContext()
+
+
 class ExecutionEngineFacet:
     """The base class for different factes of the execution engines.
 
@@ -155,6 +176,7 @@ class ExecutionEngine(ABC):
         self._sql_engine: Optional[SQLEngine] = None
         self._map_engine: Optional[MapEngine] = None
         self._ctx_count = 0
+        self._is_global = False
 
     @contextmanager
     def as_context(self) -> Iterator["ExecutionEngine"]:
@@ -173,8 +195,37 @@ class ExecutionEngine(ABC):
 
     @property
     def in_context(self) -> bool:
+        """Whether this engine is being used as a context engine"""
         with _CONTEXT_LOCK:
             return self._ctx_count > 0
+
+    def set_global(self) -> "ExecutionEngine":
+        """Set this execution engine to be the global execution engine.
+
+        .. note::
+            Global engine is also considered as a context engine, so
+            :meth:`~.ExecutionEngine.in_context` will also become true
+            for the global engine.
+
+        .. admonition:: Examples
+
+            .. code-block:: python
+
+                engine1.set_global():
+                transform(df, func)  # will use engine1 in this transformation
+
+                with engine2.as_context():
+                    transform(df, func)  # will use engine2
+
+                transform(df, func)  # will use engine1
+        """
+        _FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT.set(self)
+        return self
+
+    @property
+    def is_global(self) -> bool:
+        """Whether this engine is being used as THE global engine"""
+        return self._is_global
 
     def stop(self) -> None:
         """Stop this execution engine, do not override

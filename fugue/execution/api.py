@@ -1,9 +1,9 @@
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator, List, Optional, Union
-
+from triad import assert_or_throw
 from ..collections.partition import PartitionSpec
 from ..dataframe.dataframe import DataFrame
-from .execution_engine import ExecutionEngine
+from .execution_engine import ExecutionEngine, _FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT
 from .factory import make_execution_engine
 
 
@@ -11,8 +11,75 @@ from .factory import make_execution_engine
 def engine_context(
     engine: Any = None, engine_conf: Any = None, infer_by: Optional[List[Any]] = None
 ) -> Iterator[ExecutionEngine]:
+    """Make an execution engine and set it as the context engine. This function
+    is thread safe and async safe.
+
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param infer_by: a list of objects to infer the engine, defaults to None
+
+    .. note::
+
+        For more details, please read
+        :func:`~.fugue.execution.factory.make_execution_engine`
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            import fugue.api as fa
+
+            with fa.engine_context(spark_session):
+                transform(df, func)  # will use spark in this transformation
+
+    """
     e = make_execution_engine(engine, engine_conf, infer_by=infer_by)
     return e._as_context()
+
+
+def set_global_engine(engine: Any, engine_conf: Any = None) -> ExecutionEngine:
+    """Make an execution engine and set it as the global execution engine
+
+    :param engine: an engine like object, must not be None
+    :param engine_conf: the configs for the engine, defaults to None
+
+    .. caution::
+
+        In general, it is not a good practice to set a global engine. You should
+        consider :func:`~.engine_context` instead. The exception
+        is when you iterate in a notebook and cross cells, this could simplify
+        the code.
+
+    .. note::
+
+        For more details, please read
+        :func:`~.fugue.execution.factory.make_execution_engine` and
+        :meth:`~fugue.execution.execution_engine.ExecutionEngine.set_global`
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            import fugue.api as fa
+
+            fa.set_global_engine(spark_session)
+            transform(df, func)  # will use spark in this transformation
+            fa.clear_global_engine()  # remove the global setting
+    """
+    assert_or_throw(engine is not None, ValueError("engine must be specified"))
+    return make_execution_engine(engine, engine_conf).set_global()
+
+
+def clear_global_engine() -> None:
+    """Remove the global exeuction engine (if set)"""
+    _FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT.set(None)
+
+
+def get_current_engine() -> ExecutionEngine:
+    """Get the current execution engine. Regarding the order of the logic
+    please read :func:`~.fugue.execution.factory.make_execution_engine`
+    """
+    return make_execution_engine()
 
 
 def run_engine_function(
@@ -356,7 +423,7 @@ def join(
             res = e.join(res, e.to_df(odf), how=how, on=on)
         return res
 
-    run_engine_function(
+    return run_engine_function(
         _join,
         engine=engine,
         engine_conf=engine_conf,
@@ -397,7 +464,7 @@ def union(
             res = e.union(res, e.to_df(odf), distinct=distinct)
         return res
 
-    run_engine_function(
+    return run_engine_function(
         _union,
         engine=engine,
         engine_conf=engine_conf,
@@ -438,7 +505,7 @@ def subtract(
             res = e.subtract(res, e.to_df(odf), distinct=distinct)
         return res
 
-    run_engine_function(
+    return run_engine_function(
         _subtract,
         engine=engine,
         engine_conf=engine_conf,
@@ -479,7 +546,7 @@ def intersect(
             res = e.intersect(res, e.to_df(odf), distinct=distinct)
         return res
 
-    run_engine_function(
+    return run_engine_function(
         _intersect,
         engine=engine,
         engine_conf=engine_conf,

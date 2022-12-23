@@ -23,10 +23,12 @@ from .dataframe.api import (
 from .dataset.api import as_fugue_dataset, count, is_bounded, is_empty, is_local, show
 from .execution.api import (
     broadcast,
+    clear_global_engine,
     distinct,
     dropna,
     engine_context,
     fillna,
+    get_current_engine,
     intersect,
     join,
     load,
@@ -35,6 +37,7 @@ from .execution.api import (
     run_engine_function,
     sample,
     save,
+    set_global_engine,
     subtract,
     take,
     union,
