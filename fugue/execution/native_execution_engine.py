@@ -7,7 +7,7 @@ import pandas as pd
 from qpd_pandas import run_sql_on_pandas
 from qpd_pandas.engine import PandasUtils
 from sqlalchemy import create_engine
-from triad.collections import Schema
+from triad import Schema
 from triad.collections.dict import IndexedOrderedDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
@@ -32,11 +32,8 @@ from fugue.dataframe import (
     to_local_bounded_df,
 )
 from fugue.dataframe.utils import get_join_schemas, to_local_df
-from fugue.execution.execution_engine import (
-    ExecutionEngine,
-    MapEngine,
-    SQLEngine,
-)
+
+from .execution_engine import ExecutionEngine, MapEngine, SQLEngine
 
 
 class SqliteEngine(SQLEngine):

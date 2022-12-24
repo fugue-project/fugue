@@ -637,11 +637,3 @@ def intersect(
         as_fugue=as_fugue,
         infer_by=[df1, df2, *dfs],
     )
-
-
-def _adjust_df(
-    input_dfs: List[AnyDataFrame], output_df: DataFrame, as_fugue: bool
-) -> AnyDataFrame:
-    if as_fugue or any(isinstance(x, DataFrame) for x in input_dfs):
-        return output_df
-    return output_df.native_as_df()

@@ -6,9 +6,14 @@ import pickle
 from datetime import datetime
 from unittest import TestCase
 
-import fugue.column.functions as ff
 import pandas as pd
 import pytest
+from pytest import raises
+from triad.collections.fs import FileSystem
+from triad.exceptions import InvalidOperationError
+
+import fugue.api as fa
+import fugue.column.functions as ff
 from fugue import (
     ArrayDataFrame,
     DataFrames,
@@ -20,10 +25,6 @@ from fugue import (
 from fugue.column import SelectColumns, col, lit
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution.native_execution_engine import NativeExecutionEngine
-from pytest import raises
-from triad.collections.fs import FileSystem
-from triad.exceptions import InvalidOperationError
-
 from fugue_test._utils import skip_spark2
 
 
@@ -38,6 +39,7 @@ class ExecutionEngineTests(object):
         def setUpClass(cls):
             register_default_sql_engine(lambda engine: engine.sql_engine)
             cls._engine = cls.make_engine(cls)
+            fa.set_global_engine(cls._engine)
 
         @property
         def engine(self) -> ExecutionEngine:
@@ -45,6 +47,7 @@ class ExecutionEngineTests(object):
 
         @classmethod
         def tearDownClass(cls):
+            fa.clear_global_engine()
             cls._engine.stop()
 
         def make_engine(self) -> ExecutionEngine:  # pragma: no cover
@@ -374,38 +377,52 @@ class ExecutionEngineTests(object):
             )
             df_eq(expected, c, no_pandas=True, check_order=True, throw=True)
 
+        def test_join_multiple(self):
+            e = self.engine
+            a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
+            b = e.to_df([[1, 20], [3, 40]], "a:int,c:int")
+            c = e.to_df([[1, 200], [3, 400]], "a:int,d:int")
+            d = fa.join(a, b, c, how="inner")
+            df_eq(
+                d,
+                [[1, 2, 20, 200], [3, 4, 40, 400]],
+                "a:int,b:int,c:int,d:int",
+                throw=True,
+            )
+
         def test__join_cross(self):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
             b = e.to_df([[6], [7]], "c:int")
-            c = e.join(a, b, how="Cross")
+            c = fa.join(a, b, how="Cross")
             df_eq(
                 c,
                 [[1, 2, 6], [1, 2, 7], [3, 4, 6], [3, 4, 7]],
                 "a:int,b:int,c:int",
+                throw=True,
             )
 
             b = e.to_df([], "c:int")
-            c = e.join(a, b, how="Cross")
+            c = fa.join(a, b, how="Cross")
             df_eq(c, [], "a:int,b:int,c:int", throw=True)
 
             a = e.to_df([], "a:int,b:int")
             b = e.to_df([], "c:int")
-            c = e.join(a, b, how="Cross")
+            c = fa.join(a, b, how="Cross")
             df_eq(c, [], "a:int,b:int,c:int", throw=True)
 
         def test__join_inner(self):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            c = e.join(a, b, how="INNER", on=["a"])
+            c = fa.join(a, b, how="INNER", on=["a"])
             df_eq(c, [[1, 2, 6]], "a:int,b:int,c:int", throw=True)
-            c = e.join(b, a, how="INNER", on=["a"])
+            c = fa.join(b, a, how="INNER", on=["a"])
             df_eq(c, [[6, 1, 2]], "c:int,a:int,b:int", throw=True)
 
             a = e.to_df([], "a:int,b:int")
             b = e.to_df([], "c:int,a:int")
-            c = e.join(a, b, how="INNER", on=["a"])
+            c = fa.join(a, b, how="INNER", on=["a"])
             df_eq(c, [], "a:int,b:int,c:int", throw=True)
 
         def test__join_outer(self):
@@ -413,33 +430,33 @@ class ExecutionEngineTests(object):
 
             a = e.to_df([], "a:int,b:int")
             b = e.to_df([], "c:str,a:int")
-            c = e.join(a, b, how="left_outer", on=["a"])
+            c = fa.join(a, b, how="left_outer", on=["a"])
             df_eq(c, [], "a:int,b:int,c:str", throw=True)
 
             a = e.to_df([], "a:int,b:str")
             b = e.to_df([], "c:int,a:int")
-            c = e.join(a, b, how="right_outer", on=["a"])
+            c = fa.join(a, b, how="right_outer", on=["a"])
             df_eq(c, [], "a:int,b:str,c:int", throw=True)
 
             a = e.to_df([], "a:int,b:str")
             b = e.to_df([], "c:str,a:int")
-            c = e.join(a, b, how="full_outer", on=["a"])
+            c = fa.join(a, b, how="full_outer", on=["a"])
             df_eq(c, [], "a:int,b:str,c:str", throw=True)
 
             a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
             b = e.to_df([["6", 1], ["2", 7]], "c:str,a:int")
-            c = e.join(a, b, how="left_OUTER", on=["a"])
+            c = fa.join(a, b, how="left_OUTER", on=["a"])
             df_eq(c, [[1, "2", "6"], [3, "4", None]], "a:int,b:str,c:str", throw=True)
-            c = e.join(b, a, how="left_outer", on=["a"])
+            c = fa.join(b, a, how="left_outer", on=["a"])
             df_eq(c, [["6", 1, "2"], ["2", 7, None]], "c:str,a:int,b:str", throw=True)
 
             a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
             b = e.to_df([[6, 1], [2, 7]], "c:double,a:int")
-            c = e.join(a, b, how="left_OUTER", on=["a"])
+            c = fa.join(a, b, how="left_OUTER", on=["a"])
             df_eq(
                 c, [[1, "2", 6.0], [3, "4", None]], "a:int,b:str,c:double", throw=True
             )
-            c = e.join(b, a, how="left_outer", on=["a"])
+            c = fa.join(b, a, how="left_outer", on=["a"])
             # assert c.as_pandas().values.tolist()[1][2] is None
             df_eq(
                 c, [[6.0, 1, "2"], [2.0, 7, None]], "c:double,a:int,b:str", throw=True
@@ -447,11 +464,11 @@ class ExecutionEngineTests(object):
 
             a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
             b = e.to_df([["6", 1], ["2", 7]], "c:str,a:int")
-            c = e.join(a, b, how="right_outer", on=["a"])
+            c = fa.join(a, b, how="right_outer", on=["a"])
             # assert c.as_pandas().values.tolist()[1][1] is None
             df_eq(c, [[1, "2", "6"], [7, None, "2"]], "a:int,b:str,c:str", throw=True)
 
-            c = e.join(a, b, how="full_outer", on=["a"])
+            c = fa.join(a, b, how="full_outer", on=["a"])
             df_eq(
                 c,
                 [[1, "2", "6"], [3, "4", None], [7, None, "2"]],
@@ -464,21 +481,21 @@ class ExecutionEngineTests(object):
 
             a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            c = e.join(a, b, how="left_OUTER", on=["a"])
+            c = fa.join(a, b, how="left_OUTER", on=["a"])
             df_eq(
                 c,
                 [[1, "2", 6], [3, "4", None]],
                 "a:int,b:str,c:int",
                 throw=True,
             )
-            c = e.join(b, a, how="left_outer", on=["a"])
+            c = fa.join(b, a, how="left_outer", on=["a"])
             df_eq(c, [[6, 1, "2"], [2, 7, None]], "c:int,a:int,b:str", throw=True)
 
             a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
             b = e.to_df([[True, 1], [False, 7]], "c:bool,a:int")
-            c = e.join(a, b, how="left_OUTER", on=["a"])
+            c = fa.join(a, b, how="left_OUTER", on=["a"])
             df_eq(c, [[1, "2", True], [3, "4", None]], "a:int,b:str,c:bool", throw=True)
-            c = e.join(b, a, how="left_outer", on=["a"])
+            c = fa.join(b, a, how="left_outer", on=["a"])
             df_eq(
                 c, [[True, 1, "2"], [False, 7, None]], "c:bool,a:int,b:str", throw=True
             )
@@ -487,36 +504,36 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            c = e.join(a, b, how="semi", on=["a"])
+            c = fa.join(a, b, how="semi", on=["a"])
             df_eq(c, [[1, 2]], "a:int,b:int", throw=True)
-            c = e.join(b, a, how="semi", on=["a"])
+            c = fa.join(b, a, how="semi", on=["a"])
             df_eq(c, [[6, 1]], "c:int,a:int", throw=True)
 
             b = e.to_df([], "c:int,a:int")
-            c = e.join(a, b, how="semi", on=["a"])
+            c = fa.join(a, b, how="semi", on=["a"])
             df_eq(c, [], "a:int,b:int", throw=True)
 
             a = e.to_df([], "a:int,b:int")
             b = e.to_df([], "c:int,a:int")
-            c = e.join(a, b, how="semi", on=["a"])
+            c = fa.join(a, b, how="semi", on=["a"])
             df_eq(c, [], "a:int,b:int", throw=True)
 
         def test__join_anti(self):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            c = e.join(a, b, how="anti", on=["a"])
+            c = fa.join(a, b, how="anti", on=["a"])
             df_eq(c, [[3, 4]], "a:int,b:int", throw=True)
-            c = e.join(b, a, how="anti", on=["a"])
+            c = fa.join(b, a, how="anti", on=["a"])
             df_eq(c, [[2, 7]], "c:int,a:int", throw=True)
 
             b = e.to_df([], "c:int,a:int")
-            c = e.join(a, b, how="anti", on=["a"])
+            c = fa.join(a, b, how="anti", on=["a"])
             df_eq(c, [[1, 2], [3, 4]], "a:int,b:int", throw=True)
 
             a = e.to_df([], "a:int,b:int")
             b = e.to_df([], "c:int,a:int")
-            c = e.join(a, b, how="anti", on=["a"])
+            c = fa.join(a, b, how="anti", on=["a"])
             df_eq(c, [], "a:int,b:int", throw=True)
 
         def test__join_with_null_keys(self):
@@ -524,24 +541,40 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
             b = e.to_df([[1, 2, 33], [4, None, 63]], "a:double,b:double,d:int")
-            c = e.join(a, b, how="INNER")
+            c = fa.join(a, b, how="INNER")
             df_eq(c, [[1, 2, 3, 33]], "a:double,b:double,c:int,d:int", throw=True)
 
         def test_union(self):
             e = self.engine
             a = e.to_df([[1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
             b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
-            c = e.union(a, b)
+            c = fa.union(a, b)
             df_eq(
                 c,
                 [[1, 2, 3], [4, None, 6], [1, 2, 33]],
                 "a:double,b:double,c:int",
                 throw=True,
             )
-            c = e.union(a, b, distinct=False)
+            c = fa.union(a, b, distinct=False)
             df_eq(
                 c,
                 [[1, 2, 3], [4, None, 6], [1, 2, 33], [4, None, 6]],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
+            d = fa.union(a, b, c, distinct=False)
+            df_eq(
+                d,
+                [
+                    [1, 2, 3],
+                    [4, None, 6],
+                    [1, 2, 33],
+                    [4, None, 6],
+                    [1, 2, 3],
+                    [4, None, 6],
+                    [1, 2, 33],
+                    [4, None, 6],
+                ],
                 "a:double,b:double,c:int",
                 throw=True,
             )
@@ -550,15 +583,24 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2, 3], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
             b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
-            c = e.subtract(a, b)
+            c = fa.subtract(a, b)
             df_eq(
                 c,
                 [[1, 2, 3]],
                 "a:double,b:double,c:int",
                 throw=True,
             )
+            x = e.to_df([[1, 2, 33]], "a:double,b:double,c:int")
+            y = e.to_df([[4, None, 6]], "a:double,b:double,c:int")
+            z = fa.subtract(a, x, y)
+            df_eq(
+                z,
+                [[1, 2, 3]],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
             # TODO: EXCEPT ALL is not implemented (QPD issue)
-            # c = e.subtract(a, b, distinct=False)
+            # c = fa.subtract(a, b, distinct=False)
             # df_eq(
             #     c,
             #     [[1, 2, 3], [1, 2, 3]],
@@ -575,15 +617,30 @@ class ExecutionEngineTests(object):
                 [[1, 2, 33], [4, None, 6], [4, None, 6], [4, None, 6]],
                 "a:double,b:double,c:int",
             )
-            c = e.intersect(a, b)
+            c = fa.intersect(a, b)
             df_eq(
                 c,
                 [[4, None, 6]],
                 "a:double,b:double,c:int",
                 throw=True,
             )
+            x = e.to_df(
+                [[1, 2, 33]],
+                "a:double,b:double,c:int",
+            )
+            y = e.to_df(
+                [[4, None, 6], [4, None, 6], [4, None, 6]],
+                "a:double,b:double,c:int",
+            )
+            z = fa.intersect(a, x, y)
+            df_eq(
+                z,
+                [],
+                "a:double,b:double,c:int",
+                throw=True,
+            )
             # TODO: INTERSECT ALL is not implemented (QPD issue)
-            # c = e.intersect(a, b, distinct=False)
+            # c = fa.intersect(a, b, distinct=False)
             # df_eq(
             #     c,
             #     [[4, None, 6], [4, None, 6]],
@@ -596,7 +653,7 @@ class ExecutionEngineTests(object):
             a = e.to_df(
                 [[4, None, 6], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int"
             )
-            c = e.distinct(a)
+            c = fa.distinct(a)
             df_eq(
                 c,
                 [[4, None, 6], [1, 2, 3]],
@@ -609,11 +666,11 @@ class ExecutionEngineTests(object):
             a = e.to_df(
                 [[4, None, 6], [1, 2, 3], [4, None, None]], "a:double,b:double,c:double"
             )
-            c = e.dropna(a)  # default
-            d = e.dropna(a, how="all")
-            f = e.dropna(a, how="any", thresh=2)
-            g = e.dropna(a, how="any", subset=["a", "c"])
-            h = e.dropna(a, how="any", thresh=1, subset=["a", "c"])
+            c = fa.dropna(a)  # default
+            d = fa.dropna(a, how="all")
+            f = fa.dropna(a, how="any", thresh=2)
+            g = fa.dropna(a, how="any", subset=["a", "c"])
+            h = fa.dropna(a, how="any", thresh=1, subset=["a", "c"])
             df_eq(
                 c,
                 [[1, 2, 3]],
@@ -644,10 +701,10 @@ class ExecutionEngineTests(object):
             a = e.to_df(
                 [[4, None, 6], [1, 2, 3], [4, None, None]], "a:double,b:double,c:double"
             )
-            c = e.fillna(a, value=1)
-            d = e.fillna(a, {"b": 99, "c": -99})
-            f = e.fillna(a, value=-99, subset=["c"])
-            g = e.fillna(a, {"b": 99, "c": -99}, subset=["c"])  # subset ignored
+            c = fa.fillna(a, value=1)
+            d = fa.fillna(a, {"b": 99, "c": -99})
+            f = fa.fillna(a, value=-99, subset=["c"])
+            g = fa.fillna(a, {"b": 99, "c": -99}, subset=["c"])  # subset ignored
             df_eq(
                 c,
                 [[4, 1, 6], [1, 2, 3], [4, 1, 1]],
@@ -667,24 +724,24 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
             df_eq(g, d, throw=True)
-            raises(ValueError, lambda: e.fillna(a, {"b": None, c: "99"}))
-            raises(ValueError, lambda: e.fillna(a, None))
-            # raises(ValueError, lambda: e.fillna(a, ["b"]))
+            raises(ValueError, lambda: fa.fillna(a, {"b": None, c: "99"}))
+            raises(ValueError, lambda: fa.fillna(a, None))
+            # raises(ValueError, lambda: fa.fillna(a, ["b"]))
 
         def test_sample(self):
             engine = self.engine
             a = engine.to_df([[x] for x in range(100)], "a:int")
 
             with raises(ValueError):
-                engine.sample(a)  # must set one
+                fa.sample(a)  # must set one
             with raises(ValueError):
-                engine.sample(a, n=90, frac=0.9)  # can't set both
+                fa.sample(a, n=90, frac=0.9)  # can't set both
 
-            f = engine.sample(a, frac=0.8, replace=False)
-            g = engine.sample(a, frac=0.8, replace=True)
-            h = engine.sample(a, frac=0.8, seed=1)
-            h2 = engine.sample(a, frac=0.8, seed=1)
-            i = engine.sample(a, frac=0.8, seed=2)
+            f = fa.sample(a, frac=0.8, replace=False)
+            g = fa.sample(a, frac=0.8, replace=True)
+            h = fa.sample(a, frac=0.8, seed=1)
+            h2 = fa.sample(a, frac=0.8, seed=1)
+            i = fa.sample(a, frac=0.8, seed=2)
             assert not df_eq(f, g, throw=False)
             df_eq(h, h2, throw=True)
             assert not df_eq(h, i, throw=False)
@@ -705,12 +762,12 @@ class ExecutionEngineTests(object):
                 ],
                 "a:str,b:int,c:long",
             )
-            b = e.take(a, n=1, presort="b desc")
-            c = e.take(a, n=2, presort="a desc", na_position="first")
-            d = e.take(a, n=1, presort="a asc, b desc", partition_spec=ps)
-            f = e.take(a, n=1, presort=None, partition_spec=ps2)
-            g = e.take(a, n=2, presort="a desc", na_position="last")
-            h = e.take(a, n=2, presort="a", na_position="first")
+            b = fa.take(a, n=1, presort="b desc")
+            c = fa.take(a, n=2, presort="a desc", na_position="first")
+            d = fa.take(a, n=1, presort="a asc, b desc", partition_spec=ps)
+            f = fa.take(a, n=1, presort=None, partition_spec=ps2)
+            g = fa.take(a, n=2, presort="a desc", na_position="last")
+            h = fa.take(a, n=2, presort="a", na_position="first")
             df_eq(
                 b,
                 [[None, 4, 2]],
@@ -750,17 +807,17 @@ class ExecutionEngineTests(object):
                 "a:str,b:int,c:long",
                 throw=True,
             )
-            raises(ValueError, lambda: e.take(a, n=0.5, presort=None))
+            raises(ValueError, lambda: fa.take(a, n=0.5, presort=None))
 
         def test_sample_n(self):
             engine = self.engine
             a = engine.to_df([[x] for x in range(100)], "a:int")
 
-            b = engine.sample(a, n=90, replace=False)
-            c = engine.sample(a, n=90, replace=True)
-            d = engine.sample(a, n=90, seed=1)
-            d2 = engine.sample(a, n=90, seed=1)
-            e = engine.sample(a, n=90, seed=2)
+            b = fa.sample(a, n=90, replace=False)
+            c = fa.sample(a, n=90, replace=True)
+            d = fa.sample(a, n=90, seed=1)
+            d2 = fa.sample(a, n=90, seed=1)
+            e = fa.sample(a, n=90, seed=2)
             assert not df_eq(b, c, throw=False)
             df_eq(d, d2, throw=True)
             assert not df_eq(d, e, throw=False)
@@ -773,9 +830,9 @@ class ExecutionEngineTests(object):
                 a, PartitionSpec(by=["a"], presort="b"), df_name="_0"
             )
             assert s.count() == 2
-            s = e.persist(e._serialize_by_partition(a, PartitionSpec(), df_name="_0"))
+            s = fa.persist(e._serialize_by_partition(a, PartitionSpec(), df_name="_0"))
             assert s.count() == 1
-            s = e.persist(
+            s = fa.persist(
                 e._serialize_by_partition(a, PartitionSpec(by=["x"]), df_name="_0")
             )
             assert s.count() == 1
@@ -788,10 +845,10 @@ class ExecutionEngineTests(object):
             sa = e._serialize_by_partition(a, ps, df_name="_0")
             sb = e._serialize_by_partition(b, ps, df_name="_1")
             # test zip with serialized dfs
-            z1 = e.persist(e.zip(sa, sb, how="inner", partition_spec=ps))
+            z1 = fa.persist(e.zip(sa, sb, how="inner", partition_spec=ps))
             assert 1 == z1.count()
             assert not z1.metadata.get("serialized_has_name", False)
-            z2 = e.persist(e.zip(sa, sb, how="left_outer", partition_spec=ps))
+            z2 = fa.persist(e.zip(sa, sb, how="left_outer", partition_spec=ps))
             assert 2 == z2.count()
 
             # can't have duplicated keys
@@ -816,24 +873,24 @@ class ExecutionEngineTests(object):
             )
 
             # test zip with unserialized dfs
-            z3 = e.persist(e.zip(a, b, partition_spec=ps))
+            z3 = fa.persist(e.zip(a, b, partition_spec=ps))
             df_eq(z1, z3, throw=True)
-            z3 = e.persist(e.zip(a, sb, partition_spec=ps))
+            z3 = fa.persist(e.zip(a, sb, partition_spec=ps))
             df_eq(z1, z3, throw=True)
-            z3 = e.persist(e.zip(sa, b, partition_spec=ps))
+            z3 = fa.persist(e.zip(sa, b, partition_spec=ps))
             df_eq(z1, z3, throw=True)
 
-            z4 = e.persist(e.zip(a, b, how="left_outer", partition_spec=ps))
+            z4 = fa.persist(e.zip(a, b, how="left_outer", partition_spec=ps))
             df_eq(z2, z4, throw=True)
-            z4 = e.persist(e.zip(a, sb, how="left_outer", partition_spec=ps))
+            z4 = fa.persist(e.zip(a, sb, how="left_outer", partition_spec=ps))
             df_eq(z2, z4, throw=True)
-            z4 = e.persist(e.zip(sa, b, how="left_outer", partition_spec=ps))
+            z4 = fa.persist(e.zip(sa, b, how="left_outer", partition_spec=ps))
             df_eq(z2, z4, throw=True)
 
-            z5 = e.persist(e.zip(a, b, how="cross"))
+            z5 = fa.persist(e.zip(a, b, how="cross"))
             assert z5.count() == 1
             assert len(z5.schema) == 2
-            z6 = e.persist(e.zip(sa, b, how="cross"))
+            z6 = fa.persist(e.zip(sa, b, how="cross"))
             assert z6.count() == 2
             assert len(z6.schema) == 3
 
@@ -844,15 +901,15 @@ class ExecutionEngineTests(object):
         def test_zip_all(self):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
-            z = e.persist(e.zip_all(DataFrames(a)))
+            z = fa.persist(e.zip_all(DataFrames(a)))
             assert 1 == z.count()
             assert z.metadata.get("serialized", False)
             assert not z.metadata.get("serialized_has_name", False)
-            z = e.persist(e.zip_all(DataFrames(x=a)))
+            z = fa.persist(e.zip_all(DataFrames(x=a)))
             assert 1 == z.count()
             assert z.metadata.get("serialized", False)
             assert z.metadata.get("serialized_has_name", False)
-            z = e.persist(
+            z = fa.persist(
                 e.zip_all(DataFrames(x=a), partition_spec=PartitionSpec(by=["a"]))
             )
             assert 2 == z.count()
@@ -861,23 +918,23 @@ class ExecutionEngineTests(object):
 
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
             c = e.to_df([[6, 1], [2, 7]], "d:int,a:int")
-            z = e.persist(e.zip_all(DataFrames(a, b, c)))
+            z = fa.persist(e.zip_all(DataFrames(a, b, c)))
             assert 1 == z.count()
             assert not z.metadata.get("serialized_has_name", False)
-            z = e.persist(e.zip_all(DataFrames(x=a, y=b, z=c)))
+            z = fa.persist(e.zip_all(DataFrames(x=a, y=b, z=c)))
             assert 1 == z.count()
             assert z.metadata.get("serialized_has_name", False)
 
-            z = e.persist(e.zip_all(DataFrames(b, b)))
+            z = fa.persist(e.zip_all(DataFrames(b, b)))
             assert 2 == z.count()
             assert not z.metadata.get("serialized_has_name", False)
             assert ["a", "c"] in z.schema
-            z = e.persist(e.zip_all(DataFrames(x=b, y=b)))
+            z = fa.persist(e.zip_all(DataFrames(x=b, y=b)))
             assert 2 == z.count()
             assert z.metadata.get("serialized_has_name", False)
             assert ["a", "c"] in z.schema
 
-            z = e.persist(
+            z = fa.persist(
                 e.zip_all(DataFrames(b, b), partition_spec=PartitionSpec(by=["a"]))
             )
             assert 2 == z.count()
@@ -889,12 +946,12 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            z1 = e.persist(e.zip(a, b))
-            z2 = e.persist(e.zip(a, b, partition_spec=ps, how="left_outer"))
-            z3 = e.persist(
+            z1 = fa.persist(e.zip(a, b))
+            z2 = fa.persist(e.zip(a, b, partition_spec=ps, how="left_outer"))
+            z3 = fa.persist(
                 e._serialize_by_partition(a, partition_spec=ps, df_name="_x")
             )
-            z4 = e.persist(e.zip(a, b, partition_spec=ps, how="cross"))
+            z4 = fa.persist(e.zip(a, b, partition_spec=ps, how="cross"))
 
             def comap(cursor, dfs):
                 assert not dfs.has_key
@@ -938,9 +995,9 @@ class ExecutionEngineTests(object):
             a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
             c = e.to_df([[6, 1]], "c:int,a:int")
-            z1 = e.persist(e.zip(a, b, df1_name="x", df2_name="y"))
-            z2 = e.persist(e.zip_all(DataFrames(x=a, y=b, z=b)))
-            z3 = e.persist(
+            z1 = fa.persist(e.zip(a, b, df1_name="x", df2_name="y"))
+            z2 = fa.persist(e.zip_all(DataFrames(x=a, y=b, z=b)))
+            z3 = fa.persist(
                 e.zip_all(DataFrames(z=c), partition_spec=PartitionSpec(by=["a"]))
             )
 
@@ -994,48 +1051,47 @@ class ExecutionEngineTests(object):
             path = os.path.join(self.tmpdir, "a", "b")
             e.fs.makedirs(path, recreate=True)
             # over write folder with single file
-            e.save_df(b, path, format_hint="parquet", force_single=True)
+            fa.save(b, path, format_hint="parquet", force_single=True)
             assert e.fs.isfile(path)
-            c = e.load_df(path, format_hint="parquet", columns=["a", "c"])
+            c = fa.load(path, format_hint="parquet", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2]], "a:long,c:int", throw=True)
 
             # overwirte single with folder (if applicable)
             b = ArrayDataFrame([[60, 1], [20, 7]], "c:int,a:long")
-            e.save_df(b, path, format_hint="parquet", mode="overwrite")
-            c = e.load_df(path, format_hint="parquet", columns=["a", "c"])
+            fa.save(b, path, format_hint="parquet", mode="overwrite")
+            c = fa.load(path, format_hint="parquet", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 60], [7, 20]], "a:long,c:int", throw=True)
 
         def test_save_and_load_parquet(self):
-            e = self.engine
             b = ArrayDataFrame([[6, 1], [2, 7]], "c:int,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
-            e.save_df(b, path, format_hint="parquet")
-            c = e.load_df(path, format_hint="parquet", columns=["a", "c"])
+            fa.save(b, path, format_hint="parquet")
+            c = fa.load(path, format_hint="parquet", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2]], "a:long,c:int", throw=True)
 
         def test_load_parquet_folder(self):
-            e = self.engine
             native = NativeExecutionEngine()
             a = ArrayDataFrame([[6, 1]], "c:int,a:long")
             b = ArrayDataFrame([[2, 7], [4, 8]], "c:int,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
-            native.save_df(a, os.path.join(path, "a.parquet"))
-            native.save_df(b, os.path.join(path, "b.parquet"))
+            fa.save(a, os.path.join(path, "a.parquet"), engine=native)
+            fa.save(b, os.path.join(path, "b.parquet"), engine=native)
             FileSystem().touch(os.path.join(path, "_SUCCESS"))
-            c = e.load_df(path, format_hint="parquet", columns=["a", "c"])
+            c = fa.load(path, format_hint="parquet", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:int", throw=True)
 
         def test_load_parquet_files(self):
-            e = self.engine
             native = NativeExecutionEngine()
             a = ArrayDataFrame([[6, 1]], "c:int,a:long")
             b = ArrayDataFrame([[2, 7], [4, 8]], "c:int,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
             f1 = os.path.join(path, "a.parquet")
             f2 = os.path.join(path, "b.parquet")
-            native.save_df(a, f1)
-            native.save_df(b, f2)
-            c = e.load_df([f1, f2], format_hint="parquet", columns=["a", "c"])
+            fa.save(a, f1, engine=native)
+            fa.save(b, f2, engine=native)
+            c = fa.load(
+                [f1, f2], format_hint="parquet", columns=["a", "c"], as_fugue=True
+            )
             df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:int", throw=True)
 
         @skip_spark2
@@ -1046,39 +1102,37 @@ class ExecutionEngineTests(object):
             path = os.path.join(self.tmpdir, "a", "b")
             e.fs.makedirs(path, recreate=True)
             # over write folder with single file
-            e.save_df(b, path, format_hint="avro", force_single=True)
+            fa.save(b, path, format_hint="avro", force_single=True)
             assert e.fs.isfile(path)
-            c = e.load_df(path, format_hint="avro", columns=["a", "c"])
+            c = fa.load(path, format_hint="avro", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2]], "a:long,c:long", throw=True)
 
             # overwirte single with folder (if applicable)
             b = ArrayDataFrame([[60, 1], [20, 7]], "c:long,a:long")
-            e.save_df(b, path, format_hint="avro", mode="overwrite")
-            c = e.load_df(path, format_hint="avro", columns=["a", "c"])
+            fa.save(b, path, format_hint="avro", mode="overwrite")
+            c = fa.load(path, format_hint="avro", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 60], [7, 20]], "a:long,c:long", throw=True)
 
         @skip_spark2
         def test_save_and_load_avro(self):
             # TODO: switch to c:int,a:long when we can preserve schema to avro
-            e = self.engine
             b = ArrayDataFrame([[6, 1], [2, 7]], "c:long,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
-            e.save_df(b, path, format_hint="avro")
-            c = e.load_df(path, format_hint="avro", columns=["a", "c"])
+            fa.save(b, path, format_hint="avro")
+            c = fa.load(path, format_hint="avro", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2]], "a:long,c:long", throw=True)
 
         @skip_spark2
         def test_load_avro_folder(self):
             # TODO: switch to c:int,a:long when we can preserve schema to avro
-            e = self.engine
             native = NativeExecutionEngine()
             a = ArrayDataFrame([[6, 1]], "c:long,a:long")
             b = ArrayDataFrame([[2, 7], [4, 8]], "c:long,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
-            native.save_df(a, os.path.join(path, "a.avro"))
-            native.save_df(b, os.path.join(path, "b.avro"))
+            fa.save(a, os.path.join(path, "a.avro"), engine=native)
+            fa.save(b, os.path.join(path, "b.avro"), engine=native)
             FileSystem().touch(os.path.join(path, "_SUCCESS"))
-            c = e.load_df(path, format_hint="avro", columns=["a", "c"])
+            c = fa.load(path, format_hint="avro", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:long", throw=True)
 
         def test_save_single_and_load_csv(self):
@@ -1087,60 +1141,58 @@ class ExecutionEngineTests(object):
             path = os.path.join(self.tmpdir, "a", "b")
             e.fs.makedirs(path, recreate=True)
             # over write folder with single file
-            e.save_df(b, path, format_hint="csv", header=True, force_single=True)
+            fa.save(b, path, format_hint="csv", header=True, force_single=True)
             assert e.fs.isfile(path)
-            c = e.load_df(
-                path,
-                format_hint="csv",
-                header=True,
-                infer_schema=False,
+            c = fa.load(
+                path, format_hint="csv", header=True, infer_schema=False, as_fugue=True
             )
             df_eq(c, [["6.1", "1.1"], ["2.1", "7.1"]], "c:str,a:str", throw=True)
 
-            c = e.load_df(
-                path,
-                format_hint="csv",
-                header=True,
-                infer_schema=True,
+            c = fa.load(
+                path, format_hint="csv", header=True, infer_schema=True, as_fugue=True
             )
             df_eq(c, [[6.1, 1.1], [2.1, 7.1]], "c:double,a:double", throw=True)
 
             with raises(ValueError):
-                c = e.load_df(
+                c = fa.load(
                     path,
                     format_hint="csv",
                     header=True,
                     infer_schema=True,
                     columns="c:str,a:str",  # invalid to set schema when infer schema
+                    as_fugue=True,
                 )
 
-            c = e.load_df(
+            c = fa.load(
                 path,
                 format_hint="csv",
                 header=True,
                 infer_schema=False,
                 columns=["a", "c"],
+                as_fugue=True,
             )
             df_eq(c, [["1.1", "6.1"], ["7.1", "2.1"]], "a:str,c:str", throw=True)
 
-            c = e.load_df(
+            c = fa.load(
                 path,
                 format_hint="csv",
                 header=True,
                 infer_schema=False,
                 columns="a:double,c:double",
+                as_fugue=True,
             )
             df_eq(c, [[1.1, 6.1], [7.1, 2.1]], "a:double,c:double", throw=True)
 
             # overwirte single with folder (if applicable)
             b = ArrayDataFrame([[60.1, 1.1], [20.1, 7.1]], "c:double,a:double")
-            e.save_df(b, path, format_hint="csv", header=True, mode="overwrite")
-            c = e.load_df(
+            fa.save(b, path, format_hint="csv", header=True, mode="overwrite")
+            c = fa.load(
                 path,
                 format_hint="csv",
                 header=True,
                 infer_schema=False,
                 columns=["a", "c"],
+                as_fugue=True,
             )
             df_eq(c, [["1.1", "60.1"], ["7.1", "20.1"]], "a:str,c:str", throw=True)
 
@@ -1150,87 +1202,100 @@ class ExecutionEngineTests(object):
             path = os.path.join(self.tmpdir, "a", "b")
             e.fs.makedirs(path, recreate=True)
             # over write folder with single file
-            e.save_df(b, path, format_hint="csv", header=False, force_single=True)
+            fa.save(b, path, format_hint="csv", header=False, force_single=True)
             assert e.fs.isfile(path)
 
             with raises(ValueError):
-                c = e.load_df(
+                c = fa.load(
                     path,
                     format_hint="csv",
                     header=False,
                     infer_schema=False,
+                    as_fugue=True
                     # when header is False, must set columns
                 )
 
-            c = e.load_df(
+            c = fa.load(
                 path,
                 format_hint="csv",
                 header=False,
                 infer_schema=False,
                 columns=["c", "a"],
+                as_fugue=True,
             )
             df_eq(c, [["6.1", "1.1"], ["2.1", "7.1"]], "c:str,a:str", throw=True)
 
-            c = e.load_df(
+            c = fa.load(
                 path,
                 format_hint="csv",
                 header=False,
                 infer_schema=True,
                 columns=["c", "a"],
+                as_fugue=True,
             )
             df_eq(c, [[6.1, 1.1], [2.1, 7.1]], "c:double,a:double", throw=True)
 
             with raises(ValueError):
-                c = e.load_df(
+                c = fa.load(
                     path,
                     format_hint="csv",
                     header=False,
                     infer_schema=True,
                     columns="c:double,a:double",
+                    as_fugue=True,
                 )
 
-            c = e.load_df(
+            c = fa.load(
                 path,
                 format_hint="csv",
                 header=False,
                 infer_schema=False,
                 columns="c:double,a:str",
+                as_fugue=True,
             )
             df_eq(c, [[6.1, "1.1"], [2.1, "7.1"]], "c:double,a:str", throw=True)
 
         def test_save_and_load_csv(self):
-            e = self.engine
             b = ArrayDataFrame([[6.1, 1.1], [2.1, 7.1]], "c:double,a:double")
             path = os.path.join(self.tmpdir, "a", "b")
-            e.save_df(b, path, format_hint="csv", header=True)
-            c = e.load_df(
+            fa.save(b, path, format_hint="csv", header=True)
+            c = fa.load(
                 path,
                 format_hint="csv",
                 header=True,
                 infer_schema=True,
                 columns=["a", "c"],
+                as_fugue=True,
             )
             df_eq(c, [[1.1, 6.1], [7.1, 2.1]], "a:double,c:double", throw=True)
 
         def test_load_csv_folder(self):
-            e = self.engine
             native = NativeExecutionEngine()
             a = ArrayDataFrame([[6.1, 1.1]], "c:double,a:double")
             b = ArrayDataFrame([[2.1, 7.1], [4.1, 8.1]], "c:double,a:double")
             path = os.path.join(self.tmpdir, "a", "b")
-            native.save_df(
-                a, os.path.join(path, "a.csv"), format_hint="csv", header=True
+            fa.save(
+                a,
+                os.path.join(path, "a.csv"),
+                format_hint="csv",
+                header=True,
+                engine=native,
             )
-            native.save_df(
-                b, os.path.join(path, "b.csv"), format_hint="csv", header=True
+            fa.save(
+                b,
+                os.path.join(path, "b.csv"),
+                format_hint="csv",
+                header=True,
+                engine=native,
             )
             FileSystem().touch(os.path.join(path, "_SUCCESS"))
-            c = e.load_df(
+            c = fa.load(
                 path,
                 format_hint="csv",
                 header=True,
                 infer_schema=True,
                 columns=["a", "c"],
+                as_fugue=True,
             )
             df_eq(
                 c, [[1.1, 6.1], [7.1, 2.1], [8.1, 4.1]], "a:double,c:double", throw=True
@@ -1242,53 +1307,40 @@ class ExecutionEngineTests(object):
             path = os.path.join(self.tmpdir, "a", "b")
             e.fs.makedirs(path, recreate=True)
             # over write folder with single file
-            e.save_df(b, path, format_hint="json", force_single=True)
+            fa.save(b, path, format_hint="json", force_single=True)
             assert e.fs.isfile(path)
-            c = e.load_df(
-                path,
-                format_hint="json",
-                columns=["a", "c"],
-            )
+            c = fa.load(path, format_hint="json", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2]], "a:long,c:long", throw=True)
 
             # overwirte single with folder (if applicable)
             b = ArrayDataFrame([[60, 1], [20, 7]], "c:long,a:long")
-            e.save_df(b, path, format_hint="json", mode="overwrite")
-            c = e.load_df(path, format_hint="json", columns=["a", "c"])
+            fa.save(b, path, format_hint="json", mode="overwrite")
+            c = fa.load(path, format_hint="json", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 60], [7, 20]], "a:long,c:long", throw=True)
 
         def test_save_and_load_json(self):
             e = self.engine
             b = ArrayDataFrame([[6, 1], [3, 4], [2, 7], [4, 8], [6, 7]], "c:int,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
-            e.save_df(
+            fa.save(
                 e.repartition(e.to_df(b), PartitionSpec(num=2)),
                 path,
                 format_hint="json",
             )
-            c = e.load_df(
-                path,
-                format_hint="json",
-                columns=["a", "c"],
-            )
+            c = fa.load(path, format_hint="json", columns=["a", "c"], as_fugue=True)
             df_eq(
                 c, [[1, 6], [7, 2], [4, 3], [8, 4], [7, 6]], "a:long,c:long", throw=True
             )
 
         def test_load_json_folder(self):
-            e = self.engine
             native = NativeExecutionEngine()
             a = ArrayDataFrame([[6, 1], [3, 4]], "c:int,a:long")
             b = ArrayDataFrame([[2, 7], [4, 8]], "c:int,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
-            native.save_df(a, os.path.join(path, "a.json"), format_hint="json")
-            native.save_df(b, os.path.join(path, "b.json"), format_hint="json")
+            fa.save(a, os.path.join(path, "a.json"), format_hint="json", engine=native)
+            fa.save(b, os.path.join(path, "b.json"), format_hint="json", engine=native)
             FileSystem().touch(os.path.join(path, "_SUCCESS"))
-            c = e.load_df(
-                path,
-                format_hint="json",
-                columns=["a", "c"],
-            )
+            c = fa.load(path, format_hint="json", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2], [8, 4], [4, 3]], "a:long,c:long", throw=True)
 
 
