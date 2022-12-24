@@ -24,9 +24,16 @@ from fugue.dataframe import (
     PandasDataFrame,
 )
 from fugue.dataframe.utils import get_join_schemas
-from fugue_duckdb._io import DuckDBIO
-from fugue_duckdb._utils import encode_value_to_expr, get_temp_df_name
-from fugue_duckdb.dataframe import DuckDataFrame
+
+from ._io import DuckDBIO
+from ._utils import (
+    encode_column_name,
+    encode_column_names,
+    encode_schema_names,
+    encode_value_to_expr,
+    get_temp_df_name,
+)
+from .dataframe import DuckDataFrame
 
 _FUGUE_DUCKDB_PRAGMA_CONFIG_PREFIX = "fugue.duckdb.pragma."
 
@@ -170,17 +177,24 @@ class DuckExecutionEngine(ExecutionEngine):
             get_temp_df_name(),
             get_temp_df_name(),
         )
-        on_fields = " AND ".join(f"{t1}.{k}={t2}.{k}" for k in key_schema)
+        on_fields = " AND ".join(
+            f"{t1}.{encode_column_name(k)}={t2}.{encode_column_name(k)}"
+            for k in key_schema
+        )
         join_type = self._how_to_join(how)
         if how.lower() == "cross":
             select_fields = ",".join(
-                f"{t1}.{k}" if k in df1.schema else f"{t2}.{k}"
+                f"{t1}.{encode_column_name(k)}"
+                if k in df1.schema
+                else f"{t2}.{encode_column_name(k)}"
                 for k in output_schema.names
             )
             sql = f"SELECT {select_fields} FROM {t1} {join_type} {t2}"
         elif how.lower() == "right_outer":
             select_fields = ",".join(
-                f"{t2}.{k}" if k in df2.schema else f"{t1}.{k}"
+                f"{t2}.{encode_column_name(k)}"
+                if k in df2.schema
+                else f"{t1}.{encode_column_name(k)}"
                 for k in output_schema.names
             )
             sql = (
@@ -188,20 +202,29 @@ class DuckExecutionEngine(ExecutionEngine):
             )
         elif how.lower() == "full_outer":
             select_fields = ",".join(
-                f"COALESCE({t1}.{k},{t2}.{k}) AS {k}" if k in key_schema else k
+                f"COALESCE({t1}.{encode_column_name(k)},{t2}.{encode_column_name(k)}) "
+                f"AS {encode_column_name(k)}"
+                if k in key_schema
+                else encode_column_name(k)
                 for k in output_schema.names
             )
             sql = f"SELECT {select_fields} FROM {t1} {join_type} {t2} ON {on_fields}"
         elif how.lower() in ["semi", "left_semi"]:
-            keys = ",".join(key_schema.names)
-            on_fields = " AND ".join(f"{t1}.{k}={t3}.{k}" for k in key_schema)
+            keys = ",".join(encode_schema_names(key_schema))
+            on_fields = " AND ".join(
+                f"{t1}.{encode_column_name(k)}={t3}.{encode_column_name(k)}"
+                for k in key_schema
+            )
             sql = (
                 f"SELECT {t1}.* FROM {t1} INNER JOIN (SELECT DISTINCT {keys} "
                 f"FROM {t2}) AS {t3} ON {on_fields}"
             )
         elif how.lower() in ["anti", "left_anti"]:
-            keys = ",".join(key_schema.names)
-            on_fields = " AND ".join(f"{t1}.{k}={t3}.{k}" for k in key_schema)
+            keys = ",".join(encode_schema_names(key_schema))
+            on_fields = " AND ".join(
+                f"{t1}.{encode_column_name(k)}={t3}.{encode_column_name(k)}"
+                for k in key_schema
+            )
             sql = (
                 f"SELECT {t1}.* FROM {t1} LEFT OUTER JOIN "
                 f"(SELECT DISTINCT {keys}, 1 AS __contain__ FROM {t2}) AS {t3} "
@@ -209,7 +232,9 @@ class DuckExecutionEngine(ExecutionEngine):
             )
         else:
             select_fields = ",".join(
-                f"{t1}.{k}" if k in df1.schema else f"{t2}.{k}"
+                f"{t1}.{encode_column_name(k)}"
+                if k in df1.schema
+                else f"{t2}.{encode_column_name(k)}"
                 for k in output_schema.names
             )
             sql = f"SELECT {select_fields} FROM {t1} {join_type} {t2} ON {on_fields}"
@@ -273,7 +298,10 @@ class DuckExecutionEngine(ExecutionEngine):
             thr = thresh or len(schema)
         else:  # pragma: no cover
             raise ValueError(f"{how} is not one of any and all")
-        cw = [f"CASE WHEN {f} IS NULL THEN 0 ELSE 1 END" for f in schema.names]
+        cw = [
+            f"CASE WHEN {encode_column_name(f)} IS NULL THEN 0 ELSE 1 END"
+            for f in schema.names
+        ]
         expr = " + ".join(cw) + f" >= {thr}"
         return DuckDataFrame(self._to_duck_df(df).native.filter(expr))
 
@@ -297,7 +325,9 @@ class DuckExecutionEngine(ExecutionEngine):
             ValueError("fillna value can not be None or contain None"),
         )
         cols = [
-            f"COALESCE({f}, {vd[f]}) AS {f}" if f in names else f
+            f"COALESCE({encode_column_name(f)}, {vd[f]}) AS {encode_column_name(f)}"
+            if f in names
+            else encode_column_name(f)
             for f in df.schema.names
         ]
         return DuckDataFrame(self._to_duck_df(df).native.project(", ".join(cols)))
@@ -349,8 +379,8 @@ class DuckExecutionEngine(ExecutionEngine):
         if len(_presort) == 0:
             if len(partition_spec.partition_by) == 0:
                 return DuckDataFrame(self._to_duck_df(df).native.limit(n))
-            cols = ", ".join(df.schema.names)
-            pcols = ", ".join(partition_spec.partition_by)
+            cols = ", ".join(encode_schema_names(df.schema))
+            pcols = ", ".join(encode_column_names(partition_spec.partition_by))
             sql = (
                 f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {pcols}) "
                 f"AS __fugue_take_param FROM {tb}"
@@ -360,7 +390,7 @@ class DuckExecutionEngine(ExecutionEngine):
 
         sorts: List[str] = []
         for k, v in _presort.items():
-            s = k
+            s = encode_column_name(k)
             if not v:
                 s += " DESC"
             s += " NULLS FIRST" if na_position == "first" else " NULLS LAST"
@@ -371,8 +401,8 @@ class DuckExecutionEngine(ExecutionEngine):
             sql = f"SELECT * FROM {tb} {sort_expr} LIMIT {n}"
             return self._sql(sql, {tb: df})
 
-        cols = ", ".join(df.schema.names)
-        pcols = ", ".join(partition_spec.partition_by)
+        cols = ", ".join(encode_schema_names(df.schema))
+        pcols = ", ".join(encode_column_names(partition_spec.partition_by))
         sql = (
             f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {pcols} {sort_expr}) "
             f"AS __fugue_take_param FROM {tb}"

@@ -7,6 +7,7 @@ import pandas as pd
 import pyarrow as pa
 from duckdb import __version__ as _DUCKDB_VERSION  # type: ignore
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
+from triad import Schema
 
 _LEGACY_DUCKDB = _DUCKDB_VERSION < "0.3.3"
 
@@ -34,6 +35,15 @@ _PA_TYPES_TO_DUCK: Dict[pa.DataType, str] = {v: k for k, v in _DUCK_TYPES_TO_PA.
 
 def encode_column_name(name: str) -> str:
     return '"' + name.replace('"', '""') + '"'
+
+
+def encode_column_names(names: Iterable[str]) -> Iterable[str]:
+    for name in names:
+        yield encode_column_name(name)
+
+
+def encode_schema_names(schema: Schema) -> Iterable[str]:
+    return encode_column_names(schema.names)
 
 
 def encode_value_to_expr(value: Any) -> str:  # noqa: C901
