@@ -81,6 +81,8 @@ Transformation
 SQL
 ~~~
 
+.. autofunction:: fugue.api.fugue_sql
+.. autofunction:: fugue.api.fugue_sql_flow
 .. autofunction:: fugue.api.raw_sql
 
 Conversion

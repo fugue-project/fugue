@@ -1,13 +1,13 @@
 from typing import Any, Callable, Optional
 
 import ibis
-from fugue import DataFrame, DataFrames, ExecutionEngine
-from fugue_ibis import IbisTable
-from fugue_ibis._utils import to_ibis_schema
-from fugue_ibis.execution.ibis_engine import IbisEngine, register_ibis_engine
 from ibis.backends.pandas import Backend
 
+from fugue import DataFrame, DataFrames, ExecutionEngine
 from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
+from fugue_ibis import IbisTable
+from fugue_ibis._utils import to_ibis_schema
+from fugue_ibis.execution.ibis_engine import IbisEngine, parse_ibis_engine
 
 
 class DuckDBIbisEngine(IbisEngine):
@@ -24,15 +24,12 @@ class DuckDBIbisEngine(IbisEngine):
         return engine.select(dfs, sql)
 
 
-def _to_duckdb_ibis_engine(
-    engine: ExecutionEngine, ibis_engine: Any
-) -> Optional[IbisEngine]:
-    if isinstance(ibis_engine, str) and ibis_engine in ["duck", "duckdb"]:
-        return DuckDBIbisEngine(engine)
-    if isinstance(engine, DuckExecutionEngine):
-        if ibis_engine is None:
-            return DuckDBIbisEngine(engine)
-    return None  # pragma: no cover
+@parse_ibis_engine.candidate(
+    lambda obj, *args, **kwargs: isinstance(obj, DuckExecutionEngine)
+    or (isinstance(obj, str) and obj in ["duck", "duckdb"])
+)
+def _to_duck_ibis_engine(obj: Any, engine: ExecutionEngine) -> Optional[IbisEngine]:
+    return DuckDBIbisEngine(engine)
 
 
 class _BackendWrapper(Backend):
@@ -41,6 +38,3 @@ class _BackendWrapper(Backend):
 
     def table(self, name: str, schema: Any = None):
         return ibis.table(self._schemas[name], name=name)
-
-
-register_ibis_engine(0, _to_duckdb_ibis_engine)

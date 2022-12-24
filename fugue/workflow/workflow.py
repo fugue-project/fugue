@@ -1469,6 +1469,7 @@ class FugueWorkflow:
         self._compile_conf = ParamDict(
             {**_FUGUE_GLOBAL_CONF, **ParamDict(compile_conf)}
         )
+        self._last_df: Optional[WorkflowDataFrame] = None
 
     @property
     def conf(self) -> ParamDict:
@@ -1548,6 +1549,10 @@ class FugueWorkflow:
     def yields(self) -> Dict[str, Yielded]:
         return self._yields
 
+    @property
+    def last_df(self) -> Optional[WorkflowDataFrame]:
+        return self._last_df
+
     def __enter__(self):
         return self
 
@@ -1593,7 +1598,9 @@ class FugueWorkflow:
         :return: result dataframe
         """
         task = Create(creator=using, schema=schema, params=params)
-        return self.add(task)
+        res = self.add(task)
+        self._last_df = res
+        return res
 
     def process(
         self,
@@ -1633,9 +1640,11 @@ class FugueWorkflow:
             input_names=None if not _dfs.has_key else list(_dfs.keys()),
         )
         if _dfs.has_key:
-            return self.add(task, **_dfs)
+            res = self.add(task, **_dfs)
         else:
-            return self.add(task, *_dfs.values())
+            res = self.add(task, *_dfs.values())
+        self._last_df = res
+        return res
 
     def output(
         self, *dfs: Any, using: Any, params: Any = None, pre_partition: Any = None
@@ -1701,6 +1710,7 @@ class FugueWorkflow:
                     "schema must be None when data is WorkflowDataFrame"
                 ),
             )
+            self._last_df = data
             return data
         if (
             (isinstance(data, (List, Iterable)) and not isinstance(data, str))

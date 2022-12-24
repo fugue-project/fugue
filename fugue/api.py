@@ -42,4 +42,5 @@ from .execution.api import (
     take,
     union,
 )
+from .sql.api import fugue_sql, fugue_sql_flow
 from .workflow.api import out_transform, raw_sql, transform

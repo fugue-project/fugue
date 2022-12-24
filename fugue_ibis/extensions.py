@@ -6,8 +6,8 @@ from fugue.exceptions import FugueWorkflowCompileError
 from fugue.workflow.workflow import WorkflowDataFrames
 from triad import assert_or_throw, extension_method
 
-from fugue_ibis._utils import LazyIbisObject, _materialize
-from fugue_ibis.execution.ibis_engine import to_ibis_engine
+from ._utils import LazyIbisObject, _materialize
+from .execution.ibis_engine import parse_ibis_engine
 
 from ._compat import IbisTable
 
@@ -196,5 +196,8 @@ class _IbisProcessor(Processor):
     def process(self, dfs: DataFrames) -> DataFrame:
         ibis_func = self.params.get_or_throw("ibis_func", Callable)
         ibis_engine = self.params.get_or_none("ibis_engine", object)
-        ie = to_ibis_engine(self.execution_engine, ibis_engine)
+        ie = parse_ibis_engine(
+            self.execution_engine if ibis_engine is None else ibis_engine,
+            self.execution_engine,
+        )
         return ie.select(dfs, ibis_func)

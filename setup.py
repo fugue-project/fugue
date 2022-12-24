@@ -89,8 +89,11 @@ setup(
         "fugue.plugins": [
             "ibis = fugue_ibis[ibis]",
             "duckdb = fugue_duckdb.registry[duckdb]",
+            "duckdb_ibis = fugue_duckdb.ibis_engine[duckdb,ibis]",
             "spark = fugue_spark.registry[spark]",
+            "spark_ibis = fugue_spark.ibis_engine[spark,ibis]",
             "dask = fugue_dask.registry[dask]",
+            "dask_ibis = fugue_dask.ibis_engine[dask,ibis]",
             "ray = fugue_ray.registry[ray]",
         ]
     },
