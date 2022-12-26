@@ -1,6 +1,6 @@
 import json
 from abc import abstractmethod
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union, TypeVar
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import pandas as pd
 import pyarrow as pa
@@ -12,9 +12,15 @@ from triad.utils.pandas_like import PD_UTILS
 
 from .._utils.display import PrettyTable
 from ..collections.yielded import Yielded
-from ..dataset import Dataset, DatasetDisplay, get_dataset_display
+from ..dataset import (
+    Dataset,
+    DatasetDisplay,
+    as_local,
+    as_local_bounded,
+    get_dataset_display,
+    as_fugue_dataset,
+)
 from ..exceptions import FugueDataFrameOperationError
-
 
 AnyDataFrame = TypeVar("AnyDataFrame", "DataFrame", object)
 
@@ -426,9 +432,38 @@ class DataFrameDisplay(DatasetDisplay):
                 print("")
 
 
+def as_fugue_df(df: AnyDataFrame, **kwargs: Any) -> DataFrame:
+    """Wrap the object as a Fugue DataFrame.
+
+    :param df: the object to wrap
+    """
+    ds = as_fugue_dataset(df, **kwargs)
+    if isinstance(ds, DataFrame):
+        return ds
+    raise TypeError(f"{type(df)} {kwargs} is not recognized as a Fugue DataFrame: {ds}")
+
+
 @get_dataset_display.candidate(lambda ds: isinstance(ds, DataFrame), priority=0.1)
 def _get_dataframe_display(ds: DataFrame):
     return DataFrameDisplay(ds)
+
+
+@as_local.candidate(lambda df: isinstance(df, DataFrame) and not df.is_local)
+def _df_to_local(df: DataFrame) -> DataFrame:
+    return df.as_local()
+
+
+@as_local_bounded.candidate(
+    lambda df: isinstance(df, DataFrame) and not (df.is_local and df.is_bounded),
+    priority=0.9,
+)
+def _df_to_local_bounded(df: DataFrame) -> DataFrame:
+    res: DataFrame = df.as_local()
+    if not res.is_bounded:
+        res = as_fugue_df(res.as_array(), schema=df.schema)
+    if res is not df and df.has_metadata:
+        res.reset_metadata(df.metadata)
+    return res
 
 
 def _get_schema_change(

@@ -20,7 +20,16 @@ from .dataframe.api import (
     rename,
     select_columns,
 )
-from .dataset.api import as_fugue_dataset, count, is_bounded, is_empty, is_local, show
+from .dataset.api import (
+    as_fugue_dataset,
+    as_local,
+    as_local_bounded,
+    count,
+    is_bounded,
+    is_empty,
+    is_local,
+    show,
+)
 from .execution.api import (
     broadcast,
     clear_global_engine,

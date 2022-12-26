@@ -115,7 +115,10 @@ class IbisDataFrame(DataFrame):
         return self.as_local().as_pandas()
 
     def as_local(self) -> LocalDataFrame:
-        return self._to_local_df(self._table, schema=self.schema)
+        res = self._to_local_df(self._table, schema=self.schema)
+        if res is not self and self.has_metadata:
+            res.reset_metadata(self.metadata)
+        return res
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False

@@ -35,9 +35,9 @@ def _infer_spark_client(obj: Any) -> Any:
     return SparkSession.builder.getOrCreate()
 
 
-@as_fugue_dataset.candidate(lambda df: isinstance(df, ps.DataFrame))
-def _spark_as_fugue_df(df: ps.DataFrame) -> SparkDataFrame:
-    return SparkDataFrame(df)
+@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, ps.DataFrame))
+def _spark_as_fugue_df(df: ps.DataFrame, **kwargs: Any) -> SparkDataFrame:
+    return SparkDataFrame(df, **kwargs)
 
 
 @parse_creator.candidate(lambda obj: _is_sparksql(obj))

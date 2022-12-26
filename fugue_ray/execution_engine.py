@@ -214,7 +214,7 @@ class RayExecutionEngine(DuckExecutionEngine):
         df = self._to_auto_df(df)
         if isinstance(df, RayDataFrame):
             return df.persist(**kwargs)
-        return df
+        return df  # pragma: no cover
 
     def convert_yield_dataframe(self, df: DataFrame, as_local: bool) -> DataFrame:
         if isinstance(df, RayDataFrame):

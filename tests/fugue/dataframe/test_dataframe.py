@@ -6,11 +6,14 @@ from triad.collections.schema import Schema
 
 from fugue.dataframe import ArrayDataFrame, DataFrame
 from fugue.api import as_fugue_df, get_native_as_df
+from fugue.bag.array_bag import ArrayBag
 
 
 def test_as_fugue_df():
     with raises(NotImplementedError):
         as_fugue_df(10)
+    with raises(TypeError):
+        as_fugue_df(ArrayBag([1, 2]))
     df = pd.DataFrame([[0]], columns=["a"])
     assert isinstance(as_fugue_df(df), DataFrame)
 

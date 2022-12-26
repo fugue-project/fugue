@@ -192,14 +192,17 @@ class DaskExecutionEngine(ExecutionEngine):
             if isinstance(df, DaskDataFrame):
                 return df
             if isinstance(df, PandasDataFrame):
-                return DaskDataFrame(
+                res = DaskDataFrame(
                     df.native, df.schema, num_partitions=default_partitions
                 )
-            return DaskDataFrame(
-                df.as_array(type_safe=True),
-                df.schema,
-                num_partitions=default_partitions,
-            )
+            else:
+                res = DaskDataFrame(
+                    df.as_array(type_safe=True),
+                    df.schema,
+                    num_partitions=default_partitions,
+                )
+            res.reset_metadata(df.metadata)
+            return res
         return DaskDataFrame(df, schema, num_partitions=default_partitions)
 
     def repartition(

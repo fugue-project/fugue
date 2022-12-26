@@ -44,11 +44,14 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
         if isinstance(df, (dd.DataFrame, DaskDataFrame)):
             ddf = self._to_dask_df(df, schema)
             if all(not pa.types.is_nested(f.type) for f in ddf.schema.fields):
-                return DuckDataFrame(self.connection.from_df(ddf.as_pandas()))
+                res = DuckDataFrame(self.connection.from_df(ddf.as_pandas()))
             else:
-                return DuckDataFrame(
+                res = DuckDataFrame(
                     duckdb.arrow(ddf.as_arrow(), connection=self.connection)
                 )
+            if ddf.has_metadata:
+                res.reset_metadata(ddf.metadata)
+            return res
         return super().to_df(df, schema)
 
     def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
@@ -123,5 +126,7 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
 
     def _to_dask_df(self, df: Any, schema: Any = None) -> DaskDataFrame:
         if isinstance(df, DuckDataFrame):
-            return self._dask_engine.to_df(df.as_pandas(), df.schema)
+            res = self._dask_engine.to_df(df.as_pandas(), df.schema)
+            res.reset_metadata(df.metadata if df.has_metadata else None)
+            return res
         return self._dask_engine.to_df(df, schema)

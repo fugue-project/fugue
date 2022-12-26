@@ -18,6 +18,7 @@ from fugue.dataframe import (
 )
 from fugue.exceptions import FugueDataFrameOperationError
 from fugue.plugins import (
+    as_local_bounded,
     count,
     drop_columns,
     get_column_names,
@@ -87,8 +88,12 @@ class SparkDataFrame(DataFrame):
     def as_local(self) -> LocalDataFrame:
         if any(pa.types.is_nested(t) for t in self.schema.types):
             data = list(to_type_safe_input(self.native.collect(), self.schema))
-            return ArrayDataFrame(data, self.schema)
-        return PandasDataFrame(self.native.toPandas(), self.schema)
+            res: LocalDataFrame = ArrayDataFrame(data, self.schema)
+        else:
+            res = PandasDataFrame(self.native.toPandas(), self.schema)
+        if self.has_metadata:
+            res.reset_metadata(self.metadata)
+        return res
 
     @property
     def num_partitions(self) -> int:
@@ -196,6 +201,11 @@ def _spark_df_is_empty(df: ps.DataFrame) -> bool:
 @is_local.candidate(lambda df: isinstance(df, ps.DataFrame))
 def _spark_df_is_local(df: ps.DataFrame) -> bool:
     return False
+
+
+@as_local_bounded.candidate(lambda df: isinstance(df, ps.DataFrame))
+def _spark_df_as_local(df: ps.DataFrame) -> pd.DataFrame:
+    return df.toPandas()
 
 
 @get_column_names.candidate(lambda df: isinstance(df, ps.DataFrame))

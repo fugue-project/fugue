@@ -7,6 +7,7 @@ import ray.data as rd
 from pytest import raises
 from triad import FileSystem
 
+import fugue.api as fa
 from fugue import ArrayDataFrame, DataFrame, FugueWorkflow, fsql, transform
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.plugins import infer_execution_engine
@@ -28,9 +29,11 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
         ray.init(num_cpus=2)
         cls._con = duckdb.connect()
         cls._engine = cls.make_engine(cls)
+        fa.set_global_engine(cls._engine)
 
     @classmethod
     def tearDownClass(cls):
+        fa.clear_global_engine()
         cls._con.close()
         ray.shutdown()
 

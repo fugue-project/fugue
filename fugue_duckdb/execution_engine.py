@@ -469,6 +469,7 @@ class DuckExecutionEngine(ExecutionEngine):
                 rdf = DuckDataFrame(
                     duckdb.arrow(df.as_arrow(), connection=self.connection)
                 )
+            rdf.reset_metadata(df.metadata if df.has_metadata else None)
             return rdf
         tdf = ArrowDataFrame(df, schema)
         return DuckDataFrame(duckdb.arrow(tdf.native, connection=self.connection))

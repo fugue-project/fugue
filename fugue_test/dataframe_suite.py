@@ -64,6 +64,26 @@ class DataFrameTests(object):
             assert [] == pdf.values.tolist()
             assert fi.is_local(pdf)
 
+        def test_as_local(self):
+            with raises(NotImplementedError):
+                fi.as_local(10)
+            with raises(NotImplementedError):
+                fi.as_local_bounded(10)
+
+            df = self.df([["a", 1.0], ["b", 2.0]], "x:str,y:double")
+            ldf = fi.as_local(df)
+            assert fi.is_local(ldf)
+            lbdf = fi.as_local_bounded(df)
+            assert fi.is_local(lbdf) and fi.is_bounded(lbdf)
+
+            fdf = fi.as_fugue_df(df)
+            fdf.reset_metadata({"a": 1})
+            ldf = fi.as_local(fdf)
+            assert ldf.metadata == {"a": 1}
+            lbdf = fi.as_local_bounded(fdf)
+            assert fi.is_local(lbdf) and fi.is_bounded(lbdf)
+            assert ldf.metadata == {"a": 1}
+
         def test_drop_columns(self):
             df = fi.drop_columns(self.df([], "a:str,b:int"), ["a"])
             assert fi.get_schema(df) == "b:int"
@@ -121,6 +141,12 @@ class DataFrameTests(object):
                 df2 = fi.rename(df, columns=dict(a="aa"))
                 assert fi.get_schema(df) == "a:str,b:int"
                 df_eq(fi.as_fugue_df(df2), data, "aa:str,b:int", throw=True)
+
+            for data in [[["a", 1]], []]:
+                df = self.df(data, "a:str,b:int")
+                df3 = fi.rename(df, columns={})
+                assert fi.get_schema(df3) == "a:str,b:int"
+                df_eq(fi.as_fugue_df(df3), data, "a:str,b:int", throw=True)
 
         def test_rename_invalid(self):
             df = self.df([["a", 1]], "a:str,b:int")

@@ -6,7 +6,15 @@ from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
 
-from fugue.dataset.api import as_fugue_dataset, count, is_bounded, is_empty, is_local
+from fugue.dataset.api import (
+    as_fugue_dataset,
+    as_local,
+    as_local_bounded,
+    count,
+    is_bounded,
+    is_empty,
+    is_local,
+)
 from fugue.exceptions import FugueDataFrameOperationError
 
 from .api import (
@@ -187,9 +195,19 @@ class PandasDataFrame(LocalBoundedDataFrame):
         return PD_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True), schema
 
 
-@as_fugue_dataset.candidate(lambda df: isinstance(df, pd.DataFrame))
-def _pd_as_fugue_df(df: pd.DataFrame) -> "PandasDataFrame":
-    return PandasDataFrame(df)
+@as_local.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_as_local(df: pd.DataFrame) -> pd.DataFrame:
+    return df
+
+
+@as_local_bounded.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_as_local_bounded(df: pd.DataFrame) -> pd.DataFrame:
+    return df
+
+
+@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, pd.DataFrame))
+def _pd_as_fugue_df(df: pd.DataFrame, **kwargs: Any) -> "PandasDataFrame":
+    return PandasDataFrame(df, **kwargs)
 
 
 @is_df.candidate(lambda df: isinstance(df, pd.DataFrame))

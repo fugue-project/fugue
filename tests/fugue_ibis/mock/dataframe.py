@@ -1,9 +1,8 @@
 from typing import Any
 
 from fugue import ArrowDataFrame, DataFrame, LocalDataFrame
+from fugue.plugins import as_fugue_dataset, as_local_bounded
 from fugue_ibis import IbisDataFrame, IbisTable
-from fugue_ibis._utils import to_schema
-from fugue.plugins import as_fugue_dataset
 
 
 class MockDuckDataFrame(IbisDataFrame):
@@ -18,6 +17,12 @@ class MockDuckDataFrame(IbisDataFrame):
 
 
 # should also check the df._findbackend is duckdb
-@as_fugue_dataset.candidate(lambda df: isinstance(df, IbisTable))
-def _ibis_as_fugue(df: IbisTable) -> bool:
-    return MockDuckDataFrame(df)
+@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, IbisTable))
+def _ibis_as_fugue(df: IbisTable, **kwargs: Any) -> bool:
+    return MockDuckDataFrame(df, **kwargs)
+
+
+# should also check the df._findbackend is duckdb
+@as_local_bounded.candidate(lambda df, **kwargs: isinstance(df, IbisTable))
+def _ibis_as_local(df: IbisTable, **kwargs: Any) -> bool:
+    return df.execute()

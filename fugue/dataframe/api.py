@@ -3,27 +3,10 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import pandas as pd
 import pyarrow as pa
 from triad.collections.schema import Schema
-from triad.utils.assertion import assert_or_throw
 from triad.utils.rename import normalize_names
 
-from fugue.dataset.api import as_fugue_dataset
-
 from .._utils.registry import fugue_plugin
-from .dataframe import DataFrame, AnyDataFrame
-
-
-def as_fugue_df(df: AnyDataFrame) -> DataFrame:
-    """Wrap the object as a Fugue DataFrame. This is a wrapper
-    of :func:`~fugue.dataset.as_fugue_dataset`
-
-    :param df: the object to wrap
-    """
-    res = as_fugue_dataset(df)
-    assert_or_throw(
-        isinstance(res, DataFrame),
-        TypeError(f"{type(df)} can't be converted to a Fugue DataFrame"),
-    )
-    return res  # type: ignore
+from .dataframe import AnyDataFrame, DataFrame, as_fugue_df
 
 
 @fugue_plugin

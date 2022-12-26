@@ -19,6 +19,8 @@ from fugue.dataframe import (
 )
 from fugue.dataset import (
     as_fugue_dataset,
+    as_local,
+    as_local_bounded,
     count,
     get_dataset_display,
     is_bounded,

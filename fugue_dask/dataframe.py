@@ -17,6 +17,7 @@ from fugue.dataframe import (
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameOperationError
 from fugue.plugins import (
+    as_local_bounded,
     count,
     drop_columns,
     get_column_names,
@@ -104,7 +105,10 @@ class DaskDataFrame(DataFrame):
         return False
 
     def as_local(self) -> LocalDataFrame:
-        return PandasDataFrame(self.as_pandas(), self.schema)
+        res = PandasDataFrame(self.as_pandas(), self.schema)
+        if self.has_metadata:
+            res.reset_metadata(self.metadata)
+        return res
 
     @property
     def is_bounded(self) -> bool:
@@ -263,6 +267,11 @@ def _dd_is_empty(df: dd.DataFrame) -> bool:
 @is_local.candidate(lambda df: isinstance(df, dd.DataFrame))
 def _dd_is_local(df: dd.DataFrame) -> bool:
     return False
+
+
+@as_local_bounded.candidate(lambda df: isinstance(df, dd.DataFrame))
+def _dd_as_local(df: dd.DataFrame) -> bool:
+    return df.compute()
 
 
 @get_column_names.candidate(lambda df: isinstance(df, dd.DataFrame))

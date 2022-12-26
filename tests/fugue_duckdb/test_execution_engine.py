@@ -5,14 +5,14 @@ import pandas as pd
 import pyarrow as pa
 from pytest import raises
 
+import fugue.api as fa
 from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, fsql
-from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.api import engine_context
 from fugue.plugins import infer_execution_engine
 from fugue_duckdb import DuckExecutionEngine
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
-from fugue.api import engine_context
 
 
 class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -20,9 +20,11 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
     def setUpClass(cls):
         cls._con = duckdb.connect()
         cls._engine = cls.make_engine(cls)
+        fa.set_global_engine(cls._engine)
 
     @classmethod
     def tearDownClass(cls):
+        fa.clear_global_engine()
         cls._con.close()
 
     def make_engine(self):
@@ -30,6 +32,13 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
             {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
         )
         return e
+
+    def test_duck_to_df(self):
+        e = self.engine
+        a = e.to_df([[1, 2, 3]], "a:double,b:double,c:int")
+        assert isinstance(a, DuckDataFrame)
+        b = e.to_df(a.native_as_df())
+        assert isinstance(b, DuckDataFrame)
 
     def test_intersect_all(self):
         e = self.engine

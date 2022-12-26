@@ -88,6 +88,8 @@ SQL
 Conversion
 ~~~~~~~~~~
 
+.. autofunction:: fugue.api.as_local
+.. autofunction:: fugue.api.as_local_bounded
 .. autofunction:: fugue.api.as_array
 .. autofunction:: fugue.api.as_array_iterable
 .. autofunction:: fugue.api.as_arrow

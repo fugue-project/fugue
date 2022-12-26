@@ -6,6 +6,7 @@ import dask.dataframe as dd
 import pandas as pd
 from dask.distributed import Client
 
+import fugue.api as fa
 from fugue import transform
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
@@ -29,9 +30,11 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
     @classmethod
     def setUpClass(cls):
         cls._engine = cls.make_engine(cls)
+        fa.set_global_engine(cls._engine)
 
     @classmethod
     def tearDownClass(cls):
+        fa.clear_global_engine()
         cls._engine.dask_client.close()
 
     def make_engine(self):

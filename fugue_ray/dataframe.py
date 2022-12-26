@@ -14,9 +14,9 @@ from fugue.dataframe import (
 )
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
-from fugue.plugins import get_column_names, rename, is_df
+from fugue.plugins import get_column_names, rename, is_df, as_local_bounded
 
-from ._utils.dataframe import _build_empty_arrow, build_empty, get_dataset_format
+from ._utils.dataframe import build_empty, get_dataset_format
 
 
 class RayDataFrame(DataFrame):
@@ -41,6 +41,7 @@ class RayDataFrame(DataFrame):
         schema: Any = None,
         internal_schema: bool = False,
     ):
+        metadata: Any = None
         if internal_schema:
             schema = _input_schema(schema).assert_not_empty()
         if df is None:
@@ -71,6 +72,7 @@ class RayDataFrame(DataFrame):
             rdf = df._native
             if schema is None:
                 schema = df.schema
+            metadata = None if not df.has_metadata else df.metadata
         elif isinstance(df, (pd.DataFrame, pd.Series)):
             if isinstance(df, pd.Series):
                 df = df.to_frame()
@@ -86,11 +88,14 @@ class RayDataFrame(DataFrame):
             rdf = rd.from_arrow(df.as_arrow(type_safe=True))
             if schema is None:
                 schema = df.schema
+            metadata = None if not df.has_metadata else df.metadata
         else:
             raise ValueError(f"{df} is incompatible with DaskDataFrame")
         rdf, schema = self._apply_schema(rdf, schema, internal_schema)
         super().__init__(schema)
         self._native = rdf
+        if metadata is not None:
+            self.reset_metadata(metadata)
 
     @property
     def native(self) -> rd.Dataset:
@@ -107,8 +112,12 @@ class RayDataFrame(DataFrame):
     def as_local(self) -> LocalDataFrame:
         adf = self.as_arrow()
         if adf.shape[0] == 0:
-            return ArrowDataFrame([], self.schema)
-        return ArrowDataFrame(adf)
+            res = ArrowDataFrame([], self.schema)
+        else:
+            res = ArrowDataFrame(adf)
+        if self.has_metadata:
+            res.reset_metadata(self.metadata)
+        return res
 
     @property
     def is_bounded(self) -> bool:
@@ -150,17 +159,7 @@ class RayDataFrame(DataFrame):
         return self.native.count()
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
-        def get_tables() -> Iterable[pa.Table]:
-            empty = True
-            for block in self.native.get_internal_block_refs():
-                tb = ray.get(block)
-                if tb.shape[0] > 0:
-                    yield tb
-                    empty = False
-            if empty:
-                yield _build_empty_arrow(self.schema)
-
-        return pa.concat_tables(get_tables())
+        return pa.concat_tables(_get_arrow_tables(self.native))
 
     def as_pandas(self) -> pd.DataFrame:
         return self.as_arrow().to_pandas()
@@ -244,6 +243,11 @@ def _rd_is_df(df: rd.Dataset) -> bool:
     return True
 
 
+@as_local_bounded.candidate(lambda df: isinstance(df, rd.Dataset))
+def _rd_as_local(df: rd.Dataset) -> bool:
+    return pa.concat_tables(_get_arrow_tables(df))
+
+
 @get_column_names.candidate(lambda df: isinstance(df, rd.Dataset))
 def _get_ray_dataframe_columns(df: rd.Dataset) -> List[Any]:
     fmt = get_dataset_format(df)
@@ -264,3 +268,17 @@ def _rename_ray_dataframe(df: rd.Dataset, columns: Dict[str, Any]) -> rd.Dataset
         raise FugueDataFrameOperationError("found nonexistent columns: {missing}")
     new_cols = [columns.get(name, name) for name in cols]
     return df.map_batches(lambda b: b.rename_columns(new_cols), batch_format="pyarrow")
+
+
+def _get_arrow_tables(df: rd.Dataset) -> Iterable[pa.Table]:
+    last_empty: Any = None
+    empty = True
+    for block in df.get_internal_block_refs():
+        tb = ray.get(block)
+        if tb.shape[0] > 0:
+            yield tb
+            empty = False
+        else:
+            last_empty = tb
+    if empty:
+        yield last_empty

@@ -6,7 +6,15 @@ from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 
-from fugue.dataset.api import as_fugue_dataset, count, is_bounded, is_empty, is_local
+from fugue.dataset.api import (
+    as_fugue_dataset,
+    as_local,
+    as_local_bounded,
+    count,
+    is_bounded,
+    is_empty,
+    is_local,
+)
 from fugue.exceptions import FugueDataFrameOperationError
 
 from .api import (
@@ -232,9 +240,19 @@ class ArrowDataFrame(LocalBoundedDataFrame):
                 yield list(arr)
 
 
-@as_fugue_dataset.candidate(lambda df: isinstance(df, pa.Table))
-def _pa_table_as_fugue_df(df: pa.Table) -> "ArrowDataFrame":
-    return ArrowDataFrame(df)
+@as_local.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_as_local(df: pa.Table) -> pa.Table:
+    return df
+
+
+@as_local_bounded.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_as_local_bounded(df: pa.Table) -> pa.Table:
+    return df
+
+
+@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, pa.Table))
+def _pa_table_as_fugue_df(df: pa.Table, **kwargs: Any) -> "ArrowDataFrame":
+    return ArrowDataFrame(df, **kwargs)
 
 
 @is_df.candidate(lambda df: isinstance(df, pa.Table))
