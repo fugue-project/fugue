@@ -21,6 +21,7 @@ from fugue import (
     PandasDataFrame,
     PartitionSpec,
     register_default_sql_engine,
+    DataFrame,
 )
 from fugue.column import SelectColumns, col, lit
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -749,8 +750,8 @@ class ExecutionEngineTests(object):
 
         def test_take(self):
             e = self.engine
-            ps = PartitionSpec(by=["a"], presort="b DESC,c DESC")
-            ps2 = PartitionSpec(by=["c"], presort="b ASC")
+            ps = dict(by=["a"], presort="b DESC,c DESC")
+            ps2 = dict(by=["c"], presort="b ASC")
             a = e.to_df(
                 [
                     ["a", 2, 3],
@@ -764,8 +765,8 @@ class ExecutionEngineTests(object):
             )
             b = fa.take(a, n=1, presort="b desc")
             c = fa.take(a, n=2, presort="a desc", na_position="first")
-            d = fa.take(a, n=1, presort="a asc, b desc", partition_spec=ps)
-            f = fa.take(a, n=1, presort=None, partition_spec=ps2)
+            d = fa.take(a, n=1, presort="a asc, b desc", partition=ps)
+            f = fa.take(a, n=1, presort=None, partition=ps2)
             g = fa.take(a, n=2, presort="a desc", na_position="last")
             h = fa.take(a, n=2, presort="a", na_position="first")
             df_eq(
@@ -1342,6 +1343,19 @@ class ExecutionEngineTests(object):
             FileSystem().touch(os.path.join(path, "_SUCCESS"))
             c = fa.load(path, format_hint="json", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2], [8, 4], [4, 3]], "a:long,c:long", throw=True)
+
+        def test_engine_api(self):
+            # complimentary tests not covered by the other tests
+            with fa.engine_context(self.engine):
+                df1 = fa.as_fugue_df([[0, 1], [2, 3]], schema="a:long,b:long")
+                df1 = fa.repartition(df1, {"num": 2})
+                df1 = fa.get_native_as_df(fa.broadcast(df1))
+                df2 = pd.DataFrame([[0, 1], [2, 3]], columns=["a", "b"])
+                df3 = fa.union(df1, df2, as_fugue=False)
+                assert fa.is_df(df3) and not isinstance(df3, DataFrame)
+                df4 = fa.union(df1, df2, as_fugue=True)
+                assert isinstance(df4, DataFrame)
+                df_eq(df4, fa.as_pandas(df3), throw=True)
 
 
 def select_top(cursor, data):

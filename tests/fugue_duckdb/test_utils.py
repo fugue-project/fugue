@@ -1,10 +1,11 @@
-from fugue_duckdb._utils import to_pa_type, to_duck_type, encode_value_to_expr
-import pyarrow as pa
 import duckdb
-from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
-from pytest import raises
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pyarrow as pa
+from pytest import raises
+from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
+
+from fugue_duckdb._utils import encode_value_to_expr, to_duck_type, to_pa_type
 
 
 def test_encode_value_to_expr():

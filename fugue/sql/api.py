@@ -36,7 +36,8 @@ def fugue_sql(
     dag = _build_dag(query, fsql_ignore_case=fsql_ignore_case, args=args, kwargs=kwargs)
     if dag.last_df is not None:
         dag.last_df.yield_dataframe_as("result", as_local=as_local)
-    else:
+    else:  # pragma: no cover
+        # impossible case
         raise FugueSQLError(f"no dataframe to output from\n{query}")
     res = dag.run(engine, engine_conf)
     return res["result"] if as_fugue else res["result"].native_as_df()

@@ -10,6 +10,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Tuple,
     TypeVar,
     Union,
 )
@@ -27,6 +28,7 @@ from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
 )
+from fugue._utils.sql import get_temp_tb_name
 from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col, is_agg
 from fugue.constants import _FUGUE_GLOBAL_CONF
 from fugue.dataframe import DataFrame, DataFrames
@@ -88,18 +90,44 @@ class SQLEngine(ExecutionEngineFacet, ABC):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
+    def __init__(self, execution_engine: "ExecutionEngine") -> None:
+        super().__init__(execution_engine)
+        self._uid = "_" + str(uuid4())[:5] + "_"
+
+    def encode_name(self, name: str) -> str:
+        return self._uid + name
+
+    def encode(
+        self, dfs: DataFrames, statement: List[Tuple[bool, str]]
+    ) -> Tuple[DataFrames, str]:
+        d = DataFrames({self.encode_name(k): v for k, v in dfs.items()})
+        s = " ".join(self.encode_name(tp[1]) if tp[0] else tp[1] for tp in statement)
+        print(s)
+        return d, s
+
     @abstractmethod
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:  # pragma: no cover
+    def select(
+        self, dfs: DataFrames, statement: List[Tuple[bool, str]]
+    ) -> DataFrame:  # pragma: no cover
         """Execute select statement on the sql engine.
 
         :param dfs: a collection of dataframes that must have keys
-        :param statement: the ``SELECT`` statement using the ``dfs`` keys as tables
+        :param statement: the ``SELECT`` statement using the ``dfs`` keys as tables.
+          In each tuple, the first value indicates whether the second value is a
+          dataframe name reference (True), or just a part of the statement (False)
         :return: result of the ``SELECT`` statement
 
         .. admonition:: Examples
 
-            >>> dfs = DataFrames(a=df1, b=df2)
-            >>> sql_engine.select(dfs, "SELECT * FROM a UNION SELECT * FROM b")
+            .. code-block:: python
+
+                dfs = DataFrames(a=df1, b=df2)
+                sql_engine.select(
+                    dfs,
+                    [(False, "SELECT * FROM "),
+                     (True,"a"),
+                     (False," UNION SELECT * FROM "),
+                     (True,"b")])
 
         .. note::
 
@@ -644,9 +672,9 @@ class ExecutionEngine(ABC):
                 )
         """
         gen = SQLExpressionGenerator(enable_cast=False)
-        df_name = _get_temp_df_name()
-        sql = gen.select(cols, df_name, where=where, having=having)
-        res = self.sql_engine.select(DataFrames({df_name: self.to_df(df)}), sql)
+        df_name = get_temp_tb_name()
+        sql = list(gen.select(cols, df_name.key, where=where, having=having))
+        res = self.sql_engine.select(DataFrames({df_name.key: self.to_df(df)}), sql)
         diff = gen.correct_select_schema(df.schema, cols, res.schema)
         return res if diff is None else res.alter_columns(diff)
 
@@ -1208,7 +1236,3 @@ def _generate_comap_empty_dfs(schemas: Any, named: bool) -> DataFrames:
         return DataFrames({k: ArrayDataFrame([], v) for k, v in schemas.items()})
     else:
         return DataFrames([ArrayDataFrame([], v) for v in schemas.values()])
-
-
-def _get_temp_df_name() -> str:
-    return "_" + str(uuid4())[:5]

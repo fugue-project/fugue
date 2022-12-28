@@ -15,7 +15,7 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.plugins import as_fugue_dataset, infer_execution_engine, parse_creator
-from fugue.workflow import register_raw_df_type
+
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
@@ -46,10 +46,6 @@ def _parse_sparksql_creator(sql):
         return spark.sql(sql)
 
     return _run_sql
-
-
-def _register_raw_dataframes() -> None:
-    register_raw_df_type(ps.DataFrame)
 
 
 def _register_engines() -> None:
@@ -186,6 +182,5 @@ def _register() -> None:
 
         >>> import fugue_spark
     """
-    _register_raw_dataframes()
     _register_engines()
     _register_annotation_converters()

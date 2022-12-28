@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 import pyarrow as pa
 from fugue.column.expressions import (
@@ -238,7 +238,7 @@ class SQLExpressionGenerator:
         self._enable_cast = enable_cast
         self._func_handler: Dict[str, Callable[[_FuncExpr], Iterable[str]]] = {}
 
-    def where(self, condition: ColumnExpr, table: str) -> str:
+    def where(self, condition: ColumnExpr, table: str) -> Iterable[Tuple[bool, str]]:
         """Generate a ``SELECT *`` statement with the given where clause
 
         :param condition: column expression for ``WHERE``
@@ -261,7 +261,9 @@ class SQLExpressionGenerator:
             lambda: ValueError(f"{condition} has aggregation functions"),
         )
         cond = self.generate(condition.alias(""))
-        return f"SELECT * FROM {table} WHERE {cond}"
+        yield (False, "SELECT * FROM ")
+        yield (True, table)
+        yield (False, f"WHERE {cond}")
 
     def select(
         self,
@@ -269,7 +271,7 @@ class SQLExpressionGenerator:
         table: str,
         where: Optional[ColumnExpr] = None,
         having: Optional[ColumnExpr] = None,
-    ) -> str:
+    ) -> Iterable[Tuple[bool, str]]:
         """Construct the full ``SELECT`` statement on a single table
 
         :param columns: columns to select, it may contain aggregations, if
@@ -290,30 +292,39 @@ class SQLExpressionGenerator:
                 not is_agg(where),
                 lambda: ValueError(f"{where} has aggregation functions"),
             )
-            return " WHERE " + self.generate(where.alias(""))
+            return "WHERE " + self.generate(where.alias(""))
 
         def _having(as_where: bool = False) -> str:
             if having is None:
                 return ""
-            pre = " WHERE " if as_where else " HAVING "
+            pre = "WHERE " if as_where else "HAVING "
             return pre + self.generate(having.alias(""))
 
         distinct = "" if not columns.is_distinct else "DISTINCT "
 
         if not columns.has_agg:
             expr = ", ".join(self.generate(x) for x in columns.all_cols)
-            return f"SELECT {distinct}{expr} FROM {table}{_where()}"
+            yield (False, f"SELECT {distinct}{expr} FROM")
+            yield (True, table)
+            yield (False, _where())
+            return
         columns.assert_no_wildcard()
         if len(columns.literals) == 0:
             expr = ", ".join(self.generate(x) for x in columns.all_cols)
             if len(columns.group_keys) == 0:
-                return f"SELECT {distinct}{expr} FROM {table}{_where()}{_having()}"
+                yield (False, f"SELECT {distinct}{expr} FROM ")
+                yield (True, table)
+                yield (False, _where())
+                yield (False, _having())
+                return
             else:
                 keys = ", ".join(self.generate(x) for x in columns.group_keys)
-                return (
-                    f"SELECT {distinct}{expr} FROM "
-                    f"{table}{_where()} GROUP BY {keys}{_having()}"
-                )
+                yield (False, f"SELECT {distinct}{expr} FROM ")
+                yield (True, table)
+                yield (False, _where())
+                yield (False, f"GROUP BY {keys}")
+                yield (False, _having())
+                return
         else:
             no_lit = [
                 x for x in columns.all_cols if not isinstance(x, _LiteralColumnExpr)
@@ -324,7 +335,9 @@ class SQLExpressionGenerator:
                 for x in columns.all_cols
             ]
             expr = ", ".join(names)
-            return f"SELECT {expr} FROM ({sub})"
+            yield (False, f"SELECT {expr} FROM (")
+            yield from sub
+            yield (False, ")")
 
     def generate(self, expr: ColumnExpr) -> str:
         """Convert :class:`~fugue.column.expressions.ColumnExpr` to

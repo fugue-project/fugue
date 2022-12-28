@@ -77,7 +77,7 @@ class SparkSQLEngine(SQLEngine):
         )
         super().__init__(execution_engine)
 
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
         for k, v in dfs.items():
             self.execution_engine.register(v, k)  # type: ignore
         return SparkDataFrame(

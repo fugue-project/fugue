@@ -53,6 +53,7 @@ from fugue.exceptions import (
     FugueWorkflowRuntimeValidationError,
 )
 from pytest import raises
+import fugue.api as fa
 from triad import SerializableRLock
 
 
@@ -843,6 +844,7 @@ class BuiltInTests(object):
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:long,y:long")
                 b = dag.df([[2, 20, 40], [3, 30, 90]], "x:long,y:long,z:long")
                 dag.select("* FROM", a).assert_eq(a)
+                dag.select(a, ".* FROM", a).assert_eq(a)
                 dag.select("SELECT *,x*y AS z FROM", a, "WHERE x>=2").assert_eq(b)
 
                 c = dag.df([[2, 20, 40], [3, 30, 90]], "x:long,y:long,zb:long")
@@ -1570,6 +1572,51 @@ class BuiltInTests(object):
             assert dag.yields["x"].result.is_local
 
             assert 4 == cb3.n
+
+        def test_sql_api(self):
+            def tr(df: pd.DataFrame, n=1) -> pd.DataFrame:
+                return df + n
+
+            with fa.engine_context(self.engine):
+                df1 = fa.as_fugue_df([[0, 1], [2, 3], [4, 5]], schema="a:long,b:int")
+                df2 = pd.DataFrame([[0, 10], [1, 100]], columns=["a", "c"])
+                sdf1 = fa.raw_sql(  # noqa
+                    "SELECT ", df1, ".a, b FROM ", df1, " WHERE a<4"
+                )
+                sdf2 = fa.raw_sql("SELECT * FROM ", df2, " WHERE a<1")  # noqa
+
+                sdf3 = fa.fugue_sql(
+                    """
+                SELECT sdf1.a,sdf1.b,c FROM sdf1 INNER JOIN sdf2 ON sdf1.a=sdf2.a
+                TRANSFORM USING tr SCHEMA *
+                """
+                )
+                res = fa.fugue_sql_flow(
+                    """
+                TRANSFORM x USING tr(n=2) SCHEMA *
+                YIELD LOCAL DATAFRAME AS res
+                PRINT sdf1
+                """,
+                    x=sdf3,
+                )
+                df_eq(
+                    res["res"],
+                    [[3, 4, 13]],
+                    schema="a:long,b:int,c:long",
+                    check_schema=False,
+                    throw=True,
+                )
+
+                sdf4 = fa.fugue_sql(
+                    """
+                SELECT sdf1.a,b,c FROM sdf1 INNER JOIN sdf2 ON sdf1.a=sdf2.a
+                TRANSFORM USING tr SCHEMA *
+                """,
+                    as_fugue=False,
+                    as_local=True,
+                )
+                assert not isinstance(sdf4, DataFrame)
+                assert fa.is_local(sdf4)
 
 
 def mock_creator(p: int) -> DataFrame:

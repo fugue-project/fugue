@@ -12,7 +12,7 @@ from fugue._utils.interfaceless import (
     register_annotation_converter,
 )
 from fugue.plugins import as_fugue_dataset, infer_execution_engine
-from fugue.workflow import register_raw_df_type
+
 
 from .dataframe import RayDataFrame
 from .execution_engine import RayExecutionEngine
@@ -30,15 +30,9 @@ def _ray_as_fugue_df(df: rd.Dataset, **kwargs: Any) -> RayDataFrame:
     return RayDataFrame(df, **kwargs)
 
 
-def _register_raw_dataframes() -> None:
-    register_raw_df_type(rd.Dataset)
-
-
 def _register_engines() -> None:
     register_execution_engine(
-        "ray",
-        lambda conf, **kwargs: RayExecutionEngine(conf=conf),
-        on_dup="ignore",
+        "ray", lambda conf, **kwargs: RayExecutionEngine(conf=conf), on_dup="ignore"
     )
 
 
@@ -86,6 +80,5 @@ class _RayDatasetParam(DataFrameParam):
 @run_at_def
 def _register() -> None:
     """Register Ray Execution Engine"""
-    _register_raw_dataframes()
     _register_engines()
     _register_annotation_converters()

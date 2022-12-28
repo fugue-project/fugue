@@ -1,5 +1,5 @@
 import itertools
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import ibis
 from ibis import BaseBackend
@@ -36,9 +36,9 @@ class IbisSQLEngine(SQLEngine):
         super().__init__(execution_engine)
         self._ibis_engine: IbisExecutionEngine = execution_engine  # type: ignore
 
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
         return self._ibis_engine._to_ibis_dataframe(
-            self._ibis_engine._raw_select(statement, dfs)
+            self._ibis_engine._raw_select(" ".join(x[1] for x in statement), dfs)
         )
 
 

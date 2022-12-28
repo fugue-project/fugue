@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union, Tuple
 
 import dask.dataframe as dd
 from distributed import Client
@@ -45,12 +45,13 @@ class QPDDaskEngine(SQLEngine):
         )
         super().__init__(execution_engine)
 
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
+        _dfs, _sql = self.encode(dfs, statement)
         dask_dfs = {
             k: self.execution_engine.to_df(v).native  # type: ignore
-            for k, v in dfs.items()
+            for k, v in _dfs.items()
         }
-        df = run_sql_on_dask(statement, dask_dfs, ignore_case=True)
+        df = run_sql_on_dask(_sql, dask_dfs, ignore_case=True)
         return DaskDataFrame(df)
 
 

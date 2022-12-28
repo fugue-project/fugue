@@ -2,13 +2,14 @@ import os
 from typing import Any, Iterable, List, Optional, Union
 
 from duckdb import DuckDBPyConnection
-from fugue._utils.io import FileParser, load_df, save_df
-from fugue.dataframe import ArrowDataFrame, LocalBoundedDataFrame
 from triad import ParamDict, Schema
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 
-from fugue_duckdb._utils import encode_value_to_expr, get_temp_df_name, to_duck_type
+from fugue._utils.io import FileParser, load_df, save_df
+from fugue._utils.sql import get_temp_tb_name
+from fugue.dataframe import ArrowDataFrame, LocalBoundedDataFrame
+from fugue_duckdb._utils import encode_value_to_expr, to_duck_type
 from fugue_duckdb.dataframe import DuckDataFrame
 
 
@@ -91,15 +92,15 @@ class DuckDBIO:
         self._format_save[p.file_format](df, p, **kwargs)
 
     def _save_csv(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
-        dn = get_temp_df_name()
-        df.native.create_view(dn)
+        dn = get_temp_tb_name()
+        df.native.create_view(dn.key)
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
         kw["header"] = 1 if kw.pop("header", False) else 0
         params: List[str] = []
         for k, v in kw.items():
             params.append(f"{k.upper()} " + encode_value_to_expr(v))
         pm = ", ".join(params)
-        query = f"COPY {dn} TO {encode_value_to_expr(p.uri)} WITH ({pm})"
+        query = f"COPY {dn.key} TO {encode_value_to_expr(p.uri)} WITH ({pm})"
         self._con.execute(query)
 
     def _load_csv(  # noqa: C901
@@ -176,15 +177,15 @@ class DuckDBIO:
                 return DuckDataFrame(self._con.from_query(query))
 
     def _save_parquet(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
-        dn = get_temp_df_name()
-        df.native.create_view(dn)
+        dn = get_temp_tb_name()
+        df.native.create_view(dn.key)
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
         kw["format"] = "parquet"
         params: List[str] = []
         for k, v in kw.items():
             params.append(f"{k.upper()} " + encode_value_to_expr(v))
         pm = ", ".join(params)
-        query = f"COPY {dn} TO {encode_value_to_expr(p.uri)}"
+        query = f"COPY {dn.key} TO {encode_value_to_expr(p.uri)}"
         if len(params) > 0:
             query += f" WITH ({pm})"
         self._con.execute(query)

@@ -456,7 +456,7 @@ class DataFrameTests(object):
         def test_get_altered_schema(self):
             pass
 
-        def _test_get_column_names(self):
+        def test_get_column_names(self):
             df = self.to_native_df(pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"]))
             assert fi.get_column_names(df) == ["0", "1", "2"]
 

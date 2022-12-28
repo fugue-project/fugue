@@ -128,15 +128,15 @@ def run_engine_function(
 
 def repartition(
     df: AnyDataFrame,
-    partition_spec: PartitionSpec,
+    partition: PartitionSpec,
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
 ) -> AnyDataFrame:
-    """Partition the input dataframe using ``partition_spec``.
+    """Partition the input dataframe using ``partition``.
 
     :param df: an input dataframe that can be recognized by Fugue
-    :param partition_spec: how you want to partition the dataframe
+    :param partition: how you want to partition the dataframe
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
     :param as_fugue: whether to force return a Fugue DataFrame
@@ -148,7 +148,7 @@ def repartition(
         This function is experimental, and may be removed in the future.
     """
     return run_engine_function(
-        lambda e: e.repartition(e.to_df(df), partition_spec=partition_spec),
+        lambda e: e.repartition(e.to_df(df), partition_spec=PartitionSpec(partition)),
         engine=engine,
         engine_conf=engine_conf,
         infer_by=[df],
@@ -338,7 +338,7 @@ def take(
     n: int,
     presort: str,
     na_position: str = "last",
-    partition_spec: Optional[PartitionSpec] = None,
+    partition: Any = None,
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
@@ -355,7 +355,7 @@ def take(
     :param presort: presort expression similar to partition presort
     :param na_position: position of null values during the presort.
         can accept ``first`` or ``last``
-    :param partition_spec: PartitionSpec to apply the take operation,
+    :param partition: PartitionSpec to apply the take operation,
         defaults to None
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
@@ -370,7 +370,7 @@ def take(
             n=n,
             presort=presort,
             na_position=na_position,
-            partition_spec=partition_spec,
+            partition_spec=None if partition is None else PartitionSpec(partition),
         ),
         engine=engine,
         engine_conf=engine_conf,
@@ -418,7 +418,7 @@ def save(
     path: str,
     format_hint: Any = None,
     mode: str = "overwrite",
-    partition_spec: Optional[PartitionSpec] = None,
+    partition: Any = None,
     force_single: bool = False,
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
@@ -432,8 +432,8 @@ def save(
         defaults to None, meaning to infer
     :param mode: can accept ``overwrite``, ``append``, ``error``,
         defaults to "overwrite"
-    :param partition_spec: how to partition the dataframe before saving,
-        defaults to empty
+    :param partition: how to partition the dataframe before saving,
+        defaults to None
     :param force_single: force the output as a single file, defaults to False
     :param kwargs: parameters to pass to the underlying framework
     :param engine: an engine like object, defaults to None
@@ -447,7 +447,7 @@ def save(
             path=path,
             format_hint=format_hint,
             mode=mode,
-            partition_spec=partition_spec,
+            partition_spec=None if partition is None else PartitionSpec(partition),
             force_single=force_single,
             **kwargs,
         ),

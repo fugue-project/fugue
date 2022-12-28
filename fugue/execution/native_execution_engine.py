@@ -1,7 +1,7 @@
 import inspect
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 from qpd_pandas import run_sql_on_pandas
@@ -42,11 +42,12 @@ class SqliteEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
+        _dfs, _sql = self.encode(dfs, statement)
         sql_engine = create_engine("sqlite:///:memory:")
-        for k, v in dfs.items():
+        for k, v in _dfs.items():
             v.as_pandas().to_sql(k, sql_engine, if_exists="replace", index=False)
-        df = pd.read_sql_query(statement, sql_engine)
+        df = pd.read_sql_query(_sql, sql_engine)
         return PandasDataFrame(df)
 
 
@@ -56,12 +57,14 @@ class QPDPandasEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
-        _dfs = {
+    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
+        _dfs, _sql = self.encode(dfs, statement)
+        _dd = {
             k: self.execution_engine.to_df(v).as_pandas()  # type: ignore
-            for k, v in dfs.items()
+            for k, v in _dfs.items()
         }
-        df = run_sql_on_pandas(statement, _dfs, ignore_case=True)
+
+        df = run_sql_on_pandas(_sql, _dd, ignore_case=True)
         return self.execution_engine.to_df(df)
 
 
