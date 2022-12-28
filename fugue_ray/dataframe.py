@@ -90,7 +90,7 @@ class RayDataFrame(DataFrame):
                 schema = df.schema
             metadata = None if not df.has_metadata else df.metadata
         else:
-            raise ValueError(f"{df} is incompatible with DaskDataFrame")
+            raise ValueError(f"{df} is incompatible with RayDataFrame")
         rdf, schema = self._apply_schema(rdf, schema, internal_schema)
         super().__init__(schema)
         self._native = rdf

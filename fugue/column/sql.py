@@ -261,7 +261,7 @@ class SQLExpressionGenerator:
             lambda: ValueError(f"{condition} has aggregation functions"),
         )
         cond = self.generate(condition.alias(""))
-        yield (False, "SELECT * FROM ")
+        yield (False, "SELECT * FROM")
         yield (True, table)
         yield (False, f"WHERE {cond}")
 
@@ -312,14 +312,14 @@ class SQLExpressionGenerator:
         if len(columns.literals) == 0:
             expr = ", ".join(self.generate(x) for x in columns.all_cols)
             if len(columns.group_keys) == 0:
-                yield (False, f"SELECT {distinct}{expr} FROM ")
+                yield (False, f"SELECT {distinct}{expr} FROM")
                 yield (True, table)
                 yield (False, _where())
                 yield (False, _having())
                 return
             else:
                 keys = ", ".join(self.generate(x) for x in columns.group_keys)
-                yield (False, f"SELECT {distinct}{expr} FROM ")
+                yield (False, f"SELECT {distinct}{expr} FROM")
                 yield (True, table)
                 yield (False, _where())
                 yield (False, f"GROUP BY {keys}")
