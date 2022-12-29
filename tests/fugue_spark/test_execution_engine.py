@@ -126,6 +126,9 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
         e = SparkExecutionEngine(session, {"test": True})
         return e
 
+    def test_get_parallelism(self):
+        assert fa.get_current_parallelism(self.engine) == 4
+
     def test__join_outer_pandas_incompatible(self):
         return
 

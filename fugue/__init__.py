@@ -76,7 +76,7 @@ from fugue.rpc import (
     make_rpc_server,
     to_rpc_handler,
 )
-from fugue.sql.api import fsql
+from fugue.sql.api import fugue_sql_flow as fsql
 from fugue.sql.workflow import FugueSQLWorkflow
 from fugue.workflow._workflow_context import FugueWorkflowContext
 from fugue.workflow.module import module

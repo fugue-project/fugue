@@ -171,7 +171,7 @@ def alter_columns(
     :return: a new dataframe with altered columns, the order of the
         original schema will not change
     """
-    return _adjust_df(df, as_fugue_df(df).alter_columns(columns), as_fugue=as_fugue)
+    return _convert_df(df, as_fugue_df(df).alter_columns(columns), as_fugue=as_fugue)
 
 
 @fugue_plugin
@@ -187,7 +187,7 @@ def drop_columns(
         then it will return the underlying DataFrame object.
     :return: a new dataframe removing the columns
     """
-    return _adjust_df(df, as_fugue_df(df).drop(columns), as_fugue=as_fugue)
+    return _convert_df(df, as_fugue_df(df).drop(columns), as_fugue=as_fugue)
 
 
 @fugue_plugin
@@ -203,7 +203,7 @@ def select_columns(
         then it will return the underlying DataFrame object.
     :return: a new dataframe with the selected the columns
     """
-    return _adjust_df(df, as_fugue_df(df)[columns], as_fugue=as_fugue)
+    return _convert_df(df, as_fugue_df(df)[columns], as_fugue=as_fugue)
 
 
 @fugue_plugin
@@ -259,7 +259,7 @@ def rename(
     """
     if len(columns) == 0:
         return df
-    return _adjust_df(df, as_fugue_df(df).rename(columns), as_fugue=as_fugue)
+    return _convert_df(df, as_fugue_df(df).rename(columns), as_fugue=as_fugue)
 
 
 def normalize_column_names(df: AnyDataFrame) -> Tuple[AnyDataFrame, Dict[str, Any]]:
@@ -296,7 +296,7 @@ def normalize_column_names(df: AnyDataFrame) -> Tuple[AnyDataFrame, Dict[str, An
     return (rename(df, names), undo)
 
 
-def _adjust_df(
+def _convert_df(
     input_df: AnyDataFrame, output_df: DataFrame, as_fugue: bool
 ) -> AnyDataFrame:
     if as_fugue or isinstance(input_df, DataFrame):

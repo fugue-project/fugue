@@ -2,25 +2,12 @@ from typing import Any, Dict, Tuple
 
 from triad.utils.convert import get_caller_global_local_vars
 
-from fugue.dataframe import DataFrame
+from fugue.dataframe import AnyDataFrame
 from fugue.exceptions import FugueSQLError
 from fugue.execution import AnyExecutionEngine
-from fugue.workflow.workflow import FugueWorkflowResult
 
 from ..constants import FUGUE_CONF_SQL_IGNORE_CASE
 from .workflow import FugueSQLWorkflow
-
-
-def fugue_sql_flow(
-    query: str,
-    *args: Any,
-    fsql_ignore_case: bool = False,
-    engine: AnyExecutionEngine = None,
-    engine_conf: Any = None,
-    **kwargs: Any,
-) -> FugueWorkflowResult:
-    dag = _build_dag(query, fsql_ignore_case=fsql_ignore_case, args=args, kwargs=kwargs)
-    return dag.run(engine, engine_conf)
 
 
 def fugue_sql(
@@ -32,7 +19,71 @@ def fugue_sql(
     as_fugue: bool = False,
     as_local: bool = False,
     **kwargs: Any,
-) -> DataFrame:
+) -> AnyDataFrame:
+    """Simplified Fugue SQL interface. This function can still take multiple dataframe
+    inputs but will always return the last generated dataframe in the SQL workflow. And
+    ``YIELD`` should NOT be used with this function. If you want to use Fugue SQL to
+    represent the full workflow, or want to see more Fugue SQL examples,
+    please read :func:`~.fugue_sql_flow`.
+
+    :param query: the Fugue SQL string (can be a jinja template)
+    :param args: variables related to the SQL string
+    :param fsql_ignore_case: whether to ignore case when parsing the SQL string
+        defaults to False.
+    :param kwargs: variables related to the SQL string
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether return a local dataframe, defaults to False
+
+    :return: the result dataframe
+
+    .. note::
+
+        This function is different from :func:`~fugue.api.raw_sql` which directly
+        sends the query to the execution engine to run. This function parses the query
+        based on Fugue SQL syntax, creates a
+        :class:`~fugue.sql.workflow.FugueSQLWorkflow` which
+        could contain multiple raw SQLs plus other operations, and runs and returns
+        the last dataframe generated in the workflow.
+
+        This function allows you to parameterize the SQL in a more elegant way. The
+        data tables referred in the query can either be automatically extracted from the
+        local variables or be specified in the arguments.
+
+    .. caution::
+
+        Currently, we have not unified the dialects of different SQL backends. So there
+        can be some slight syntax differences when you switch between backends.
+        In addition, we have not unified the UDFs cross different backends, so you
+        should be careful to use uncommon UDFs belonging to a certain backend.
+
+        That being said, if you keep your SQL part general and leverage Fugue extensions
+        (transformer, creator, processor, outputter, etc.) appropriately, it should be
+        easy to write backend agnostic Fugue SQL.
+
+        We are working on unifying the dialects of different SQLs, it should be
+        available in the future releases. Regarding unifying UDFs, the effort is still
+        unclear.
+
+    .. code-block:: python
+
+        import pandas as pd
+        import fugue.api as fa
+
+        def tr(df:pd.DataFrame) -> pd.DataFrame:
+            return df.assign(c=2)
+
+        input = pd.DataFrame([[0,1],[3.4]], columns=["a","b"])
+
+        with fa.engine_context("duckdb"):
+            res = fa.fugue_sql('''
+            SELECT * FROM input WHERE a<{{x}}
+            TRANSFORM USING tr SCHEMA *,c:int
+            ''', x=2)
+            assert fa.as_array(res) == [[0,1,2]]
+    """
+
     dag = _build_dag(query, fsql_ignore_case=fsql_ignore_case, args=args, kwargs=kwargs)
     if dag.last_df is not None:
         dag.last_df.yield_dataframe_as("result", as_local=as_local)
@@ -43,10 +94,11 @@ def fugue_sql(
     return res["result"] if as_fugue else res["result"].native_as_df()
 
 
-def fsql(
+def fugue_sql_flow(
     query: str, *args: Any, fsql_ignore_case: bool = False, **kwargs: Any
 ) -> FugueSQLWorkflow:
-    """Fugue SQL functional interface
+    """Fugue SQL full functional interface. This function allows full workflow
+    definition using Fugue SQL, and it allows multiple outputs using ``YIELD``.
 
     :param query: the Fugue SQL string (can be a jinja template)
     :param args: variables related to the SQL string
@@ -55,7 +107,38 @@ def fsql(
     :param kwargs: variables related to the SQL string
     :return: the translated Fugue workflow
 
+    .. note::
+
+        This function is different from :func:`~fugue.api.raw_sql` which directly
+        sends the query to the execution engine to run. This function parses the query
+        based on Fugue SQL syntax, creates a
+        :class:`~fugue.sql.workflow.FugueSQLWorkflow` which
+        could contain multiple raw SQLs plus other operations, and runs and returns
+        the last dataframe generated in the workflow.
+
+        This function allows you to parameterize the SQL in a more elegant way. The
+        data tables referred in the query can either be automatically extracted from the
+        local variables or be specified in the arguments.
+
+    .. caution::
+
+        Currently, we have not unified the dialects of different SQL backends. So there
+        can be some slight syntax differences when you switch between backends.
+        In addition, we have not unified the UDFs cross different backends, so you
+        should be careful to use uncommon UDFs belonging to a certain backend.
+
+        That being said, if you keep your SQL part general and leverage Fugue extensions
+        (transformer, creator, processor, outputter, etc.) appropriately, it should be
+        easy to write backend agnostic Fugue SQL.
+
+        We are working on unifying the dialects of different SQLs, it should be
+        available in the future releases. Regarding unifying UDFs, the effort is still
+        unclear.
+
     .. code-block:: python
+
+        import fugue.api.fugue_sql_flow as fsql
+        import fugue.api as fa
 
         # Basic case
         fsql('''
@@ -108,9 +191,11 @@ def fsql(
         PRINT
         '''
 
-        fsql(sql).run(user_defined_spark_session())
-        fsql(sql).run(SparkExecutionEngine, {"spark.executor.instances":10})
-        fsql(sql).run(DaskExecutionEngine)
+        fsql(sql).run(spark_session)
+        fsql(sql).run("dask")
+
+        with fa.engine_context("duckdb"):
+            fsql(sql).run()
 
         # Passing dataframes between fsql calls
         result = fsql('''
