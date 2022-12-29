@@ -47,11 +47,11 @@ Information
 .. autofunction:: fugue.api.show
 
 .. autofunction:: fugue.api.get_column_names
+.. autofunction:: fugue.api.get_num_partitions
 .. autofunction:: fugue.api.get_schema
 .. autofunction:: fugue.api.is_df
 .. autofunction:: fugue.api.peek_array
 .. autofunction:: fugue.api.peek_dict
-
 
 
 Transformation
@@ -99,10 +99,12 @@ Conversion
 
 ExecutionEngine
 ~~~~~~~~~~~~~~~
+
 .. autofunction:: fugue.api.engine_context
 .. autofunction:: fugue.api.set_global_engine
 .. autofunction:: fugue.api.clear_global_engine
 .. autofunction:: fugue.api.get_current_engine
+.. autofunction:: get_current_parallelism
 
 
 Big Data Operations

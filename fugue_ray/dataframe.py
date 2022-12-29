@@ -14,7 +14,13 @@ from fugue.dataframe import (
 )
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
-from fugue.plugins import get_column_names, rename, is_df, as_local_bounded
+from fugue.plugins import (
+    as_local_bounded,
+    get_column_names,
+    get_num_partitions,
+    is_df,
+    rename,
+)
 
 from ._utils.dataframe import build_empty, get_dataset_format
 
@@ -129,7 +135,7 @@ class RayDataFrame(DataFrame):
 
     @property
     def num_partitions(self) -> int:
-        return self.native.num_blocks()
+        return _rd_num_partitions(self.native)
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         cols = (self.schema - cols).names
@@ -241,6 +247,11 @@ class RayDataFrame(DataFrame):
 @is_df.candidate(lambda df: isinstance(df, rd.Dataset))
 def _rd_is_df(df: rd.Dataset) -> bool:
     return True
+
+
+@get_num_partitions.candidate(lambda df: isinstance(df, rd.Dataset))
+def _rd_num_partitions(df: rd.Dataset) -> int:
+    return df.num_blocks()
 
 
 @as_local_bounded.candidate(lambda df: isinstance(df, rd.Dataset))

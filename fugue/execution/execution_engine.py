@@ -341,6 +341,11 @@ class ExecutionEngine(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_current_parallelism(self) -> int:  # pragma: no cover
+        """Get the current number of parallelism of this engine"""
+        raise NotImplementedError
+
+    @abstractmethod
     def to_df(self, data: Any, schema: Any = None) -> DataFrame:  # pragma: no cover
         """Convert a data structure to this engine compatible DataFrame
 

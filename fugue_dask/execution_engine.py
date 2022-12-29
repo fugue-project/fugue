@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional, Union, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import dask.dataframe as dd
 from distributed import Client
@@ -22,11 +22,7 @@ from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFra
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 from fugue.execution.native_execution_engine import NativeExecutionEngine
-from fugue_dask._constants import (
-    CPU_COUNT,
-    FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS,
-    FUGUE_DASK_DEFAULT_CONF,
-)
+from fugue_dask._constants import FUGUE_DASK_DEFAULT_CONF
 from fugue_dask._io import load_df, save_df
 from fugue_dask._utils import DASK_UTILS, DaskUtils
 from fugue_dask.dataframe import DaskDataFrame
@@ -158,6 +154,10 @@ class DaskExecutionEngine(ExecutionEngine):
     def create_default_map_engine(self) -> MapEngine:
         return DaskMapEngine(self)
 
+    def get_current_parallelism(self) -> int:
+        res = dict(self.dask_client.nthreads())
+        return sum(res.values())
+
     @property
     def pl_utils(self) -> DaskUtils:
         """Pandas-like dataframe utils"""
@@ -182,9 +182,7 @@ class DaskExecutionEngine(ExecutionEngine):
             * all other methods in the engine can take arbitrary dataframes and
               call this method to convert before doing anything
         """
-        default_partitions = self.conf.get_or_throw(
-            FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS, int
-        )
+
         if isinstance(df, DataFrame):
             assert_or_throw(
                 schema is None,
@@ -193,18 +191,12 @@ class DaskExecutionEngine(ExecutionEngine):
             if isinstance(df, DaskDataFrame):
                 return df
             if isinstance(df, PandasDataFrame):
-                res = DaskDataFrame(
-                    df.native, df.schema, num_partitions=default_partitions
-                )
+                res = DaskDataFrame(df.native, df.schema)
             else:
-                res = DaskDataFrame(
-                    df.as_array(type_safe=True),
-                    df.schema,
-                    num_partitions=default_partitions,
-                )
+                res = DaskDataFrame(df.as_array(type_safe=True), df.schema)
             res.reset_metadata(df.metadata)
             return res
-        return DaskDataFrame(df, schema, num_partitions=default_partitions)
+        return DaskDataFrame(df, schema)
 
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
@@ -217,7 +209,7 @@ class DaskExecutionEngine(ExecutionEngine):
         p = partition_spec.get_num_partitions(
             **{
                 KEYWORD_ROWCOUNT: lambda: df.persist().count(),  # type: ignore
-                KEYWORD_CORECOUNT: lambda: CPU_COUNT,
+                KEYWORD_CORECOUNT: lambda: self.get_current_parallelism(),
             }
         )
         if p > 0:

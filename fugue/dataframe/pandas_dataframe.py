@@ -11,6 +11,7 @@ from fugue.dataset.api import (
     as_local,
     as_local_bounded,
     count,
+    get_num_partitions,
     is_bounded,
     is_empty,
     is_local,
@@ -233,6 +234,11 @@ def _pd_is_empty(df: pd.DataFrame) -> bool:
 @is_local.candidate(lambda df: isinstance(df, pd.DataFrame))
 def _pd_is_local(df: pd.DataFrame) -> bool:
     return True
+
+
+@get_num_partitions.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _get_pandas_num_partitions(df: pd.DataFrame) -> int:
+    return 1
 
 
 @get_column_names.candidate(lambda df: isinstance(df, pd.DataFrame))

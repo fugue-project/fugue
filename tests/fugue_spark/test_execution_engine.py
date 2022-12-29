@@ -12,6 +12,7 @@ from pyspark.sql import SparkSession
 from pytest import raises
 from triad import Schema
 
+import fugue.api as fa
 from fugue import transform
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import (
@@ -41,6 +42,9 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
             session, {"test": True, "fugue.spark.use_pandas_udf": False}
         )
         return e
+
+    def test_get_parallelism(self):
+        assert fa.get_current_parallelism(self.engine) == 4
 
     def test_not_using_pandas_udf(self):
         assert not self.engine.create_default_map_engine()._should_use_pandas_udf(

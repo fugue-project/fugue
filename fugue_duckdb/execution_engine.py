@@ -135,6 +135,9 @@ class DuckExecutionEngine(ExecutionEngine):
     def create_default_map_engine(self) -> MapEngine:
         return PandasMapEngine(self._native_engine)
 
+    def get_current_parallelism(self) -> int:
+        return 1
+
     def to_df(self, df: Any, schema: Any = None) -> DataFrame:
         return self._to_duck_df(df, schema=schema)
 

@@ -13,7 +13,13 @@ from fugue import (
     LocalDataFrame,
 )
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
-from fugue.plugins import as_fugue_dataset, as_local_bounded, get_column_names, is_df
+from fugue.plugins import (
+    as_fugue_dataset,
+    as_local_bounded,
+    get_column_names,
+    get_num_partitions,
+    is_df,
+)
 
 from ._utils import encode_column_name, to_duck_type, to_pa_type
 
@@ -153,6 +159,11 @@ def _duckdb_as_fugue_df(df: DuckDBPyRelation, **kwargs: Any) -> DuckDataFrame:
 @is_df.candidate(lambda df: isinstance(df, DuckDBPyRelation))
 def _duck_is_df(df: DuckDBPyRelation) -> bool:
     return True
+
+
+@get_num_partitions.candidate(lambda df: isinstance(df, DuckDBPyRelation))
+def _duckdb_num_partitions(df: DuckDBPyRelation) -> int:
+    return 1
 
 
 @as_local_bounded.candidate(lambda df: isinstance(df, DuckDBPyRelation))

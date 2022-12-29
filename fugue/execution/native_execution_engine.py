@@ -153,6 +153,9 @@ class NativeExecutionEngine(ExecutionEngine):
     def create_default_map_engine(self) -> MapEngine:
         return PandasMapEngine(self)
 
+    def get_current_parallelism(self) -> int:
+        return 1
+
     @property
     def pl_utils(self) -> PandasUtils:
         """Pandas-like dataframe utils"""

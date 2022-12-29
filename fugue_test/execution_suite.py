@@ -61,6 +61,9 @@ class ExecutionEngineTests(object):
             assert copy.copy(self.engine) is self.engine
             assert copy.deepcopy(self.engine) is self.engine
 
+        def test_get_parallelism(self):
+            assert fa.get_current_parallelism(self.engine) == 1
+
         def test_to_df_general(self):
             e = self.engine
             o = ArrayDataFrame(

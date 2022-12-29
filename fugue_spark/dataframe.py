@@ -22,6 +22,7 @@ from fugue.plugins import (
     count,
     drop_columns,
     get_column_names,
+    get_num_partitions,
     head,
     is_bounded,
     is_df,
@@ -67,6 +68,10 @@ class SparkDataFrame(DataFrame):
             raise ValueError(f"{df} is incompatible with SparkDataFrame")
 
     @property
+    def alias(self) -> str:
+        return "_" + str(id(self.native))
+
+    @property
     def native(self) -> ps.DataFrame:
         """The wrapped Spark DataFrame
 
@@ -97,7 +102,7 @@ class SparkDataFrame(DataFrame):
 
     @property
     def num_partitions(self) -> int:
-        return self.native.rdd.getNumPartitions()
+        return _spark_num_partitions(self.native)
 
     @property
     def empty(self) -> bool:
@@ -181,6 +186,11 @@ class SparkDataFrame(DataFrame):
 @is_df.candidate(lambda df: isinstance(df, ps.DataFrame))
 def _spark_is_df(df: ps.DataFrame) -> bool:
     return True
+
+
+@get_num_partitions.candidate(lambda df: isinstance(df, ps.DataFrame))
+def _spark_num_partitions(df: ps.DataFrame) -> int:
+    return df.rdd.getNumPartitions()
 
 
 @count.candidate(lambda df: isinstance(df, ps.DataFrame))

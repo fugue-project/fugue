@@ -36,6 +36,9 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
     def create_default_map_engine(self) -> MapEngine:
         return DaskMapEngine(self._dask_engine)
 
+    def get_current_parallelism(self) -> int:
+        return self._dask_engine.get_current_parallelism()
+
     @property
     def dask_client(self) -> Client:
         return self._dask_engine.dask_client

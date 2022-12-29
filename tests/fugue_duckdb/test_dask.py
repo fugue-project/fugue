@@ -38,12 +38,16 @@ class DuckDaskExecutionEngineTests(ExecutionEngineTests.Tests):
         cls._engine.dask_client.close()
 
     def make_engine(self):
+        client = Client(processes=True, n_workers=2, threads_per_worker=1)
         e = DuckDaskExecutionEngine(
             conf={"test": True, "fugue.duckdb.pragma.threads": 2},
             connection=self._con,
-            dask_client=Client(),
+            dask_client=client,
         )
         return e
+
+    def test_get_parallelism(self):
+        assert fa.get_current_parallelism(self.engine) == 2
 
     def test_to_df_dask(self):
         pdf = pd.DataFrame([[1.1]], columns=["a"])

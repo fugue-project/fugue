@@ -92,6 +92,20 @@ def get_current_engine() -> ExecutionEngine:
     return make_execution_engine()
 
 
+def get_current_parallelism(
+    engine: AnyExecutionEngine = None, engine_conf: Any = None
+) -> int:
+    """Get the current parallelism of the engine
+
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+
+    :return: the size of the parallelism
+    """
+    with engine_context(engine, engine_conf) as e:
+        return e.get_current_parallelism()
+
+
 def run_engine_function(
     func: Callable[[ExecutionEngine], Any],
     engine: AnyExecutionEngine = None,

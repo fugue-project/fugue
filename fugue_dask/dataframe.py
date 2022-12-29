@@ -21,6 +21,7 @@ from fugue.plugins import (
     count,
     drop_columns,
     get_column_names,
+    get_num_partitions,
     head,
     is_bounded,
     is_df,
@@ -29,11 +30,8 @@ from fugue.plugins import (
     rename,
     select_columns,
 )
-from fugue_dask._constants import (
-    FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS,
-    FUGUE_DASK_DEFAULT_CONF,
-)
-from fugue_dask._utils import DASK_UTILS
+
+from ._utils import DASK_UTILS, get_default_partitions
 
 
 class DaskDataFrame(DataFrame):
@@ -45,7 +43,7 @@ class DaskDataFrame(DataFrame):
     :param schema: |SchemaLikeObject| or :class:`spark:pyspark.sql.types.StructType`,
       defaults to None.
     :param num_partitions: initial number of partitions for the dask dataframe
-      defaults to 0 to get the value from `fugue.dask.dataframe.default.partitions`
+      defaults to 0 to get the value from `fugue.dask.default.partitions`
     :param type_safe: whether to cast input data to ensure type safe, defaults to True
 
     .. note::
@@ -61,9 +59,7 @@ class DaskDataFrame(DataFrame):
         type_safe=True,
     ):
         if num_partitions <= 0:
-            num_partitions = FUGUE_DASK_DEFAULT_CONF[
-                FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS
-            ]
+            num_partitions = get_default_partitions()
         if df is None:
             schema = _input_schema(schema).assert_not_empty()
             df = []
@@ -120,7 +116,7 @@ class DaskDataFrame(DataFrame):
 
     @property
     def num_partitions(self) -> int:
-        return self.native.npartitions
+        return _dd_get_num_partitions(self.native)
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         cols = (self.schema - cols).names
@@ -247,6 +243,11 @@ class DaskDataFrame(DataFrame):
 @is_df.candidate(lambda df: isinstance(df, dd.DataFrame))
 def _dd_is_df(df: dd.DataFrame) -> bool:
     return True
+
+
+@get_num_partitions.candidate(lambda df: isinstance(df, dd.DataFrame))
+def _dd_get_num_partitions(df: dd.DataFrame) -> int:
+    return df.npartitions
 
 
 @count.candidate(lambda df: isinstance(df, dd.DataFrame))

@@ -23,6 +23,7 @@ from fugue.dataset import (
     as_local_bounded,
     count,
     get_dataset_display,
+    get_num_partitions,
     is_bounded,
     is_empty,
     is_local,

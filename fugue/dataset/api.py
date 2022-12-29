@@ -93,3 +93,12 @@ def count(data: AnyDataset) -> int:
     :param data: the dataset that can be recognized by Fugue
     """
     return as_fugue_dataset(data).count()
+
+
+@fugue_plugin
+def get_num_partitions(data: AnyDataset) -> bool:
+    """Get the number of partitions of the dataset
+
+    :param data: the dataset that can be recognized by Fugue
+    """
+    return as_fugue_dataset(data).num_partitions

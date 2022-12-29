@@ -38,8 +38,12 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
         cls._engine.dask_client.close()
 
     def make_engine(self):
-        e = DaskExecutionEngine(conf=dict(test=True, **_CONF))
+        client = Client(processes=True, n_workers=3, threads_per_worker=1)
+        e = DaskExecutionEngine(client, conf=dict(test=True, **_CONF))
         return e
+
+    def test_get_parallelism(self):
+        assert fa.get_current_parallelism(self.engine) == 3
 
     def test__join_outer_pandas_incompatible(self):
         return
