@@ -1,16 +1,11 @@
-import json
-from datetime import datetime
 from typing import Any
 
-import numpy as np
 import pandas as pd
 import pyarrow as pa
-from fugue.dataframe import ArrowDataFrame, PandasDataFrame
-from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.dataframe import ArrowDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
-from triad.collections.schema import Schema, SchemaError
-from triad.exceptions import InvalidOperationError
+import fugue.api as fa
 
 
 class ArrowDataFrameTests(DataFrameTests.Tests):
@@ -24,6 +19,9 @@ class NativeArrowDataFrameTests(DataFrameTests.NativeTests):
 
     def to_native_df(self, pdf: pd.DataFrame) -> Any:  # pragma: no cover
         return pa.Table.from_pandas(pdf)
+
+    def test_num_partitions(self):
+        assert fa.get_num_partitions(self.df([[0, 1]], "a:int,b:int")) == 1
 
 
 def test_init():

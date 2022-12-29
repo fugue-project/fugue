@@ -2,14 +2,12 @@ from datetime import datetime
 from typing import Any
 
 import duckdb
-import numpy as np
 import pandas as pd
-from fugue import ArrowDataFrame
-from fugue.dataframe.utils import _df_eq as df_eq
-from fugue_test.dataframe_suite import DataFrameTests
-from pytest import raises
 
+import fugue.api as fa
+from fugue import ArrowDataFrame
 from fugue_duckdb.dataframe import DuckDataFrame
+from fugue_test.dataframe_suite import DataFrameTests
 
 
 class DuckDataFrameTests(DataFrameTests.Tests):
@@ -80,3 +78,6 @@ class NativeDuckDataFrameTests(DataFrameTests.NativeTests):
 
     def to_native_df(self, pdf: pd.DataFrame) -> Any:
         return duckdb.from_df(pdf)
+
+    def test_num_partitions(self):
+        assert fa.get_num_partitions(self.df([[0, 1]], "a:int,b:int")) == 1
