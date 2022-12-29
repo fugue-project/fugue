@@ -102,7 +102,6 @@ class SQLEngine(ExecutionEngineFacet, ABC):
     ) -> Tuple[DataFrames, str]:
         d = DataFrames({self.encode_name(k): v for k, v in dfs.items()})
         s = " ".join(self.encode_name(tp[1]) if tp[0] else tp[1] for tp in statement)
-        print(s)
         return d, s
 
     @abstractmethod

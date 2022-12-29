@@ -33,9 +33,7 @@ For contributing, start with the `contributing guide <https://github.com/fugue-p
    :maxdepth: 3
    :hidden:
 
-   introduction
    tutorials
-   community
    top_api
    api
 
