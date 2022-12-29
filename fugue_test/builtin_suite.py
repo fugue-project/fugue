@@ -1598,7 +1598,7 @@ class BuiltInTests(object):
                 PRINT sdf1
                 """,
                     x=sdf3,
-                )
+                ).run()
                 df_eq(
                     res["res"],
                     [[3, 4, 13]],
