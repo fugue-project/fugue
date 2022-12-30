@@ -84,13 +84,16 @@ class PartitionSpec(object):
     .. admonition:: Examples
 
         >>> PartitionSepc(num=4)
+        >>> PartitionSepc(4)  # == PartitionSepc(num=4)
         >>> PartitionSepc(num="ROWCOUNT/4 + 3")  # It can be an expression
         >>> PartitionSepc(by=["a","b"])
+        >>> PartitionSepc(["a","b"])  # == PartitionSepc(by=["a","b"])
         >>> PartitionSpec(by=["a"], presort="b DESC, c ASC")
         >>> PartitionSpec(algo="even", num=4)
         >>> p = PartitionSpec(num=4, by=["a"])
         >>> p_override = PartitionSpec(p, by=["a","b"], algo="even")
         >>> PartitionSpec(by="a")  # == PartitionSpec(by=["a"])
+        >>> PartitionSpec("a")  # == PartitionSpec(by=["a"])
         >>> PartitionSpec("per_row")  # == PartitionSpec(num="ROWCOUNT", algo="even")
 
     It's important to understand this concept, please read |PartitionTutorial|
@@ -109,15 +112,18 @@ class PartitionSpec(object):
 
     def __init__(self, *args: Any, **kwargs: Any):  # noqa: C901
         p = ParamDict()
-        if (
-            len(args) == 1
-            and len(kwargs) == 0
-            and isinstance(args[0], str)
-            and args[0].lower() == "per_row"
-        ):
-            p["algo"] = "even"
-            p["num_partitions"] = "ROWCOUNT"
-        else:
+        if len(args) == 1 and len(kwargs) == 0:
+            if isinstance(args[0], str):
+                if args[0].lower() == "per_row":
+                    p["algo"] = "even"
+                    p["num_partitions"] = "ROWCOUNT"
+                elif not args[0].startswith("{"):
+                    p["partition_by"] = [args[0]]
+            elif isinstance(args[0], int):
+                p["num_partitions"] = str(args[0])
+            elif isinstance(args[0], (list, tuple)):
+                p["partition_by"] = args[0]
+        if len(p) == 0:  # the first condition had no match
             for a in args:
                 if a is None:
                     continue

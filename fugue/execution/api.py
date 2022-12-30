@@ -1170,7 +1170,7 @@ def aggregate(
 
             with fa.engine_context("duckdb"):
                 # SELECT MAX(b) AS b FROM df
-                fa.aggregate(df, f.max(col("b")))
+                fa.aggregate(df, b=f.max(col("b")))
 
                 # SELECT a, MAX(b) AS x FROM df GROUP BY a
                 fa.aggregate(df, "a", x=f.max(col("b")))
