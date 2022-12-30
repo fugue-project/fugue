@@ -23,7 +23,7 @@ from fugue import (
     register_default_sql_engine,
     DataFrame,
 )
-from fugue.column import SelectColumns, col, lit
+from fugue.column import col, lit
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from fugue_test._utils import skip_spark2
@@ -98,30 +98,24 @@ class ExecutionEngineTests(object):
             df_eq(o, e.to_df(pdf), throw=True)
 
         def test_filter(self):
-            e = self.engine
-            o = ArrayDataFrame(
+            a = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
                 "a:double,b:int",
             )
-            a = e.to_df(o)
-            b = e.filter(a, col("a").not_null())
+            b = fa.filter(a, col("a").not_null())
             df_eq(b, [[1, 2], [3, 4]], "a:double,b:int", throw=True)
-            c = e.filter(a, col("a").not_null() & (col("b") < 3))
+            c = fa.filter(a, col("a").not_null() & (col("b") < 3))
             df_eq(c, [[1, 2]], "a:double,b:int", throw=True)
-            c = e.filter(a, col("a") + col("b") == 3)
+            c = fa.filter(a, col("a") + col("b") == 3)
             df_eq(c, [[1, 2]], "a:double,b:int", throw=True)
 
         def test_select(self):
-            e = self.engine
-            o = ArrayDataFrame(
+            a = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
             )
-            a = e.to_df(o)
 
             # simple
-            b = e.select(
-                a, SelectColumns(col("b"), (col("b") + 1).alias("c").cast(str))
-            )
+            b = fa.select(a, col("b"), (col("b") + 1).alias("c").cast(str))
             df_eq(
                 b,
                 [[2, "3"], [2, "3"], [1, "2"], [4, "5"], [4, "5"]],
@@ -130,11 +124,8 @@ class ExecutionEngineTests(object):
             )
 
             # with distinct
-            b = e.select(
-                a,
-                SelectColumns(
-                    col("b"), (col("b") + 1).alias("c").cast(str), arg_distinct=True
-                ),
+            b = fa.select(
+                a, col("b"), (col("b") + 1).alias("c").cast(str), distinct=True
             )
             df_eq(
                 b,
@@ -144,21 +135,20 @@ class ExecutionEngineTests(object):
             )
 
             # wildcard
-            b = e.select(a, SelectColumns(col("*")), where=col("a") + col("b") == 3)
+            b = fa.select(a, col("*"), where=col("a") + col("b") == 3)
             df_eq(b, [[1, 2]], "a:double,b:int", throw=True)
 
             # aggregation
-            b = e.select(
-                a, SelectColumns(col("a"), ff.sum(col("b")).cast(float).alias("b"))
-            )
+            b = fa.select(a, col("a"), ff.sum(col("b")).cast(float).alias("b"))
             df_eq(b, [[1, 2], [3, 4], [None, 7]], "a:double,b:double", throw=True)
 
             # having
             # https://github.com/fugue-project/fugue/issues/222
             col_b = ff.sum(col("b"))
-            b = e.select(
+            b = fa.select(
                 a,
-                SelectColumns(col("a"), col_b.cast(float).alias("c")),
+                col("a"),
+                col_b.cast(float).alias("c"),
                 having=(col_b >= 7) | (col("a") == 1),
             )
             df_eq(b, [[1, 2], [None, 7]], "a:double,c:double", throw=True)
@@ -166,11 +156,11 @@ class ExecutionEngineTests(object):
             # literal + alias inference
             # https://github.com/fugue-project/fugue/issues/222
             col_b = ff.sum(col("b"))
-            b = e.select(
+            b = fa.select(
                 a,
-                SelectColumns(
-                    col("a"), lit(1, "o").cast(str), col_b.cast(float).alias("c")
-                ),
+                col("a"),
+                lit(1, "o").cast(str),
+                col_b.cast(float).alias("c"),
                 having=(col_b >= 7) | (col("a") == 1),
             )
             df_eq(
@@ -178,16 +168,11 @@ class ExecutionEngineTests(object):
             )
 
         def test_assign(self):
-            e = self.engine
-            o = ArrayDataFrame(
+            a = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
             )
-            a = e.to_df(o)
 
-            b = e.assign(
-                a,
-                [lit(1, "x"), col("b").cast(str), (col("b") + 1).alias("c").cast(int)],
-            )
+            b = fa.assign(a, x=1, b=col("b").cast(str), c=(col("b") + 1).cast(int))
             df_eq(
                 b,
                 [
@@ -202,29 +187,22 @@ class ExecutionEngineTests(object):
             )
 
         def test_aggregate(self):
-            e = self.engine
-            o = ArrayDataFrame(
+            a = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
             )
-            a = e.to_df(o)
 
-            b = e.aggregate(
+            b = fa.aggregate(
                 df=a,
-                partition_spec=None,
-                agg_cols=[
-                    ff.max(col("b")),
-                    (ff.max(col("b")) * 2).cast("int32").alias("c"),
-                ],
+                b=ff.max(col("b")),
+                c=(ff.max(col("b")) * 2).cast("int32").alias("c"),
             )
             df_eq(b, [[4, 8]], "b:int,c:int", throw=True)
 
-            b = e.aggregate(
-                df=a,
-                partition_spec=PartitionSpec(by=["a"]),
-                agg_cols=[
-                    ff.max(col("b")),
-                    (ff.max(col("b")) * 2).cast("int32").alias("c"),
-                ],
+            b = fa.aggregate(
+                a,
+                "a",
+                b=ff.max(col("b")),
+                c=(ff.max(col("b")) * 2).cast("int32").alias("c"),
             )
             df_eq(
                 b,
@@ -234,18 +212,10 @@ class ExecutionEngineTests(object):
             )
 
             with raises(ValueError):
-                e.aggregate(
-                    df=a,
-                    partition_spec=PartitionSpec(by=["a"]),
-                    agg_cols=[ff.max(col("b")), lit(1)],
-                )
+                fa.aggregate(a, "a", b=ff.max(col("b")), x=1)
 
             with raises(ValueError):
-                e.aggregate(
-                    df=a,
-                    partition_spec=PartitionSpec(by=["a"]),
-                    agg_cols=[],
-                )
+                fa.aggregate(a, "a")
 
         def test_map(self):
             def noop(cursor, data):

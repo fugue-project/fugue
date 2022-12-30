@@ -57,6 +57,9 @@ Information
 Transformation
 ~~~~~~~~~~~~~~
 
+.. autofunction:: fugue.api.transform
+.. autofunction:: fugue.api.out_transform
+
 .. autofunction:: fugue.api.alter_columns
 .. autofunction:: fugue.api.drop_columns
 .. autofunction:: fugue.api.head
@@ -70,20 +73,22 @@ Transformation
 .. autofunction:: fugue.api.sample
 .. autofunction:: fugue.api.take
 
-.. autofunction:: fugue.api.join
-.. autofunction:: fugue.api.union
-.. autofunction:: fugue.api.intersect
-.. autofunction:: fugue.api.subtract
-
-.. autofunction:: fugue.api.transform
-.. autofunction:: fugue.api.out_transform
-
 SQL
 ~~~
 
 .. autofunction:: fugue.api.fugue_sql
 .. autofunction:: fugue.api.fugue_sql_flow
 .. autofunction:: fugue.api.raw_sql
+
+.. autofunction:: fugue.api.join
+.. autofunction:: fugue.api.union
+.. autofunction:: fugue.api.intersect
+.. autofunction:: fugue.api.subtract
+
+.. autofunction:: fugue.api.assign
+.. autofunction:: fugue.api.select
+.. autofunction:: fugue.api.filter
+.. autofunction:: fugue.api.aggregate
 
 Conversion
 ~~~~~~~~~~

@@ -11,6 +11,7 @@ from .execution_engine import (
     ExecutionEngine,
 )
 from .factory import make_execution_engine
+from fugue.column import ColumnExpr, SelectColumns, col, lit
 
 
 @contextmanager
@@ -111,13 +112,15 @@ def run_engine_function(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
     infer_by: Optional[List[Any]] = None,
 ) -> Any:
     """Run a lambda function based on the engine provided
 
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
     :param infer_by: a list of objects to infer the engine, defaults to None
 
     :return: None or a Fugue :class:`~.fugue.dataframe.dataframe.DataFrame` if
@@ -130,14 +133,15 @@ def run_engine_function(
 
         This function is for deveopment use. Users should not need it.
     """
-    with engine_context(engine, engine_conf, infer_by=infer_by) as e:
-        res = func(e)
+    e = make_execution_engine(engine, engine_conf, infer_by=infer_by)
+    res = func(e)
 
-        if isinstance(res, DataFrame):
-            if as_fugue or any(isinstance(x, DataFrame) for x in (infer_by or [])):
-                return res
-            return res.native_as_df()
-        return res
+    if isinstance(res, DataFrame):
+        res = e.convert_yield_dataframe(res, as_local=as_local)
+        if as_fugue or any(isinstance(x, DataFrame) for x in (infer_by or [])):
+            return res
+        return res.native_as_df()
+    return res
 
 
 def repartition(
@@ -146,6 +150,7 @@ def repartition(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
 ) -> AnyDataFrame:
     """Partition the input dataframe using ``partition``.
 
@@ -153,7 +158,8 @@ def repartition(
     :param partition: how you want to partition the dataframe
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
 
     :return: the repartitioned dataframe
 
@@ -167,6 +173,7 @@ def repartition(
         engine_conf=engine_conf,
         infer_by=[df],
         as_fugue=as_fugue,
+        as_local=as_local,
     )
 
 
@@ -175,13 +182,15 @@ def broadcast(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
 ) -> AnyDataFrame:
     """Broadcast the dataframe to all workers for a distributed computing framework
 
     :param df: an input dataframe that can be recognized by Fugue
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
 
     :return: the broadcasted dataframe
     """
@@ -191,6 +200,7 @@ def broadcast(
         engine_conf=engine_conf,
         infer_by=[df],
         as_fugue=as_fugue,
+        as_local=as_local,
     )
 
 
@@ -200,6 +210,7 @@ def persist(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
     **kwargs: Any,
 ) -> AnyDataFrame:
     """Force materializing and caching the dataframe
@@ -211,7 +222,8 @@ def persist(
     :param kwargs: parameter to pass to the underlying persist implementation
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
 
     :return: the persisted dataframe
     """
@@ -221,6 +233,7 @@ def persist(
         engine_conf=engine_conf,
         infer_by=[df],
         as_fugue=as_fugue,
+        as_local=as_local,
     )
 
 
@@ -229,13 +242,15 @@ def distinct(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
 ) -> AnyDataFrame:
     """Equivalent to ``SELECT DISTINCT * FROM df``
 
     :param df: an input dataframe that can be recognized by Fugue
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
 
     :return: the result with distinct rows
     """
@@ -245,6 +260,7 @@ def distinct(
         engine_conf=engine_conf,
         infer_by=[df],
         as_fugue=as_fugue,
+        as_local=as_local,
     )
 
 
@@ -256,6 +272,7 @@ def dropna(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
 ) -> AnyDataFrame:
     """Drop NA recods from dataframe
 
@@ -266,7 +283,8 @@ def dropna(
     :param subset: list of columns to operate on
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
 
     :return: DataFrame with NA records dropped
     """
@@ -276,6 +294,7 @@ def dropna(
         engine_conf=engine_conf,
         infer_by=[df],
         as_fugue=as_fugue,
+        as_local=as_local,
     )
 
 
@@ -286,6 +305,7 @@ def fillna(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
 ) -> AnyDataFrame:
     """
     Fill ``NULL``, ``NAN``, ``NAT`` values in a dataframe
@@ -298,7 +318,8 @@ def fillna(
         a dictionary
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
 
     :return: DataFrame with NA records filled
     """
@@ -308,6 +329,7 @@ def fillna(
         engine_conf=engine_conf,
         infer_by=[df],
         as_fugue=as_fugue,
+        as_local=as_local,
     )
 
 
@@ -320,6 +342,7 @@ def sample(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
 ) -> AnyDataFrame:
     """
     Sample dataframe by number of rows or by fraction
@@ -334,7 +357,8 @@ def sample(
     :param seed: seed for randomness, defaults to None
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
 
     :return: the sampled dataframe
     """
@@ -344,6 +368,7 @@ def sample(
         engine_conf=engine_conf,
         infer_by=[df],
         as_fugue=as_fugue,
+        as_local=as_local,
     )
 
 
@@ -356,6 +381,7 @@ def take(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
 ) -> AnyDataFrame:
     """
     Get the first n rows of a DataFrame per partition. If a presort is defined,
@@ -373,7 +399,8 @@ def take(
         defaults to None
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
 
     :return: n rows of DataFrame per partition
     """
@@ -390,6 +417,7 @@ def take(
         engine_conf=engine_conf,
         infer_by=[df],
         as_fugue=as_fugue,
+        as_local=as_local,
     )
 
 
@@ -400,6 +428,7 @@ def load(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
     **kwargs: Any,
 ) -> AnyDataFrame:
     """Load dataframe from persistent storage
@@ -411,8 +440,8 @@ def load(
     :param kwargs: parameters to pass to the underlying framework
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
-
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
     :return: an engine compatible dataframe
 
     For more details and examples, read |ZipComap|.
@@ -424,6 +453,7 @@ def load(
         engine=engine,
         engine_conf=engine_conf,
         as_fugue=as_fugue,
+        as_local=as_local,
     )
 
 
@@ -480,6 +510,7 @@ def join(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
 ) -> AnyDataFrame:
     """Join two dataframes
 
@@ -492,7 +523,8 @@ def join(
         validated against the inferred keys.
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
 
     :return: the joined dataframe
 
@@ -514,6 +546,7 @@ def join(
         engine=engine,
         engine_conf=engine_conf,
         as_fugue=as_fugue,
+        as_local=as_local,
         infer_by=[df1, df2, *dfs],
     )
 
@@ -526,6 +559,7 @@ def union(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
 ) -> AnyDataFrame:
     """Join two dataframes
 
@@ -536,7 +570,8 @@ def union(
         ``false`` for ``UNION ALL``
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
 
     :return: the unioned dataframe
 
@@ -559,6 +594,7 @@ def union(
         engine=engine,
         engine_conf=engine_conf,
         as_fugue=as_fugue,
+        as_local=as_local,
         infer_by=[df1, df2, *dfs],
     )
 
@@ -571,6 +607,7 @@ def subtract(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
 ) -> AnyDataFrame:
     """``df1 - df2``
 
@@ -581,7 +618,8 @@ def subtract(
         ``false`` for ``EXCEPT ALL``
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
 
     :return: the unioned dataframe
 
@@ -604,6 +642,7 @@ def subtract(
         engine=engine,
         engine_conf=engine_conf,
         as_fugue=as_fugue,
+        as_local=as_local,
         infer_by=[df1, df2, *dfs],
     )
 
@@ -616,6 +655,7 @@ def intersect(
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
+    as_local: bool = False,
 ) -> AnyDataFrame:
     """Intersect ``df1`` and ``df2``
 
@@ -626,7 +666,8 @@ def intersect(
         ``false`` for ``INTERSECT ALL``
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
-    :param as_fugue: whether to force return a Fugue DataFrame
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
 
     :return: the unioned dataframe
 
@@ -649,5 +690,266 @@ def intersect(
         engine=engine,
         engine_conf=engine_conf,
         as_fugue=as_fugue,
+        as_local=as_local,
         infer_by=[df1, df2, *dfs],
+    )
+
+
+def select(
+    df: AnyDataFrame,
+    *columns: Union[str, ColumnExpr],
+    where: Optional[ColumnExpr] = None,
+    having: Optional[ColumnExpr] = None,
+    distinct: bool = False,
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    as_local: bool = False,
+) -> AnyDataFrame:
+    """The functional interface for SQL select statement
+
+    :param df: the dataframe to be operated on
+    :param columns: column expressions, for strings they will represent
+        the column names
+    :param where: ``WHERE`` condition expression, defaults to None
+    :param having: ``having`` condition expression, defaults to None. It
+        is used when ``cols`` contains aggregation columns, defaults to None
+    :param distinct: whether to return distinct result, defaults to False
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
+
+    :return: the select result as a dataframe
+
+    .. attention::
+
+        This interface is experimental, it's subjected to change in new versions.
+
+    .. seealso::
+
+        Please find more expression examples in :mod:`fugue.column.sql` and
+        :mod:`fugue.column.functions`
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            from fugue.column import col, lit, functions as f
+            import fugue.api as fa
+
+            with fa.engine_context("duckdb"):
+                # select existed and new columns
+                fa.select(df, col("a"),col("b"),lit(1,"another"))
+                fa.select(df, col("a"),(col("b")+lit(1)).alias("x"))
+
+                # aggregation
+                # SELECT COUNT(DISTINCT *) AS x FROM df
+                fa.select(
+                    df,
+                    f.count_distinct(col("*")).alias("x"))
+
+                # SELECT a, MAX(b+1) AS x FROM df GROUP BY a
+                fa.select(
+                    df,
+                    col("a"),f.max(col("b")+lit(1)).alias("x"))
+
+                # SELECT a, MAX(b+1) AS x FROM df
+                #   WHERE b<2 AND a>1
+                #   GROUP BY a
+                #   HAVING MAX(b+1)>0
+                fa.select(
+                    df,
+                    col("a"),f.max(col("b")+lit(1)).alias("x"),
+                    where=(col("b")<2) & (col("a")>1),
+                    having=f.max(col("b")+lit(1))>0
+                )
+    """
+    cols = SelectColumns(
+        *[col(x) if isinstance(x, str) else x for x in columns],
+        arg_distinct=distinct,
+    )
+
+    return run_engine_function(
+        lambda e: e.select(e.to_df(df), cols=cols, where=where, having=having),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
+        as_fugue=as_fugue,
+        as_local=as_local,
+    )
+
+
+def filter(
+    df: AnyDataFrame,
+    condition: ColumnExpr,
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    as_local: bool = False,
+) -> AnyDataFrame:
+    """Filter rows by the given condition
+
+    :param df: the dataframe to be filtered
+    :param condition: (boolean) column expression
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
+
+    :return: the filtered dataframe
+
+    .. seealso::
+
+        Please find more expression examples in :mod:`fugue.column.sql` and
+        :mod:`fugue.column.functions`
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            from fugue.column import col, functions as f
+            import fugue.api as fa
+
+            with fa.engine_context("duckdb"):
+                fa.filter(df, (col("a")>1) & (col("b")=="x"))
+                fa.filter(df, f.coalesce(col("a"),col("b"))>1)
+    """
+    return run_engine_function(
+        lambda e: e.filter(e.to_df(df), condition=condition),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
+        as_fugue=as_fugue,
+        as_local=as_local,
+    )
+
+
+def assign(
+    df: AnyDataFrame,
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    as_local: bool = False,
+    **columns: Any,
+) -> AnyDataFrame:
+    """Update existing columns with new values and add new columns
+
+    :param df: the dataframe to set columns
+    :param columns: column expressions
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
+
+    :return: the updated dataframe
+
+    .. tip::
+
+        This can be used to cast data types, alter column values or add new
+        columns. But you can't use aggregation in columns.
+
+    .. admonition:: New Since
+        :class: hint
+
+        **0.6.0**
+
+    .. seealso::
+
+        Please find more expression examples in :mod:`fugue.column.sql` and
+        :mod:`fugue.column.functions`
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            from fugue.column import col, functions as f
+            import fugue.api as fa
+
+            # assume df has schema: a:int,b:str
+
+            with fa.engine_context("duckdb"):
+                # add constant column x
+                fa.assign(df, x=1)
+
+                # change column b to be a constant integer
+                fa.assign(df, b=1)
+
+                # add new x to be a+b
+                fa.assign(df, x=col("a")+col("b"))
+
+                # cast column a data type to double
+                fa.assign(df, a=col("a").cast(float))
+    """
+    cols = [
+        v.alias(k) if isinstance(v, ColumnExpr) else lit(v).alias(k)
+        for k, v in columns.items()
+    ]
+    return run_engine_function(
+        lambda e: e.assign(e.to_df(df), columns=cols),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
+        as_fugue=as_fugue,
+        as_local=as_local,
+    )
+
+
+def aggregate(
+    df: AnyDataFrame,
+    partition_by: Union[None, str, List[str]] = None,
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    as_local: bool = False,
+    **agg_kwcols: ColumnExpr,
+) -> AnyDataFrame:
+    """Aggregate on dataframe
+
+    :param df: the dataframe to aggregate on
+    :param partition_by: partition key(s), defaults to None
+    :param agg_kwcols: aggregation expressions
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
+
+    :return: the aggregated result as a dataframe
+
+    .. seealso::
+
+        Please find more expression examples in :mod:`fugue.column.sql` and
+        :mod:`fugue.column.functions`
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            from fugue.column import col, functions as f
+            import fugue.api as fa
+
+            with fa.engine_context("duckdb"):
+                # SELECT MAX(b) AS b FROM df
+                fa.aggregate(df, f.max(col("b")))
+
+                # SELECT a, MAX(b) AS x FROM df GROUP BY a
+                fa.aggregate(df, "a", x=f.max(col("b")))
+    """
+    cols = [
+        v.alias(k) if isinstance(v, ColumnExpr) else lit(v).alias(k)
+        for k, v in agg_kwcols.items()
+    ]
+    return run_engine_function(
+        lambda e: e.aggregate(
+            e.to_df(df),
+            partition_spec=None
+            if partition_by is None
+            else PartitionSpec(by=partition_by),
+            agg_cols=cols,
+        ),
+        engine=engine,
+        engine_conf=engine_conf,
+        infer_by=[df],
+        as_fugue=as_fugue,
+        as_local=as_local,
     )

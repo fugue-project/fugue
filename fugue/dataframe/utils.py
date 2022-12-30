@@ -15,6 +15,7 @@ from triad.utils.assertion import assert_or_throw as aot
 
 from .api import get_column_names, normalize_column_names, rename
 from .array_dataframe import ArrayDataFrame
+from .arrow_dataframe import ArrowDataFrame
 from .dataframe import DataFrame, LocalBoundedDataFrame, LocalDataFrame
 from .iterable_dataframe import IterableDataFrame
 from .pandas_dataframe import PandasDataFrame
@@ -135,6 +136,8 @@ def to_local_df(df: Any, schema: Any = None) -> LocalDataFrame:
         return df.as_local()
     if isinstance(df, pd.DataFrame):
         return PandasDataFrame(df, schema)
+    if isinstance(df, pa.Table):
+        return ArrowDataFrame(df, schema)
     if isinstance(df, List):
         return ArrayDataFrame(df, schema)
     if isinstance(df, Iterable):

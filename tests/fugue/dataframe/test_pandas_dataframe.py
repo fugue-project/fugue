@@ -22,6 +22,9 @@ class PandasDataFrameTests(DataFrameTests.Tests):
     def test_num_partitions(self):
         assert fa.get_num_partitions(self.df([[0, 1]], "a:int,b:int")) == 1
 
+    def test_api_as_local(self):
+        assert fa.is_local(self.df([[0, 1]], "a:int,b:int"))
+
 
 class NativePandasDataFrameTests(DataFrameTests.NativeTests):
     def df(self, data: Any = None, schema: Any = None) -> pd.DataFrame:

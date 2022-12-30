@@ -3,10 +3,13 @@ import os
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+from pytest import raises
+from triad import FileSystem, Schema
+from triad.collections.schema import SchemaError
+from triad.exceptions import InvalidOperationError, NoneArgumentError
+
+from fugue import ArrayDataFrame, ArrowDataFrame, IterableDataFrame, PandasDataFrame
 from fugue.dataframe import to_local_bounded_df, to_local_df
-from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.iterable_dataframe import IterableDataFrame
-from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dataframe.utils import (
     _schema_eq,
@@ -19,10 +22,6 @@ from fugue.dataframe.utils import (
     serialize_df,
     unpickle_df,
 )
-from pytest import raises
-from triad import FileSystem, Schema
-from triad.collections.schema import SchemaError
-from triad.exceptions import InvalidOperationError, NoneArgumentError
 
 
 def test_to_local_df():
@@ -44,9 +43,14 @@ def test_to_local_df():
 def test_to_local_bounded_df():
     df = ArrayDataFrame([[0, 1]], "a:int,b:int")
     idf = IterableDataFrame([[0, 1]], "a:int,b:int")
+    adf = ArrowDataFrame(df.as_array(), "a:int,b:int")
     assert to_local_bounded_df(df) is df
     r = to_local_bounded_df(idf)
     assert r is not idf
+    assert r.as_array() == [[0, 1]]
+    assert r.schema == "a:int,b:int"
+    r = to_local_bounded_df(adf.native)
+    assert isinstance(r, ArrowDataFrame)
     assert r.as_array() == [[0, 1]]
     assert r.schema == "a:int,b:int"
 

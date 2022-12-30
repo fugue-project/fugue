@@ -32,12 +32,15 @@ from .dataset.api import (
     show,
 )
 from .execution.api import (
+    aggregate,
+    assign,
     broadcast,
     clear_global_engine,
     distinct,
     dropna,
     engine_context,
     fillna,
+    filter,
     get_current_engine,
     get_current_parallelism,
     intersect,
@@ -48,6 +51,7 @@ from .execution.api import (
     run_engine_function,
     sample,
     save,
+    select,
     set_global_engine,
     subtract,
     take,
