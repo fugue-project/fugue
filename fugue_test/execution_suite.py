@@ -356,7 +356,7 @@ class ExecutionEngineTests(object):
             a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
             b = e.to_df([[1, 20], [3, 40]], "a:int,c:int")
             c = e.to_df([[1, 200], [3, 400]], "a:int,d:int")
-            d = fa.join(a, b, c, how="inner")
+            d = fa.inner_join(a, b, c)
             df_eq(
                 d,
                 [[1, 2, 20, 200], [3, 4, 40, 400]],
@@ -377,7 +377,7 @@ class ExecutionEngineTests(object):
             )
 
             b = e.to_df([], "c:int")
-            c = fa.join(a, b, how="Cross")
+            c = fa.cross_join(a, b)
             df_eq(c, [], "a:int,b:int,c:int", throw=True)
 
             a = e.to_df([], "a:int,b:int")
@@ -391,7 +391,7 @@ class ExecutionEngineTests(object):
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
             c = fa.join(a, b, how="INNER", on=["a"])
             df_eq(c, [[1, 2, 6]], "a:int,b:int,c:int", throw=True)
-            c = fa.join(b, a, how="INNER", on=["a"])
+            c = fa.inner_join(b, a)
             df_eq(c, [[6, 1, 2]], "c:int,a:int,b:int", throw=True)
 
             a = e.to_df([], "a:int,b:int")
@@ -404,17 +404,17 @@ class ExecutionEngineTests(object):
 
             a = e.to_df([], "a:int,b:int")
             b = e.to_df([], "c:str,a:int")
-            c = fa.join(a, b, how="left_outer", on=["a"])
+            c = fa.left_outer_join(a, b)
             df_eq(c, [], "a:int,b:int,c:str", throw=True)
 
             a = e.to_df([], "a:int,b:str")
             b = e.to_df([], "c:int,a:int")
-            c = fa.join(a, b, how="right_outer", on=["a"])
+            c = fa.right_outer_join(a, b)
             df_eq(c, [], "a:int,b:str,c:int", throw=True)
 
             a = e.to_df([], "a:int,b:str")
             b = e.to_df([], "c:str,a:int")
-            c = fa.join(a, b, how="full_outer", on=["a"])
+            c = fa.full_outer_join(a, b)
             df_eq(c, [], "a:int,b:str,c:str", throw=True)
 
             a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
@@ -480,7 +480,7 @@ class ExecutionEngineTests(object):
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
             c = fa.join(a, b, how="semi", on=["a"])
             df_eq(c, [[1, 2]], "a:int,b:int", throw=True)
-            c = fa.join(b, a, how="semi", on=["a"])
+            c = fa.semi_join(b, a)
             df_eq(c, [[6, 1]], "c:int,a:int", throw=True)
 
             b = e.to_df([], "c:int,a:int")
@@ -498,7 +498,7 @@ class ExecutionEngineTests(object):
             b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
             c = fa.join(a, b, how="anti", on=["a"])
             df_eq(c, [[3, 4]], "a:int,b:int", throw=True)
-            c = fa.join(b, a, how="anti", on=["a"])
+            c = fa.anti_join(b, a)
             df_eq(c, [[2, 7]], "c:int,a:int", throw=True)
 
             b = e.to_df([], "c:int,a:int")

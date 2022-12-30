@@ -551,6 +551,246 @@ def join(
     )
 
 
+def inner_join(
+    df1: AnyDataFrame,
+    df2: AnyDataFrame,
+    *dfs: AnyDataFrame,
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    as_local: bool = False,
+) -> AnyDataFrame:
+    """Inner join two dataframes.
+    This is a wrapper of :func:`~.join` with ``how="inner"``
+
+    :param df1: the first dataframe
+    :param df2: the second dataframe
+    :param dfs: more dataframes to join
+    :param how: can accept ``semi``, ``left_semi``, ``anti``, ``left_anti``,
+        ``inner``, ``left_outer``, ``right_outer``, ``full_outer``, ``cross``
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
+
+    :return: the joined dataframe
+    """
+    return join(
+        df1,
+        df2,
+        *dfs,
+        how="inner",
+        engine=engine,
+        engine_conf=engine_conf,
+        as_fugue=as_fugue,
+        as_local=as_local,
+    )
+
+
+def semi_join(
+    df1: AnyDataFrame,
+    df2: AnyDataFrame,
+    *dfs: AnyDataFrame,
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    as_local: bool = False,
+) -> AnyDataFrame:
+    """Left semi-join two dataframes.
+    This is a wrapper of :func:`~.join` with ``how="semi"``
+
+    :param df1: the first dataframe
+    :param df2: the second dataframe
+    :param dfs: more dataframes to join
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
+
+    :return: the joined dataframe
+    """
+    return join(
+        df1,
+        df2,
+        *dfs,
+        how="semi",
+        engine=engine,
+        engine_conf=engine_conf,
+        as_fugue=as_fugue,
+        as_local=as_local,
+    )
+
+
+def anti_join(
+    df1: AnyDataFrame,
+    df2: AnyDataFrame,
+    *dfs: AnyDataFrame,
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    as_local: bool = False,
+) -> AnyDataFrame:
+    """Left anti-join two dataframes.
+    This is a wrapper of :func:`~.join` with ``how="anti"``
+
+    :param df1: the first dataframe
+    :param df2: the second dataframe
+    :param dfs: more dataframes to join
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
+
+    :return: the joined dataframe
+    """
+    return join(
+        df1,
+        df2,
+        *dfs,
+        how="anti",
+        engine=engine,
+        engine_conf=engine_conf,
+        as_fugue=as_fugue,
+        as_local=as_local,
+    )
+
+
+def left_outer_join(
+    df1: AnyDataFrame,
+    df2: AnyDataFrame,
+    *dfs: AnyDataFrame,
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    as_local: bool = False,
+) -> AnyDataFrame:
+    """Left outer join two dataframes.
+    This is a wrapper of :func:`~.join` with ``how="left_outer"``
+
+    :param df1: the first dataframe
+    :param df2: the second dataframe
+    :param dfs: more dataframes to join
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
+
+    :return: the joined dataframe
+    """
+    return join(
+        df1,
+        df2,
+        *dfs,
+        how="left_outer",
+        engine=engine,
+        engine_conf=engine_conf,
+        as_fugue=as_fugue,
+        as_local=as_local,
+    )
+
+
+def right_outer_join(
+    df1: AnyDataFrame,
+    df2: AnyDataFrame,
+    *dfs: AnyDataFrame,
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    as_local: bool = False,
+) -> AnyDataFrame:
+    """Right outer join two dataframes.
+    This is a wrapper of :func:`~.join` with ``how="right_outer"``
+
+    :param df1: the first dataframe
+    :param df2: the second dataframe
+    :param dfs: more dataframes to join
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
+
+    :return: the joined dataframe
+    """
+    return join(
+        df1,
+        df2,
+        *dfs,
+        how="right_outer",
+        engine=engine,
+        engine_conf=engine_conf,
+        as_fugue=as_fugue,
+        as_local=as_local,
+    )
+
+
+def full_outer_join(
+    df1: AnyDataFrame,
+    df2: AnyDataFrame,
+    *dfs: AnyDataFrame,
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    as_local: bool = False,
+) -> AnyDataFrame:
+    """Full outer join two dataframes.
+    This is a wrapper of :func:`~.join` with ``how="full_outer"``
+
+    :param df1: the first dataframe
+    :param df2: the second dataframe
+    :param dfs: more dataframes to join
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
+
+    :return: the joined dataframe
+    """
+    return join(
+        df1,
+        df2,
+        *dfs,
+        how="full_outer",
+        engine=engine,
+        engine_conf=engine_conf,
+        as_fugue=as_fugue,
+        as_local=as_local,
+    )
+
+
+def cross_join(
+    df1: AnyDataFrame,
+    df2: AnyDataFrame,
+    *dfs: AnyDataFrame,
+    engine: AnyExecutionEngine = None,
+    engine_conf: Any = None,
+    as_fugue: bool = False,
+    as_local: bool = False,
+) -> AnyDataFrame:
+    """Cross join two dataframes.
+    This is a wrapper of :func:`~.join` with ``how="cross"``
+
+    :param df1: the first dataframe
+    :param df2: the second dataframe
+    :param dfs: more dataframes to join
+    :param engine: an engine like object, defaults to None
+    :param engine_conf: the configs for the engine, defaults to None
+    :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
+    :param as_local: whether to force return a local DataFrame, defaults to False
+
+    :return: the joined dataframe
+    """
+    return join(
+        df1,
+        df2,
+        *dfs,
+        how="cross",
+        engine=engine,
+        engine_conf=engine_conf,
+        as_fugue=as_fugue,
+        as_local=as_local,
+    )
+
+
 def union(
     df1: AnyDataFrame,
     df2: AnyDataFrame,

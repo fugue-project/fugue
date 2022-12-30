@@ -81,6 +81,14 @@ SQL
 .. autofunction:: fugue.api.raw_sql
 
 .. autofunction:: fugue.api.join
+.. autofunction:: fugue.api.semi_join
+.. autofunction:: fugue.api.anti_join
+.. autofunction:: fugue.api.inner_join
+.. autofunction:: fugue.api.left_outer_join
+.. autofunction:: fugue.api.right_outer_join
+.. autofunction:: fugue.api.full_outer_join
+.. autofunction:: fugue.api.cross_join
+
 .. autofunction:: fugue.api.union
 .. autofunction:: fugue.api.intersect
 .. autofunction:: fugue.api.subtract
