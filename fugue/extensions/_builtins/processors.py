@@ -147,7 +147,7 @@ class Fillna(Processor):
 
 class RunSQLSelect(Processor):
     def process(self, dfs: DataFrames) -> DataFrame:
-        statement = self.params.get_or_throw("statement", str)
+        statement = self.params.get_or_throw("statement", object)
         engine = self.params.get_or_none("sql_engine", object)
         engine_params = self.params.get("sql_engine_params", ParamDict())
         sql_engine = make_sql_engine(engine, self.execution_engine, **engine_params)

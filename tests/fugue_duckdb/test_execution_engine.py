@@ -3,15 +3,16 @@ import pickle
 import duckdb
 import pandas as pd
 import pyarrow as pa
-from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, infer_execution_engine
-from fugue.dataframe.utils import _df_eq as df_eq
-from fugue import fsql
-from fugue_test.builtin_suite import BuiltInTests
-from fugue_test.execution_suite import ExecutionEngineTests
 from pytest import raises
 
+import fugue.api as fa
+from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, fsql
+from fugue.api import engine_context
+from fugue.plugins import infer_execution_engine
 from fugue_duckdb import DuckExecutionEngine
 from fugue_duckdb.dataframe import DuckDataFrame
+from fugue_test.builtin_suite import BuiltInTests
+from fugue_test.execution_suite import ExecutionEngineTests
 
 
 class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -19,9 +20,11 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
     def setUpClass(cls):
         cls._con = duckdb.connect()
         cls._engine = cls.make_engine(cls)
+        fa.set_global_engine(cls._engine)
 
     @classmethod
     def tearDownClass(cls):
+        fa.clear_global_engine()
         cls._con.close()
 
     def make_engine(self):
@@ -29,6 +32,13 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
             {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
         )
         return e
+
+    def test_duck_to_df(self):
+        e = self.engine
+        a = e.to_df([[1, 2, 3]], "a:double,b:double,c:int")
+        assert isinstance(a, DuckDataFrame)
+        b = e.to_df(a.native_as_df())
+        assert isinstance(b, DuckDataFrame)
 
     def test_intersect_all(self):
         e = self.engine
@@ -174,13 +184,27 @@ def test_sql_yield():
     assert isinstance(res["a"], ArrowDataFrame)
     assert isinstance(res["b"], ArrowDataFrame)
 
+    # in context
+    with engine_context("duck"):
+        res = fsql(
+            """
+        CREATE [[0]] SCHEMA a:int
+        YIELD DATAFRAME AS a
+        CREATE [[0]] SCHEMA b:int
+        YIELD LOCAL DATAFRAME AS b
+        """
+        ).run()
+
+        assert isinstance(res["a"], DuckDataFrame)
+        assert isinstance(res["b"], ArrowDataFrame)
+
 
 def test_infer_engine():
     con = duckdb.connect()
     df = con.from_df(pd.DataFrame([[0]], columns=["a"]))
-    assert infer_execution_engine([df])=="duckdb"
+    assert infer_execution_engine([df]) == "duckdb"
 
     fdf = DuckDataFrame(df)
-    assert infer_execution_engine([fdf])=="duckdb"
+    assert infer_execution_engine([fdf]) == "duckdb"
 
     con.close()

@@ -8,6 +8,7 @@ from .._utils.registry import fugue_plugin
 from ..exceptions import FuguePluginsRegistrationError
 from .execution_engine import (
     _FUGUE_EXECUTION_ENGINE_CONTEXT,
+    _FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT,
     ExecutionEngine,
     SQLEngine,
 )
@@ -250,6 +251,9 @@ def make_execution_engine(
 
         * If ``engine`` is None, it first try to see if there is any defined
           context engine to use (=> engine)
+        * If ``engine`` is still empty, then it will try to get the global execution
+          engine. See
+          :meth:`~fugue.execution.execution_engine.ExecutionEngine.set_global`
         * If ``engine`` is still empty, then if ``infer_by``
           is given, it will try to infer the execution engine (=> engine)
         * If ``engine`` is still empty, then it will construct the default
@@ -291,13 +295,20 @@ def make_execution_engine(
             # assume object e2_df can infer E2 engine
             make_execution_engine(infer_by=[e2_df])  # an E2 engine
 
+            # global
+            e_global = E1(conf)
+            e_global.set_global()
+            make_execution_engine()  # e_global
+
             # context
             with E2(conf).as_context() as ec:
                 make_execution_engine()  # ec
-            make_execution_engine()  # the default execution engine
+            make_execution_engine()  # e_global
     """
     if engine is None:
         engine = _FUGUE_EXECUTION_ENGINE_CONTEXT.get()
+        if engine is None:
+            engine = _FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT.get()
         if engine is None and infer_by is not None:
             engine = infer_execution_engine(infer_by)
 
@@ -398,7 +409,7 @@ def is_pandas_or(objs: List[Any], obj_type: Any) -> bool:
 @fugue_plugin
 def infer_execution_engine(obj: List[Any]) -> Any:
     """Infer the correspondent ExecutionEngine based on the input objects. This is
-    used in interfaceless functions.
+    used in express functions.
 
     :param objs: the objects
     :return: if the inference succeeded, it returns an object that can be used by

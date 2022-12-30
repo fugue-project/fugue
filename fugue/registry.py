@@ -1,7 +1,6 @@
 import inspect
 from typing import Any, Optional
 
-import pandas as pd
 import pyarrow as pa
 
 from fugue._utils.interfaceless import (
@@ -9,7 +8,6 @@ from fugue._utils.interfaceless import (
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
-from fugue.collections.yielded import Yielded
 from fugue.dataframe import ArrowDataFrame, DataFrame
 from fugue.execution.factory import register_execution_engine, register_sql_engine
 from fugue.execution.native_execution_engine import (
@@ -17,7 +15,6 @@ from fugue.execution.native_execution_engine import (
     QPDPandasEngine,
     SqliteEngine,
 )
-from fugue.workflow import register_raw_df_type
 
 
 def _register() -> None:
@@ -29,16 +26,8 @@ def _register() -> None:
 
         >>> import fugue
     """
-    _register_raw_dataframes()
     _register_engines()
     _register_annotation_converters()
-
-
-def _register_raw_dataframes() -> None:
-    register_raw_df_type(Yielded)
-    register_raw_df_type(pd.DataFrame)
-    register_raw_df_type(DataFrame)
-    register_raw_df_type(pa.Table)
 
 
 def _register_engines() -> None:

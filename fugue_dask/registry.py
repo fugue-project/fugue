@@ -5,19 +5,14 @@ import dask.dataframe as dd
 from dask.distributed import Client
 from triad import run_at_def
 
-from fugue import (
-    DataFrame,
-    infer_execution_engine,
-    is_pandas_or,
-    register_execution_engine,
-)
+from fugue import DataFrame, is_pandas_or, register_execution_engine
 from fugue._utils.interfaceless import (
     DataFrameParam,
     ExecutionEngineParam,
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
-from fugue.workflow import register_raw_df_type
+from fugue.plugins import as_fugue_dataset, infer_execution_engine
 from fugue_dask._utils import DASK_UTILS
 from fugue_dask.dataframe import DaskDataFrame
 from fugue_dask.execution_engine import DaskExecutionEngine
@@ -30,8 +25,9 @@ def _infer_dask_client(objs: Any) -> Any:
     return DASK_UTILS.get_or_create_client()
 
 
-def _register_raw_dataframes() -> None:
-    register_raw_df_type(dd.DataFrame)
+@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, dd.DataFrame))
+def _dask_as_fugue_df(df: dd.DataFrame, **kwargs: Any) -> DaskDataFrame:
+    return DaskDataFrame(df, **kwargs)
 
 
 def _register_engines() -> None:
@@ -102,6 +98,5 @@ def _register() -> None:
 
         >>> import fugue_dask
     """
-    _register_raw_dataframes()
     _register_engines()
     _register_annotation_converters()

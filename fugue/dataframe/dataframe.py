@@ -1,6 +1,6 @@
 import json
 from abc import abstractmethod
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import pandas as pd
 import pyarrow as pa
@@ -12,8 +12,17 @@ from triad.utils.pandas_like import PD_UTILS
 
 from .._utils.display import PrettyTable
 from ..collections.yielded import Yielded
-from ..dataset import Dataset, DatasetDisplay, get_dataset_display
+from ..dataset import (
+    Dataset,
+    DatasetDisplay,
+    as_local,
+    as_local_bounded,
+    get_dataset_display,
+    as_fugue_dataset,
+)
 from ..exceptions import FugueDataFrameOperationError
+
+AnyDataFrame = TypeVar("AnyDataFrame", "DataFrame", object)
 
 
 class DataFrame(Dataset):
@@ -43,7 +52,7 @@ class DataFrame(Dataset):
 
     @property
     def schema(self) -> Schema:
-        """Schema of the dataframe"""
+        """The schema of the dataframe"""
         if self._schema_discovered:
             # we must keep it simple because it could be called on every row by a user
             assert isinstance(self._schema, Schema)
@@ -57,12 +66,22 @@ class DataFrame(Dataset):
             return self._schema
 
     @abstractmethod
+    def native_as_df(self) -> AnyDataFrame:  # pragma: no cover
+        """The dataframe form of the native object this Dataset class wraps.
+        Dataframe form means the object contains schema information. For example
+        the native an ArrayDataFrame is a python array, it doesn't contain schema
+        information, and its ``native_as_df`` should be either a pandas dataframe
+        or an arrow dataframe.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def as_local(self) -> "LocalDataFrame":  # pragma: no cover
         """Convert this dataframe to a :class:`.LocalDataFrame`"""
         raise NotImplementedError
 
     @abstractmethod
-    def peek_array(self) -> Any:  # pragma: no cover
+    def peek_array(self) -> List[Any]:  # pragma: no cover
         """Peek the first row of the dataframe as array
 
         :raises FugueDatasetEmptyError: if it is empty
@@ -280,6 +299,9 @@ class LocalDataFrame(DataFrame):
         implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
 
+    def native_as_df(self) -> AnyDataFrame:
+        return self.as_pandas()
+
     @property
     def is_local(self) -> bool:
         """Always True because it's a LocalDataFrame"""
@@ -410,9 +432,38 @@ class DataFrameDisplay(DatasetDisplay):
                 print("")
 
 
+def as_fugue_df(df: AnyDataFrame, **kwargs: Any) -> DataFrame:
+    """Wrap the object as a Fugue DataFrame.
+
+    :param df: the object to wrap
+    """
+    ds = as_fugue_dataset(df, **kwargs)
+    if isinstance(ds, DataFrame):
+        return ds
+    raise TypeError(f"{type(df)} {kwargs} is not recognized as a Fugue DataFrame: {ds}")
+
+
 @get_dataset_display.candidate(lambda ds: isinstance(ds, DataFrame), priority=0.1)
 def _get_dataframe_display(ds: DataFrame):
     return DataFrameDisplay(ds)
+
+
+@as_local.candidate(lambda df: isinstance(df, DataFrame) and not df.is_local)
+def _df_to_local(df: DataFrame) -> DataFrame:
+    return df.as_local()
+
+
+@as_local_bounded.candidate(
+    lambda df: isinstance(df, DataFrame) and not (df.is_local and df.is_bounded),
+    priority=0.9,
+)
+def _df_to_local_bounded(df: DataFrame) -> DataFrame:
+    res: DataFrame = df.as_local()
+    if not res.is_bounded:
+        res = as_fugue_df(res.as_array(), schema=df.schema)
+    if res is not df and df.has_metadata:
+        res.reset_metadata(df.metadata)
+    return res
 
 
 def _get_schema_change(

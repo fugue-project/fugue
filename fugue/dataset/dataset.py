@@ -1,11 +1,14 @@
 import html
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
 from triad import ParamDict, SerializableRLock, assert_or_throw
 
-from ._utils.registry import fugue_plugin
-from .exceptions import FugueDatasetEmptyError
+from .._utils.registry import fugue_plugin
+from ..exceptions import FugueDatasetEmptyError
+
+
+AnyDataset = TypeVar("AnyDataset", "Dataset", object)
 
 
 class Dataset(ABC):
@@ -38,8 +41,14 @@ class Dataset(ABC):
 
     @property
     @abstractmethod
+    def native(self) -> Any:  # pragma: no cover
+        """The native object this Dataset class wraps"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
     def is_local(self) -> bool:  # pragma: no cover
-        """Whether this dataframe is a :class:`.LocalDataFrame`"""
+        """Whether this dataframe is a local Dataset"""
         raise NotImplementedError
 
     @property
@@ -79,7 +88,7 @@ class Dataset(ABC):
     ) -> None:
         """Display the Dataset
 
-        :param rows: number of rows to print, defaults to 10
+        :param n: number of rows to print, defaults to 10
         :param with_count: whether to show dataset count, defaults to False
         :param title: title of the dataset, defaults to None
 
@@ -146,4 +155,4 @@ def get_dataset_display(ds: "Dataset") -> DatasetDisplay:  # pragma: no cover
     :param ds: the Dataset to be displayed
     """
 
-    raise NotImplementedError(f"No matching DatasetDisplay registered for {type(ds)}")
+    raise NotImplementedError(f"no matching DatasetDisplay registered for {type(ds)}")

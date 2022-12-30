@@ -1,9 +1,28 @@
 import sys
 from collections import defaultdict
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
 from uuid import uuid4
 
 from adagio.specs import WorkflowSpec
+from triad import (
+    ParamDict,
+    Schema,
+    SerializableRLock,
+    assert_or_throw,
+    extensible_class,
+)
+
 from fugue._utils.exception import modify_traceback
 from fugue.collections.partition import PartitionSpec
 from fugue.collections.yielded import Yielded
@@ -19,6 +38,7 @@ from fugue.constants import (
     FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE,
 )
 from fugue.dataframe import DataFrame, LocalBoundedDataFrame, YieldedDataFrame
+from fugue.dataframe.api import is_df
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
 from fugue.execution.factory import make_execution_engine
@@ -56,14 +76,6 @@ from fugue.rpc.base import EmptyRPCHandler
 from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, FugueTask, Output, Process
 from fugue.workflow._workflow_context import FugueWorkflowContext
-from fugue.workflow.input import is_acceptable_raw_df
-from triad import (
-    ParamDict,
-    Schema,
-    SerializableRLock,
-    assert_or_throw,
-    extensible_class,
-)
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -95,6 +107,13 @@ class WorkflowDataFrame(DataFrame):
     def spec_uuid(self) -> str:
         """UUID of its task spec"""
         return self._task.__uuid__()
+
+    @property
+    def native(self) -> Any:  # pragma: no cover
+        raise NotImplementedError
+
+    def native_as_df(self) -> Any:  # pragma: no cover
+        raise NotImplementedError
 
     @property
     def name(self) -> str:
@@ -1312,7 +1331,7 @@ class WorkflowDataFrame(DataFrame):
         """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
-    def peek_array(self) -> Any:  # pragma: no cover
+    def peek_array(self) -> List[Any]:  # pragma: no cover
         """
         :raises NotImplementedError: don't call this method
         """
@@ -1462,6 +1481,7 @@ class FugueWorkflow:
         self._compile_conf = ParamDict(
             {**_FUGUE_GLOBAL_CONF, **ParamDict(compile_conf)}
         )
+        self._last_df: Optional[WorkflowDataFrame] = None
 
     @property
     def conf(self) -> ParamDict:
@@ -1541,6 +1561,10 @@ class FugueWorkflow:
     def yields(self) -> Dict[str, Yielded]:
         return self._yields
 
+    @property
+    def last_df(self) -> Optional[WorkflowDataFrame]:
+        return self._last_df
+
     def __enter__(self):
         return self
 
@@ -1585,8 +1609,16 @@ class FugueWorkflow:
           :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
         :return: result dataframe
         """
-        task = Create(creator=using, schema=schema, params=params)
-        return self.add(task)
+        task = Create(
+            creator=CreateData(using)
+            if is_df(using) or isinstance(using, Yielded)
+            else using,
+            schema=schema,
+            params=params,
+        )
+        res = self.add(task)
+        self._last_df = res
+        return res
 
     def process(
         self,
@@ -1626,9 +1658,11 @@ class FugueWorkflow:
             input_names=None if not _dfs.has_key else list(_dfs.keys()),
         )
         if _dfs.has_key:
-            return self.add(task, **_dfs)
+            res = self.add(task, **_dfs)
         else:
-            return self.add(task, *_dfs.values())
+            res = self.add(task, *_dfs.values())
+        self._last_df = res
+        return res
 
     def output(
         self, *dfs: Any, using: Any, params: Any = None, pre_partition: Any = None
@@ -1694,11 +1728,12 @@ class FugueWorkflow:
                     "schema must be None when data is WorkflowDataFrame"
                 ),
             )
+            self._last_df = data
             return data
         if (
             (isinstance(data, (List, Iterable)) and not isinstance(data, str))
             or isinstance(data, Yielded)
-            or is_acceptable_raw_df(data)
+            or is_df(data)
         ):
             return self.create(
                 using=CreateData(
@@ -2054,20 +2089,23 @@ class FugueWorkflow:
         Please read :ref:`this <tutorial:tutorials/advanced/dag:select query>`
         for more examples
         """
-        s_str: List[str] = []
+        sql: List[Tuple[bool, str]] = []
         dfs: Dict[str, DataFrame] = {}
         for s in statements:
             if isinstance(s, str):
-                s_str.append(s)
-            if isinstance(s, DataFrame):
+                sql.append((False, s))
+            else:
                 ws = self.df(s)
                 dfs[ws.name] = ws
-                s_str.append(ws.name)
-        sql = " ".join(s_str).strip()
-        if not sql[:10].upper().startswith("SELECT") and not sql[
-            :10
-        ].upper().startswith("WITH"):
-            sql = "SELECT " + sql
+                sql.append((True, ws.name))
+        if sql[0][0]:  # starts with reference
+            sql.insert(0, (False, "SELECT"))
+        else:  # start with string but without select
+            start = sql[0][1].strip()
+            if not start[:10].upper().startswith("SELECT") and not start[
+                :10
+            ].upper().startswith("WITH"):
+                sql[0] = (False, "SELECT " + start)
         return self.process(
             dfs,
             using=RunSQLSelect,

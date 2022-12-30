@@ -61,7 +61,7 @@ class IterableDataFrame(LocalUnboundedDataFrame):
     def empty(self) -> bool:
         return self.native.empty
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         self.assert_not_empty()
         return list(self.native.peek())
 

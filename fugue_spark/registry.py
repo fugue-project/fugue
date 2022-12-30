@@ -7,21 +7,15 @@ from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from triad import run_at_def
 
-from fugue import (
-    DataFrame,
-    ExecutionEngine,
-    infer_execution_engine,
-    is_pandas_or,
-    parse_creator,
-    register_execution_engine,
-)
+from fugue import DataFrame, ExecutionEngine, is_pandas_or, register_execution_engine
 from fugue._utils.interfaceless import (
     DataFrameParam,
     ExecutionEngineParam,
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
-from fugue.workflow import register_raw_df_type
+from fugue.plugins import as_fugue_dataset, infer_execution_engine, parse_creator
+
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
@@ -41,16 +35,17 @@ def _infer_spark_client(obj: Any) -> Any:
     return SparkSession.builder.getOrCreate()
 
 
+@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, ps.DataFrame))
+def _spark_as_fugue_df(df: ps.DataFrame, **kwargs: Any) -> SparkDataFrame:
+    return SparkDataFrame(df, **kwargs)
+
+
 @parse_creator.candidate(lambda obj: _is_sparksql(obj))
 def _parse_sparksql_creator(sql):
     def _run_sql(spark: SparkSession) -> ps.DataFrame:
         return spark.sql(sql)
 
     return _run_sql
-
-
-def _register_raw_dataframes() -> None:
-    register_raw_df_type(ps.DataFrame)
 
 
 def _register_engines() -> None:
@@ -187,6 +182,5 @@ def _register() -> None:
 
         >>> import fugue_spark
     """
-    _register_raw_dataframes()
     _register_engines()
     _register_annotation_converters()

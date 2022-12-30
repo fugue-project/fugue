@@ -7,7 +7,6 @@ from triad import run_at_def
 from fugue import (
     DataFrame,
     ExecutionEngine,
-    infer_execution_engine,
     is_pandas_or,
     register_execution_engine,
     register_sql_engine,
@@ -18,7 +17,7 @@ from fugue._utils.interfaceless import (
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
-from fugue.workflow import register_raw_df_type
+from fugue.plugins import infer_execution_engine
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
 
@@ -28,10 +27,6 @@ from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
 )
 def _infer_duckdb_client(objs: Any) -> Any:
     return "duckdb"
-
-
-def _register_raw_dataframes() -> None:
-    register_raw_df_type(DuckDBPyRelation)
 
 
 def _register_engines() -> None:
@@ -131,6 +126,5 @@ def _register() -> None:
 
         >>> import fugue_duckdb
     """
-    _register_raw_dataframes()
     _register_engines()
     _register_annotation_converters()

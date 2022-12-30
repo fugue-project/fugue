@@ -140,11 +140,13 @@ def test_functions():
 
 def test_where():
     gen = SQLExpressionGenerator()
-    assert "SELECT * FROM x WHERE (a<5) AND b IS NULL" == gen.where(
-        (col("a") < 5) & col("b").is_null(), "x"
+    assert "SELECT * FROM !x! WHERE (a<5) AND b IS NULL" == _to_sql(
+        gen.where((col("a") < 5) & col("b").is_null(), "x")
     )
-    assert "SELECT * FROM x WHERE a<5" == gen.where((col("a") < 5).alias("x"), "x")
-    raises(ValueError, lambda: gen.where(f.max(col("a")), "x"))
+    assert "SELECT * FROM !x! WHERE a<5" == _to_sql(
+        gen.where((col("a") < 5).alias("x"), "x")
+    )
+    raises(ValueError, lambda: list(gen.where(f.max(col("a")), "x")))
 
 
 def test_select():
@@ -152,33 +154,33 @@ def test_select():
 
     # no aggregation
     cols = SelectColumns(col("*"))
-    assert "SELECT * FROM x" == gen.select(cols, "x")
+    assert "SELECT * FROM !x!" == _to_sql(gen.select(cols, "x"))
 
     cols = SelectColumns(col("a"), lit(1).alias("b"), (col("b") + col("c")).alias("x"))
     where = (col("a") > 5).alias("aa")
-    assert "SELECT a, 1 AS b, b+c AS x FROM t WHERE a>5" == gen.select(
-        cols, "t", where=where
+    assert "SELECT a, 1 AS b, b+c AS x FROM !t! WHERE a>5" == _to_sql(
+        gen.select(cols, "t", where=where)
     )
 
     # aggregation without literals
     cols = SelectColumns(f.max(col("c")).alias("c"), col("a", "aa"), col("b"))
-    assert "SELECT MAX(c) AS c, a AS aa, b FROM t GROUP BY a, b" == gen.select(
-        cols, "t"
+    assert "SELECT MAX(c) AS c, a AS aa, b FROM !t! GROUP BY a, b" == _to_sql(
+        gen.select(cols, "t")
     )
 
     where = col("a") < 10
     having = (f.max(col("a")) > 5).alias("aaa")
     assert (
-        "SELECT MAX(c) AS c, a AS aa, b FROM t WHERE a<10 GROUP BY a, b HAVING MAX(a)>5"
-        == gen.select(cols, "t", where=where, having=having)
+        "SELECT MAX(c) AS c, a AS aa, b FROM !t! WHERE a<10 GROUP BY a, b HAVING MAX(a)>5"
+        == _to_sql(gen.select(cols, "t", where=where, having=having))
     )
 
     cols = SelectColumns(
         f.min(col("c") + 1).alias("c"),
         f.avg(col("d") + col("e")).cast(int).alias("d"),
     )
-    assert "SELECT MIN(c+1) AS c, CAST(AVG(d+e) AS long) AS d FROM t" == gen.select(
-        cols, "t"
+    assert "SELECT MIN(c+1) AS c, CAST(AVG(d+e) AS long) AS d FROM !t!" == _to_sql(
+        gen.select(cols, "t")
     )
 
     # aggregation with literals
@@ -186,19 +188,19 @@ def test_select():
         lit(1, "k"), f.max(col("c")).alias("c"), lit(2, "j"), col("a", "aa"), col("b")
     )
     assert (
-        "SELECT 1 AS k, c, 2 AS j, aa, b FROM (SELECT MAX(c) AS c, a AS aa, b FROM t GROUP BY a, b)"
-        == gen.select(cols, "t")
+        "SELECT 1 AS k, c, 2 AS j, aa, b FROM ( SELECT MAX(c) AS c, a AS aa, b FROM !t! GROUP BY a, b )"
+        == _to_sql(gen.select(cols, "t"))
     )
 
     cols = SelectColumns(lit(1, "k"), f.max(col("c")).alias("c"), lit(2, "j"))
-    assert "SELECT 1 AS k, c, 2 AS j FROM (SELECT MAX(c) AS c FROM t)" == gen.select(
-        cols, "t"
+    assert "SELECT 1 AS k, c, 2 AS j FROM ( SELECT MAX(c) AS c FROM !t! )" == _to_sql(
+        gen.select(cols, "t")
     )
 
     cols = SelectColumns(lit(1, "k"), col("a"), f.max(col("c")).alias("c"), lit(2, "j"))
     assert (
-        "SELECT 1 AS k, a, c, 2 AS j FROM (SELECT a, MAX(c) AS c FROM t GROUP BY a)"
-        == gen.select(cols, "t")
+        "SELECT 1 AS k, a, c, 2 AS j FROM ( SELECT a, MAX(c) AS c FROM !t! GROUP BY a )"
+        == _to_sql(gen.select(cols, "t"))
     )
 
     # cast
@@ -207,8 +209,8 @@ def test_select():
         f.avg(col("d") + col("e")).cast(int).alias("d"),
     )
     assert (
-        "SELECT CAST(c AS double) AS c, CAST(AVG(d+e) AS long) AS d FROM t GROUP BY c"
-        == gen.select(cols, "t")
+        "SELECT CAST(c AS double) AS c, CAST(AVG(d+e) AS long) AS d FROM !t! GROUP BY c"
+        == _to_sql(gen.select(cols, "t"))
     )
 
     # infer alias
@@ -219,7 +221,8 @@ def test_select():
     )
     assert (
         "SELECT CAST(-c AS double) AS c, CAST(MAX(e) AS long) AS e, "
-        "CAST(AVG(d+e) AS long) AS d FROM t GROUP BY -c" == gen.select(cols, "t")
+        "CAST(AVG(d+e) AS long) AS d FROM !t! GROUP BY -c"
+        == _to_sql(gen.select(cols, "t"))
     )
 
 
@@ -252,6 +255,16 @@ def test_no_cast():
     cols = SelectColumns(
         f.max(col("c")).cast("long").alias("c"), col("a", "aa"), col("b")
     )
-    assert "SELECT MAX(c) AS c, a AS aa, b FROM t GROUP BY a, b" == gen.select(
-        cols, "t"
+    assert "SELECT MAX(c) AS c, a AS aa, b FROM !t! GROUP BY a, b" == _to_sql(
+        gen.select(cols, "t")
     )
+
+
+def _to_sql(parts):
+    return (
+        " ".join(
+            "!" + x[1].strip() + "!" if x[0] else x[1].strip()
+            for x in parts
+            if x[1].strip() != ""
+        )
+    ).strip()

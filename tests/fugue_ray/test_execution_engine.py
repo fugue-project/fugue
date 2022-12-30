@@ -4,21 +4,16 @@ import duckdb
 import pandas as pd
 import ray
 import ray.data as rd
-from fugue import (
-    ArrayDataFrame,
-    FugueWorkflow,
-    transform,
-    DataFrame,
-    infer_execution_engine,
-)
-from fugue.dataframe.utils import _df_eq as df_eq
-from fugue import fsql
-from fugue_test.builtin_suite import BuiltInTests
-from fugue_test.execution_suite import ExecutionEngineTests
 from pytest import raises
 from triad import FileSystem
 
-from fugue_ray import RayExecutionEngine, RayDataFrame
+import fugue.api as fa
+from fugue import ArrayDataFrame, DataFrame, FugueWorkflow, fsql, transform
+from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.plugins import infer_execution_engine
+from fugue_ray import RayDataFrame, RayExecutionEngine
+from fugue_test.builtin_suite import BuiltInTests
+from fugue_test.execution_suite import ExecutionEngineTests
 
 _CONF = {
     "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
@@ -34,9 +29,11 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
         ray.init(num_cpus=2)
         cls._con = duckdb.connect()
         cls._engine = cls.make_engine(cls)
+        fa.set_global_engine(cls._engine)
 
     @classmethod
     def tearDownClass(cls):
+        fa.clear_global_engine()
         cls._con.close()
         ray.shutdown()
 
@@ -46,6 +43,9 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             connection=self._con,
         )
         return e
+
+    def test_get_parallelism(self):
+        assert fa.get_current_parallelism(self.engine) == 2
 
     def test_repartitioning(self):
         # schema: *
@@ -61,7 +61,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             partition="per_row",
             engine="ray",
             as_local=True,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
         )
         df_eq(
             res,
@@ -77,7 +77,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             partition=dict(num=3, algo="rand"),
             engine="ray",
             as_local=True,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
         )
         df_eq(
             res,
@@ -93,7 +93,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             partition=dict(num=40),
             engine="ray",
             as_local=True,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
         )
         df_eq(
             res,
@@ -119,7 +119,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
                 "fugue.ray.remote.num_cpus": 1,
             },
             as_local=True,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
         )
         df_eq(
             res,

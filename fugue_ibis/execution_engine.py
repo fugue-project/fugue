@@ -1,24 +1,20 @@
-from typing import Any, List, Optional, Dict
+import itertools
+from typing import Any, Dict, List, Optional, Tuple
 
 import ibis
+from ibis import BaseBackend
+from triad.utils.assertion import assert_or_throw
+
 from fugue.collections.partition import (
-    EMPTY_PARTITION_SPEC,
     PartitionSpec,
     parse_presort_exp,
 )
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.utils import get_join_schemas
-from fugue.execution.execution_engine import (
-    _DEFAULT_JOIN_KEYS,
-    ExecutionEngine,
-    SQLEngine,
-)
-from ibis import BaseBackend
-from triad.utils.assertion import assert_or_throw
+from fugue.execution.execution_engine import ExecutionEngine, SQLEngine
 
-from .dataframe import IbisDataFrame
 from ._compat import IbisTable
-import itertools
+from .dataframe import IbisDataFrame
 
 _JOIN_RIGHT_SUFFIX = "_ibis_y__"
 _GEN_TABLE_NAMES = (f"_fugue_temp_table_{i:d}" for i in itertools.count())
@@ -40,9 +36,9 @@ class IbisSQLEngine(SQLEngine):
         super().__init__(execution_engine)
         self._ibis_engine: IbisExecutionEngine = execution_engine  # type: ignore
 
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
         return self._ibis_engine._to_ibis_dataframe(
-            self._ibis_engine._raw_select(statement, dfs)
+            self._ibis_engine._raw_select(" ".join(x[1] for x in statement), dfs)
         )
 
 
@@ -55,6 +51,9 @@ class IbisExecutionEngine(ExecutionEngine):
 
     def create_default_sql_engine(self) -> SQLEngine:
         return IbisSQLEngine(self)
+
+    def get_current_parallelism(self) -> int:
+        return 1
 
     @property
     def backend(self) -> BaseBackend:  # pragma: no cover
@@ -82,7 +81,7 @@ class IbisExecutionEngine(ExecutionEngine):
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        on: List[str] = _DEFAULT_JOIN_KEYS,
+        on: Optional[List[str]] = None,
     ) -> DataFrame:
         _df1 = self._to_ibis_dataframe(df1)
         _df2 = self._to_ibis_dataframe(df2)
@@ -213,8 +212,9 @@ class IbisExecutionEngine(ExecutionEngine):
         n: int,
         presort: str,
         na_position: str = "last",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
     ) -> DataFrame:
+        partition_spec = partition_spec or PartitionSpec()
         assert_or_throw(
             isinstance(n, int),
             ValueError("n needs to be an integer"),

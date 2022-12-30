@@ -2,11 +2,31 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 import pyarrow as pa
-from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
-from fugue.exceptions import FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
+
+from fugue.dataset.api import (
+    as_fugue_dataset,
+    as_local,
+    as_local_bounded,
+    count,
+    get_num_partitions,
+    is_bounded,
+    is_empty,
+    is_local,
+)
+from fugue.exceptions import FugueDataFrameOperationError
+
+from .api import (
+    drop_columns,
+    get_column_names,
+    get_schema,
+    is_df,
+    rename,
+    select_columns,
+)
+from .dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
 
 
 class ArrowDataFrame(LocalBoundedDataFrame):
@@ -101,11 +121,14 @@ class ArrowDataFrame(LocalBoundedDataFrame):
         """:func:`pyarrow.Table <pa:pyarrow.table>`"""
         return self._native
 
+    def native_as_df(self) -> pa.Table:
+        return self._native
+
     @property
     def empty(self) -> bool:
         return self.count() == 0
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         self.assert_not_empty()
         data = self.native.take([0]).to_pydict()
         return [v[0] for v in data.values()]
@@ -218,8 +241,95 @@ class ArrowDataFrame(LocalBoundedDataFrame):
                 yield list(arr)
 
 
+@as_local.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_as_local(df: pa.Table) -> pa.Table:
+    return df
+
+
+@as_local_bounded.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_as_local_bounded(df: pa.Table) -> pa.Table:
+    return df
+
+
+@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, pa.Table))
+def _pa_table_as_fugue_df(df: pa.Table, **kwargs: Any) -> "ArrowDataFrame":
+    return ArrowDataFrame(df, **kwargs)
+
+
+@is_df.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_is_df(df: pa.Table) -> bool:
+    return True
+
+
+@count.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_count(df: pa.Table) -> int:
+    return df.shape[0]
+
+
+@is_bounded.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_is_bounded(df: pa.Table) -> bool:
+    return True
+
+
+@is_empty.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_is_empty(df: pa.Table) -> bool:
+    return df.shape[0] == 0
+
+
+@is_local.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_is_local(df: pa.Table) -> bool:
+    return True
+
+
+@get_num_partitions.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_get_num_partitions(df: pa.Table) -> int:
+    return 1
+
+
+@get_column_names.candidate(lambda df: isinstance(df, pa.Table))
+def _get_pyarrow_table_columns(df: pa.Table) -> List[Any]:
+    return [f.name for f in df.schema]
+
+
+@get_schema.candidate(lambda df: isinstance(df, pa.Table))
+def _get_pyarrow_table_schema(df: pa.Table) -> Schema:
+    return Schema(df.schema)
+
+
+@rename.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
+def _rename_pyarrow_dataframe(df: pa.Table, columns: Dict[str, Any]) -> pa.Table:
+    if len(columns) == 0:
+        return df
+    _assert_no_missing(df, columns.keys())
+    return df.rename_columns([columns.get(f.name, f.name) for f in df.schema])
+
+
+@drop_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
+def _drop_pa_columns(df: pa.Table, columns: List[str]) -> pa.Table:
+    cols = [x for x in df.schema.names if x not in columns]
+    if len(cols) == 0:
+        raise FugueDataFrameOperationError("cannot drop all columns")
+    if len(cols) + len(columns) != len(df.columns):
+        _assert_no_missing(df, columns)
+    return df.select(cols)
+
+
+@select_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
+def _select_pa_columns(df: pa.Table, columns: List[Any]) -> pa.Table:
+    if len(columns) == 0:
+        raise FugueDataFrameOperationError("must select at least one column")
+    _assert_no_missing(df, columns=columns)
+    return df.select(columns)
+
+
 def _build_empty_arrow(schema: Schema) -> pa.Table:  # pragma: no cover
     if pa.__version__ < "7":
         arr = [pa.array([])] * len(schema)
         return pa.Table.from_arrays(arr, schema=schema.pa_schema)
     return pa.Table.from_pylist([], schema=schema.pa_schema)
+
+
+def _assert_no_missing(df: pa.Table, columns: Iterable[Any]) -> None:
+    missing = [x for x in columns if x not in df.schema.names]
+    if len(missing) > 0:
+        raise FugueDataFrameOperationError("found nonexistent columns: {missing}")

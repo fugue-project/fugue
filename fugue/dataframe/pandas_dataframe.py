@@ -2,11 +2,32 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 import pyarrow as pa
-from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
-from fugue.exceptions import FugueDataFrameOperationError
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
+
+from fugue.dataset.api import (
+    as_fugue_dataset,
+    as_local,
+    as_local_bounded,
+    count,
+    get_num_partitions,
+    is_bounded,
+    is_empty,
+    is_local,
+)
+from fugue.exceptions import FugueDataFrameOperationError
+
+from .api import (
+    drop_columns,
+    get_column_names,
+    get_schema,
+    head,
+    is_df,
+    rename,
+    select_columns,
+)
+from .dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
 
 
 class PandasDataFrame(LocalBoundedDataFrame):
@@ -72,11 +93,14 @@ class PandasDataFrame(LocalBoundedDataFrame):
         """Pandas DataFrame"""
         return self._native
 
+    def native_as_df(self) -> pd.DataFrame:
+        return self._native
+
     @property
     def empty(self) -> bool:
         return self.native.empty
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         self.assert_not_empty()
         return self.native.iloc[0].values.tolist()
 
@@ -170,3 +194,112 @@ class PandasDataFrame(LocalBoundedDataFrame):
             )
             pdf.columns = schema.names
         return PD_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True), schema
+
+
+@as_local.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_as_local(df: pd.DataFrame) -> pd.DataFrame:
+    return df
+
+
+@as_local_bounded.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_as_local_bounded(df: pd.DataFrame) -> pd.DataFrame:
+    return df
+
+
+@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, pd.DataFrame))
+def _pd_as_fugue_df(df: pd.DataFrame, **kwargs: Any) -> "PandasDataFrame":
+    return PandasDataFrame(df, **kwargs)
+
+
+@is_df.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_is_df(df: pd.DataFrame) -> bool:
+    return True
+
+
+@count.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_count(df: pd.DataFrame) -> int:
+    return df.shape[0]
+
+
+@is_bounded.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_is_bounded(df: pd.DataFrame) -> bool:
+    return True
+
+
+@is_empty.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_is_empty(df: pd.DataFrame) -> bool:
+    return df.shape[0] == 0
+
+
+@is_local.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _pd_is_local(df: pd.DataFrame) -> bool:
+    return True
+
+
+@get_num_partitions.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _get_pandas_num_partitions(df: pd.DataFrame) -> int:
+    return 1
+
+
+@get_column_names.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _get_pandas_dataframe_columns(df: pd.DataFrame) -> List[Any]:
+    return list(df.columns)
+
+
+@get_schema.candidate(lambda df: isinstance(df, pd.DataFrame))
+def _get_pandas_dataframe_schema(df: pd.DataFrame) -> Schema:
+    return Schema(df)
+
+
+@rename.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
+def _rename_pandas_dataframe(
+    df: pd.DataFrame, columns: Dict[str, Any], as_fugue: bool = False
+) -> Any:
+    if len(columns) == 0:
+        return df
+    _assert_no_missing(df, columns.keys())
+    return _adjust_df(df.rename(columns=columns), as_fugue=as_fugue)
+
+
+@drop_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
+def _drop_pd_columns(
+    df: pd.DataFrame, columns: List[str], as_fugue: bool = False
+) -> Any:
+    cols = [x for x in df.columns if x not in columns]
+    if len(cols) == 0:
+        raise FugueDataFrameOperationError("cannot drop all columns")
+    if len(cols) + len(columns) != len(df.columns):
+        _assert_no_missing(df, columns)
+    return _adjust_df(df[cols], as_fugue=as_fugue)
+
+
+@select_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
+def _select_pd_columns(
+    df: pd.DataFrame, columns: List[Any], as_fugue: bool = False
+) -> Any:
+    if len(columns) == 0:
+        raise FugueDataFrameOperationError("must select at least one column")
+    _assert_no_missing(df, columns)
+    return _adjust_df(df[columns], as_fugue=as_fugue)
+
+
+@head.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
+def _pd_head(
+    df: pd.DataFrame,
+    n: int,
+    columns: Optional[List[str]] = None,
+    as_fugue: bool = False,
+) -> pd.DataFrame:
+    if columns is not None:
+        df = df[columns]
+    return _adjust_df(df.head(n), as_fugue=as_fugue)
+
+
+def _adjust_df(res: pd.DataFrame, as_fugue: bool):
+    return res if not as_fugue else PandasDataFrame(res)
+
+
+def _assert_no_missing(df: pd.DataFrame, columns: Iterable[Any]) -> None:
+    missing = [x for x in columns if x not in df.columns]
+    if len(missing) > 0:
+        raise FugueDataFrameOperationError("found nonexistent columns: {missing}")

@@ -1,13 +1,13 @@
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import ibis
-from fugue import DataFrame, DataFrames, ExecutionEngine
-from fugue_ibis import IbisTable
-from fugue_ibis._utils import to_schema
-from fugue_ibis.execution.ibis_engine import IbisEngine, register_ibis_engine
 from pyspark.sql import DataFrame as PySparkDataFrame
 from triad.utils.assertion import assert_or_throw
 
+from fugue import DataFrame, DataFrames, ExecutionEngine
+from fugue_ibis import IbisTable
+from fugue_ibis._utils import to_schema
+from fugue_ibis.execution.ibis_engine import IbisEngine, parse_ibis_engine
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
@@ -38,13 +38,8 @@ class SparkIbisEngine(IbisEngine):
         return SparkDataFrame(result, schema=schema)
 
 
-def _to_spark_ibis_engine(
-    engine: ExecutionEngine, ibis_engine: Any
-) -> Optional[IbisEngine]:
-    if isinstance(engine, SparkExecutionEngine):
-        if ibis_engine is None:
-            return SparkIbisEngine(engine)
-    return None  # pragma: no cover
-
-
-register_ibis_engine(0, _to_spark_ibis_engine)
+@parse_ibis_engine.candidate(
+    lambda obj, *args, **kwargs: isinstance(obj, SparkExecutionEngine)
+)
+def _spark_to_ibis_engine(obj: Any, engine: ExecutionEngine) -> IbisEngine:
+    return SparkIbisEngine(engine)

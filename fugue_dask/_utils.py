@@ -8,6 +8,20 @@ from dask.distributed import Client, get_client
 from qpd_dask.engine import DaskUtils as DaskUtilsBase
 from triad.utils.pyarrow import to_pandas_dtype, to_single_pandas_dtype
 
+import fugue.api as fa
+from fugue.constants import FUGUE_CONF_DEFAULT_PARTITIONS
+
+from ._constants import FUGUE_DASK_CONF_DEFAULT_PARTITIONS
+
+
+def get_default_partitions() -> int:
+    engine = fa.get_current_engine()
+    n = engine.conf.get(
+        FUGUE_DASK_CONF_DEFAULT_PARTITIONS,
+        engine.conf.get(FUGUE_CONF_DEFAULT_PARTITIONS, -1),
+    )
+    return n if n > 0 else engine.get_current_parallelism() * 2
+
 
 class DaskUtils(DaskUtilsBase):
     def get_or_create_client(self, client: Optional[Client] = None):

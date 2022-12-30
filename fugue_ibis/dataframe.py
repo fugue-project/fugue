@@ -2,6 +2,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 import pyarrow as pa
+from triad import Schema
+
 from fugue import (
     DataFrame,
     IterableDataFrame,
@@ -11,7 +13,7 @@ from fugue import (
 )
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
-from triad import Schema
+from fugue.plugins import is_df, get_column_names, rename
 
 from ._compat import IbisTable
 from ._utils import _pa_to_ibis_type, to_schema
@@ -37,6 +39,9 @@ class IbisDataFrame(DataFrame):
     @property
     def native(self) -> IbisTable:
         """Ibis Table object"""
+        return self._table
+
+    def native_as_df(self) -> IbisTable:
         return self._table
 
     def _to_local_df(self, table: IbisTable, schema: Any = None) -> LocalDataFrame:
@@ -69,7 +74,7 @@ class IbisDataFrame(DataFrame):
     def num_partitions(self) -> int:
         return 1  # pragma: no cover
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         res = self._to_local_df(self._table.head(1)).as_array()
         if len(res) == 0:
             raise FugueDatasetEmptyError()
@@ -91,13 +96,8 @@ class IbisDataFrame(DataFrame):
             schema = self.schema.rename(columns)
         except Exception as e:
             raise FugueDataFrameOperationError from e
-        cols: List[Any] = []
-        for a, b in zip(self.schema.names, schema.names):
-            if a == b:
-                cols.append(self._table[a])
-            else:
-                cols.append(self._table[a].name(b))
-        return self._to_new_df(self._table.projection(cols), schema=schema)
+        df = _rename(self._table, self.schema.names, schema.names)
+        return self if df is self._table else self._to_new_df(df, schema=schema)
 
     def alter_columns(self, columns: Any) -> DataFrame:
         new_schema = self._get_altered_schema(columns)
@@ -115,7 +115,10 @@ class IbisDataFrame(DataFrame):
         return self.as_local().as_pandas()
 
     def as_local(self) -> LocalDataFrame:
-        return self._to_local_df(self._table, schema=self.schema)
+        res = self._to_local_df(self._table, schema=self.schema)
+        if res is not self and self.has_metadata:
+            res.reset_metadata(self.metadata)
+        return res
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
@@ -152,3 +155,39 @@ class IbisDataFrame(DataFrame):
 
     def _type_equal(self, tp1: pa.DataType, tp2: pa.DataType) -> bool:
         return tp1 == tp2
+
+
+@is_df.candidate(lambda df: isinstance(df, IbisTable))
+def _ibis_is_df(df: IbisTable) -> bool:
+    return True
+
+
+@get_column_names.candidate(lambda df: isinstance(df, IbisTable))
+def _get_ibis_columns(df: IbisTable) -> List[Any]:
+    return df.columns
+
+
+@rename.candidate(lambda df, *args, **kwargs: isinstance(df, IbisTable))
+def _rename_dask_dataframe(df: IbisTable, columns: Dict[str, Any]) -> IbisTable:
+    _assert_no_missing(df, columns.keys())
+    old_names = df.columns
+    new_names = [columns.get(name, name) for name in old_names]
+    return _rename(df, old_names, new_names)
+
+
+def _rename(df: IbisTable, old_names: List[str], new_names: List[str]) -> IbisTable:
+    cols: List[Any] = []
+    has_change = False
+    for a, b in zip(old_names, new_names):
+        if a == b:
+            cols.append(df[a])
+        else:
+            cols.append(df[a].name(b))
+            has_change = True
+    return df.projection(cols) if has_change else df
+
+
+def _assert_no_missing(df: IbisTable, columns: Iterable[Any]) -> None:
+    missing = set(columns) - set(df.columns)
+    if len(missing) > 0:
+        raise FugueDataFrameOperationError("found nonexistent columns: {missing}")

@@ -1,11 +1,11 @@
 from datetime import date, datetime
 from typing import Any, Dict, Iterable, Optional, Tuple
-from uuid import uuid4
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 from duckdb import __version__ as _DUCKDB_VERSION  # type: ignore
+from triad import Schema
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
 
 _LEGACY_DUCKDB = _DUCKDB_VERSION < "0.3.3"
@@ -30,6 +30,19 @@ _DUCK_TYPES_TO_PA: Dict[str, pa.DataType] = {
 }
 
 _PA_TYPES_TO_DUCK: Dict[pa.DataType, str] = {v: k for k, v in _DUCK_TYPES_TO_PA.items()}
+
+
+def encode_column_name(name: str) -> str:
+    return '"' + name.replace('"', '""') + '"'
+
+
+def encode_column_names(names: Iterable[str]) -> Iterable[str]:
+    for name in names:
+        yield encode_column_name(name)
+
+
+def encode_schema_names(schema: Schema) -> Iterable[str]:
+    return encode_column_names(schema.names)
 
 
 def encode_value_to_expr(value: Any) -> str:  # noqa: C901
@@ -62,10 +75,6 @@ def encode_value_to_expr(value: Any) -> str:  # noqa: C901
         return "DATE '" + value.strftime("%Y-%m-%d") + "'"
 
     raise NotImplementedError(value)
-
-
-def get_temp_df_name() -> str:
-    return "_" + str(uuid4())[:5]
 
 
 def to_duck_type(tp: pa.DataType) -> str:

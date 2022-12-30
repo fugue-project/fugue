@@ -1,8 +1,20 @@
 # Release Notes
 
-## 0.7.4
+## 0.8.0
 
--   [340](https://github.com/fugue-project/fugue/issues/340) Migrate to plugin mode (DataFrames & Extensions)
+-   [384](https://github.com/fugue-project/fugue/issues/384) Expanding Fugue API
+-   [396](https://github.com/fugue-project/fugue/issues/396) Ray/Dask engines guess optimal default partitions
+-   [403](https://github.com/fugue-project/fugue/issues/403) Deprecate register_raw_df_type
+-   [392](https://github.com/fugue-project/fugue/issues/392) Aggregations on Spark dataframes fail intermittently
+-   [398](https://github.com/fugue-project/fugue/issues/398) Rework API Docs and Favicon
+-   [393](https://github.com/fugue-project/fugue/issues/393) ExecutionEngine as_context
+-   [385](https://github.com/fugue-project/fugue/issues/385) Remove DataFrame metadata
+-   [381](https://github.com/fugue-project/fugue/issues/381) Change SparkExecutionEngine to use pandas udf by default
+-   [380](https://github.com/fugue-project/fugue/issues/380) Refactor ExecutionEngine (Separate out MapEngine)
+-   [378](https://github.com/fugue-project/fugue/issues/378) Refactor DataFrame show
+-   [377](https://github.com/fugue-project/fugue/issues/377) Create bag
+-   [372](https://github.com/fugue-project/fugue/issues/372) Infer execution engine from input
+-   [340](https://github.com/fugue-project/fugue/issues/340) Migrate to plugin mode
 -   [369](https://github.com/fugue-project/fugue/issues/369) Remove execution from FugueWorkflow context manager, remove engine from FugueWorkflow
 -   [373](https://github.com/fugue-project/fugue/issues/373) Fixed Spark engine rename slowness when there are a lot of columns
 

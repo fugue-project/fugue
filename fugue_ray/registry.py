@@ -4,19 +4,15 @@ from typing import Any, Optional
 import ray.data as rd
 from triad import run_at_def
 
-from fugue import (
-    DataFrame,
-    infer_execution_engine,
-    is_pandas_or,
-    register_execution_engine,
-)
+from fugue import DataFrame, is_pandas_or, register_execution_engine
 from fugue._utils.interfaceless import (
     DataFrameParam,
     ExecutionEngineParam,
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
-from fugue.workflow import register_raw_df_type
+from fugue.plugins import as_fugue_dataset, infer_execution_engine
+
 
 from .dataframe import RayDataFrame
 from .execution_engine import RayExecutionEngine
@@ -29,15 +25,14 @@ def _infer_ray_client(objs: Any) -> Any:
     return "ray"
 
 
-def _register_raw_dataframes() -> None:
-    register_raw_df_type(rd.Dataset)
+@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, rd.Dataset))
+def _ray_as_fugue_df(df: rd.Dataset, **kwargs: Any) -> RayDataFrame:
+    return RayDataFrame(df, **kwargs)
 
 
 def _register_engines() -> None:
     register_execution_engine(
-        "ray",
-        lambda conf, **kwargs: RayExecutionEngine(conf=conf),
-        on_dup="ignore",
+        "ray", lambda conf, **kwargs: RayExecutionEngine(conf=conf), on_dup="ignore"
     )
 
 
@@ -85,6 +80,5 @@ class _RayDatasetParam(DataFrameParam):
 @run_at_def
 def _register() -> None:
     """Register Ray Execution Engine"""
-    _register_raw_dataframes()
     _register_engines()
     _register_annotation_converters()

@@ -13,6 +13,7 @@ FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE = "fugue.workflow.exception.hide"
 FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT = "fugue.workflow.exception.inject"
 FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE = "fugue.workflow.exception.optimize"
 FUGUE_CONF_SQL_IGNORE_CASE = "fugue.sql.compile.ignore_case"
+FUGUE_CONF_DEFAULT_PARTITIONS = "fugue.default.partitions"
 
 FUGUE_COMPILE_TIME_CONFIGS = set(
     [
@@ -35,6 +36,7 @@ _FUGUE_GLOBAL_CONF = ParamDict(
         FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 3,
         FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE: True,
         FUGUE_CONF_SQL_IGNORE_CASE: False,
+        FUGUE_CONF_DEFAULT_PARTITIONS: -1,
     }
 )
 

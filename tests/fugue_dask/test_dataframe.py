@@ -6,6 +6,7 @@ from typing import Any
 import dask.dataframe as pd
 import numpy as np
 import pandas
+import fugue.api as fi
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -14,16 +15,46 @@ from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 from triad.collections.schema import Schema
 from fugue.dataframe.utils import (
-    get_dataframe_column_names,
-    rename_dataframe_column_names,
+    get_column_names,
+    rename,
 )
 
 
 class DaskDataFrameTests(DataFrameTests.Tests):
-    def df(
-        self, data: Any = None, schema: Any = None
-    ) -> DaskDataFrame:
+    def df(self, data: Any = None, schema: Any = None) -> DaskDataFrame:
         return DaskDataFrame(data, schema)
+
+
+class NativeDaskDataFrameTests(DataFrameTests.NativeTests):
+    def df(self, data: Any = None, schema: Any = None):
+        return DaskDataFrame(data, schema).native
+
+    def to_native_df(self, pdf: pandas.DataFrame) -> Any:
+        return pd.from_pandas(pdf, npartitions=2)
+
+    def test_not_local(self):
+        assert not fi.is_local(self.df([], "a:int,b:str"))
+
+    def test_alter_columns(self):
+        pass
+
+    def test_as_arrow(self):
+        pass
+
+    def test_binary_type(self):
+        pass
+
+    def test_deep_nested_types(self):
+        pass
+
+    def test_list_type(self):
+        pass
+
+    def test_map_type(self):
+        pass
+
+    def test_struct_type(self):
+        pass
 
 
 def test_init():
@@ -201,20 +232,20 @@ def _test_as_array_perf():
     print(nts, ts)
 
 
-def test_get_dataframe_column_names():
+def _test_get_column_names():
     df = pd.from_pandas(pandas.DataFrame([[0, 1, 2]]), npartitions=1)
-    assert get_dataframe_column_names(df) == [0, 1, 2]
+    assert get_column_names(df) == [0, 1, 2]
 
 
-def test_rename_dataframe_column_names():
+def _test_rename():
     pdf = pd.from_pandas(
         pandas.DataFrame([[0, 1, 2]], columns=["a", "b", "c"]), npartitions=1
     )
-    df = rename_dataframe_column_names(pdf, {})
+    df = rename(pdf, {})
     assert isinstance(df, pd.DataFrame)
-    assert get_dataframe_column_names(df) == ["a", "b", "c"]
+    assert get_column_names(df) == ["a", "b", "c"]
 
     pdf = pd.from_pandas(pandas.DataFrame([[0, 1, 2]]), npartitions=1)
-    df = rename_dataframe_column_names(pdf, {0: "_0", 1: "_1", 2: "_2"})
+    df = rename(pdf, {0: "_0", 1: "_1", 2: "_2"})
     assert isinstance(df, pd.DataFrame)
-    assert get_dataframe_column_names(df) == ["_0", "_1", "_2"]
+    assert get_column_names(df) == ["_0", "_1", "_2"]

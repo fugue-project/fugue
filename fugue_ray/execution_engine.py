@@ -1,7 +1,8 @@
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import pyarrow as pa
-from duckdb import DuckDBPyConnection
+import ray
+from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from triad import Schema, assert_or_throw, to_uuid
 from triad.utils.threading import RunOnce
 
@@ -13,13 +14,12 @@ from fugue import (
     PartitionCursor,
     PartitionSpec,
 )
-from fugue.collections.partition import EMPTY_PARTITION_SPEC
 from fugue.constants import KEYWORD_ROWCOUNT
 from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckExecutionEngine
 
-from ._constants import FUGUE_RAY_CONF_SHUFFLE_PARTITIONS
+from ._utils.cluster import get_default_partitions, get_default_shuffle_partitions
 from ._utils.dataframe import add_partition_key
 from ._utils.io import RayIO
 from .dataframe import RayDataFrame
@@ -95,12 +95,15 @@ class RayMapEngine(MapEngine):
             output_df = map_func(cursor, input_df)
             return output_df.as_arrow()
 
-        _df = self.execution_engine._to_ray_df(df)  # type: ignore
+        _df: RayDataFrame = self.execution_engine._to_ray_df(df)  # type: ignore
         if partition_spec.num_partitions != "0":
             _df = self.execution_engine.repartition(_df, partition_spec)  # type: ignore
         else:
-            n = self.execution_engine.conf.get(FUGUE_RAY_CONF_SHUFFLE_PARTITIONS, -1)
-            if n > 1:
+            n = get_default_shuffle_partitions(self.execution_engine)
+            if n > 0 and n != _df.num_partitions:
+                # if n==0 or same as the current dataframe partitions
+                # then no repartition will be done by fugue
+                # otherwise, repartition the dataset
                 _df = self.execution_engine.repartition(  # type: ignore
                     _df, PartitionSpec(num=n)
                 )
@@ -153,6 +156,15 @@ class RayMapEngine(MapEngine):
             rdf = self.execution_engine.repartition(  # type: ignore
                 rdf, partition_spec=partition_spec
             )
+        elif rdf.num_partitions <= 1:
+            n = get_default_partitions(self.execution_engine)
+            if n > 0 and n != rdf.num_partitions:
+                # if n==0 or same as the current dataframe partitions
+                # then no repartition will be done by fugue
+                # otherwise, repartition the dataset
+                rdf = self.execution_engine.repartition(  # type: ignore
+                    rdf, PartitionSpec(num=n)
+                )
         sdf = rdf.native.map_batches(
             _udf,
             batch_format="pyarrow",
@@ -172,11 +184,23 @@ class RayExecutionEngine(DuckExecutionEngine):
     def __init__(
         self, conf: Any = None, connection: Optional[DuckDBPyConnection] = None
     ):
+        if not ray.is_initialized():  # pragma: no cover
+            ray.init()
         super().__init__(conf, connection)
         self._io = RayIO(self)
 
+    def __repr__(self) -> str:
+        return "RayExecutionEngine"
+
     def create_default_map_engine(self) -> MapEngine:
         return RayMapEngine(self)
+
+    def get_current_parallelism(self) -> int:
+        res = ray.cluster_resources()
+        n = res.get("CPU", 0)
+        if n == 0:  # pragma: no cover
+            res.get("cpu", 0)
+        return int(n)
 
     def to_df(self, df: Any, schema: Any = None) -> DataFrame:
         return self._to_ray_df(df, schema=schema)
@@ -190,17 +214,15 @@ class RayExecutionEngine(DuckExecutionEngine):
 
         num_funcs = {KEYWORD_ROWCOUNT: lambda: _persist_and_count(rdf)}
         num = partition_spec.get_num_partitions(**num_funcs)
+        pdf = rdf.native
 
-        if partition_spec.algo in ["hash", "even"]:
-            pdf = rdf.native
-            if num > 0:
+        if num > 0:
+            if partition_spec.algo in ["hash", "even"]:
                 pdf = pdf.repartition(num)
-        elif partition_spec.algo == "rand":
-            pdf = rdf.native
-            if num > 0:
+            elif partition_spec.algo == "rand":
                 pdf = pdf.repartition(num, shuffle=True)
-        else:  # pragma: no cover
-            raise NotImplementedError(partition_spec.algo + " is not supported")
+            else:  # pragma: no cover
+                raise NotImplementedError(partition_spec.algo + " is not supported")
         return RayDataFrame(pdf, schema=rdf.schema, internal_schema=True)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
@@ -215,7 +237,7 @@ class RayExecutionEngine(DuckExecutionEngine):
         df = self._to_auto_df(df)
         if isinstance(df, RayDataFrame):
             return df.persist(**kwargs)
-        return df
+        return df  # pragma: no cover
 
     def convert_yield_dataframe(self, df: DataFrame, as_local: bool) -> DataFrame:
         if isinstance(df, RayDataFrame):
@@ -239,10 +261,11 @@ class RayExecutionEngine(DuckExecutionEngine):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        partition_spec = partition_spec or PartitionSpec()
         df = self._to_ray_df(df)
         self._io.save_df(
             df,
@@ -269,6 +292,12 @@ class RayExecutionEngine(DuckExecutionEngine):
                 ValueError("schema must be None when df is a DataFrame"),
             )
             return df
+        if isinstance(df, DuckDBPyRelation):
+            assert_or_throw(
+                schema is None,
+                ValueError("schema must be None when df is a DuckDBPyRelation"),
+            )
+            return DuckDataFrame(df)
         return RayDataFrame(df, schema)
 
     def _get_remote_args(self) -> Dict[str, Any]:

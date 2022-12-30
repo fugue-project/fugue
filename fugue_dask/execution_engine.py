@@ -1,25 +1,9 @@
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import dask.dataframe as dd
 from distributed import Client
-from fugue.collections.partition import (
-    EMPTY_PARTITION_SPEC,
-    PartitionCursor,
-    PartitionSpec,
-    parse_presort_exp,
-)
-from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
-from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
-from fugue.dataframe.utils import get_join_schemas
-from fugue.execution.execution_engine import (
-    _DEFAULT_JOIN_KEYS,
-    ExecutionEngine,
-    SQLEngine,
-    MapEngine,
-)
-from fugue.execution.native_execution_engine import NativeExecutionEngine
 from qpd_dask import run_sql_on_dask
 from triad.collections import Schema
 from triad.collections.dict import IndexedOrderedDict, ParamDict
@@ -28,11 +12,17 @@ from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.threading import RunOnce
 
-from fugue_dask._constants import (
-    CPU_COUNT,
-    FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS,
-    FUGUE_DASK_DEFAULT_CONF,
+from fugue.collections.partition import (
+    PartitionCursor,
+    PartitionSpec,
+    parse_presort_exp,
 )
+from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
+from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
+from fugue.dataframe.utils import get_join_schemas
+from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
+from fugue.execution.native_execution_engine import NativeExecutionEngine
+from fugue_dask._constants import FUGUE_DASK_DEFAULT_CONF
 from fugue_dask._io import load_df, save_df
 from fugue_dask._utils import DASK_UTILS, DaskUtils
 from fugue_dask.dataframe import DaskDataFrame
@@ -51,12 +41,13 @@ class QPDDaskEngine(SQLEngine):
         )
         super().__init__(execution_engine)
 
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
+        _dfs, _sql = self.encode(dfs, statement)
         dask_dfs = {
             k: self.execution_engine.to_df(v).native  # type: ignore
-            for k, v in dfs.items()
+            for k, v in _dfs.items()
         }
-        df = run_sql_on_dask(statement, dask_dfs, ignore_case=True)
+        df = run_sql_on_dask(_sql, dask_dfs, ignore_case=True)
         return DaskDataFrame(df)
 
 
@@ -163,6 +154,10 @@ class DaskExecutionEngine(ExecutionEngine):
     def create_default_map_engine(self) -> MapEngine:
         return DaskMapEngine(self)
 
+    def get_current_parallelism(self) -> int:
+        res = dict(self.dask_client.nthreads())
+        return sum(res.values())
+
     @property
     def pl_utils(self) -> DaskUtils:
         """Pandas-like dataframe utils"""
@@ -187,9 +182,7 @@ class DaskExecutionEngine(ExecutionEngine):
             * all other methods in the engine can take arbitrary dataframes and
               call this method to convert before doing anything
         """
-        default_partitions = self.conf.get_or_throw(
-            FUGUE_DASK_CONF_DATAFRAME_DEFAULT_PARTITIONS, int
-        )
+
         if isinstance(df, DataFrame):
             assert_or_throw(
                 schema is None,
@@ -198,15 +191,12 @@ class DaskExecutionEngine(ExecutionEngine):
             if isinstance(df, DaskDataFrame):
                 return df
             if isinstance(df, PandasDataFrame):
-                return DaskDataFrame(
-                    df.native, df.schema, num_partitions=default_partitions
-                )
-            return DaskDataFrame(
-                df.as_array(type_safe=True),
-                df.schema,
-                num_partitions=default_partitions,
-            )
-        return DaskDataFrame(df, schema, num_partitions=default_partitions)
+                res = DaskDataFrame(df.native, df.schema)
+            else:
+                res = DaskDataFrame(df.as_array(type_safe=True), df.schema)
+            res.reset_metadata(df.metadata)
+            return res
+        return DaskDataFrame(df, schema)
 
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
@@ -219,7 +209,7 @@ class DaskExecutionEngine(ExecutionEngine):
         p = partition_spec.get_num_partitions(
             **{
                 KEYWORD_ROWCOUNT: lambda: df.persist().count(),  # type: ignore
-                KEYWORD_CORECOUNT: lambda: CPU_COUNT,
+                KEYWORD_CORECOUNT: lambda: self.get_current_parallelism(),
             }
         )
         if p > 0:
@@ -249,7 +239,7 @@ class DaskExecutionEngine(ExecutionEngine):
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        on: List[str] = _DEFAULT_JOIN_KEYS,
+        on: Optional[List[str]] = None,
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         d = self.pl_utils.join(
@@ -376,8 +366,9 @@ class DaskExecutionEngine(ExecutionEngine):
         n: int,
         presort: str,
         na_position: str = "last",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
     ) -> DataFrame:
+        partition_spec = partition_spec or PartitionSpec()
         assert_or_throw(
             isinstance(n, int),
             ValueError("n needs to be an integer"),
@@ -444,10 +435,11 @@ class DaskExecutionEngine(ExecutionEngine):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        partition_spec = partition_spec or PartitionSpec()
         if force_single:
             self._native.save_df(
                 df,

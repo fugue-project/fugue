@@ -6,7 +6,7 @@ import pyarrow as pa
 import ray.data as rd
 from fugue import ExecutionEngine
 from fugue._utils.io import FileParser, load_df, save_df
-from fugue.collections.partition import EMPTY_PARTITION_SPEC, PartitionSpec
+from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame
 from fugue_ray.dataframe import RayDataFrame
 from pyarrow import csv as pacsv
@@ -59,11 +59,12 @@ class RayIO(object):
         df: RayDataFrame,
         uri: str,
         format_hint: Optional[str] = None,
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         mode: str = "overwrite",
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        partition_spec = partition_spec or PartitionSpec()
         if self._fs.exists(uri):
             assert_or_throw(mode == "overwrite", FileExistsError(uri))
             try:

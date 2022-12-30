@@ -33,7 +33,7 @@ setup(
     install_requires=[
         "triad>=0.7.0",
         "adagio>=0.2.4",
-        "qpd>=0.3.1",
+        "qpd>=0.3.4",
         "fugue-sql-antlr>=0.1.1",
         "sqlalchemy",
         "pyarrow>=0.15.1",
@@ -43,7 +43,7 @@ setup(
     extras_require={
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.1"],
         "spark": ["pyspark"],
-        "dask": ["dask[distributed,dataframe]", "qpd[dask]>=0.3.1"],
+        "dask": ["dask[distributed,dataframe]", "qpd[dask]>=0.3.4"],
         "ray": ["ray[data]>=2.0.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
         "duckdb": [
             "duckdb>=0.5.0",
@@ -60,7 +60,7 @@ setup(
             "pyspark",
             "dask[distributed,dataframe]",
             "ray[data]>=2.0.0",
-            "qpd[dask]>=0.3.1",
+            "qpd[dask]>=0.3.4",
             "notebook",
             "jupyterlab",
             "ipython>=7.10.0",
@@ -89,8 +89,11 @@ setup(
         "fugue.plugins": [
             "ibis = fugue_ibis[ibis]",
             "duckdb = fugue_duckdb.registry[duckdb]",
+            "duckdb_ibis = fugue_duckdb.ibis_engine[duckdb,ibis]",
             "spark = fugue_spark.registry[spark]",
+            "spark_ibis = fugue_spark.ibis_engine[spark,ibis]",
             "dask = fugue_dask.registry[dask]",
+            "dask_ibis = fugue_dask.ibis_engine[dask,ibis]",
             "ray = fugue_ray.registry[ray]",
         ]
     },

@@ -67,6 +67,7 @@ def test_workflow():
     builder = FugueWorkflow()
 
     a = builder.create_data([[0], [0], [1]], "a:int")
+    assert builder.last_df is a
     raises(InvalidOperationError, lambda: a._task.copy())
     raises(InvalidOperationError, lambda: copy.copy(a._task))
     raises(InvalidOperationError, lambda: copy.deepcopy(a._task))
@@ -77,11 +78,16 @@ def test_workflow():
 
     b = a.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"]))
     b.show()
+    assert builder.last_df is b
     builder.create_data([[0], [1]], "b:int").show()
+    assert builder.last_df is not b
     c = ArrayDataFrame([[100]], "a:int")
     builder.show(a, b, c)
     b = a.partition(by=["a"]).transform(mock_tf2).persist().broadcast()
     b.show()
+    assert builder.last_df is b
+    c = builder.df(a)
+    assert builder.last_df is a
 
     builder.run()
     df_eq(a.result, [[0], [0], [1]], "a:int")

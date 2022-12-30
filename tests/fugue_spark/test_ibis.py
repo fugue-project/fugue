@@ -1,11 +1,12 @@
 import pytest
 
 ibis = pytest.importorskip("ibis")
-from fugue_ibis import IbisEngine
-from fugue_test.ibis_suite import IbisTests
 from pyspark.sql import SparkSession
 
-from fugue_spark import SparkExecutionEngine, SparkIbisEngine
+from fugue_ibis import IbisEngine
+from fugue_spark import SparkExecutionEngine
+from fugue_spark.ibis_engine import SparkIbisEngine
+from fugue_test.ibis_suite import IbisTests
 
 
 class SparkIbisTests(IbisTests.Tests):

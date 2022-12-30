@@ -1,13 +1,13 @@
 import inspect
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 from qpd_pandas import run_sql_on_pandas
 from qpd_pandas.engine import PandasUtils
 from sqlalchemy import create_engine
-from triad.collections import Schema
+from triad import Schema
 from triad.collections.dict import IndexedOrderedDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
@@ -19,7 +19,6 @@ from fugue._utils.interfaceless import (
 )
 from fugue._utils.io import load_df, save_df
 from fugue.collections.partition import (
-    EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
     parse_presort_exp,
@@ -33,12 +32,8 @@ from fugue.dataframe import (
     to_local_bounded_df,
 )
 from fugue.dataframe.utils import get_join_schemas, to_local_df
-from fugue.execution.execution_engine import (
-    _DEFAULT_JOIN_KEYS,
-    ExecutionEngine,
-    MapEngine,
-    SQLEngine,
-)
+
+from .execution_engine import ExecutionEngine, MapEngine, SQLEngine
 
 
 class SqliteEngine(SQLEngine):
@@ -47,11 +42,12 @@ class SqliteEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
+        _dfs, _sql = self.encode(dfs, statement)
         sql_engine = create_engine("sqlite:///:memory:")
-        for k, v in dfs.items():
+        for k, v in _dfs.items():
             v.as_pandas().to_sql(k, sql_engine, if_exists="replace", index=False)
-        df = pd.read_sql_query(statement, sql_engine)
+        df = pd.read_sql_query(_sql, sql_engine)
         return PandasDataFrame(df)
 
 
@@ -61,12 +57,14 @@ class QPDPandasEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
-        _dfs = {
+    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
+        _dfs, _sql = self.encode(dfs, statement)
+        _dd = {
             k: self.execution_engine.to_df(v).as_pandas()  # type: ignore
-            for k, v in dfs.items()
+            for k, v in _dfs.items()
         }
-        df = run_sql_on_pandas(statement, _dfs, ignore_case=True)
+
+        df = run_sql_on_pandas(_sql, _dd, ignore_case=True)
         return self.execution_engine.to_df(df)
 
 
@@ -155,6 +153,9 @@ class NativeExecutionEngine(ExecutionEngine):
     def create_default_map_engine(self) -> MapEngine:
         return PandasMapEngine(self)
 
+    def get_current_parallelism(self) -> int:
+        return 1
+
     @property
     def pl_utils(self) -> PandasUtils:
         """Pandas-like dataframe utils"""
@@ -188,7 +189,7 @@ class NativeExecutionEngine(ExecutionEngine):
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        on: List[str] = _DEFAULT_JOIN_KEYS,
+        on: Optional[List[str]] = None,
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         d = self.pl_utils.join(
@@ -309,8 +310,9 @@ class NativeExecutionEngine(ExecutionEngine):
         n: int,
         presort: str,
         na_position: str = "last",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
     ) -> DataFrame:
+        partition_spec = partition_spec or PartitionSpec()
         assert_or_throw(
             isinstance(n, int),
             ValueError("n needs to be an integer"),
@@ -357,10 +359,11 @@ class NativeExecutionEngine(ExecutionEngine):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        partition_spec = partition_spec or PartitionSpec()
         if not force_single and not partition_spec.empty:
             kwargs["partition_cols"] = partition_spec.partition_by
         self.fs.makedirs(os.path.dirname(path), recreate=True)
