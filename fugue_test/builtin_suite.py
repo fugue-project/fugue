@@ -1618,6 +1618,23 @@ class BuiltInTests(object):
                 assert not isinstance(sdf4, DataFrame)
                 assert fa.is_local(sdf4)
 
+        def test_any_column_name(self):
+            df1 = pd.DataFrame([[0, 1], [2, 3]], columns=["a b", "c"])
+            df2 = pd.DataFrame([[0, 10], [20, 3]], columns=["a b", "d"])
+            r = fa.inner_join(df1, df2, as_fugue=True, as_local=True)
+            df_eq(r, [[0, 1, 10]], "`a b`:long,c:long,d:long", throw=True)
+
+            r = fa.fugue_sql(
+                """
+            df1 = CREATE [[0, 1], [2, 3]] SCHEMA `a b`:long,c:long
+            df2 = CREATE [[0, 10], [20, 3]] SCHEMA `a b`:long,d:long
+            r = SELECT df1.*,d FROM df1 INNER JOIN df2 ON df1.`a b`=df2.`a b`
+            """,
+                as_fugue=True,
+                as_local=True,
+            )
+            df_eq(r, [[0, 1, 10]], "`a b`:long,c:long,d:long", throw=True)
+
 
 def mock_creator(p: int) -> DataFrame:
     return ArrayDataFrame([[p]], "a:int")

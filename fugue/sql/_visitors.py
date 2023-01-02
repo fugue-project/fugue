@@ -28,6 +28,7 @@ from triad.utils.convert import (
     to_type,
 )
 from triad.utils.pyarrow import to_pa_datatype
+from triad.utils.rename import unquote_name
 from triad.utils.string import validate_triad_var_name
 
 from ..collections.partition import PartitionSpec
@@ -184,7 +185,7 @@ class _VisitorBase(FugueSQLVisitor):
         return self.ctxToStr(ctx)
 
     def visitFugueColumnIdentifier(self, ctx: fp.FugueColumnIdentifierContext) -> str:
-        return self.ctxToStr(ctx)
+        return unquote_name(self.ctxToStr(ctx))
 
     def visitFugueParamsPairs(self, ctx: fp.FugueParamsPairsContext) -> Dict:
         return dict(self.collectChildren(ctx.pairs, fp.FugueJsonPairContext))
