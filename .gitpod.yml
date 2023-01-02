@@ -3,7 +3,6 @@ image: fugueproject/gitpod:0.7.1
 
 tasks:
   - init: |
-      sudo chmod -R 777 /usr/local/
       make devenv
 
 github:
