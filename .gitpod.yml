@@ -1,5 +1,5 @@
 
-image: fugueproject/devenv:0.7.0
+image: fugueproject/gitpod:0.7.1
 
 tasks:
   - init: |
