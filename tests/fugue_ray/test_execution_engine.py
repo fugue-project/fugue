@@ -45,7 +45,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
         return e
 
     def test_get_parallelism(self):
-        assert fa.get_current_parallelism(self.engine) == 2
+        assert fa.get_current_parallelism() == 2
 
     def test_repartitioning(self):
         # schema: *

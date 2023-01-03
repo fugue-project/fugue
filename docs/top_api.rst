@@ -53,6 +53,7 @@ Information
 .. autofunction:: fugue.api.peek_array
 .. autofunction:: fugue.api.peek_dict
 
+.. autofunction:: get_current_conf
 
 Transformation
 ~~~~~~~~~~~~~~
@@ -116,7 +117,7 @@ ExecutionEngine
 .. autofunction:: fugue.api.engine_context
 .. autofunction:: fugue.api.set_global_engine
 .. autofunction:: fugue.api.clear_global_engine
-.. autofunction:: fugue.api.get_current_engine
+.. autofunction:: fugue.api.get_context_engine
 .. autofunction:: get_current_parallelism
 
 

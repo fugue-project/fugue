@@ -7,7 +7,7 @@ from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 
 from fugue._utils.io import FileParser, load_df, save_df
-from fugue._utils.sql import get_temp_tb_name
+from fugue.collections.sql import TempTableName
 from fugue.dataframe import ArrowDataFrame, LocalBoundedDataFrame
 from fugue_duckdb._utils import encode_value_to_expr, to_duck_type
 from fugue_duckdb.dataframe import DuckDataFrame
@@ -92,7 +92,7 @@ class DuckDBIO:
         self._format_save[p.file_format](df, p, **kwargs)
 
     def _save_csv(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
-        dn = get_temp_tb_name()
+        dn = TempTableName()
         df.native.create_view(dn.key)
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
         kw["header"] = 1 if kw.pop("header", False) else 0
@@ -177,7 +177,7 @@ class DuckDBIO:
                 return DuckDataFrame(self._con.from_query(query))
 
     def _save_parquet(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
-        dn = get_temp_tb_name()
+        dn = TempTableName()
         df.native.create_view(dn.key)
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
         kw["format"] = "parquet"

@@ -28,9 +28,9 @@ from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
 )
-from fugue._utils.sql import get_temp_tb_name
+from fugue.collections.sql import StructuredRawSQL, TempTableName
 from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col, is_agg
-from fugue.constants import _FUGUE_GLOBAL_CONF
+from fugue.constants import _FUGUE_GLOBAL_CONF, FUGUE_SQL_DIALECT
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
@@ -94,26 +94,28 @@ class SQLEngine(ExecutionEngineFacet, ABC):
         super().__init__(execution_engine)
         self._uid = "_" + str(uuid4())[:5] + "_"
 
+    @property
+    def dialect(self) -> Optional[str]:
+        return None
+
     def encode_name(self, name: str) -> str:
         return self._uid + name
 
     def encode(
-        self, dfs: DataFrames, statement: List[Tuple[bool, str]]
+        self, dfs: DataFrames, statement: StructuredRawSQL
     ) -> Tuple[DataFrames, str]:
         d = DataFrames({self.encode_name(k): v for k, v in dfs.items()})
-        s = " ".join(self.encode_name(tp[1]) if tp[0] else tp[1] for tp in statement)
+        s = statement.construct(self.encode_name, dialect=self.dialect)
         return d, s
 
     @abstractmethod
     def select(
-        self, dfs: DataFrames, statement: List[Tuple[bool, str]]
+        self, dfs: DataFrames, statement: StructuredRawSQL
     ) -> DataFrame:  # pragma: no cover
         """Execute select statement on the sql engine.
 
         :param dfs: a collection of dataframes that must have keys
         :param statement: the ``SELECT`` statement using the ``dfs`` keys as tables.
-          In each tuple, the first value indicates whether the second value is a
-          dataframe name reference (True), or just a part of the statement (False)
         :return: result of the ``SELECT`` statement
 
         .. admonition:: Examples
@@ -209,6 +211,10 @@ class ExecutionEngine(ABC):
     """
 
     def __init__(self, conf: Any):
+        if not isinstance(conf, dict) and isinstance(conf, set):
+            raise ValueError(
+                f"{conf} is a set, did you mistakenly use `,` instead of `:`?"
+            )
         _conf = ParamDict(conf)
         self._conf = ParamDict({**_FUGUE_GLOBAL_CONF, **_conf})
         self._compile_conf = ParamDict()
@@ -676,8 +682,11 @@ class ExecutionEngine(ABC):
                 )
         """
         gen = SQLExpressionGenerator(enable_cast=False)
-        df_name = get_temp_tb_name()
-        sql = list(gen.select(cols, df_name.key, where=where, having=having))
+        df_name = TempTableName()
+        sql = StructuredRawSQL(
+            gen.select(cols, df_name.key, where=where, having=having),
+            dialect=FUGUE_SQL_DIALECT,
+        )
         res = self.sql_engine.select(DataFrames({df_name.key: self.to_df(df)}), sql)
         diff = gen.correct_select_schema(df.schema, cols, res.schema)
         return res if diff is None else res.alter_columns(diff)

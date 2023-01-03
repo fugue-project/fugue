@@ -142,7 +142,8 @@ class _VisitorBase(FugueSQLVisitor):
         return Schema(self.collectChildren(ctx, fp.FugueSchemaPairContext))
 
     def visitFugueSchemaPair(self, ctx: fp.FugueSchemaPairContext) -> Any:
-        return self.to_kv(ctx)
+        tp = self.to_kv(ctx)
+        return (unquote_name(tp[0]), tp[1])
 
     def visitFugueSchemaSimpleType(
         self, ctx: fp.FugueSchemaSimpleTypeContext

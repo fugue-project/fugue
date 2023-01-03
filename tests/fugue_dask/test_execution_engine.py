@@ -43,7 +43,7 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
         return e
 
     def test_get_parallelism(self):
-        assert fa.get_current_parallelism(self.engine) == 3
+        assert fa.get_current_parallelism() == 3
 
     def test__join_outer_pandas_incompatible(self):
         return

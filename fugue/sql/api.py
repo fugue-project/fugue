@@ -1,10 +1,11 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Optional
 
 from triad.utils.convert import get_caller_global_local_vars
 
 from fugue.dataframe import AnyDataFrame
 from fugue.exceptions import FugueSQLError
 from fugue.execution import AnyExecutionEngine
+from fugue.execution.api import get_current_conf
 
 from ..constants import FUGUE_CONF_SQL_IGNORE_CASE
 from .workflow import FugueSQLWorkflow
@@ -13,7 +14,7 @@ from .workflow import FugueSQLWorkflow
 def fugue_sql(
     query: str,
     *args: Any,
-    fsql_ignore_case: bool = False,
+    fsql_ignore_case: Optional[bool] = None,
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
@@ -29,7 +30,7 @@ def fugue_sql(
     :param query: the Fugue SQL string (can be a jinja template)
     :param args: variables related to the SQL string
     :param fsql_ignore_case: whether to ignore case when parsing the SQL string
-        defaults to False.
+        defaults to None (it depends on the engine/global config).
     :param kwargs: variables related to the SQL string
     :param engine: an engine like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
@@ -95,7 +96,7 @@ def fugue_sql(
 
 
 def fugue_sql_flow(
-    query: str, *args: Any, fsql_ignore_case: bool = False, **kwargs: Any
+    query: str, *args: Any, fsql_ignore_case: Optional[bool] = None, **kwargs: Any
 ) -> FugueSQLWorkflow:
     """Fugue SQL full functional interface. This function allows full workflow
     definition using Fugue SQL, and it allows multiple outputs using ``YIELD``.
@@ -103,7 +104,7 @@ def fugue_sql_flow(
     :param query: the Fugue SQL string (can be a jinja template)
     :param args: variables related to the SQL string
     :param fsql_ignore_case: whether to ignore case when parsing the SQL string
-        defaults to False.
+        defaults to None (it depends on the engine/global config).
     :param kwargs: variables related to the SQL string
     :return: the translated Fugue workflow
 
@@ -235,12 +236,14 @@ def fugue_sql_flow(
 
 def _build_dag(
     query: str,
-    fsql_ignore_case: bool,
+    fsql_ignore_case: Optional[bool],
     args: Tuple[Any, ...],
     kwargs: Dict[str, Any],
     level: int = -2,
 ) -> FugueSQLWorkflow:
     global_vars, local_vars = get_caller_global_local_vars(start=level, end=level)
+    if fsql_ignore_case is None:
+        fsql_ignore_case = get_current_conf().get(FUGUE_CONF_SQL_IGNORE_CASE, False)
     dag = FugueSQLWorkflow(compile_conf={FUGUE_CONF_SQL_IGNORE_CASE: fsql_ignore_case})
     try:
         dag._sql(query, global_vars, local_vars, *args, **kwargs)

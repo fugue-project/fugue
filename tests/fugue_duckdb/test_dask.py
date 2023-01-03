@@ -47,7 +47,7 @@ class DuckDaskExecutionEngineTests(ExecutionEngineTests.Tests):
         return e
 
     def test_get_parallelism(self):
-        assert fa.get_current_parallelism(self.engine) == 2
+        assert fa.get_current_parallelism() == 2
 
     def test_to_df_dask(self):
         pdf = pd.DataFrame([[1.1]], columns=["a"])

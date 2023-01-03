@@ -1,5 +1,6 @@
 # flake8: noqa
 # pylint: disable-all
+from fugue.collections.sql import transpile_sql
 from fugue.dataframe import (
     alter_columns,
     as_array,

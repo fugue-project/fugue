@@ -10,6 +10,10 @@ from uuid import uuid4
 import numpy as np
 import pandas as pd
 import pytest
+from pytest import raises
+from triad import SerializableRLock
+
+import fugue.api as fa
 from fugue import (
     ArrayDataFrame,
     CoTransformer,
@@ -52,9 +56,6 @@ from fugue.exceptions import (
     FugueWorkflowError,
     FugueWorkflowRuntimeValidationError,
 )
-from pytest import raises
-import fugue.api as fa
-from triad import SerializableRLock
 
 
 class BuiltInTests(object):
@@ -1619,21 +1620,22 @@ class BuiltInTests(object):
                 assert fa.is_local(sdf4)
 
         def test_any_column_name(self):
-            df1 = pd.DataFrame([[0, 1], [2, 3]], columns=["a b", "c"])
-            df2 = pd.DataFrame([[0, 10], [20, 3]], columns=["a b", "d"])
-            r = fa.inner_join(df1, df2, as_fugue=True, as_local=True)
-            df_eq(r, [[0, 1, 10]], "`a b`:long,c:long,d:long", throw=True)
+            with fa.engine_context(self.engine):
+                df1 = pd.DataFrame([[0, 1], [2, 3]], columns=["a b", "c"])
+                df2 = pd.DataFrame([[0, 10], [20, 3]], columns=["a b", "d"])
+                r = fa.inner_join(df1, df2, as_fugue=True, as_local=True)
+                df_eq(r, [[0, 1, 10]], "`a b`:long,c:long,d:long", throw=True)
 
-            r = fa.fugue_sql(
-                """
-            df1 = CREATE [[0, 1], [2, 3]] SCHEMA `a b`:long,c:long
-            df2 = CREATE [[0, 10], [20, 3]] SCHEMA `a b`:long,d:long
-            r = SELECT df1.*,d FROM df1 INNER JOIN df2 ON df1.`a b`=df2.`a b`
-            """,
-                as_fugue=True,
-                as_local=True,
-            )
-            df_eq(r, [[0, 1, 10]], "`a b`:long,c:long,d:long", throw=True)
+                r = fa.fugue_sql(
+                    """
+                df1 = CREATE [[0, 1], [2, 3]] SCHEMA `a b`:long,c:long
+                df2 = CREATE [[0, 10], [20, 3]] SCHEMA `a b`:long,d:long
+                SELECT df1.*,d FROM df1 INNER JOIN df2 ON df1.`a b`=df2.`a b`
+                """,
+                    as_fugue=True,
+                    as_local=True,
+                )
+                df_eq(r, [[0, 1, 10]], "`a b`:long,c:long,d:long", throw=True)
 
 
 def mock_creator(p: int) -> DataFrame:
