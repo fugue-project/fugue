@@ -98,7 +98,8 @@ class DuckDataFrame(LocalBoundedDataFrame):
             else:
                 tp = to_duck_type(f2.type)
                 fields.append(
-                    f"CAST({encode_column_name(f1.name)} AS {tp}) AS {f1.name}"
+                    f"CAST({encode_column_name(f1.name)} AS {tp}) "
+                    f"AS {encode_column_name(f1.name)}"
                 )
         return DuckDataFrame(self._rel.project(", ".join(fields)))
 

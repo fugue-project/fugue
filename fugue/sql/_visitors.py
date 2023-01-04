@@ -28,7 +28,7 @@ from triad.utils.convert import (
     to_type,
 )
 from triad.utils.pyarrow import to_pa_datatype
-from triad.utils.rename import unquote_name
+from triad.utils.schema import unquote_name
 from triad.utils.string import validate_triad_var_name
 
 from ..collections.partition import PartitionSpec
@@ -124,8 +124,6 @@ class _VisitorBase(FugueSQLVisitor):
 
     def visitFugueWildSchema(self, ctx: fp.FugueWildSchemaContext) -> str:
         schema = ",".join(self.collectChildren(ctx, fp.FugueWildSchemaPairContext))
-        if schema.count("*") > 1:
-            raise FugueSQLSyntaxError(f"invalid {schema} * can appear at most once")
         ops = "".join(self.collectChildren(ctx, fp.FugueSchemaOpContext))
         return schema + ops
 

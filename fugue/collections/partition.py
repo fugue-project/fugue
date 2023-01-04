@@ -7,6 +7,7 @@ from triad.utils.assertion import assert_or_throw as aot
 from triad.utils.convert import to_size
 from triad.utils.hash import to_uuid
 from triad.utils.pyarrow import SchemaedDataPartitioner
+from triad.utils.schema import safe_split_out_of_quote, unquote_name
 
 
 def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C901]
@@ -39,9 +40,9 @@ def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C
         presort = presort.strip()
         if presort == "":
             return res
-        for p in presort.split(","):
-            pp = p.strip().split()
-            key = pp[0].strip()
+        for p in safe_split_out_of_quote(presort, ","):
+            pp = safe_split_out_of_quote(p.strip(), " ", max_split=1)
+            key = unquote_name(pp[0].strip())
             if len(pp) == 1:
                 presort_list.append((key, True))
             elif len(pp) == 2:
@@ -57,11 +58,7 @@ def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C
     elif isinstance(presort, list):
         for p in presort:
             if isinstance(p, str):
-                aot(
-                    len(p.strip().split()) == 1,
-                    SyntaxError(f"Invalid expression {presort}"),
-                )
-                presort_list.append((p.strip(), True))
+                presort_list.append((p, True))
             else:
                 aot(len(p) == 2, SyntaxError(f"Invalid expression {presort}"))
                 aot(
@@ -69,7 +66,7 @@ def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C
                     & (isinstance(p[0], str) & (isinstance(p[1], bool))),
                     SyntaxError(f"Invalid expression {presort}"),
                 )
-                presort_list.append((p[0].strip(), p[1]))
+                presort_list.append((p[0], p[1]))
 
     for key, value in presort_list:
         if key in res:

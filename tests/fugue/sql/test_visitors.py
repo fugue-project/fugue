@@ -70,6 +70,7 @@ def test_schema():
     assert_eq("a:int,b:str,C:{A:int,b:str}")
     assert_eq("a:int,\nb:str,C:[{A:int,b:str}]")
     assert_eq("a:<int,str>,b:<int,[str]>,c:[<int,{b:str}>]")
+    assert_eq(" ` * ` : int , `` : string ", "` * `:int,``:str")
 
 
 def test_wild_schema():
@@ -94,8 +95,11 @@ def test_wild_schema():
         "a:int32, *, B:string +x:str, k:int\n-Y, z -t~ w , x",
         "a:int,*,B:str+x:str,k:int-Y,z-t~w,x",
     )
-    with raises(FugueSQLSyntaxError):
-        assert_eq("*,a:int32, *, \nb:string")
+    # special chars
+    assert_eq(
+        " ` * ` :int32, *, `` : string +x:str, k:int\n-Y, z -t~ w , x",
+        "` * `:int,*,``:str+x:str,k:int-Y,z-t~w,x",
+    )
 
 
 def test_pre_partition():
