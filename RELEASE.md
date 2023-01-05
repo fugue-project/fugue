@@ -3,7 +3,9 @@
 ## 0.8.0
 
 -   [384](https://github.com/fugue-project/fugue/issues/384) Expanding Fugue API
--   [396](https://github.com/fugue-project/fugue/issues/396) Ray/Dask engines guess optimal default partitions
+-   [410](https://github.com/fugue-project/fugue/issues/410) Unify Fugue SQL dialect (syntax only)
+-   [409](https://github.com/fugue-project/fugue/issues/409) Support arbitrary column names in Fugue
+-   [404](https://github.com/fugue-project/fugue/issues/404) Ray/Dask engines guess optimal default partitions
 -   [403](https://github.com/fugue-project/fugue/issues/403) Deprecate register_raw_df_type
 -   [392](https://github.com/fugue-project/fugue/issues/392) Aggregations on Spark dataframes fail intermittently
 -   [398](https://github.com/fugue-project/fugue/issues/398) Rework API Docs and Favicon

@@ -28,9 +28,16 @@ from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
 )
-from fugue._utils.sql import get_temp_tb_name
-from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col, is_agg
-from fugue.constants import _FUGUE_GLOBAL_CONF
+from fugue.collections.sql import StructuredRawSQL, TempTableName
+from fugue.column import (
+    ColumnExpr,
+    SelectColumns,
+    SQLExpressionGenerator,
+    all_cols,
+    col,
+    is_agg,
+)
+from fugue.constants import _FUGUE_GLOBAL_CONF, FUGUE_SQL_DIALECT
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
@@ -94,26 +101,28 @@ class SQLEngine(ExecutionEngineFacet, ABC):
         super().__init__(execution_engine)
         self._uid = "_" + str(uuid4())[:5] + "_"
 
+    @property
+    def dialect(self) -> Optional[str]:
+        return None
+
     def encode_name(self, name: str) -> str:
         return self._uid + name
 
     def encode(
-        self, dfs: DataFrames, statement: List[Tuple[bool, str]]
+        self, dfs: DataFrames, statement: StructuredRawSQL
     ) -> Tuple[DataFrames, str]:
         d = DataFrames({self.encode_name(k): v for k, v in dfs.items()})
-        s = " ".join(self.encode_name(tp[1]) if tp[0] else tp[1] for tp in statement)
+        s = statement.construct(self.encode_name, dialect=self.dialect)
         return d, s
 
     @abstractmethod
     def select(
-        self, dfs: DataFrames, statement: List[Tuple[bool, str]]
+        self, dfs: DataFrames, statement: StructuredRawSQL
     ) -> DataFrame:  # pragma: no cover
         """Execute select statement on the sql engine.
 
         :param dfs: a collection of dataframes that must have keys
         :param statement: the ``SELECT`` statement using the ``dfs`` keys as tables.
-          In each tuple, the first value indicates whether the second value is a
-          dataframe name reference (True), or just a part of the statement (False)
         :return: result of the ``SELECT`` statement
 
         .. admonition:: Examples
@@ -657,7 +666,7 @@ class ExecutionEngine(ABC):
                 # SELECT COUNT(DISTINCT *) AS x FROM df
                 engine.select(
                     df,
-                    SelectColumns(f.count_distinct(col("*")).alias("x")))
+                    SelectColumns(f.count_distinct(all_cols()).alias("x")))
 
                 # SELECT a, MAX(b+1) AS x FROM df GROUP BY a
                 engine.select(
@@ -676,8 +685,11 @@ class ExecutionEngine(ABC):
                 )
         """
         gen = SQLExpressionGenerator(enable_cast=False)
-        df_name = get_temp_tb_name()
-        sql = list(gen.select(cols, df_name.key, where=where, having=having))
+        df_name = TempTableName()
+        sql = StructuredRawSQL(
+            gen.select(cols, df_name.key, where=where, having=having),
+            dialect=FUGUE_SQL_DIALECT,
+        )
         res = self.sql_engine.select(DataFrames({df_name.key: self.to_df(df)}), sql)
         diff = gen.correct_select_schema(df.schema, cols, res.schema)
         return res if diff is None else res.alter_columns(diff)
@@ -708,7 +720,7 @@ class ExecutionEngine(ABC):
                 engine.filter(df, (col("a")>1) & (col("b")=="x"))
                 engine.filter(df, f.coalesce(col("a"),col("b"))>1)
         """
-        return self.select(df, cols=SelectColumns(col("*")), where=condition)
+        return self.select(df, cols=SelectColumns(all_cols()), where=condition)
 
     def assign(self, df: DataFrame, columns: List[ColumnExpr]) -> DataFrame:
         """Update existing columns with new values and add new columns

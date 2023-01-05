@@ -1,5 +1,4 @@
-
-image: fugueproject/gitpod:0.7.1
+image: fugueproject/gitpod:0.7.2
 
 tasks:
   - init: |

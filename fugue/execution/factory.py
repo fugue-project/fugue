@@ -221,6 +221,19 @@ def register_default_sql_engine(func: Callable, on_dup="overwrite") -> None:
     )
 
 
+def try_get_context_execution_engine() -> Optional[ExecutionEngine]:
+    """If the global execution engine is set (see
+    :meth:`~fugue.execution.execution_engine.ExecutionEngine.set_global`)
+    or the context is set (see
+    :meth:`~fugue.execution.execution_engine.ExecutionEngine.as_context`),
+    then return the engine, else return None
+    """
+    engine = _FUGUE_EXECUTION_ENGINE_CONTEXT.get()
+    if engine is None:
+        engine = _FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT.get()
+    return engine
+
+
 def make_execution_engine(
     engine: Any = None,
     conf: Any = None,
@@ -306,9 +319,7 @@ def make_execution_engine(
             make_execution_engine()  # e_global
     """
     if engine is None:
-        engine = _FUGUE_EXECUTION_ENGINE_CONTEXT.get()
-        if engine is None:
-            engine = _FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT.get()
+        engine = try_get_context_execution_engine()
         if engine is None and infer_by is not None:
             engine = infer_execution_engine(infer_by)
 

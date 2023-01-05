@@ -1,20 +1,19 @@
 import itertools
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import ibis
 from ibis import BaseBackend
 from triad.utils.assertion import assert_or_throw
 
-from fugue.collections.partition import (
-    PartitionSpec,
-    parse_presort_exp,
-)
+from fugue import StructuredRawSQL
+from fugue.collections.partition import PartitionSpec, parse_presort_exp
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import ExecutionEngine, SQLEngine
 
 from ._compat import IbisTable
 from .dataframe import IbisDataFrame
+from abc import abstractmethod
 
 _JOIN_RIGHT_SUFFIX = "_ibis_y__"
 _GEN_TABLE_NAMES = (f"_fugue_temp_table_{i:d}" for i in itertools.count())
@@ -36,9 +35,11 @@ class IbisSQLEngine(SQLEngine):
         super().__init__(execution_engine)
         self._ibis_engine: IbisExecutionEngine = execution_engine  # type: ignore
 
-    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         return self._ibis_engine._to_ibis_dataframe(
-            self._ibis_engine._raw_select(" ".join(x[1] for x in statement), dfs)
+            self._ibis_engine._raw_select(
+                statement.construct(dialect=self._ibis_engine.dialect), dfs
+            )
         )
 
 
@@ -49,11 +50,14 @@ class IbisExecutionEngine(ExecutionEngine):
     :param conf: |ParamsLikeObject|, read |FugueConfig| to learn Fugue specific options
     """
 
+    @property
+    @abstractmethod
+    def dialect(self) -> str:  # pragma: no cover
+        """The dialect of this ibis based engine"""
+        raise NotImplementedError
+
     def create_default_sql_engine(self) -> SQLEngine:
         return IbisSQLEngine(self)
-
-    def get_current_parallelism(self) -> int:
-        return 1
 
     @property
     def backend(self) -> BaseBackend:  # pragma: no cover

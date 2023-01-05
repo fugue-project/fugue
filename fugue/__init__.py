@@ -6,6 +6,7 @@ from fugue.api import out_transform, transform
 from fugue.bag.array_bag import ArrayBag
 from fugue.bag.bag import Bag, BagDisplay
 from fugue.collections.partition import PartitionCursor, PartitionSpec
+from fugue.collections.sql import StructuredRawSQL, TempTableName
 from fugue.collections.yielded import Yielded, YieldedFile
 from fugue.constants import register_global_conf
 from fugue.dataframe.array_dataframe import ArrayDataFrame

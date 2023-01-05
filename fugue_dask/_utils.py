@@ -15,12 +15,12 @@ from ._constants import FUGUE_DASK_CONF_DEFAULT_PARTITIONS
 
 
 def get_default_partitions() -> int:
-    engine = fa.get_current_engine()
-    n = engine.conf.get(
+    conf = fa.get_current_conf()
+    n = conf.get(
         FUGUE_DASK_CONF_DEFAULT_PARTITIONS,
-        engine.conf.get(FUGUE_CONF_DEFAULT_PARTITIONS, -1),
+        conf.get(FUGUE_CONF_DEFAULT_PARTITIONS, -1),
     )
-    return n if n > 0 else engine.get_current_parallelism() * 2
+    return n if n > 0 else fa.get_current_parallelism() * 2
 
 
 class DaskUtils(DaskUtilsBase):

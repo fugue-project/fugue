@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import dask.dataframe as dd
 from distributed import Client
@@ -12,6 +12,7 @@ from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.threading import RunOnce
 
+from fugue import StructuredRawSQL
 from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
@@ -41,7 +42,7 @@ class QPDDaskEngine(SQLEngine):
         )
         super().__init__(execution_engine)
 
-    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         _dfs, _sql = self.encode(dfs, statement)
         dask_dfs = {
             k: self.execution_engine.to_df(v).native  # type: ignore

@@ -11,14 +11,14 @@ from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import broadcast, col, lit, row_number
 from pyspark.sql.window import Window
-from triad import FileSystem, IndexedOrderedDict, ParamDict, Schema
+from triad import FileSystem, IndexedOrderedDict, ParamDict, Schema, SerializableRLock
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.iter import EmptyAwareIterable
 from triad.utils.pandas_like import PD_UTILS
 from triad.utils.threading import RunOnce
-from triad import SerializableRLock
 
+from fugue import StructuredRawSQL
 from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
@@ -78,12 +78,12 @@ class SparkSQLEngine(SQLEngine):
         )
         super().__init__(execution_engine)
 
-    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         _map: Dict[str, str] = {}
         for k, v in dfs.items():
             df = self.execution_engine._to_spark_df(v, create_view=True)  # type: ignore
             _map[k] = df.alias
-        _sql = " ".join(_map.get(p[1], p[1]) if p[0] else p[1] for p in statement)
+        _sql = statement.construct(_map, dialect="spark")
         return SparkDataFrame(
             self.execution_engine.spark_session.sql(_sql)  # type: ignore
         )
@@ -96,10 +96,10 @@ class SparkMapEngine(MapEngine):
             possible &= self.execution_engine.conf.get(
                 "spark.sql.execution.arrow.enabled", False
             )
-        else:
-            possible &= self.execution_engine.conf.get(
-                "spark.sql.execution.arrow.pyspark.enabled", False
-            )
+        # else:  # this condition seems to be unnecessary
+        #    possible &= self.execution_engine.conf.get(
+        #        "spark.sql.execution.arrow.pyspark.enabled", False
+        #    )
         enabled = self.execution_engine.conf.get_or_throw(
             FUGUE_SPARK_CONF_USE_PANDAS_UDF, bool
         )

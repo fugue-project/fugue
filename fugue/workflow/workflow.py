@@ -25,10 +25,11 @@ from triad import (
 
 from fugue._utils.exception import modify_traceback
 from fugue.collections.partition import PartitionSpec
+from fugue.collections.sql import StructuredRawSQL
 from fugue.collections.yielded import Yielded
 from fugue.column import ColumnExpr
 from fugue.column import SelectColumns as ColumnsSelect
-from fugue.column import col, lit
+from fugue.column import all_cols, col, lit
 from fugue.constants import (
     _FUGUE_GLOBAL_CONF,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
@@ -36,6 +37,7 @@ from fugue.constants import (
     FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
     FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT,
     FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE,
+    FUGUE_SQL_DIALECT,
 )
 from fugue.dataframe import DataFrame, LocalBoundedDataFrame, YieldedDataFrame
 from fugue.dataframe.api import is_df
@@ -356,7 +358,7 @@ class WorkflowDataFrame(DataFrame):
 
                 # aggregation
                 # SELECT COUNT(DISTINCT *) AS x FROM df
-                df.select(f.count_distinct(col("*")).alias("x"))
+                df.select(f.count_distinct(all_cols()).alias("x"))
 
                 # SELECT a, MAX(b+1) AS x FROM df GROUP BY a
                 df.select("a",f.max(col("b")+lit(1)).alias("x"))
@@ -371,8 +373,12 @@ class WorkflowDataFrame(DataFrame):
                     having=f.max(col("b")+lit(1))>0
                 )
         """
+
+        def _to_col(s: str) -> ColumnExpr:
+            return col(s) if s != "*" else all_cols()
+
         sc = ColumnsSelect(
-            *[col(x) if isinstance(x, str) else x for x in columns],
+            *[_to_col(x) if isinstance(x, str) else x for x in columns],
             arg_distinct=distinct,
         )
         df = self.workflow.process(
@@ -2063,6 +2069,7 @@ class FugueWorkflow:
         *statements: Any,
         sql_engine: Any = None,
         sql_engine_params: Any = None,
+        dialect: Optional[str] = FUGUE_SQL_DIALECT,
     ) -> WorkflowDataFrame:
         """Execute ``SELECT`` statement using
         :class:`~fugue.execution.execution_engine.SQLEngine`
@@ -2110,7 +2117,7 @@ class FugueWorkflow:
             dfs,
             using=RunSQLSelect,
             params=dict(
-                statement=sql,
+                statement=StructuredRawSQL(sql, dialect=dialect),
                 sql_engine=sql_engine,
                 sql_engine_params=ParamDict(sql_engine_params),
             ),

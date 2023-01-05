@@ -4,7 +4,7 @@ import ibis
 from ibis.backends.pandas import Backend
 
 from fugue import DataFrame, DataFrames, ExecutionEngine
-from fugue._utils.sql import TempTableName, get_temp_tb_name, parse_sql
+from fugue.collections.sql import StructuredRawSQL, TempTableName
 from fugue_ibis import IbisTable
 from fugue_ibis._utils import to_ibis_schema
 from fugue_ibis.execution.ibis_engine import IbisEngine, parse_ibis_engine
@@ -19,17 +19,17 @@ class DuckDBIbisEngine(IbisEngine):
         be = _BackendWrapper().connect({})
         be.set_schemas(dfs)
         expr = ibis_func(be)
-        sql = list(
-            parse_sql(
-                str(
-                    ibis.postgres.compile(expr).compile(
-                        compile_kwargs={"literal_binds": True}
-                    )
-                ),
-                prefix='"<tmpdf:',
-                suffix='>"',
-            )
+        sql = StructuredRawSQL.from_expr(
+            str(
+                ibis.postgres.compile(expr).compile(
+                    compile_kwargs={"literal_binds": True}
+                )
+            ),
+            prefix='"<tmpdf:',
+            suffix='>"',
+            dialect="postgres",
         )
+
         engine = DuckDBEngine(self.execution_engine)
         _dfs = DataFrames({be._name_map[k][0].key: v for k, v in dfs.items()})
         return engine.select(_dfs, sql)
@@ -50,7 +50,7 @@ class _BackendWrapper(Backend):
 
     def table(self, name: str, schema: Any = None) -> IbisTable:
         if name not in self._name_map:
-            tn = get_temp_tb_name()
+            tn = TempTableName()
             tb = ibis.table(self._schemas[name], name=(str(tn)))
             self._name_map[name] = (tn, tb)
         return self._name_map[name][1]

@@ -16,14 +16,14 @@ import fugue.api as fa
 import fugue.column.functions as ff
 from fugue import (
     ArrayDataFrame,
+    DataFrame,
     DataFrames,
     ExecutionEngine,
     PandasDataFrame,
     PartitionSpec,
     register_default_sql_engine,
-    DataFrame,
 )
-from fugue.column import col, lit
+from fugue.column import all_cols, col, lit
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from fugue_test._utils import skip_spark2
@@ -62,7 +62,7 @@ class ExecutionEngineTests(object):
             assert copy.deepcopy(self.engine) is self.engine
 
         def test_get_parallelism(self):
-            assert fa.get_current_parallelism(self.engine) == 1
+            assert fa.get_current_parallelism() == 1
 
         def test_to_df_general(self):
             e = self.engine
@@ -135,7 +135,7 @@ class ExecutionEngineTests(object):
             )
 
             # wildcard
-            b = fa.select(a, col("*"), where=col("a") + col("b") == 3)
+            b = fa.select(a, all_cols(), where=col("a") + col("b") == 3)
             df_eq(b, [[1, 2]], "a:double,b:int", throw=True)
 
             # aggregation

@@ -11,10 +11,12 @@ try:  # pyspark < 3
     pt._acceptable_types[pt.BinaryType] = (bytearray, bytes)  # type: ignore  # pragma: no cover  # noqa: E501  # pylint: disable=line-too-long
 except ImportError:  # pyspark >=3
     from pyspark.sql.pandas.types import from_arrow_type, to_arrow_type
+
 from pyarrow.types import is_list, is_struct, is_timestamp
 from triad.collections import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
+from triad.utils.schema import quote_name
 
 
 def to_spark_schema(obj: Any) -> pt.StructType:
@@ -52,25 +54,28 @@ def to_cast_expression(
             name_match or allow_name_mismatch,
             lambda: ValueError(f"schema name mismatch: {schema1}, {schema2}"),
         )
+        n1, n2 = quote_name(schema1[i].name, quote="`"), quote_name(
+            schema2[i].name, quote="`"
+        )
         if schema1[i].dataType != schema2[i].dataType:
             type2 = schema2[i].dataType.simpleString()
             if isinstance(schema1[i].dataType, pt.FractionalType) and isinstance(
                 schema2[i].dataType, (pt.StringType, pt.IntegralType)
             ):
                 expr.append(
-                    f"CAST(IF(isnan({schema1[i].name}) OR {schema1[i].name} IS NULL"
-                    f", NULL, {schema1[i].name})"
-                    f" AS {type2}) {schema2[i].name}"
+                    f"CAST(IF(isnan({n1}) OR {n1} IS NULL"
+                    f", NULL, {n1})"
+                    f" AS {type2}) {n2}"
                 )
             else:
-                expr.append(f"CAST({schema1[i].name} AS {type2}) {schema2[i].name}")
+                expr.append(f"CAST({n1} AS {type2}) {n2}")
             has_cast = True
         else:
             if schema1[i].name != schema2[i].name:
-                expr.append(f"{schema1[i].name} AS {schema2[i].name}")
+                expr.append(f"{n1} AS {n2}")
                 has_cast = True
             else:
-                expr.append(schema1[i].name)
+                expr.append(n1)
     return has_cast, expr
 
 

@@ -44,7 +44,7 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         return e
 
     def test_get_parallelism(self):
-        assert fa.get_current_parallelism(self.engine) == 4
+        assert fa.get_current_parallelism() == 4
 
     def test_not_using_pandas_udf(self):
         assert not self.engine.create_default_map_engine()._should_use_pandas_udf(
@@ -127,7 +127,7 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
         return e
 
     def test_get_parallelism(self):
-        assert fa.get_current_parallelism(self.engine) == 4
+        assert fa.get_current_parallelism() == 4
 
     def test__join_outer_pandas_incompatible(self):
         return

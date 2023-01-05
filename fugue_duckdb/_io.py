@@ -7,9 +7,14 @@ from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 
 from fugue._utils.io import FileParser, load_df, save_df
-from fugue._utils.sql import get_temp_tb_name
+from fugue.collections.sql import TempTableName
 from fugue.dataframe import ArrowDataFrame, LocalBoundedDataFrame
-from fugue_duckdb._utils import encode_value_to_expr, to_duck_type
+from fugue_duckdb._utils import (
+    encode_value_to_expr,
+    to_duck_type,
+    encode_column_name,
+    encode_column_names,
+)
 from fugue_duckdb.dataframe import DuckDataFrame
 
 
@@ -92,7 +97,7 @@ class DuckDBIO:
         self._format_save[p.file_format](df, p, **kwargs)
 
     def _save_csv(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
-        dn = get_temp_tb_name()
+        dn = TempTableName()
         df.native.create_view(dn.key)
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
         kw["header"] = 1 if kw.pop("header", False) else 0
@@ -125,7 +130,7 @@ class DuckDBIO:
                 if columns is None:
                     cols = "*"
                 elif isinstance(columns, list):
-                    cols = ", ".join(columns)
+                    cols = ", ".join(encode_column_names(columns))
                 else:
                     raise ValueError(
                         "columns can't be schema when infer_schema is true"
@@ -149,7 +154,7 @@ class DuckDBIO:
                 if columns is None:
                     cols = "*"
                 elif isinstance(columns, list):
-                    cols = ", ".join(columns)
+                    cols = ", ".join(encode_column_names(columns))
                 else:
                     cols = "*"
                 for k, v in kw.items():
@@ -171,13 +176,13 @@ class DuckDBIO:
                     schema = Schema(columns)
                 kw["columns"] = {f.name: to_duck_type(f.type) for f in schema.fields}
                 for k, v in kw.items():
-                    params.append(f"{k}=" + encode_value_to_expr(v))
+                    params.append(encode_column_name(k) + "=" + encode_value_to_expr(v))
                 pm = ", ".join(params)
                 query = f"SELECT * FROM read_csv({pm})"
                 return DuckDataFrame(self._con.from_query(query))
 
     def _save_parquet(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
-        dn = get_temp_tb_name()
+        dn = TempTableName()
         df.native.create_view(dn.key)
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
         kw["format"] = "parquet"
@@ -196,7 +201,7 @@ class DuckDBIO:
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
         params: List[str] = [encode_value_to_expr(p.uri_with_glob)]
         if isinstance(columns, list):
-            cols = ", ".join(columns)
+            cols = ", ".join(encode_column_names(columns))
         else:
             cols = "*"
         assert_or_throw(

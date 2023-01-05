@@ -1,7 +1,7 @@
 import inspect
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import pandas as pd
 from qpd_pandas import run_sql_on_pandas
@@ -23,6 +23,7 @@ from fugue.collections.partition import (
     PartitionSpec,
     parse_presort_exp,
 )
+from fugue.collections.sql import StructuredRawSQL
 from fugue.dataframe import (
     DataFrame,
     DataFrames,
@@ -42,7 +43,7 @@ class SqliteEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         _dfs, _sql = self.encode(dfs, statement)
         sql_engine = create_engine("sqlite:///:memory:")
         for k, v in _dfs.items():
@@ -57,7 +58,7 @@ class QPDPandasEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         _dfs, _sql = self.encode(dfs, statement)
         _dd = {
             k: self.execution_engine.to_df(v).as_pandas()  # type: ignore

@@ -93,7 +93,7 @@ def parse_output_schema_from_comment(func: Callable) -> Optional[str]:
     if res is None:
         return None
     assert_or_throw(res != "", SyntaxError("incorrect schema annotation"))
-    return res.replace(" ", "")
+    return res.strip()
 
 
 def is_class_method(func: Callable) -> bool:

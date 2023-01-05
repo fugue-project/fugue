@@ -31,11 +31,12 @@ setup(
     keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
     install_requires=[
-        "triad>=0.7.0",
+        "triad>=0.8.0",
         "adagio>=0.2.4",
-        "qpd>=0.3.4",
+        "qpd>=0.4.0",
         "fugue-sql-antlr>=0.1.1",
         "sqlalchemy",
+        "sqlglot",
         "pyarrow>=0.15.1",
         "pandas>=1.0.2",
         "jinja2",
@@ -43,7 +44,11 @@ setup(
     extras_require={
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.1"],
         "spark": ["pyspark"],
-        "dask": ["dask[distributed,dataframe]", "qpd[dask]>=0.3.4"],
+        "dask": [
+            "dask[distributed,dataframe]; python_version < '3.8'",
+            "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
+            "qpd[dask]>=0.4.0",
+        ],
         "ray": ["ray[data]>=2.0.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
         "duckdb": [
             "duckdb>=0.5.0",
@@ -58,9 +63,10 @@ setup(
         "all": [
             "fugue-sql-antlr[cpp]>=0.1.0",
             "pyspark",
-            "dask[distributed,dataframe]",
+            "dask[distributed,dataframe]; python_version < '3.8'",
+            "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
             "ray[data]>=2.0.0",
-            "qpd[dask]>=0.3.4",
+            "qpd[dask]>=0.4.0",
             "notebook",
             "jupyterlab",
             "ipython>=7.10.0",

@@ -1,8 +1,9 @@
 import logging
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import duckdb
 import pyarrow as pa
+import sqlglot
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from triad import SerializableRLock
 from triad.collections.fs import FileSystem
@@ -16,8 +17,9 @@ from fugue import (
     PandasMapEngine,
     SQLEngine,
 )
-from fugue._utils.sql import get_temp_tb_name, parse_sql
 from fugue.collections.partition import PartitionSpec, parse_presort_exp
+from fugue.collections.sql import StructuredRawSQL, TempTableName
+from fugue.constants import FUGUE_SQL_DIALECT
 from fugue.dataframe import (
     DataFrame,
     DataFrames,
@@ -25,6 +27,7 @@ from fugue.dataframe import (
     PandasDataFrame,
 )
 from fugue.dataframe.utils import get_join_schemas
+from fugue.plugins import transpile_sql
 
 from ._io import DuckDBIO
 from ._utils import (
@@ -38,29 +41,36 @@ from .dataframe import DuckDataFrame
 _FUGUE_DUCKDB_PRAGMA_CONFIG_PREFIX = "fugue.duckdb.pragma."
 
 
+@transpile_sql.candidate(
+    lambda sql, from_dialect, to_dialect: from_dialect
+    in [FUGUE_SQL_DIALECT, "spark", "postgres"]
+    and to_dialect == "duckdb"
+)
+def _to_duckdb_sql(sql: str, from_dialect: str, to_dialect: str) -> str:
+    return " ".join(sqlglot.transpile(sql, read="spark", write="duckdb"))
+
+
 class DuckDBEngine(SQLEngine):
     """DuckDB SQL backend implementation.
 
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def select(self, dfs: DataFrames, statement: List[Tuple[bool, str]]) -> DataFrame:
+    def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         if isinstance(self.execution_engine, DuckExecutionEngine):
             return self._duck_select(dfs, statement)
         else:
             _dfs, _sql = self.encode(dfs, statement)
             return self._other_select(_dfs, _sql)
 
-    def _duck_select(
-        self, dfs: DataFrames, statement: List[Tuple[bool, str]]
-    ) -> DataFrame:
+    def _duck_select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         name_map: Dict[str, str] = {}
         for k, v in dfs.items():
             tdf: DuckDataFrame = self.execution_engine._to_duck_df(  # type: ignore
                 v, create_view=True
             )
             name_map[k] = tdf.alias
-        query = " ".join(name_map.get(p[1], p[1]) if p[0] else p[1] for p in statement)
+        query = statement.construct(name_map, dialect="duckdb")
         result = self.execution_engine.connection.query(query)  # type: ignore
         return DuckDataFrame(result)
 
@@ -174,9 +184,9 @@ class DuckExecutionEngine(ExecutionEngine):
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         t1, t2, t3 = (
-            get_temp_tb_name(),
-            get_temp_tb_name(),
-            get_temp_tb_name(),
+            TempTableName(),
+            TempTableName(),
+            TempTableName(),
         )
         on_fields = " AND ".join(
             f"{t1}.{encode_column_name(k)}={t2}.{encode_column_name(k)}"
@@ -249,7 +259,7 @@ class DuckExecutionEngine(ExecutionEngine):
             df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
         )
         if distinct:
-            t1, t2 = get_temp_tb_name(), get_temp_tb_name()
+            t1, t2 = TempTableName(), TempTableName()
             sql = f"SELECT * FROM {t1} UNION SELECT * FROM {t2}"
             return self._sql(sql, {t1.key: df1, t2.key: df2})
         return DuckDataFrame(
@@ -260,7 +270,7 @@ class DuckExecutionEngine(ExecutionEngine):
         self, df1: DataFrame, df2: DataFrame, distinct: bool = True
     ) -> DataFrame:  # pragma: no cover
         if distinct:
-            t1, t2 = get_temp_tb_name(), get_temp_tb_name()
+            t1, t2 = TempTableName(), TempTableName()
             sql = f"SELECT * FROM {t1} EXCEPT SELECT * FROM {t2}"
             return self._sql(sql, {t1.key: df1, t2.key: df2})
         return DuckDataFrame(
@@ -271,7 +281,7 @@ class DuckExecutionEngine(ExecutionEngine):
         self, df1: DataFrame, df2: DataFrame, distinct: bool = True
     ) -> DataFrame:
         if distinct:
-            t1, t2 = get_temp_tb_name(), get_temp_tb_name()
+            t1, t2 = TempTableName(), TempTableName()
             sql = f"SELECT * FROM {t1} INTERSECT DISTINCT SELECT * FROM {t2}"
             return self._sql(sql, {t1.key: df1, t2.key: df2})
         raise NotImplementedError(
@@ -348,7 +358,7 @@ class DuckExecutionEngine(ExecutionEngine):
                 f"one and only one of n and frac should be non-negative, {n}, {frac}"
             ),
         )
-        tb = get_temp_tb_name()
+        tb = TempTableName()
         if frac is not None:
             sql = f"SELECT * FROM {tb} USING SAMPLE bernoulli({frac*100} PERCENT)"
         else:
@@ -375,7 +385,7 @@ class DuckExecutionEngine(ExecutionEngine):
             _presort = parse_presort_exp(presort)
         else:
             _presort = partition_spec.presort
-        tb = get_temp_tb_name()
+        tb = TempTableName()
 
         if len(_presort) == 0:
             if len(partition_spec.partition_by) == 0:
@@ -444,7 +454,9 @@ class DuckExecutionEngine(ExecutionEngine):
 
     def _sql(self, sql: str, dfs: Dict[str, DataFrame]) -> DuckDataFrame:
         with self._context_lock:
-            df = self.sql_engine.select(DataFrames(dfs), list(parse_sql(sql)))
+            df = self.sql_engine.select(
+                DataFrames(dfs), StructuredRawSQL.from_expr(sql, dialect=None)
+            )
             return DuckDataFrame(df.native)  # type: ignore
 
     def _to_duck_df(

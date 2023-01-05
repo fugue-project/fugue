@@ -32,6 +32,12 @@ def test_parse_presort_exp():
     assert parse_presort_exp("b desc, c asc") == IndexedOrderedDict(
         [("b", False), ("c", True)]
     )
+    assert parse_presort_exp("`` desc, `a b` asc, ````, `中国`") == IndexedOrderedDict(
+        [("", False), ("a b", True), ("`", True), ("中国", True)]
+    )
+    assert parse_presort_exp([("", False), ("a b", True), "中国"]) == IndexedOrderedDict(
+        [("", False), ("a b", True), ("中国", True)]
+    )
 
     with raises(SyntaxError):
         parse_presort_exp("b dsc, c asc")  # mispelling of desc
@@ -41,6 +47,9 @@ def test_parse_presort_exp():
 
     with raises(SyntaxError):
         parse_presort_exp("c true, c true")  # cannot contain duplicates
+
+    with raises(SyntaxError):
+        parse_presort_exp("a b dsc, c asc")  # no quote
 
     with raises(SyntaxError):
         parse_presort_exp(
@@ -75,10 +84,10 @@ def test_partition_spec():
     assert "hash" == p.algo
     assert not p.empty
 
-    p = PartitionSpec(by=["a", "b", "c"], num=5, presort="d,e desc", algo="EvEN")
-    assert ["a", "b", "c"] == p.partition_by
+    p = PartitionSpec(by=["a ", "b", "c"], num=5, presort="d,`e ` desc", algo="EvEN")
+    assert ["a ", "b", "c"] == p.partition_by
     assert "5" == p.num_partitions
-    assert dict(d=True, e=False) == p.presort
+    assert {"d": True, "e ": False} == p.presort
     assert "even" == p.algo
     assert not p.empty
 
@@ -131,7 +140,6 @@ def test_partition_spec():
     raises(SyntaxError, lambda: PartitionSpec(presort="a xsc,e desc"))
     raises(SyntaxError, lambda: PartitionSpec(presort="a asc,a desc"))
     raises(SyntaxError, lambda: PartitionSpec(presort="a b asc,a desc"))
-    raises(SyntaxError, lambda: PartitionSpec(presort=["a asc", ("b", True)]))
     raises(SyntaxError, lambda: PartitionSpec(presort=[("a", "asc"), "b"]))
     raises(SyntaxError, lambda: PartitionSpec(presort=[("a",), ("b")]))
     raises(SyntaxError, lambda: PartitionSpec(presort=["a", ["b", True]]))

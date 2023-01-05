@@ -28,6 +28,7 @@ from triad.utils.convert import (
     to_type,
 )
 from triad.utils.pyarrow import to_pa_datatype
+from triad.utils.schema import unquote_name
 from triad.utils.string import validate_triad_var_name
 
 from ..collections.partition import PartitionSpec
@@ -123,8 +124,6 @@ class _VisitorBase(FugueSQLVisitor):
 
     def visitFugueWildSchema(self, ctx: fp.FugueWildSchemaContext) -> str:
         schema = ",".join(self.collectChildren(ctx, fp.FugueWildSchemaPairContext))
-        if schema.count("*") > 1:
-            raise FugueSQLSyntaxError(f"invalid {schema} * can appear at most once")
         ops = "".join(self.collectChildren(ctx, fp.FugueSchemaOpContext))
         return schema + ops
 
@@ -141,7 +140,8 @@ class _VisitorBase(FugueSQLVisitor):
         return Schema(self.collectChildren(ctx, fp.FugueSchemaPairContext))
 
     def visitFugueSchemaPair(self, ctx: fp.FugueSchemaPairContext) -> Any:
-        return self.to_kv(ctx)
+        tp = self.to_kv(ctx)
+        return (unquote_name(tp[0]), tp[1])
 
     def visitFugueSchemaSimpleType(
         self, ctx: fp.FugueSchemaSimpleTypeContext
@@ -184,7 +184,7 @@ class _VisitorBase(FugueSQLVisitor):
         return self.ctxToStr(ctx)
 
     def visitFugueColumnIdentifier(self, ctx: fp.FugueColumnIdentifierContext) -> str:
-        return self.ctxToStr(ctx)
+        return unquote_name(self.ctxToStr(ctx))
 
     def visitFugueParamsPairs(self, ctx: fp.FugueParamsPairsContext) -> Dict:
         return dict(self.collectChildren(ctx.pairs, fp.FugueJsonPairContext))
