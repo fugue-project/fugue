@@ -97,6 +97,21 @@ result.show()
 
 This syntax is simpler, cleaner, and more maintainable than the PySpark equivalent. At the same time, no edits were made to the original pandas-based function to bring it to Spark. It is still usable on pandas DataFrames. Because the Spark execution engine was used, the returned `df` is now a Spark DataFrame. Fugue `transform()` also supports Dask and Ray as execution engines alongside the default pandas-based engine.
 
+## [Fugue API](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes.html#engine-context)
+
+In the example above, a Pandas DataFrame was passed into the `transform()` function. The Fugue API has a collection of functions that are compatible with Spark, Dask, and Ray. We can construct end-to-end workflows with these functions like as follows:
+
+```python
+import fugue.api as fa
+
+with fa.engine_context():
+    df = fa.load("/path/to/file.parquet")
+    out = fa.transform(df, map_letter_to_food, schema="*")
+    fa.save(out, "path/to/output_file.parquet")
+```
+
+This will all run in Pandas. To run in `spark`, we just need to pass in the Spark Session to the `engine_context()`. All functions underneath the context will run on the specified backend.
+
 ## [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/fugue_sql/index.html)
 
 FugueSQL is a SQL-based language capable of expressing end-to-end data workflows. The `map_letter_to_food()` function above is used in the SQL expression below. This is how to use a Python-defined function along with the standard SQL `SELECT` statement.
@@ -146,7 +161,7 @@ Note if you already installed Spark or DuckDB independently, Fugue is able to au
 
 The best way to get started with Fugue is to work through the 10 minute tutorials:
 
-*   [Fugue in 10 minutes](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes.html)
+*   [Fugue API in 10 minutes](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes.html)
 *   [FugueSQL in 10 minutes](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes_sql.html)
 
 The [tutorials](https://fugue-tutorials.readthedocs.io/) can also be run in an interactive notebook environment through binder or Docker:
