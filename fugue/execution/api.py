@@ -111,14 +111,13 @@ def get_current_conf() -> ParamDict:
 
 def get_current_parallelism() -> int:
     """Get the current parallelism of the current global/context engine.
-    If there is no global/context engine, then return 1
+    If there is no global/context engine, it creates a temporary engine
+    using :func:`~.fugue.execution.factory.make_execution_engine` to get
+    its parallelism
 
     :return: the size of the parallelism
     """
-    engine = try_get_context_execution_engine()
-    if engine is None:
-        return 1
-    return engine.get_current_parallelism()
+    return make_execution_engine().get_current_parallelism()
 
 
 def run_engine_function(
@@ -1001,7 +1000,7 @@ def select(
                 # SELECT COUNT(DISTINCT *) AS x FROM df
                 fa.select(
                     df,
-                    f.count_distinct(col("*")).alias("x"))
+                    f.count_distinct(all_cols()).alias("x"))
 
                 # SELECT a, MAX(b+1) AS x FROM df GROUP BY a
                 fa.select(

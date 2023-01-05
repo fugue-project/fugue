@@ -94,7 +94,7 @@ class DuckDataFrame(LocalBoundedDataFrame):
         fields: List[str] = []
         for f1, f2 in zip(self.schema.fields, new_schema.fields):
             if f1.type == f2.type:
-                fields.append(f1.name)
+                fields.append(encode_column_name(f1.name))
             else:
                 tp = to_duck_type(f2.type)
                 fields.append(

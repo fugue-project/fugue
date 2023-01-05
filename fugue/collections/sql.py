@@ -31,7 +31,7 @@ def transpile_sql(
     :param to_dialect: the expected dialect.
     :return: the transpiled SQL
     """
-    return raw
+    return raw  # pragma: no cover
 
 
 class StructuredRawSQL:

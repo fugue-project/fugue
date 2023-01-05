@@ -1640,15 +1640,22 @@ class BuiltInTests(object):
                     "`a b`:long,` `:long,d:long,`c *`:long",
                     throw=True,
                 )
-                r = fa.alter_columns(r, "`c *`:long")
+                r = fa.alter_columns(r, "`c *`:str")
+                r = fa.select(
+                    r,
+                    col("a b").alias("a b "),
+                    col(" ").alias("x y"),
+                    col("d"),
+                    col("c *").cast(int),
+                )
                 df_eq(
                     r,
                     [[0, 1, 10, 2]],
-                    "`a b`:long,` `:long,d:long,`c *`:long",
+                    "`a b `:long,`x y`:long,d:long,`c *`:long",
                     throw=True,
                 )
-                r = fa.rename(r, {" ": "x y"})
-                fa.save(r, f_csv, header=True)
+                r = fa.rename(r, {"a b ": "a b"})
+                fa.save(r, f_csv, header=True, force_single=True)
                 fa.save(r, f_parquet)
                 df_eq(
                     fa.load(f_parquet, columns=["x y", "d", "c *"], as_fugue=True),

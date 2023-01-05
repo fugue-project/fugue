@@ -29,7 +29,14 @@ from fugue.collections.partition import (
     PartitionSpec,
 )
 from fugue.collections.sql import StructuredRawSQL, TempTableName
-from fugue.column import ColumnExpr, SelectColumns, SQLExpressionGenerator, col, is_agg
+from fugue.column import (
+    ColumnExpr,
+    SelectColumns,
+    SQLExpressionGenerator,
+    all_cols,
+    col,
+    is_agg,
+)
 from fugue.constants import _FUGUE_GLOBAL_CONF, FUGUE_SQL_DIALECT
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
@@ -211,10 +218,6 @@ class ExecutionEngine(ABC):
     """
 
     def __init__(self, conf: Any):
-        if not isinstance(conf, dict) and isinstance(conf, set):
-            raise ValueError(
-                f"{conf} is a set, did you mistakenly use `,` instead of `:`?"
-            )
         _conf = ParamDict(conf)
         self._conf = ParamDict({**_FUGUE_GLOBAL_CONF, **_conf})
         self._compile_conf = ParamDict()
@@ -663,7 +666,7 @@ class ExecutionEngine(ABC):
                 # SELECT COUNT(DISTINCT *) AS x FROM df
                 engine.select(
                     df,
-                    SelectColumns(f.count_distinct(col("*")).alias("x")))
+                    SelectColumns(f.count_distinct(all_cols()).alias("x")))
 
                 # SELECT a, MAX(b+1) AS x FROM df GROUP BY a
                 engine.select(
@@ -717,7 +720,7 @@ class ExecutionEngine(ABC):
                 engine.filter(df, (col("a")>1) & (col("b")=="x"))
                 engine.filter(df, f.coalesce(col("a"),col("b"))>1)
         """
-        return self.select(df, cols=SelectColumns(col("*")), where=condition)
+        return self.select(df, cols=SelectColumns(all_cols()), where=condition)
 
     def assign(self, df: DataFrame, columns: List[ColumnExpr]) -> DataFrame:
         """Update existing columns with new values and add new columns

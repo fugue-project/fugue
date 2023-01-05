@@ -49,6 +49,9 @@ def test_parse_presort_exp():
         parse_presort_exp("c true, c true")  # cannot contain duplicates
 
     with raises(SyntaxError):
+        parse_presort_exp("a b dsc, c asc")  # no quote
+
+    with raises(SyntaxError):
         parse_presort_exp(
             [("b", "desc"), ("c", "asc")]
         )  # instead of desc and asc, needs to be bool

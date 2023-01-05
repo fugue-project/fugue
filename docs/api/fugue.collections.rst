@@ -35,6 +35,14 @@ fugue.collections.partition
    :undoc-members:
    :show-inheritance:
 
+fugue.collections.sql
+---------------------
+
+.. automodule:: fugue.collections.sql
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.collections.yielded
 -------------------------
 

@@ -72,7 +72,7 @@ def test_parse_output_schema_from_comment():
 
     assert parse_output_schema_from_comment(a) is None
     assert parse_output_schema_from_comment(b) is None
-    assert "s:int" == parse_output_schema_from_comment(c)
+    assert "s:int" == parse_output_schema_from_comment(c).replace(" ", "")
     raises(SyntaxError, lambda: parse_output_schema_from_comment(d))
 
 

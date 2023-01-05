@@ -29,7 +29,7 @@ from fugue.collections.sql import StructuredRawSQL
 from fugue.collections.yielded import Yielded
 from fugue.column import ColumnExpr
 from fugue.column import SelectColumns as ColumnsSelect
-from fugue.column import col, lit
+from fugue.column import all_cols, col, lit
 from fugue.constants import (
     _FUGUE_GLOBAL_CONF,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
@@ -358,7 +358,7 @@ class WorkflowDataFrame(DataFrame):
 
                 # aggregation
                 # SELECT COUNT(DISTINCT *) AS x FROM df
-                df.select(f.count_distinct(col("*")).alias("x"))
+                df.select(f.count_distinct(all_cols()).alias("x"))
 
                 # SELECT a, MAX(b+1) AS x FROM df GROUP BY a
                 df.select("a",f.max(col("b")+lit(1)).alias("x"))
@@ -373,8 +373,12 @@ class WorkflowDataFrame(DataFrame):
                     having=f.max(col("b")+lit(1))>0
                 )
         """
+
+        def _to_col(s: str) -> ColumnExpr:
+            return col(s) if s != "*" else all_cols()
+
         sc = ColumnsSelect(
-            *[col(x) if isinstance(x, str) else x for x in columns],
+            *[_to_col(x) if isinstance(x, str) else x for x in columns],
             arg_distinct=distinct,
         )
         df = self.workflow.process(

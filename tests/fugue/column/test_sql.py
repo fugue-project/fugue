@@ -1,8 +1,17 @@
-import fugue.column.functions as f
-from fugue.column import SelectColumns, SQLExpressionGenerator, col, function, lit, null
-from fugue.column.expressions import _BinaryOpExpr
 from pytest import raises
 from triad import Schema, to_uuid
+
+import fugue.column.functions as f
+from fugue.column import (
+    SelectColumns,
+    SQLExpressionGenerator,
+    all_cols,
+    col,
+    function,
+    lit,
+    null,
+)
+from fugue.column.expressions import _BinaryOpExpr
 
 
 def test_select_columns():
@@ -29,14 +38,16 @@ def test_select_columns():
     raises(ValueError, lambda: cols.assert_all_with_names())
 
     # with *, all cols must have alias
-    cols = SelectColumns(col("*"), col("a")).assert_no_agg()
+    cols = SelectColumns(all_cols(), col("a")).assert_no_agg()
     raises(ValueError, lambda: cols.assert_all_with_names())
 
     # * can be used at most once
-    raises(ValueError, lambda: SelectColumns(col("*"), col("*"), col("a").alias("p")))
+    raises(
+        ValueError, lambda: SelectColumns(all_cols(), all_cols(), col("a").alias("p"))
+    )
 
     # * can't be used with aggregation
-    raises(ValueError, lambda: SelectColumns(col("*"), f.first(col("a")).alias("x")))
+    raises(ValueError, lambda: SelectColumns(all_cols(), f.first(col("a")).alias("x")))
 
     cols = SelectColumns(
         col("aa").alias("a").cast(int),
@@ -66,7 +77,7 @@ def test_select_columns():
     assert not cols.has_literals
     assert not cols.has_agg
 
-    cols = SelectColumns(col("x"), col("*"), col("y") + col("z"))
+    cols = SelectColumns(col("x"), all_cols(), col("y") + col("z"))
     cols = cols.replace_wildcard(Schema("a:int,b:int"))
     assert "x" == str(cols.all_cols[0])
 
@@ -112,18 +123,18 @@ def test_functions():
         ).is_null()
     )
     assert (
-        "MY(MIN(x),MAX(y+1),AVG(z),2,aa=FIRST(a),bb=LAST('b'),cc=COUNT(DISTINCT *)) AS x"
+        "MY(MIN(`x y`),MAX(y+1),AVG(z),2,aa=FIRST(a),bb=LAST('b'),cc=COUNT(DISTINCT *)) AS `x z`"
         == gen.generate(
             function(
                 "MY",
-                f.min(col("x")),
+                f.min(col("x y")),
                 f.max(col("y") + 1),
                 f.avg(col("z")),
                 2,
                 aa=f.first(col("a")),
                 bb=f.last(lit("b")),
-                cc=f.count_distinct(col("*")),
-            ).alias("x")
+                cc=f.count_distinct(all_cols()),
+            ).alias("x z")
         )
     )
 
@@ -140,8 +151,8 @@ def test_functions():
 
 def test_where():
     gen = SQLExpressionGenerator()
-    assert "SELECT * FROM !x! WHERE (a<5) AND b IS NULL" == _to_sql(
-        gen.where((col("a") < 5) & col("b").is_null(), "x")
+    assert "SELECT * FROM !x! WHERE (`a `<5) AND b IS NULL" == _to_sql(
+        gen.where((col("a ") < 5) & col("b").is_null(), "x")
     )
     assert "SELECT * FROM !x! WHERE a<5" == _to_sql(
         gen.where((col("a") < 5).alias("x"), "x")
@@ -153,12 +164,12 @@ def test_select():
     gen = SQLExpressionGenerator()
 
     # no aggregation
-    cols = SelectColumns(col("*"))
+    cols = SelectColumns(all_cols())
     assert "SELECT * FROM !x!" == _to_sql(gen.select(cols, "x"))
 
-    cols = SelectColumns(col("a"), lit(1).alias("b"), (col("b") + col("c")).alias("x"))
-    where = (col("a") > 5).alias("aa")
-    assert "SELECT a, 1 AS b, b+c AS x FROM !t! WHERE a>5" == _to_sql(
+    cols = SelectColumns(col("a b"), lit(1).alias("b"), (col("b") + col("c")).alias("x"))
+    where = (col("a b") > 5).alias("aa")
+    assert "SELECT `a b`, 1 AS b, b+c AS x FROM !t! WHERE `a b`>5" == _to_sql(
         gen.select(cols, "t", where=where)
     )
 
@@ -230,7 +241,7 @@ def test_correct_select_schema():
     schema = Schema("a:double,b:str")
     gen = SQLExpressionGenerator()
 
-    sc = SelectColumns(col("*"), col("c"))
+    sc = SelectColumns(all_cols(), col("c"))
     output = Schema("a:double,b:str,c:str")
     c = gen.correct_select_schema(schema, sc, output)
     assert c is None
@@ -239,7 +250,7 @@ def test_correct_select_schema():
     c = gen.correct_select_schema(schema, sc, output)
     assert c == "a:double,b:str"
 
-    sc = SelectColumns(f.count(col("*")).alias("t"), col("c").alias("a"))
+    sc = SelectColumns(f.count(all_cols()).alias("t"), col("c").alias("a"))
     output = Schema("t:int,a:str")
     c = gen.correct_select_schema(schema, sc, output)
     assert c is None

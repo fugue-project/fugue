@@ -52,7 +52,8 @@ def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C
                     presort_list.append((key, False))
                 else:
                     raise SyntaxError(f"Invalid expression {presort}")
-            else:
+            else:  # pragma: no cover
+                # impossible
                 raise SyntaxError(f"Invalid expression {presort}")
 
     elif isinstance(presort, list):
