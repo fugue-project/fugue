@@ -99,7 +99,7 @@ This syntax is simpler, cleaner, and more maintainable than the PySpark equivale
 
 ## [Fugue API](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes.html#engine-context)
 
-In the example above, a Pandas DataFrame was passed into the `transform()` function. The Fugue API has a collection of functions that are compatible with Spark, Dask, and Ray. We can construct end-to-end workflows with these functions like as follows:
+In the example above, a Pandas DataFrame was passed into the `transform()` function. The Fugue API has a broader collection of functions that are also compatible with Spark, Dask, and Ray. We can construct end-to-end workflows with these functions like as follows:
 
 ```python
 import fugue.api as fa
