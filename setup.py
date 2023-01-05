@@ -44,7 +44,11 @@ setup(
     extras_require={
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.1"],
         "spark": ["pyspark"],
-        "dask": ["dask[distributed,dataframe]>=2022.9.0", "qpd[dask]>=0.4.0"],
+        "dask": [
+            "dask[distributed,dataframe]; python_version < '3.8'",
+            "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
+            "qpd[dask]>=0.4.0",
+        ],
         "ray": ["ray[data]>=2.0.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
         "duckdb": [
             "duckdb>=0.5.0",
@@ -59,7 +63,8 @@ setup(
         "all": [
             "fugue-sql-antlr[cpp]>=0.1.0",
             "pyspark",
-            "dask[distributed,dataframe]>=2022.9.0",
+            "dask[distributed,dataframe]; python_version < '3.8'",
+            "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
             "ray[data]>=2.0.0",
             "qpd[dask]>=0.4.0",
             "notebook",
