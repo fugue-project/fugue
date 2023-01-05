@@ -28,6 +28,9 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
     def dialect(self) -> str:
         return "duckdb"
 
+    def get_current_parallelism(self) -> int:
+        return 1
+
     @property
     def backend(self) -> ibis.BaseBackend:
         return self._backend

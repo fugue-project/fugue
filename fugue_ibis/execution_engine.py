@@ -59,9 +59,6 @@ class IbisExecutionEngine(ExecutionEngine):
     def create_default_sql_engine(self) -> SQLEngine:
         return IbisSQLEngine(self)
 
-    def get_current_parallelism(self) -> int:
-        return 1
-
     @property
     def backend(self) -> BaseBackend:  # pragma: no cover
         raise NotImplementedError

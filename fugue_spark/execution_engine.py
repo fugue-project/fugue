@@ -96,10 +96,10 @@ class SparkMapEngine(MapEngine):
             possible &= self.execution_engine.conf.get(
                 "spark.sql.execution.arrow.enabled", False
             )
-        else:
-            possible &= self.execution_engine.conf.get(
-                "spark.sql.execution.arrow.pyspark.enabled", False
-            )
+        # else:  # this condition seems to be unnecessary
+        #    possible &= self.execution_engine.conf.get(
+        #        "spark.sql.execution.arrow.pyspark.enabled", False
+        #    )
         enabled = self.execution_engine.conf.get_or_throw(
             FUGUE_SPARK_CONF_USE_PANDAS_UDF, bool
         )
