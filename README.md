@@ -14,6 +14,11 @@
 
 **Fugue is a unified interface for distributed computing that lets users execute Python, Pandas, and SQL code on Spark, Dask, and Ray with minimal rewrites**.
 
+Fugue is most commonly used for:
+
+*   **Parallelizing or scaling existing Python and Pandas code** by bringing it to Spark, Dask, or Ray with minimal rewrites.
+*   Using [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes_sql.html) to **define end-to-end workflows** on top of Pandas, Spark, and Dask DataFrames. FugueSQL is an enhanced SQL interface that can invoke Python code.
+
 ## [Fugue API](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes.html)
 
 The Fugue API is a collection of functions that are capable of running on Pandas, Spark, Dask, and Ray. The simplest way to use Fugue is the [`transform()` function](https://fugue-tutorials.readthedocs.io/tutorials/beginner/transform.html). This lets users parallelize the execution of a single function by bringing it to Spark, Dask, or Ray. In the example below, the `map_letter_to_food()` function takes in a mapping and applies it on a column. This is just Pandas and Python so far (without Fugue).
@@ -124,19 +129,10 @@ map_dict_str = json.dumps(map_dict)
 
 # returns Pandas DataFrame
 fugue_sql(query,mapping=map_dict_str)
+
+# returns Spark DataFrame
+fugue_sql(query, mapping=map_dict_str, engine="spark")
 ```
-
-For FugueSQL, we can change the execution engine by passing `fugue_sql(query, mapping=map_dict_str, engine="spark")`.
-
-## Use Cases
-
-Fugue is most common used for:
-
-*   **Parallelizing or scaling existing Python and Pandas code** by bringing it to Spark, Dask, or Ray with minimal rewrites.
-*   Using [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes_sql.html) to **define end-to-end workflows** on top of Pandas, Spark, and Dask DataFrames. FugueSQL is an enhanced SQL interface that can invoke Python code with added keywords.
-*   Improving iteration speed of big data projects. Fugue seamlessly scales execution to big data after local development and testing. By removing PySpark code, unit tests can be written in Python or Pandas and ran quickly without spinning up a cluster.
-
-For a more comprehensive overview of Fugue, read [this](https://towardsdatascience.com/introducing-fugue-reducing-pyspark-developer-friction-a702230455de) article.
 
 ## Installation
 
