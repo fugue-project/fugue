@@ -94,7 +94,7 @@ result.show()
 
 This syntax is simpler, cleaner, and more maintainable than the PySpark equivalent. At the same time, no edits were made to the original Pandas-based function to bring it to Spark. It is still usable on Pandas DataFrames. Fugue `transform()` also supports Dask and Ray as execution engines alongside the default Pandas-based engine.
 
-The Fugue API has a broader collection of functions that are also compatible with Spark, Dask, and Ray. For example, we can use `load()` and `save()` to create an end-to-end workflow compatible with Spark, Dask, and Ray.
+The Fugue API has a broader collection of functions that are also compatible with Spark, Dask, and Ray. For example, we can use `load()` and `save()` to create an end-to-end workflow compatible with Spark, Dask, and Ray. For the full list of functions, see the [Top Level API](https://fugue.readthedocs.io/en/latest/top_api.html)
 
 ```python
 import fugue.api as fa
@@ -165,6 +165,10 @@ The best way to get started with Fugue is to work through the 10 minute tutorial
 
 *   [Fugue API in 10 minutes](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes.html)
 *   [FugueSQL in 10 minutes](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes_sql.html)
+
+For the top level API, see:
+
+*   [Fugue Top Level API](https://fugue.readthedocs.io/en/latest/top_api.html)
 
 The [tutorials](https://fugue-tutorials.readthedocs.io/) can also be run in an interactive notebook environment through binder or Docker:
 
