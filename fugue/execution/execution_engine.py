@@ -62,8 +62,10 @@ class _GlobalExecutionEngineContext:
             if self._engine is not None:
                 self._engine._is_global = False
                 self._engine._ctx_count -= 1
+                self._engine.on_exit_context()
             self._engine = engine
             if engine is not None:
+                engine.on_enter_context()
                 engine._is_global = True
                 engine._ctx_count += 1
 
@@ -274,6 +276,18 @@ class ExecutionEngine(ABC):
     def is_global(self) -> bool:
         """Whether this engine is being used as THE global engine"""
         return self._is_global
+
+    def on_enter_context(self) -> None:  # pragma: no cover
+        """The event hook when calling :func:`~.fugue.api.set_blobal_engine` or
+        :func:`~.fugue.api.engine_context`, defaults to no operation
+        """
+        return
+
+    def on_exit_context(self) -> None:  # pragma: no cover
+        """The event hook when calling :func:`~.fugue.api.clear_blobal_engine` or
+        exiting from :func:`~.fugue.api.engine_context`, defaults to no operation
+        """
+        return
 
     def stop(self) -> None:
         """Stop this execution engine, do not override
@@ -1129,6 +1143,7 @@ class ExecutionEngine(ABC):
 
         """
         with _CONTEXT_LOCK:
+            self.on_enter_context()
             token = _FUGUE_EXECUTION_ENGINE_CONTEXT.set(self)  # type: ignore
             self._ctx_count += 1
         try:
@@ -1137,6 +1152,7 @@ class ExecutionEngine(ABC):
             with _CONTEXT_LOCK:
                 self._ctx_count -= 1
                 _FUGUE_EXECUTION_ENGINE_CONTEXT.reset(token)
+                self.on_exit_context()
 
     def _serialize_by_partition(
         self,
