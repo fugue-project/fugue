@@ -61,13 +61,11 @@ class _GlobalExecutionEngineContext:
         with _CONTEXT_LOCK:
             if self._engine is not None:
                 self._engine._is_global = False
-                self._engine._ctx_count -= 1
-                self._engine.on_exit_context()
+                self._engine._exit_context()
             self._engine = engine
             if engine is not None:
-                engine.on_enter_context()
+                engine._enter_context()
                 engine._is_global = True
-                engine._ctx_count += 1
 
     def get(self) -> Optional["ExecutionEngine"]:
         return self._engine
@@ -227,6 +225,8 @@ class ExecutionEngine(ABC):
         self._map_engine: Optional[MapEngine] = None
         self._ctx_count = 0
         self._is_global = False
+        self._private_lock = SerializableRLock()
+        self._stop_engine_called = False
 
     @contextmanager
     def as_context(self) -> Iterator["ExecutionEngine"]:
@@ -291,9 +291,17 @@ class ExecutionEngine(ABC):
 
     def stop(self) -> None:
         """Stop this execution engine, do not override
-        You should customize :meth:`~.stop_engine` if necessary.
+        You should customize :meth:`~.stop_engine` if necessary. This function
+        ensures :meth:`~.stop_engine` to be called only once
+
+        .. note::
+
+            Once the engine is stopped it should not be used again
         """
-        self.stop_engine()
+        with self._private_lock:
+            if not self._stop_engine_called:
+                self.stop_engine()
+                self._stop_engine_called = True
 
     def stop_engine(self) -> None:  # pragma: no cover
         """Custom logic to stop the execution engine, defaults to no operation"""
@@ -1143,16 +1151,24 @@ class ExecutionEngine(ABC):
 
         """
         with _CONTEXT_LOCK:
-            self.on_enter_context()
+            self._enter_context()
             token = _FUGUE_EXECUTION_ENGINE_CONTEXT.set(self)  # type: ignore
-            self._ctx_count += 1
         try:
             yield self
         finally:
             with _CONTEXT_LOCK:
-                self._ctx_count -= 1
                 _FUGUE_EXECUTION_ENGINE_CONTEXT.reset(token)
-                self.on_exit_context()
+                self._exit_context()
+
+    def _enter_context(self):
+        self.on_enter_context()
+        self._ctx_count += 1
+
+    def _exit_context(self):
+        self._ctx_count -= 1
+        self.on_exit_context()
+        if self._ctx_count == 0:
+            self.stop()
 
     def _serialize_by_partition(
         self,

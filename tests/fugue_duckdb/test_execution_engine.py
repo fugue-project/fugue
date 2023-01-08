@@ -154,7 +154,8 @@ def test_annotations():
     dag.run(con)
 
 
-def test_sql_yield():
+def test_output_types():
+    pdf = pd.DataFrame([[0]], columns=["a"])
     con = duckdb.connect()
 
     res = fsql(
@@ -168,6 +169,9 @@ def test_sql_yield():
 
     assert isinstance(res["a"], DuckDataFrame)
     assert isinstance(res["b"], ArrowDataFrame)
+
+    x = fa.union(pdf, pdf, engine=con)
+    assert isinstance(x, duckdb.DuckDBPyRelation)
 
     con.close()
 
@@ -184,6 +188,9 @@ def test_sql_yield():
     assert isinstance(res["a"], ArrowDataFrame)
     assert isinstance(res["b"], ArrowDataFrame)
 
+    x = fa.union(pdf, pdf, engine="duckdb")
+    assert isinstance(x, pa.Table)
+
     # in context
     with engine_context("duck"):
         res = fsql(
@@ -197,6 +204,9 @@ def test_sql_yield():
 
         assert isinstance(res["a"], DuckDataFrame)
         assert isinstance(res["b"], ArrowDataFrame)
+
+        x = fa.union(pdf, pdf)
+        assert isinstance(x, duckdb.DuckDBPyRelation)
 
 
 def test_infer_engine():
