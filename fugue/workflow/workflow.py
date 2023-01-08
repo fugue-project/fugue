@@ -43,7 +43,7 @@ from fugue.dataframe import DataFrame, LocalBoundedDataFrame, YieldedDataFrame
 from fugue.dataframe.api import is_df
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
-from fugue.execution.factory import make_execution_engine
+from fugue.execution.api import engine_context
 from fugue.extensions._builtins import (
     Aggregate,
     AlterColumns,
@@ -1506,7 +1506,7 @@ class FugueWorkflow:
         .. note::
 
             For inputs, please read
-            :func:`~.fugue.execution.factory.make_execution_engine`
+            :func:`~.fugue.api.engine_context`
 
         :param engine: object that can be recognized as an engine, defaults to None
         :param conf: engine config, defaults to None
@@ -1537,30 +1537,34 @@ class FugueWorkflow:
         to learn how to run in different ways and pros and cons.
         """
         with self._lock:
-            e = make_execution_engine(engine=engine, conf=conf, **kwargs)
-            self._computed = False
-            self._workflow_ctx = FugueWorkflowContext(engine=e, compile_conf=self.conf)
-            try:
-                self._workflow_ctx.run(self._spec, {})
-            except Exception as ex:
-                if not self.conf.get_or_throw(
-                    FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE, bool
-                ) or sys.version_info < (3, 7):
-                    raise
-                conf = self.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str)
-                pre = [p for p in conf.split(",") if p != ""]
-                if len(pre) == 0:
-                    raise
-
-                # prune by prefix
-                ctb = modify_traceback(
-                    sys.exc_info()[2],
-                    lambda x: any(x.lower().startswith(xx) for xx in pre),
+            with engine_context(engine, engine_conf=conf) as e:
+                self._computed = False
+                self._workflow_ctx = FugueWorkflowContext(
+                    engine=e, compile_conf=self.conf
                 )
-                if ctb is None:  # pragma: no cover
-                    raise
-                raise ex.with_traceback(ctb)
-            self._computed = True
+                try:
+                    self._workflow_ctx.run(self._spec, {})
+                except Exception as ex:
+                    if not self.conf.get_or_throw(
+                        FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE, bool
+                    ) or sys.version_info < (3, 7):
+                        raise
+                    conf = self.conf.get_or_throw(
+                        FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str
+                    )
+                    pre = [p for p in conf.split(",") if p != ""]
+                    if len(pre) == 0:
+                        raise
+
+                    # prune by prefix
+                    ctb = modify_traceback(
+                        sys.exc_info()[2],
+                        lambda x: any(x.lower().startswith(xx) for xx in pre),
+                    )
+                    if ctb is None:  # pragma: no cover
+                        raise
+                    raise ex.with_traceback(ctb)
+                self._computed = True
         return FugueWorkflowResult(self.yields)
 
     @property

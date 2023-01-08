@@ -10,12 +10,16 @@ class MyEngine(NativeExecutionEngine):
         super().__init__(conf)
         self.pre_enter_state = []
         self.post_exit_state = []
+        self.stop_calls = 0
 
     def on_enter_context(self) -> None:
         self.pre_enter_state += [self.in_context]
 
     def on_exit_context(self) -> None:
         self.post_exit_state += [self.in_context]
+
+    def stop_engine(self) -> None:
+        self.stop_calls += 1
 
 
 def test_engine_operations():
@@ -41,17 +45,20 @@ def test_engine_operations():
             assert not e2.is_global and e2.in_context
             assert e.in_context and e.is_global
             assert fa.get_context_engine() is e
+            assert e.stop_calls == 0
         assert e.pre_enter_state == [False, True]
         assert e.post_exit_state == [True]
         assert fa.get_current_conf().get("fugue.x", 0) == 3
         assert e.in_context and e.is_global
         assert fa.get_context_engine() is e2
+    assert e.stop_calls == 0
     assert e.pre_enter_state == [False, True]
     assert e.post_exit_state == [True]
     assert fa.get_current_conf().get("fugue.x", 0) == 2
     assert not e2.is_global and not e2.in_context
     assert e.in_context and e.is_global
     e3 = fa.set_global_engine("duckdb", {"fugue.x": 4})
+    assert e.stop_calls == 1
     assert e.pre_enter_state == [False, True]
     assert e.post_exit_state == [True, False]
     assert fa.get_current_conf().get("fugue.x", 0) == 4

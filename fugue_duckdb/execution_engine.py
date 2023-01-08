@@ -119,10 +119,9 @@ class DuckExecutionEngine(ExecutionEngine):
                 value = encode_value_to_expr(v)
                 yield f"PRAGMA {name}={value};"
 
-    def stop(self) -> None:
+    def stop_engine(self) -> None:
         if not self._external_con:
             self._con.close()
-        super().stop()
 
     def __repr__(self) -> str:
         return "DuckExecutionEngine"
@@ -450,7 +449,9 @@ class DuckExecutionEngine(ExecutionEngine):
     def convert_yield_dataframe(self, df: DataFrame, as_local: bool) -> DataFrame:
         if as_local:
             return df.as_local()
-        return df.as_local() if not self.in_context and not self._external_con else df
+        # self._ctx_count <= 1 means it is either not in a context or in the top
+        # leve context where the engine was constructed
+        return df.as_local() if self._ctx_count <= 1 and not self._external_con else df
 
     def _sql(self, sql: str, dfs: Dict[str, DataFrame]) -> DuckDataFrame:
         with self._context_lock:

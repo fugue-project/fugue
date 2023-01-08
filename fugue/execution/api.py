@@ -146,15 +146,15 @@ def run_engine_function(
 
         This function is for deveopment use. Users should not need it.
     """
-    e = make_execution_engine(engine, engine_conf, infer_by=infer_by)
-    res = func(e)
+    with engine_context(engine, engine_conf=engine_conf, infer_by=infer_by) as e:
+        res = func(e)
 
-    if isinstance(res, DataFrame):
-        res = e.convert_yield_dataframe(res, as_local=as_local)
-        if as_fugue or any(isinstance(x, DataFrame) for x in (infer_by or [])):
-            return res
-        return res.native_as_df()
-    return res
+        if isinstance(res, DataFrame):
+            res = e.convert_yield_dataframe(res, as_local=as_local)
+            if as_fugue or any(isinstance(x, DataFrame) for x in (infer_by or [])):
+                return res
+            return res.native_as_df()
+        return res
 
 
 def repartition(

@@ -36,6 +36,8 @@ def test_start_stop():
     engine = _MockExecutionEngine(conf=conf)
     engine.stop()
     assert 1 == engine._stop
+    engine.stop()  # stop will be called only once
+    assert 1 == engine._stop
 
 
 def test_global_conf():
