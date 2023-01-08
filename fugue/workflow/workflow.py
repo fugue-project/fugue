@@ -43,6 +43,7 @@ from fugue.dataframe import DataFrame, LocalBoundedDataFrame, YieldedDataFrame
 from fugue.dataframe.api import is_df
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
+from fugue.execution.api import engine_context
 from fugue.extensions._builtins import (
     Aggregate,
     AlterColumns,
@@ -71,7 +72,6 @@ from fugue.extensions._builtins import (
     Take,
     Zip,
 )
-from fugue.execution.api import engine_context
 from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
 from fugue.rpc import to_rpc_handler
 from fugue.rpc.base import EmptyRPCHandler
