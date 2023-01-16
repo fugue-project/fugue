@@ -29,9 +29,6 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
     def create_non_ibis_execution_engine(self) -> ExecutionEngine:
         return NativeExecutionEngine(self.conf)
 
-    def get_current_parallelism(self) -> int:
-        return 1
-
     def is_non_ibis(self, ds: Any) -> bool:
         if self._force_is_ibis:
             return False

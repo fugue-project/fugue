@@ -44,6 +44,9 @@ class IbisExecutionEngineForceIbisTests(ExecutionEngineTests.Tests):
         # it can't work properly with DuckDB (hugeint is not recognized)
         pass
 
+    def test_get_parallelism(self):
+        assert self.engine.get_current_parallelism() == 1
+
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="< 3.8")
 class DuckBuiltInTests(BuiltInTests.Tests):

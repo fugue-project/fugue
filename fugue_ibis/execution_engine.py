@@ -160,6 +160,9 @@ class IbisExecutionEngine(ExecutionEngine):
     def fs(self) -> FileSystem:
         return self.non_ibis_engine.fs
 
+    def get_current_parallelism(self) -> int:
+        return self.non_ibis_engine.get_current_parallelism()
+
     @property
     def backend(self) -> BaseBackend:  # pragma: no cover
         raise NotImplementedError
