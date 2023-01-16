@@ -1,19 +1,26 @@
 import itertools
-from typing import Any, Dict, List, Optional
+import logging
+from abc import abstractmethod
+from typing import Any, Callable, Dict, List, Optional
 
 import ibis
 from ibis import BaseBackend
-from triad.utils.assertion import assert_or_throw
+from triad import FileSystem, assert_or_throw
 
 from fugue import StructuredRawSQL
-from fugue.collections.partition import PartitionSpec, parse_presort_exp
-from fugue.dataframe import DataFrame, DataFrames
+from fugue.bag import Bag, LocalBag
+from fugue.collections.partition import (
+    BagPartitionCursor,
+    PartitionCursor,
+    PartitionSpec,
+    parse_presort_exp,
+)
+from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.dataframe.utils import get_join_schemas
-from fugue.execution.execution_engine import ExecutionEngine, SQLEngine
+from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 
 from ._compat import IbisTable
 from .dataframe import IbisDataFrame
-from abc import abstractmethod
 
 _JOIN_RIGHT_SUFFIX = "_ibis_y__"
 _GEN_TABLE_NAMES = (f"_fugue_temp_table_{i:d}" for i in itertools.count())
@@ -43,6 +50,48 @@ class IbisSQLEngine(SQLEngine):
         )
 
 
+class IbisMapEngine(MapEngine):
+    """IbisExecutionEngine's MapEngine, it is a wrapper of the map engine
+    of :meth:`~.IbisExecutionEngine.non_ibis_engine`
+
+    :param execution_engine: the execution engine this map engine will run on
+    """
+
+    def __init__(self, execution_engine: ExecutionEngine) -> None:
+        assert_or_throw(
+            isinstance(execution_engine, IbisExecutionEngine)
+            and isinstance(
+                execution_engine.backend, ibis.backends.base.sql.BaseSQLBackend
+            )
+        )
+        super().__init__(execution_engine)
+        self._ibis_engine: IbisExecutionEngine = execution_engine  # type: ignore
+
+    def map_dataframe(
+        self,
+        df: DataFrame,
+        map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
+        output_schema: Any,
+        partition_spec: PartitionSpec,
+        on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+    ) -> DataFrame:
+        _df = self._ibis_engine._to_non_ibis_dataframe(df)
+        return self._ibis_engine.non_ibis_engine.map_engine.map_dataframe(
+            _df, map_func, output_schema, partition_spec, on_init
+        )
+
+    def map_bag(
+        self,
+        bag: Bag,
+        map_func: Callable[[BagPartitionCursor, LocalBag], LocalBag],
+        partition_spec: PartitionSpec,
+        on_init: Optional[Callable[[int, Bag], Any]] = None,
+    ) -> Bag:  # pragma: no cover
+        return self._ibis_engine.non_ibis_engine.map_engine.map_bag(
+            bag, map_func, partition_spec, on_init
+        )
+
+
 class IbisExecutionEngine(ExecutionEngine):
     """The base execution engine using Ibis.
     Please read |ExecutionEngineTutorial| to understand this important Fugue concept
@@ -50,14 +99,66 @@ class IbisExecutionEngine(ExecutionEngine):
     :param conf: |ParamsLikeObject|, read |FugueConfig| to learn Fugue specific options
     """
 
+    def __init__(self, conf: Any):
+        super().__init__(conf)
+        self._non_ibis_engine = self.create_non_ibis_execution_engine()
+
     @property
     @abstractmethod
     def dialect(self) -> str:  # pragma: no cover
         """The dialect of this ibis based engine"""
         raise NotImplementedError
 
+    @abstractmethod
+    def create_non_ibis_execution_engine(self) -> ExecutionEngine:
+        """Create the execution engine that handles operations beyond SQL"""
+        raise NotImplementedError  # pragma: no cover
+
+    @abstractmethod
+    def _to_ibis_dataframe(
+        self, df: Any, schema: Any = None
+    ) -> IbisDataFrame:  # pragma: no cover
+        """Create ``IbisDataFrame`` from the dataframe like input
+
+        :param df: dataframe like object
+        :param schema: dataframe schema, defaults to None
+        :return: the IbisDataFrame
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def _to_non_ibis_dataframe(
+        self, df: Any, schema: Any = None
+    ) -> DataFrame:  # pragma: no cover
+        """Create ``DataFrame`` for map operations
+        from the dataframe like input
+
+        :param df: dataframe like object
+        :param schema: dataframe schema, defaults to None
+        :return: the DataFrame
+        """
+        raise NotImplementedError
+
+    def is_non_ibis(self, ds: Any) -> bool:
+        return not isinstance(ds, (IbisDataFrame, IbisTable))
+
+    @property
+    def non_ibis_engine(self) -> ExecutionEngine:
+        return self._non_ibis_engine
+
     def create_default_sql_engine(self) -> SQLEngine:
         return IbisSQLEngine(self)
+
+    def create_default_map_engine(self) -> MapEngine:
+        return IbisMapEngine(self)
+
+    @property
+    def log(self) -> logging.Logger:
+        return self.non_ibis_engine.log
+
+    @property
+    def fs(self) -> FileSystem:
+        return self.non_ibis_engine.fs
 
     @property
     def backend(self) -> BaseBackend:  # pragma: no cover
@@ -69,16 +170,24 @@ class IbisExecutionEngine(ExecutionEngine):
     def get_temp_table_name(self) -> str:
         return next(_GEN_TABLE_NAMES)
 
-    def _to_ibis_dataframe(
-        self, df: Any, schema: Any = None
-    ) -> IbisDataFrame:  # pragma: no cover
-        raise NotImplementedError
-
     def _compile_sql(self, df: IbisDataFrame) -> str:
         return str(df.native.compile())
 
     def to_df(self, df: Any, schema: Any = None) -> DataFrame:
+        if self.is_non_ibis(df):
+            return self._to_non_ibis_dataframe(df, schema)
         return self._to_ibis_dataframe(df, schema=schema)
+
+    def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
+        if self.is_non_ibis(df):
+            return self.non_ibis_engine.repartition(df, partition_spec=partition_spec)
+        self.log.warning("%s doesn't respect repartition", self)
+        return df
+
+    def broadcast(self, df: DataFrame) -> DataFrame:
+        if self.is_non_ibis(df):
+            return self.non_ibis_engine.broadcast(df)
+        return df
 
     def join(
         self,
@@ -154,6 +263,8 @@ class IbisExecutionEngine(ExecutionEngine):
         return self._to_ibis_dataframe(tb, _df1.schema)
 
     def distinct(self, df: DataFrame) -> DataFrame:
+        if self.is_non_ibis(df):
+            return self.non_ibis_engine.distinct(df)
         _df = self._to_ibis_dataframe(df)
         tb = _df.native.distinct()
         return self._to_ibis_dataframe(tb, _df.schema)
@@ -165,6 +276,10 @@ class IbisExecutionEngine(ExecutionEngine):
         thresh: int = None,
         subset: Optional[List[str]] = None,
     ) -> DataFrame:
+        if self.is_non_ibis(df):
+            return self.non_ibis_engine.dropna(
+                df, how=how, thresh=thresh, subset=subset
+            )
         schema = df.schema
         if subset is not None:
             schema = schema.extract(subset)
@@ -186,6 +301,9 @@ class IbisExecutionEngine(ExecutionEngine):
         return self._to_ibis_dataframe(tb, _df.schema)
 
     def fillna(self, df: DataFrame, value: Any, subset: List[str] = None) -> DataFrame:
+        if self.is_non_ibis(df):
+            return self.non_ibis_engine.fillna(df, value=value, subset=subset)
+
         def _build_value_dict(names: List[str]) -> Dict[str, str]:
             if not isinstance(value, dict):
                 return {n: value for n in names}
@@ -218,6 +336,14 @@ class IbisExecutionEngine(ExecutionEngine):
         na_position: str = "last",
         partition_spec: Optional[PartitionSpec] = None,
     ) -> DataFrame:
+        if self.is_non_ibis(df):
+            return self.non_ibis_engine.take(
+                df,
+                n=n,
+                presort=presort,
+                na_position=na_position,
+                partition_spec=partition_spec,
+            )
         partition_spec = partition_spec or PartitionSpec()
         assert_or_throw(
             isinstance(n, int),
