@@ -35,7 +35,7 @@ def map_letter_to_food(df: pd.DataFrame, mapping: Dict[str, str]) -> pd.DataFram
     return df
 ```
 
-Now, the `map_letter_to_food()` function is brought to the Spark execution engine by invoking the `transform()` function of Fugue. The output `schema`, `params` and `engine` are passed to the `transform()` call. The `schema` is needed because it's a requirement for distributed frameworks. A schema of `"*"` below means all input columns are in the output.
+Now, the `map_letter_to_food()` function is brought to the Spark execution engine by invoking the `transform()` function of Fugue. The output `schema` and `params` are passed to the `transform()` call. The `schema` is needed because it's a requirement for distributed frameworks. A schema of `"*"` below means all input columns are in the output.
 
 ```python
 from pyspark.sql import SparkSession
@@ -230,6 +230,7 @@ View some of our latest conferences presentations and content. For a more comple
 ### Case Studies
 
 *   [How LyftLearn Democratizes Distributed Compute through Kubernetes Spark and Fugue](https://eng.lyft.com/how-lyftlearn-democratizes-distributed-compute-through-kubernetes-spark-and-fugue-c0875b97c3d9)
+*   [Clobotics - Large Scale Image Processing with Spark through Fugue](https://medium.com/fugue-project/large-scale-image-processing-with-spark-through-fugue-e510b9813da8)
 
 ### Blogs
 
