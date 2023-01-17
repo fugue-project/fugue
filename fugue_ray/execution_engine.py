@@ -115,18 +115,10 @@ class RayMapEngine(MapEngine):
             output_key=_RAY_PARTITION_KEY,
         )
 
-        batch_size = (
-            self.execution_engine.conf.get_or_throw(
-                FUGUE_RAY_DEFAULT_BATCH_SIZE, object
-            )
-            if FUGUE_RAY_DEFAULT_BATCH_SIZE in self.execution_engine.conf
-            else "default"
-        )
         gdf = rdf.groupby(_RAY_PARTITION_KEY)
         sdf = gdf.map_groups(
             _udf,
             batch_format="pyarrow",
-            batch_size=batch_size,
             **self.execution_engine._get_remote_args(),  # type: ignore
         )
         return RayDataFrame(sdf, schema=output_schema, internal_schema=True)
@@ -174,9 +166,17 @@ class RayMapEngine(MapEngine):
                 rdf = self.execution_engine.repartition(  # type: ignore
                     rdf, PartitionSpec(num=n)
                 )
+        batch_size = (
+            self.execution_engine.conf.get_or_throw(
+                FUGUE_RAY_DEFAULT_BATCH_SIZE, object
+            )
+            if FUGUE_RAY_DEFAULT_BATCH_SIZE in self.execution_engine.conf
+            else "default"
+        )
         sdf = rdf.native.map_batches(
             _udf,
             batch_format="pyarrow",
+            batch_size=batch_size,
             **self.execution_engine._get_remote_args(),  # type: ignore
         )
         return RayDataFrame(sdf, schema=output_schema, internal_schema=True)
