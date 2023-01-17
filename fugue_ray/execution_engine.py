@@ -19,6 +19,7 @@ from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckExecutionEngine
 
+from ._constants import FUGUE_RAY_DEFAULT_BATCH_SIZE
 from ._utils.cluster import get_default_partitions, get_default_shuffle_partitions
 from ._utils.dataframe import add_partition_key
 from ._utils.io import RayIO
@@ -114,10 +115,18 @@ class RayMapEngine(MapEngine):
             output_key=_RAY_PARTITION_KEY,
         )
 
+        batch_size = (
+            self.execution_engine.conf.get_or_throw(
+                FUGUE_RAY_DEFAULT_BATCH_SIZE, object
+            )
+            if FUGUE_RAY_DEFAULT_BATCH_SIZE in self.execution_engine.conf
+            else "default"
+        )
         gdf = rdf.groupby(_RAY_PARTITION_KEY)
         sdf = gdf.map_groups(
             _udf,
             batch_format="pyarrow",
+            batch_size=batch_size,
             **self.execution_engine._get_remote_args(),  # type: ignore
         )
         return RayDataFrame(sdf, schema=output_schema, internal_schema=True)
