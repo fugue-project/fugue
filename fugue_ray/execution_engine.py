@@ -29,6 +29,10 @@ _RAY_PARTITION_KEY = "__ray_partition_key__"
 
 
 class RayMapEngine(MapEngine):
+    @property
+    def is_distributed(self) -> bool:
+        return True
+
     def map_dataframe(
         self,
         df: DataFrame,

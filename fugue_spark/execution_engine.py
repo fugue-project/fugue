@@ -78,6 +78,10 @@ class SparkSQLEngine(SQLEngine):
         )
         super().__init__(execution_engine)
 
+    @property
+    def is_distributed(self) -> bool:
+        return True
+
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         _map: Dict[str, str] = {}
         for k, v in dfs.items():
@@ -90,6 +94,10 @@ class SparkSQLEngine(SQLEngine):
 
 
 class SparkMapEngine(MapEngine):
+    @property
+    def is_distributed(self) -> bool:
+        return True
+
     def _should_use_pandas_udf(self, schema: Schema) -> bool:
         possible = hasattr(ps.DataFrame, "mapInPandas")  # must be new version of Spark
         if pyspark.__version__ < "3":  # pragma: no cover

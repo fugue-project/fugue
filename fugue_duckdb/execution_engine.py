@@ -63,6 +63,10 @@ class DuckDBEngine(SQLEngine):
             _dfs, _sql = self.encode(dfs, statement)
             return self._other_select(_dfs, _sql)
 
+    @property
+    def is_distributed(self) -> bool:
+        return False
+
     def _duck_select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         name_map: Dict[str, str] = {}
         for k, v in dfs.items():

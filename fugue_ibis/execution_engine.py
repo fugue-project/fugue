@@ -42,6 +42,10 @@ class IbisSQLEngine(SQLEngine):
         super().__init__(execution_engine)
         self._ibis_engine: IbisExecutionEngine = execution_engine  # type: ignore
 
+    @property
+    def is_distributed(self) -> bool:
+        return self._ibis_engine.is_distributed
+
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         return self._ibis_engine._to_ibis_dataframe(
             self._ibis_engine._raw_select(
@@ -56,6 +60,10 @@ class IbisMapEngine(MapEngine):
 
     :param execution_engine: the execution engine this map engine will run on
     """
+
+    @property
+    def is_distributed(self) -> bool:
+        return self._ibis_engine.non_ibis_engine.map_engine.is_distributed
 
     def __init__(self, execution_engine: ExecutionEngine) -> None:
         assert_or_throw(
@@ -102,6 +110,12 @@ class IbisExecutionEngine(ExecutionEngine):
     def __init__(self, conf: Any):
         super().__init__(conf)
         self._non_ibis_engine = self.create_non_ibis_execution_engine()
+
+    @property
+    @abstractmethod
+    def is_distributed(self) -> bool:  # pragma: no cover
+        """Whether this ibis based engine (SQL part) is distributed"""
+        raise NotImplementedError
 
     @property
     @abstractmethod

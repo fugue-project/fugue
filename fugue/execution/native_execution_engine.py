@@ -43,6 +43,10 @@ class SqliteEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
+    @property
+    def is_distributed(self) -> bool:
+        return False
+
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         _dfs, _sql = self.encode(dfs, statement)
         sql_engine = create_engine("sqlite:///:memory:")
@@ -58,6 +62,10 @@ class QPDPandasEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
+    @property
+    def is_distributed(self) -> bool:
+        return False
+
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         _dfs, _sql = self.encode(dfs, statement)
         _dd = {
@@ -70,6 +78,10 @@ class QPDPandasEngine(SQLEngine):
 
 
 class PandasMapEngine(MapEngine):
+    @property
+    def is_distributed(self) -> bool:
+        return False
+
     def map_dataframe(
         self,
         df: DataFrame,

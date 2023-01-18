@@ -42,6 +42,10 @@ class QPDDaskEngine(SQLEngine):
         )
         super().__init__(execution_engine)
 
+    @property
+    def is_distributed(self) -> bool:
+        return True
+
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         _dfs, _sql = self.encode(dfs, statement)
         dask_dfs = {
@@ -53,6 +57,10 @@ class QPDDaskEngine(SQLEngine):
 
 
 class DaskMapEngine(MapEngine):
+    @property
+    def is_distributed(self) -> bool:
+        return True
+
     def map_dataframe(
         self,
         df: DataFrame,

@@ -23,6 +23,10 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
         self._force_is_ibis = force_is_ibis
 
     @property
+    def is_distributed(self) -> bool:
+        return False
+
+    @property
     def dialect(self) -> str:
         return "duckdb"
 

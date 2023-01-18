@@ -102,6 +102,12 @@ class SQLEngine(ExecutionEngineFacet, ABC):
         self._uid = "_" + str(uuid4())[:5] + "_"
 
     @property
+    @abstractmethod
+    def is_distributed(self) -> bool:  # pragma: no cover
+        """Whether this SQL engine is a distributed engine"""
+        raise NotImplementedError
+
+    @property
     def dialect(self) -> Optional[str]:
         return None
 
@@ -152,6 +158,12 @@ class MapEngine(ExecutionEngineFacet, ABC):
 
     :param execution_engine: the execution engine this sql engine will run on
     """
+
+    @property
+    @abstractmethod
+    def is_distributed(self) -> bool:  # pragma: no cover
+        """Whether this map engine is a distributed engine"""
+        raise NotImplementedError
 
     @abstractmethod
     def map_dataframe(
