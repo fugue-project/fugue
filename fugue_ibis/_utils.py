@@ -48,7 +48,6 @@ _IBIS_TO_PYARROW: Dict[dt.DataType, pa.DataType] = {
     dt.float64: pa.float64(),
     dt.string: pa.string(),
     dt.binary: pa.binary(),
-    dt.timestamp: TRIAD_DEFAULT_TIMESTAMP,
     dt.date: pa.date32(),
 }
 
@@ -70,6 +69,11 @@ def to_schema(schema: ibis.Schema) -> Schema:
 def _ibis_to_pa_type(tp: dt.DataType) -> pa.DataType:
     if tp in _IBIS_TO_PYARROW:
         return _IBIS_TO_PYARROW[tp]
+    if isinstance(tp, dt.Timestamp):
+        if tp.timezone is None:
+            return TRIAD_DEFAULT_TIMESTAMP
+        else:
+            return pa.timestamp("us", tp.timezone)
     if isinstance(tp, dt.Array):
         ttp = _ibis_to_pa_type(tp.value_type)
         return pa.list_(ttp)
@@ -84,6 +88,10 @@ def _ibis_to_pa_type(tp: dt.DataType) -> pa.DataType:
 def _pa_to_ibis_type(tp: pa.DataType) -> dt.DataType:
     if tp in _PYARROW_TO_IBIS:
         return _PYARROW_TO_IBIS[tp]
+    if pa.types.is_timestamp(tp):
+        if tp.tz is None:
+            return dt.Timestamp()
+        return dt.Timestamp(timezone=str(tp.tz).lower())
     if pa.types.is_list(tp):
         ttp = _pa_to_ibis_type(tp.value_type)
         return dt.Array(value_type=ttp)
