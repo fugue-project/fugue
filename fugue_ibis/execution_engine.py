@@ -1,7 +1,7 @@
 import itertools
 import logging
 from abc import abstractmethod
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Type
 
 import ibis
 from ibis import BaseBackend
@@ -15,7 +15,7 @@ from fugue.collections.partition import (
     PartitionSpec,
     parse_presort_exp,
 )
-from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
+from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, AnyDataFrame
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 
@@ -33,14 +33,15 @@ class IbisSQLEngine(SQLEngine):
     """
 
     def __init__(self, execution_engine: ExecutionEngine) -> None:
-        assert_or_throw(
-            isinstance(execution_engine, IbisExecutionEngine)
-            and isinstance(
-                execution_engine.backend, ibis.backends.base.sql.BaseSQLBackend
-            )
-        )
         super().__init__(execution_engine)
         self._ibis_engine: IbisExecutionEngine = execution_engine  # type: ignore
+
+    @property
+    def execution_engine_constraint(self) -> Type[ExecutionEngine]:
+        return IbisExecutionEngine
+
+    def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
+        return self.execution_engine.to_df(df, schema)
 
     @property
     def is_distributed(self) -> bool:
@@ -66,14 +67,15 @@ class IbisMapEngine(MapEngine):
         return self._ibis_engine.non_ibis_engine.map_engine.is_distributed
 
     def __init__(self, execution_engine: ExecutionEngine) -> None:
-        assert_or_throw(
-            isinstance(execution_engine, IbisExecutionEngine)
-            and isinstance(
-                execution_engine.backend, ibis.backends.base.sql.BaseSQLBackend
-            )
-        )
         super().__init__(execution_engine)
         self._ibis_engine: IbisExecutionEngine = execution_engine  # type: ignore
+
+    @property
+    def execution_engine_constraint(self) -> Type[ExecutionEngine]:
+        return IbisExecutionEngine
+
+    def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
+        return self.execution_engine.to_df(df, schema)
 
     def map_dataframe(
         self,

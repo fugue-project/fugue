@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 import pyarrow as pa
 import ray
@@ -9,6 +9,7 @@ from triad.utils.threading import RunOnce
 from fugue import (
     ArrowDataFrame,
     DataFrame,
+    ExecutionEngine,
     LocalDataFrame,
     MapEngine,
     PartitionCursor,
@@ -29,6 +30,10 @@ _RAY_PARTITION_KEY = "__ray_partition_key__"
 
 
 class RayMapEngine(MapEngine):
+    @property
+    def execution_engine_constraint(self) -> Type[ExecutionEngine]:
+        return RayExecutionEngine
+
     @property
     def is_distributed(self) -> bool:
         return True

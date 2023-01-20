@@ -33,7 +33,7 @@ from fugue.dataset import (
 from fugue.execution.execution_engine import (
     AnyExecutionEngine,
     ExecutionEngine,
-    ExecutionEngineFacet,
+    EngineFacet,
     MapEngine,
     SQLEngine,
 )

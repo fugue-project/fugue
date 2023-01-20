@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
 from uuid import uuid4
 
 import pandas as pd
@@ -71,12 +71,9 @@ class SparkSQLEngine(SQLEngine):
     :raises ValueError: if the engine is not :class:`~.SparkExecutionEngine`
     """
 
-    def __init__(self, execution_engine: ExecutionEngine):
-        assert_or_throw(
-            isinstance(execution_engine, SparkExecutionEngine),
-            ValueError("SparkSQLEngine must use SparkExecutionEngine"),
-        )
-        super().__init__(execution_engine)
+    @property
+    def execution_engine_constraint(self) -> Type[ExecutionEngine]:
+        return SparkExecutionEngine
 
     @property
     def is_distributed(self) -> bool:

@@ -11,6 +11,7 @@ from typing import (
     List,
     Optional,
     Tuple,
+    Type,
     TypeVar,
     Union,
 )
@@ -22,6 +23,7 @@ from triad.exceptions import InvalidOperationError
 from triad.utils.convert import to_size
 from triad.utils.string import validate_triad_var_name
 
+from fugue._utils.registry import fugue_plugin
 from fugue.bag import Bag, LocalBag
 from fugue.collections.partition import (
     BagPartitionCursor,
@@ -38,7 +40,7 @@ from fugue.column import (
     is_agg,
 )
 from fugue.constants import _FUGUE_GLOBAL_CONF, FUGUE_SQL_DIALECT
-from fugue.dataframe import DataFrame, DataFrames
+from fugue.dataframe import AnyDataFrame, DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
@@ -51,6 +53,21 @@ _FUGUE_EXECUTION_ENGINE_CONTEXT = ContextVar(
 )
 
 _CONTEXT_LOCK = SerializableRLock()
+
+
+@fugue_plugin
+def as_fugue_engine_df(df: AnyDataFrame, engine: "FugueEngineBase") -> DataFrame:
+    """Convert the dataframe to the Fugue engine compatible DataFrame
+
+    :param df: an input dataframe that can be recognized by Fugue
+    :param engine: the execution engine
+    :return: the Fugue engine compatible DataFrame
+
+    .. note::
+
+        By default it will call meth:`~.FugueEngineBase.to_df`
+    """
+    return engine.to_df(df)
 
 
 class _GlobalExecutionEngineContext:
@@ -74,13 +91,64 @@ class _GlobalExecutionEngineContext:
 _FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT = _GlobalExecutionEngineContext()
 
 
-class ExecutionEngineFacet:
+class FugueEngineBase(ABC):
+    @abstractmethod
+    def to_df(
+        self, df: AnyDataFrame, schema: Any = None
+    ) -> DataFrame:  # pragma: no cover
+        """Convert a data structure to this engine compatible DataFrame
+
+        :param data: :class:`~fugue.dataframe.dataframe.DataFrame`,
+          pandas DataFramme or list or iterable of arrays or others that
+          is supported by certain engine implementation
+        :param schema: |SchemaLikeObject|, defaults to None
+        :return: engine compatible dataframe
+
+        .. note::
+
+            There are certain conventions to follow for a new implementation:
+
+            * if the input is already in compatible dataframe type, it should return
+              itself
+            * all other methods in the engine interface should take arbitrary
+              dataframes and call this method to convert before doing anything
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def log(self) -> logging.Logger:  # pragma: no cover
+        """Logger of this engine instance"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def conf(self) -> ParamDict:  # pragma: no cover
+        """All configurations of this engine instance.
+
+        .. note::
+
+            It can contain more than you providec, for example
+            in :class:`~.fugue_spark.execution_engine.SparkExecutionEngine`,
+            the Spark session can bring in more config, they are all accessible
+            using this property.
+        """
+        raise NotImplementedError
+
+
+class EngineFacet(FugueEngineBase):
     """The base class for different factes of the execution engines.
 
     :param execution_engine: the execution engine this sql engine will run on
     """
 
     def __init__(self, execution_engine: "ExecutionEngine") -> None:
+        tp = self.execution_engine_constraint
+        if not isinstance(execution_engine, tp):
+            raise TypeError(
+                f"{self} expects the engine type to be "
+                f"{tp}, but got {type(execution_engine)}"
+            )
         self._execution_engine = execution_engine
 
     @property
@@ -88,8 +156,27 @@ class ExecutionEngineFacet:
         """the execution engine this sql engine will run on"""
         return self._execution_engine
 
+    @property
+    def log(self) -> logging.Logger:
+        return self.execution_engine.log
 
-class SQLEngine(ExecutionEngineFacet, ABC):
+    @property
+    def conf(self) -> ParamDict:
+        return self.execution_engine.conf
+
+    def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
+        return self.execution_engine.to_df(df, schema)
+
+    @property
+    def execution_engine_constraint(self) -> Type["ExecutionEngine"]:
+        """This defines the required ExecutionEngine type of this facet
+
+        :return: a subtype of :class:`~.ExecutionEngine`
+        """
+        return ExecutionEngine
+
+
+class SQLEngine(EngineFacet):
     """The abstract base class for different SQL execution implementations. Please read
     :ref:`this <tutorial:tutorials/advanced/execution_engine:sqlengine>`
     to understand the concept
@@ -153,7 +240,7 @@ class SQLEngine(ExecutionEngineFacet, ABC):
         raise NotImplementedError
 
 
-class MapEngine(ExecutionEngineFacet, ABC):
+class MapEngine(EngineFacet):
     """The abstract base class for different map operation implementations.
 
     :param execution_engine: the execution engine this sql engine will run on
@@ -216,7 +303,7 @@ class MapEngine(ExecutionEngineFacet, ABC):
         raise NotImplementedError
 
 
-class ExecutionEngine(ABC):
+class ExecutionEngine(FugueEngineBase):
     """The abstract base class for execution engines.
     It is the layer that unifies core concepts of distributed computing,
     and separates the underlying computing frameworks from user's higher level logic.
@@ -321,15 +408,6 @@ class ExecutionEngine(ABC):
 
     @property
     def conf(self) -> ParamDict:
-        """All configurations of this engine instance.
-
-        .. note::
-
-            It can contain more than you providec, for example
-            in :class:`~fugue_spark.execution_engine.SparkExecutionEngine`,
-            the Spark session can bring in more config, they are all accessible
-            using this property.
-        """
         return self._conf
 
     @property
@@ -362,12 +440,6 @@ class ExecutionEngine(ABC):
 
     @property
     @abstractmethod
-    def log(self) -> logging.Logger:  # pragma: no cover
-        """Logger of this engine instance"""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
     def fs(self) -> FileSystem:  # pragma: no cover
         """File system of this engine instance"""
         raise NotImplementedError
@@ -385,27 +457,6 @@ class ExecutionEngine(ABC):
     @abstractmethod
     def get_current_parallelism(self) -> int:  # pragma: no cover
         """Get the current number of parallelism of this engine"""
-        raise NotImplementedError
-
-    @abstractmethod
-    def to_df(self, data: Any, schema: Any = None) -> DataFrame:  # pragma: no cover
-        """Convert a data structure to this engine compatible DataFrame
-
-        :param data: :class:`~fugue.dataframe.dataframe.DataFrame`,
-          pandas DataFramme or list or iterable of arrays or others that
-          is supported by certain engine implementation
-        :param schema: |SchemaLikeObject|, defaults to None
-        :return: engine compatible dataframe
-
-        .. note::
-
-            There are certain conventions to follow for a new implementation:
-
-            * if the input is already in compatible dataframe type, it should return
-              itself
-            * all other methods in the engine interface should take arbitrary
-              dataframes and call this method to convert before doing anything
-        """
         raise NotImplementedError
 
     @abstractmethod

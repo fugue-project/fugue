@@ -3,7 +3,7 @@ from typing import Any, Callable
 
 import ibis
 
-from fugue import DataFrame, DataFrames, ExecutionEngine, ExecutionEngineFacet
+from fugue import DataFrame, DataFrames, ExecutionEngine, EngineFacet, AnyDataFrame
 from fugue._utils.registry import fugue_plugin
 
 from .._compat import IbisTable
@@ -19,11 +19,14 @@ def parse_ibis_engine(obj: Any, engine: ExecutionEngine) -> "IbisEngine":
     )
 
 
-class IbisEngine(ExecutionEngineFacet):
+class IbisEngine(EngineFacet):
     """The abstract base class for different ibis execution implementations.
 
     :param execution_engine: the execution engine this ibis engine will run on
     """
+
+    def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
+        raise NotImplementedError
 
     @abstractmethod
     def select(

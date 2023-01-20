@@ -10,8 +10,8 @@ from triad import assert_or_throw
 from fugue import DataFrame, MapEngine, PartitionSpec
 from fugue_dask import DaskDataFrame, DaskExecutionEngine
 from fugue_dask.execution_engine import DaskMapEngine
-from fugue_duckdb.dataframe import DuckDataFrame
-from fugue_duckdb.execution_engine import DuckExecutionEngine
+from .dataframe import DuckDataFrame
+from .execution_engine import DuckExecutionEngine, _to_duck_df
 
 
 class DuckDaskExecutionEngine(DuckExecutionEngine):
@@ -125,7 +125,7 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
             return df
         if isinstance(df, dd.DataFrame):
             return self._dask_engine.to_df(df, schema)
-        return self._to_duck_df(df, schema)
+        return _to_duck_df(self, df, schema)
 
     def _to_dask_df(self, df: Any, schema: Any = None) -> DaskDataFrame:
         if isinstance(df, DuckDataFrame):
