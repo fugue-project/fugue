@@ -176,9 +176,7 @@ class RayMapEngine(MapEngine):
                     rdf, PartitionSpec(num=n)
                 )
         batch_size = (
-            self.execution_engine.conf.get_or_throw(
-                FUGUE_RAY_DEFAULT_BATCH_SIZE, object
-            )
+            self.conf.get_or_throw(FUGUE_RAY_DEFAULT_BATCH_SIZE, object)
             if FUGUE_RAY_DEFAULT_BATCH_SIZE in self.execution_engine.conf
             else "default"
         )

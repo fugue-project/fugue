@@ -53,6 +53,22 @@ def test_json():
     assert_eq("(a=1,b='x',c=True,d={x:3},)", dict(a=1, b="x", c=True, d=dict(x=3)))
 
 
+def test_extension():
+    def assert_eq(expr, expected=None):
+        sql = FugueSQLParser(
+            expr, "fugueExtension", ignore_case=True, parse_mode=_PARSE_MODE
+        )
+        v = _VisitorBase(sql)
+        obj = v.visit(sql.tree)
+        assert expected == obj
+
+    assert_eq("abc", "abc")
+    assert_eq("abc . def", "abc.def")
+    assert_eq("abc . def. ` ` ", "abc.def.` `")
+    assert_eq(" x :abc . def. ` ` ", ("x", "abc.def.` `"))
+    assert_eq("`x:y ` : abc . def. ` ` ", ("x:y ", "abc.def.` `"))
+
+
 def test_schema():
     def assert_eq(expr, expected=None):
         sql = FugueSQLParser(

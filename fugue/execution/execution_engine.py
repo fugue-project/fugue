@@ -205,7 +205,7 @@ class SQLEngine(EngineFacet):
         self, dfs: DataFrames, statement: StructuredRawSQL
     ) -> Tuple[DataFrames, str]:
         d = DataFrames({self.encode_name(k): v for k, v in dfs.items()})
-        s = statement.construct(self.encode_name, dialect=self.dialect)
+        s = statement.construct(self.encode_name, dialect=self.dialect, log=self.log)
         return d, s
 
     @abstractmethod

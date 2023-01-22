@@ -78,7 +78,7 @@ class DuckDBEngine(SQLEngine):
                 self.execution_engine, v, create_view=True  # type: ignore
             )
             name_map[k] = tdf.alias
-        query = statement.construct(name_map, dialect="duckdb")
+        query = statement.construct(name_map, dialect="duckdb", log=self.log)
         result = self.execution_engine.connection.query(query)  # type: ignore
         return DuckDataFrame(result)
 

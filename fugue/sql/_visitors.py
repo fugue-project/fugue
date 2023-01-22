@@ -28,7 +28,7 @@ from triad.utils.convert import (
     to_type,
 )
 from triad.utils.pyarrow import to_pa_datatype
-from triad.utils.schema import unquote_name
+from triad.utils.schema import unquote_name, safe_split_out_of_quote
 from triad.utils.string import validate_triad_var_name
 
 from ..collections.partition import PartitionSpec
@@ -192,8 +192,12 @@ class _VisitorBase(FugueSQLVisitor):
     def visitFugueParamsObj(self, ctx: fp.FugueParamsObjContext) -> Any:
         return self.visit(ctx.obj)
 
-    def visitFugueExtension(self, ctx: fp.FugueExtensionContext) -> str:
-        return self.ctxToStr(ctx, delimit="")
+    def visitFugueExtension(self, ctx: fp.FugueExtensionContext) -> Any:
+        s = self.ctxToStr(ctx, delimit="")
+        if ctx.domain is None:
+            return s
+        p = safe_split_out_of_quote(s, ":", 1)
+        return unquote_name(p[0]), p[1]
 
     def visitFugueSingleOutputExtensionCommon(
         self, ctx: fp.FugueSingleOutputExtensionCommonContext

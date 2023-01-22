@@ -84,7 +84,7 @@ class SparkSQLEngine(SQLEngine):
         for k, v in dfs.items():
             df = self.execution_engine._to_spark_df(v, create_view=True)  # type: ignore
             _map[k] = df.alias
-        _sql = statement.construct(_map, dialect="spark")
+        _sql = statement.construct(_map, dialect="spark", log=self.log)
         return SparkDataFrame(
             self.execution_engine.spark_session.sql(_sql)  # type: ignore
         )
@@ -110,7 +110,7 @@ class SparkMapEngine(MapEngine):
         )
         if not possible or any(pa.types.is_nested(t) for t in schema.types):
             if enabled and not possible:  # pragma: no cover
-                self.execution_engine.log.warning(
+                self.log.warning(
                     f"{FUGUE_SPARK_CONF_USE_PANDAS_UDF}"
                     " is enabled but the current PySpark session"
                     "did not enable Pandas UDF support"

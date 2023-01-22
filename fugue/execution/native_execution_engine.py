@@ -102,7 +102,7 @@ class PandasMapEngine(MapEngine):
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
         if partition_spec.num_partitions != "0":
-            self.execution_engine.log.warning(
+            self.log.warning(
                 "%s doesn't respect num_partitions %s",
                 self,
                 partition_spec.num_partitions,

@@ -50,7 +50,8 @@ class IbisSQLEngine(SQLEngine):
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         return self._ibis_engine._to_ibis_dataframe(
             self._ibis_engine._raw_select(
-                statement.construct(dialect=self._ibis_engine.dialect), dfs
+                statement.construct(dialect=self._ibis_engine.dialect, log=self.log),
+                dfs,
             )
         )
 

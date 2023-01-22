@@ -1,3 +1,4 @@
+from logging import Logger
 from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
 from uuid import uuid4
 
@@ -66,6 +67,7 @@ class StructuredRawSQL:
         self,
         name_map: Union[None, Callable[[str], str], Dict[str, str]] = None,
         dialect: Optional[str] = None,
+        log: Optional[Logger] = None,
     ):
         """Construct the final SQL given the ``dialect``
 
@@ -73,6 +75,7 @@ class StructuredRawSQL:
             the expected names, defaults to None. It can be a function or a
             dictionary
         :param dialect: the expected dialect, defaults to None
+        :param log: the logger to log information, defaults to None
         :return: the final SQL string
         """
         nm: Any = (
@@ -88,7 +91,17 @@ class StructuredRawSQL:
             and dialect is not None
             and self._dialect != dialect
         ):
-            return transpile_sql(raw_sql, self._dialect, dialect)
+            tsql = transpile_sql(raw_sql, self._dialect, dialect)
+            if log is not None:
+                log.debug(
+                    "SQL transpiled from %s to %s\n\n"
+                    "Original:\n\n%s\n\nTranspiled:\n\n%s\n",
+                    self._dialect,
+                    dialect,
+                    raw_sql,
+                    tsql,
+                )
+            return tsql
         return raw_sql
 
     @staticmethod
