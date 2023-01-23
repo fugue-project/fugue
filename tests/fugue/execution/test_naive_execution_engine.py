@@ -49,6 +49,11 @@ class NativeExecutionEngineSqliteTests(ExecutionEngineTests.Tests):
         e.set_sql_engine(SqliteEngine(e))
         return e
 
+    def test_properties(self):
+        assert not self.engine.is_distributed
+        assert not self.engine.map_engine.is_distributed
+        assert not self.engine.sql_engine.is_distributed
+
     def test_map_with_dict_col(self):
         # TODO: add back
         return
@@ -82,6 +87,11 @@ class NativeExecutionEngineQPDTests(ExecutionEngineTests.Tests):
         e = NativeExecutionEngine(dict(test=True))
         e.set_sql_engine(QPDPandasEngine(e))
         return e
+
+    def test_properties(self):
+        assert not self.engine.is_distributed
+        assert not self.engine.map_engine.is_distributed
+        assert not self.engine.sql_engine.is_distributed
 
     def test_map_with_dict_col(self):
         # TODO: add back

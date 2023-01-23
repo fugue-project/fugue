@@ -25,7 +25,6 @@ from fugue.dataframe import (
     DataFrames,
     LocalBoundedDataFrame,
     PandasDataFrame,
-    AnyDataFrame,
 )
 from fugue.dataframe.utils import get_join_schemas
 from fugue.plugins import transpile_sql
@@ -56,9 +55,6 @@ class DuckDBEngine(SQLEngine):
 
     :param execution_engine: the execution engine this sql engine will run on
     """
-
-    def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
-        return self.execution_engine.to_df(df, schema)
 
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         if isinstance(self.execution_engine, DuckExecutionEngine):
@@ -133,6 +129,10 @@ class DuckExecutionEngine(ExecutionEngine):
 
     def __repr__(self) -> str:
         return "DuckExecutionEngine"
+
+    @property
+    def is_distributed(self) -> bool:
+        return False
 
     @property
     def connection(self) -> DuckDBPyConnection:

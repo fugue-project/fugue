@@ -208,6 +208,10 @@ class RayExecutionEngine(DuckExecutionEngine):
     def __repr__(self) -> str:
         return "RayExecutionEngine"
 
+    @property
+    def is_distributed(self) -> bool:
+        return True
+
     def create_default_map_engine(self) -> MapEngine:
         return RayMapEngine(self)
 

@@ -32,6 +32,11 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
             {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
         )
         return e
+    
+    def test_properties(self):
+        assert not self.engine.is_distributed
+        assert not self.engine.map_engine.is_distributed
+        assert not self.engine.sql_engine.is_distributed
 
     def test_duck_to_df(self):
         e = self.engine

@@ -15,7 +15,7 @@ from fugue.collections.partition import (
     PartitionSpec,
     parse_presort_exp,
 )
-from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, AnyDataFrame
+from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 
@@ -39,9 +39,6 @@ class IbisSQLEngine(SQLEngine):
     @property
     def execution_engine_constraint(self) -> Type[ExecutionEngine]:
         return IbisExecutionEngine
-
-    def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
-        return self.execution_engine.to_df(df, schema)
 
     @property
     def is_distributed(self) -> bool:
@@ -74,9 +71,6 @@ class IbisMapEngine(MapEngine):
     @property
     def execution_engine_constraint(self) -> Type[ExecutionEngine]:
         return IbisExecutionEngine
-
-    def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
-        return self.execution_engine.to_df(df, schema)
 
     def map_dataframe(
         self,
@@ -113,12 +107,6 @@ class IbisExecutionEngine(ExecutionEngine):
     def __init__(self, conf: Any):
         super().__init__(conf)
         self._non_ibis_engine = self.create_non_ibis_execution_engine()
-
-    @property
-    @abstractmethod
-    def is_distributed(self) -> bool:  # pragma: no cover
-        """Whether this ibis based engine (SQL part) is distributed"""
-        raise NotImplementedError
 
     @property
     @abstractmethod

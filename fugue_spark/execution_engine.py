@@ -145,12 +145,10 @@ class SparkMapEngine(MapEngine):
                     partition_spec=partition_spec,
                     on_init=on_init,
                 )
-        df = self.execution_engine.to_df(
-            self.execution_engine.repartition(df, partition_spec)
-        )
+        df = self.to_df(self.execution_engine.repartition(df, partition_spec))
         mapper = _Mapper(df, map_func, output_schema, partition_spec, on_init)
         sdf = df.native.rdd.mapPartitionsWithIndex(mapper.run, True)  # type: ignore
-        return self.execution_engine.to_df(sdf, output_schema)
+        return self.to_df(sdf, output_schema)
 
     def _group_map_by_pandas_udf(
         self,
@@ -188,7 +186,7 @@ class SparkMapEngine(MapEngine):
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()
 
-        df = self.execution_engine.to_df(df)
+        df = self.to_df(df)
 
         gdf = df.native.groupBy(*partition_spec.partition_by)  # type: ignore
         sdf = gdf.applyInPandas(_udf, schema=to_spark_schema(output_schema))
@@ -202,9 +200,7 @@ class SparkMapEngine(MapEngine):
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
-        df = self.execution_engine.to_df(
-            self.execution_engine.repartition(df, partition_spec)
-        )
+        df = self.to_df(self.execution_engine.repartition(df, partition_spec))
         output_schema = Schema(output_schema)
         input_schema = df.schema
         on_init_once: Any = (
@@ -241,7 +237,7 @@ class SparkMapEngine(MapEngine):
             else:
                 yield output_df.as_pandas()
 
-        df = self.execution_engine.to_df(df)
+        df = self.to_df(df)
         sdf = df.native.mapInPandas(  # type: ignore
             _udf, schema=to_spark_schema(output_schema)
         )
@@ -290,6 +286,10 @@ class SparkExecutionEngine(ExecutionEngine):
             self._spark_session is not None, "SparkExecutionEngine is not started"
         )
         return self._spark_session
+
+    @property
+    def is_distributed(self) -> bool:
+        return True
 
     @property
     def log(self) -> logging.Logger:

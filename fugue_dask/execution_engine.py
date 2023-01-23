@@ -57,9 +57,6 @@ class DaskMapEngine(MapEngine):
     def execution_engine_constraint(self) -> Type[ExecutionEngine]:
         return DaskExecutionEngine
 
-    def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
-        return self.execution_engine.to_df(df, schema)
-
     @property
     def is_distributed(self) -> bool:
         return True
@@ -146,6 +143,10 @@ class DaskExecutionEngine(ExecutionEngine):
 
     def __repr__(self) -> str:
         return "DaskExecutionEngine"
+
+    @property
+    def is_distributed(self) -> bool:
+        return True
 
     @property
     def dask_client(self) -> Client:

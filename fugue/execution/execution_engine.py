@@ -135,6 +135,12 @@ class FugueEngineBase(ABC):
         """
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def is_distributed(self) -> bool:  # pragma: no cover
+        """Whether this engine is a distributed engine"""
+        raise NotImplementedError
+
 
 class EngineFacet(FugueEngineBase):
     """The base class for different factes of the execution engines.
@@ -164,6 +170,10 @@ class EngineFacet(FugueEngineBase):
     def conf(self) -> ParamDict:
         return self.execution_engine.conf
 
+    @property
+    def is_distributed(self) -> bool:
+        return self.execution_engine.is_distributed
+
     def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
         return self.execution_engine.to_df(df, schema)
 
@@ -187,12 +197,6 @@ class SQLEngine(EngineFacet):
     def __init__(self, execution_engine: "ExecutionEngine") -> None:
         super().__init__(execution_engine)
         self._uid = "_" + str(uuid4())[:5] + "_"
-
-    @property
-    @abstractmethod
-    def is_distributed(self) -> bool:  # pragma: no cover
-        """Whether this SQL engine is a distributed engine"""
-        raise NotImplementedError
 
     @property
     def dialect(self) -> Optional[str]:
@@ -245,12 +249,6 @@ class MapEngine(EngineFacet):
 
     :param execution_engine: the execution engine this sql engine will run on
     """
-
-    @property
-    @abstractmethod
-    def is_distributed(self) -> bool:  # pragma: no cover
-        """Whether this map engine is a distributed engine"""
-        raise NotImplementedError
 
     @abstractmethod
     def map_dataframe(

@@ -44,9 +44,6 @@ class SqliteEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
-        return _to_native_execution_engine_df(df, schema)
-
     @property
     def is_distributed(self) -> bool:
         return False
@@ -170,6 +167,10 @@ class NativeExecutionEngine(ExecutionEngine):
     @property
     def fs(self) -> FileSystem:
         return self._fs
+
+    @property
+    def is_distributed(self) -> bool:
+        return False
 
     def create_default_sql_engine(self) -> SQLEngine:
         return QPDPandasEngine(self)
