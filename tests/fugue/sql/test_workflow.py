@@ -75,6 +75,24 @@ def test_show():
     dag.run()
 
 
+def test_builtin_plot():
+    fsql(
+        """
+    CREATE [[0]] SCHEMA a:int
+    OUTPUT USING viz:plot
+    OUTPUT USING viz:hist(title="x")
+    """
+    ).run()
+
+    fsql(
+        """
+    CREATE [[0,1],[2,0]] SCHEMA x:int,y:int
+    OUTPUT PREPARTITION BY x PRESORT y USING viz:plot
+    OUTPUT PREPARTITION BY x PRESORT y USING viz:plot(title="x")
+    """
+    ).run()
+
+
 def test_jinja_keyword_in_sql():
     with FugueSQLWorkflow() as dag:
         dag(

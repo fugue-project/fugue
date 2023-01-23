@@ -170,10 +170,6 @@ class EngineFacet(FugueEngineBase):
     def conf(self) -> ParamDict:
         return self.execution_engine.conf
 
-    @property
-    def is_distributed(self) -> bool:
-        return self.execution_engine.is_distributed
-
     def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
         return self.execution_engine.to_df(df, schema)
 

@@ -91,7 +91,7 @@ def _pa_to_ibis_type(tp: pa.DataType) -> dt.DataType:
     if pa.types.is_timestamp(tp):
         if tp.tz is None:
             return dt.Timestamp()
-        return dt.Timestamp(timezone=str(tp.tz).lower())
+        return dt.Timestamp(timezone=str(tp.tz))
     if pa.types.is_list(tp):
         ttp = _pa_to_ibis_type(tp.value_type)
         return dt.Array(value_type=ttp)

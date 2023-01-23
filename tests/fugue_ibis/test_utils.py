@@ -49,6 +49,9 @@ def test_schema():
     a = Schema("a:<int,str>")
     assert to_schema(to_ibis_schema(a)) == a
 
+    a = Schema("a:timestamp(us, GMT)")
+    assert to_schema(to_ibis_schema(a)) == a
+
 
 def test_materialize():
     tdf1 = pd.DataFrame([[0, 1], [3, 4]], columns=["a", "b"])

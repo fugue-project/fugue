@@ -40,6 +40,11 @@ class IbisExecutionEngineForceIbisTests(ExecutionEngineTests.Tests):
     def make_engine(self):
         return MockDuckExecutionEngine({"test": True}, force_is_ibis=True)
 
+    def test_properties(self):
+        assert not self.engine.is_distributed
+        assert not self.engine.map_engine.is_distributed
+        assert not self.engine.sql_engine.is_distributed
+
     def test_select(self):
         # it can't work properly with DuckDB (hugeint is not recognized)
         pass

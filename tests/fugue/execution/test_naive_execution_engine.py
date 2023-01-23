@@ -92,6 +92,8 @@ class NativeExecutionEngineQPDTests(ExecutionEngineTests.Tests):
         assert not self.engine.is_distributed
         assert not self.engine.map_engine.is_distributed
         assert not self.engine.sql_engine.is_distributed
+        assert self.engine.map_engine.conf is self.engine.conf
+        assert self.engine.sql_engine.conf is self.engine.conf
 
     def test_map_with_dict_col(self):
         # TODO: add back
