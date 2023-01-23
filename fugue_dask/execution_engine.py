@@ -38,6 +38,10 @@ from fugue_dask.dataframe import DaskDataFrame
 class QPDDaskEngine(SQLEngine):
     """QPD execution implementation."""
 
+    @property
+    def dialect(self) -> Optional[str]:
+        return "spark"
+
     def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
         return to_dask_engine_df(df, schema)
 

@@ -44,6 +44,10 @@ class DuckDBEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
+    @property
+    def dialect(self) -> Optional[str]:
+        return "duckdb"
+
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         if isinstance(self.execution_engine, DuckExecutionEngine):
             return self._duck_select(dfs, statement)
@@ -62,7 +66,7 @@ class DuckDBEngine(SQLEngine):
                 self.execution_engine, v, create_view=True  # type: ignore
             )
             name_map[k] = tdf.alias
-        query = statement.construct(name_map, dialect="duckdb", log=self.log)
+        query = statement.construct(name_map, dialect=self.dialect, log=self.log)
         result = self.execution_engine.connection.query(query)  # type: ignore
         return DuckDataFrame(result)
 

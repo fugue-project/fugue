@@ -72,6 +72,10 @@ class SparkSQLEngine(SQLEngine):
     """
 
     @property
+    def dialect(self) -> Optional[str]:
+        return "spark"
+
+    @property
     def execution_engine_constraint(self) -> Type[ExecutionEngine]:
         return SparkExecutionEngine
 
@@ -84,7 +88,7 @@ class SparkSQLEngine(SQLEngine):
         for k, v in dfs.items():
             df = self.execution_engine._to_spark_df(v, create_view=True)  # type: ignore
             _map[k] = df.alias
-        _sql = statement.construct(_map, dialect="spark", log=self.log)
+        _sql = statement.construct(_map, dialect=self.dialect, log=self.log)
         return SparkDataFrame(
             self.execution_engine.spark_session.sql(_sql)  # type: ignore
         )

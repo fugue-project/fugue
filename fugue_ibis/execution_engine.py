@@ -32,6 +32,10 @@ class IbisSQLEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
+    @property
+    def dialect(self) -> Optional[str]:
+        return self._ibis_engine.dialect
+
     def __init__(self, execution_engine: ExecutionEngine) -> None:
         super().__init__(execution_engine)
         self._ibis_engine: IbisExecutionEngine = execution_engine  # type: ignore
@@ -47,7 +51,7 @@ class IbisSQLEngine(SQLEngine):
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         return self._ibis_engine._to_ibis_dataframe(
             self._ibis_engine._raw_select(
-                statement.construct(dialect=self._ibis_engine.dialect, log=self.log),
+                statement.construct(dialect=self.dialect, log=self.log),
                 dfs,
             )
         )
