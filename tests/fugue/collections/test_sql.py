@@ -3,9 +3,29 @@ from triad import to_uuid
 from fugue.collections.sql import StructuredRawSQL, TempTableName, transpile_sql
 
 
-@transpile_sql.candidate(lambda sql, d1, d2: d1 == "x" and d2 == "y")
-def _dummy_transpile(sql, d1, d2):
+@transpile_sql.candidate(
+    lambda sql, from_dialect, to_dialect: from_dialect == "x" and to_dialect == "y"
+)
+def _dummy_transpile(sql, from_dialect, to_dialect):
     return sql.lower()
+
+
+def test_transpile():
+    assert 'SELECT "x" FROM tb' == transpile_sql(
+        "SELECT `x` FROM tb", from_dialect="spark", to_dialect="duckdb"
+    )
+    assert "SELECT `x` FROM tb" == transpile_sql(
+        "SELECT `x` FROM tb", from_dialect="spark", to_dialect=None
+    )
+    assert "SELECT `x` FROM tb" == transpile_sql(
+        "SELECT `x` FROM tb", from_dialect=None, to_dialect=None
+    )
+    assert "SELECT `x` FROM tb" == transpile_sql(
+        "SELECT `x` FROM tb", from_dialect=None, to_dialect="duckdb"
+    )
+    assert 'select "x" from tb' == transpile_sql(
+        'SELECT "x" FROM tb', from_dialect="x", to_dialect="y"
+    )
 
 
 def test_parse_sql():

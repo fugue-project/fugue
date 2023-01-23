@@ -3,7 +3,6 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 
 import duckdb
 import pyarrow as pa
-import sqlglot
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from triad import SerializableRLock
 from triad.collections.fs import FileSystem
@@ -19,7 +18,6 @@ from fugue import (
 )
 from fugue.collections.partition import PartitionSpec, parse_presort_exp
 from fugue.collections.sql import StructuredRawSQL, TempTableName
-from fugue.constants import FUGUE_SQL_DIALECT
 from fugue.dataframe import (
     DataFrame,
     DataFrames,
@@ -27,7 +25,6 @@ from fugue.dataframe import (
     PandasDataFrame,
 )
 from fugue.dataframe.utils import get_join_schemas
-from fugue.plugins import transpile_sql
 
 from ._io import DuckDBIO
 from ._utils import (
@@ -39,15 +36,6 @@ from ._utils import (
 from .dataframe import DuckDataFrame
 
 _FUGUE_DUCKDB_PRAGMA_CONFIG_PREFIX = "fugue.duckdb.pragma."
-
-
-@transpile_sql.candidate(
-    lambda sql, from_dialect, to_dialect: from_dialect
-    in [FUGUE_SQL_DIALECT, "spark", "postgres"]
-    and to_dialect == "duckdb"
-)
-def _to_duckdb_sql(sql: str, from_dialect: str, to_dialect: str) -> str:
-    return " ".join(sqlglot.transpile(sql, read="spark", write="duckdb"))
 
 
 class DuckDBEngine(SQLEngine):

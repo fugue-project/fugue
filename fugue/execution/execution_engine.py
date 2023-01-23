@@ -39,7 +39,7 @@ from fugue.column import (
     col,
     is_agg,
 )
-from fugue.constants import _FUGUE_GLOBAL_CONF, FUGUE_SQL_DIALECT
+from fugue.constants import _FUGUE_GLOBAL_CONF, FUGUE_SQL_DEFAULT_DIALECT
 from fugue.dataframe import AnyDataFrame, DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
@@ -195,7 +195,7 @@ class SQLEngine(EngineFacet):
         self._uid = "_" + str(uuid4())[:5] + "_"
 
     @property
-    def dialect(self) -> Optional[str]:
+    def dialect(self) -> Optional[str]:  # pragma: no cover
         return None
 
     def encode_name(self, name: str) -> str:
@@ -767,7 +767,7 @@ class ExecutionEngine(FugueEngineBase):
         df_name = TempTableName()
         sql = StructuredRawSQL(
             gen.select(cols, df_name.key, where=where, having=having),
-            dialect=FUGUE_SQL_DIALECT,
+            dialect=FUGUE_SQL_DEFAULT_DIALECT,
         )
         res = self.sql_engine.select(DataFrames({df_name.key: self.to_df(df)}), sql)
         diff = gen.correct_select_schema(df.schema, cols, res.schema)

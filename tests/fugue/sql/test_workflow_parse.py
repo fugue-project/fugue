@@ -755,7 +755,9 @@ def test_module():
 
 def assert_eq(expr, expected: FugueWorkflow):
     global_vars, local_vars = get_caller_global_local_vars()
-    sql = FugueSQLParser(expr, "fugueLanguage", ignore_case=True, parse_mode="auto")
+    sql = FugueSQLParser(
+        expr, "fugueLanguage", ignore_case=True, parse_mode="auto", dialect="spark"
+    )
     wf = FugueWorkflow()
     v = _Extensions(
         sql, FugueSQLHooks(), wf, global_vars=global_vars, local_vars=local_vars

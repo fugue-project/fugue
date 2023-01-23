@@ -37,7 +37,7 @@ from fugue.constants import (
     FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
     FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT,
     FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE,
-    FUGUE_SQL_DIALECT,
+    FUGUE_SQL_DEFAULT_DIALECT,
 )
 from fugue.dataframe import DataFrame, LocalBoundedDataFrame, YieldedDataFrame
 from fugue.dataframe.api import is_df
@@ -2073,7 +2073,7 @@ class FugueWorkflow:
         *statements: Any,
         sql_engine: Any = None,
         sql_engine_params: Any = None,
-        dialect: Optional[str] = FUGUE_SQL_DIALECT,
+        dialect: Optional[str] = FUGUE_SQL_DEFAULT_DIALECT,
     ) -> WorkflowDataFrame:
         """Execute ``SELECT`` statement using
         :class:`~fugue.execution.execution_engine.SQLEngine`

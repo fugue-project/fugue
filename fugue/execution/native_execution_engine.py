@@ -48,6 +48,10 @@ class SqliteEngine(SQLEngine):
     def is_distributed(self) -> bool:
         return False
 
+    @property
+    def dialect(self) -> Optional[str]:
+        return "sqlite"
+
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         _dfs, _sql = self.encode(dfs, statement)
         sql_engine = create_engine("sqlite:///:memory:")
@@ -62,6 +66,10 @@ class QPDPandasEngine(SQLEngine):
 
     :param execution_engine: the execution engine this sql engine will run on
     """
+
+    @property
+    def dialect(self) -> Optional[str]:
+        return "spark"
 
     def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
         return _to_native_execution_engine_df(df, schema)

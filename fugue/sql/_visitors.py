@@ -683,7 +683,7 @@ class _Extensions(_VisitorBase):
             df: Any = statements[0]
         else:
             __modified_exception__ = self.to_runtime_error(ctx)  # noqa
-            df = self.workflow.select(*statements)
+            df = self.workflow.select(*statements, dialect=self.sql.dialect)
         self._process_assignable(df, ctx)
 
     def visitFugueModuleTask(self, ctx: fp.FugueModuleTaskContext) -> None:
@@ -746,13 +746,16 @@ class _Extensions(_VisitorBase):
             engine, engine_params = self.visitFugueSqlEngine(ctx.fugueSqlEngine())
             __modified_exception__ = self.to_runtime_error(ctx)  # noqa
             yield self.workflow.select(
-                get_sql(), sql_engine=engine, sql_engine_params=engine_params
+                get_sql(),
+                sql_engine=engine,
+                sql_engine_params=engine_params,
+                dialect=self.sql.dialect,
             )
         elif ctx.ctes() is None:
             yield from self._get_query_elements(ctx)
         else:
             __modified_exception__ = self.to_runtime_error(ctx)  # noqa
-            yield self.workflow.select(get_sql())
+            yield self.workflow.select(get_sql(), dialect=self.sql.dialect)
 
     def visitOptionalFromClause(
         self, ctx: fp.OptionalFromClauseContext

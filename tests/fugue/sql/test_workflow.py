@@ -9,6 +9,7 @@ from fugue import (
     FugueSQLWorkflow,
     NativeExecutionEngine,
     fsql,
+    register_global_conf,
 )
 from fugue.dataframe.utils import _df_eq
 from fugue.exceptions import FugueSQLError
@@ -371,7 +372,7 @@ def test_fsql():
     df = pd.DataFrame([[0], [1]], columns=["a"])
     result = fsql(
         """
-    SELECT * FROM df WHERE a>{{p}}
+    SELECT * FROM df WHERE `a`>{{p}}
     UNION ALL
     SELECT * FROM df2 WHERE a>{{p}}
     TRANSFORM USING t YIELD DATAFRAME AS result
@@ -393,6 +394,35 @@ def test_fsql():
         fsql_ignore_case=True,
     ).run()
     assert [[1, 1], [1, 1]] == result["result"].as_array()
+
+    result = fsql(
+        """
+    SELECT * FROM df WHERE "a">{{p}}
+    UNION ALL
+    SELECT * FROM df2 WHERE a>{{p}}
+    TRANSFORM USING t YIELD DATAFRAME AS result
+    """,
+        df2=pd.DataFrame([[0], [1]], columns=["a"]),
+        p=0,
+        fsql_dialect="duckdb",
+    ).run()
+    assert [[1, 1], [1, 1]] == result["result"].as_array()
+
+    register_global_conf({"fugue.sql.compile.dialect": "duckdb"})
+    try:
+        result = fsql(
+            """
+        SELECT * FROM df WHERE "a">{{p}}
+        UNION ALL
+        SELECT * FROM df2 WHERE a>{{p}}
+        TRANSFORM USING t YIELD DATAFRAME AS result
+        """,
+            df2=pd.DataFrame([[0], [1]], columns=["a"]),
+            p=0,
+        ).run()
+        assert [[1, 1], [1, 1]] == result["result"].as_array()
+    finally:
+        register_global_conf({"fugue.sql.compile.dialect": "spark"})
 
 
 def test_fsql_syntax_error():

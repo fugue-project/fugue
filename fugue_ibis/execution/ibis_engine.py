@@ -26,7 +26,7 @@ class IbisEngine(EngineFacet):
     """
 
     @property
-    def is_distributed(self) -> bool:
+    def is_distributed(self) -> bool:  # pragma: no cover
         return self.execution_engine.is_distributed
 
     def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:

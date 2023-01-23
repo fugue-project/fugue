@@ -6,7 +6,7 @@ from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars
 
 from ..collections.yielded import Yielded
-from ..constants import FUGUE_CONF_SQL_IGNORE_CASE
+from ..constants import FUGUE_CONF_SQL_DIALECT, FUGUE_CONF_SQL_IGNORE_CASE
 from ..dataframe.api import is_df
 from ..dataframe.dataframe import DataFrame
 from ..workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
@@ -51,6 +51,7 @@ class FugueSQLWorkflow(FugueWorkflow):
             code,
             "fugueLanguage",
             ignore_case=self.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool),
+            dialect=self.conf.get_or_throw(FUGUE_CONF_SQL_DIALECT, str),
             parse_mode="auto",
         )
         v = _Extensions(
