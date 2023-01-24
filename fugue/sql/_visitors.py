@@ -303,6 +303,7 @@ class _Extensions(_VisitorBase):
         sql: FugueSQLParser,
         hooks: FugueSQLHooks,
         workflow: FugueWorkflow,
+        dialect: str,
         variables: Optional[
             Dict[
                 str, Tuple[WorkflowDataFrame, WorkflowDataFrames, LazyWorkflowDataFrame]
@@ -324,6 +325,7 @@ class _Extensions(_VisitorBase):
         self._global_vars, self._local_vars = get_caller_global_local_vars(
             global_vars, local_vars
         )
+        self._dialect = dialect
 
     @property
     def workflow(self) -> FugueWorkflow:
@@ -394,6 +396,7 @@ class _Extensions(_VisitorBase):
             self.sql,
             self.hooks,
             workflow=self.workflow,
+            dialect=self._dialect,
             variables=self.variables,
             last=self._last,
             global_vars=self.global_vars,
@@ -683,7 +686,7 @@ class _Extensions(_VisitorBase):
             df: Any = statements[0]
         else:
             __modified_exception__ = self.to_runtime_error(ctx)  # noqa
-            df = self.workflow.select(*statements, dialect=self.sql.dialect)
+            df = self.workflow.select(*statements, dialect=self._dialect)
         self._process_assignable(df, ctx)
 
     def visitFugueModuleTask(self, ctx: fp.FugueModuleTaskContext) -> None:
@@ -749,13 +752,13 @@ class _Extensions(_VisitorBase):
                 get_sql(),
                 sql_engine=engine,
                 sql_engine_params=engine_params,
-                dialect=self.sql.dialect,
+                dialect=self._dialect,
             )
         elif ctx.ctes() is None:
             yield from self._get_query_elements(ctx)
         else:
             __modified_exception__ = self.to_runtime_error(ctx)  # noqa
-            yield self.workflow.select(get_sql(), dialect=self.sql.dialect)
+            yield self.workflow.select(get_sql(), dialect=self._dialect)
 
     def visitOptionalFromClause(
         self, ctx: fp.OptionalFromClauseContext
@@ -802,6 +805,7 @@ class _Extensions(_VisitorBase):
                 self.sql,
                 self.hooks,
                 workflow=self.workflow,
+                dialect=self._dialect,
                 variables=self.variables,
                 last=last,
                 global_vars=self.global_vars,

@@ -51,11 +51,15 @@ class FugueSQLWorkflow(FugueWorkflow):
             code,
             "fugueLanguage",
             ignore_case=self.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool),
-            dialect=self.conf.get_or_throw(FUGUE_CONF_SQL_DIALECT, str),
             parse_mode="auto",
         )
         v = _Extensions(
-            sql, FugueSQLHooks(), self, dfs, local_vars=params  # type: ignore
+            sql,
+            FugueSQLHooks(),
+            self,
+            dialect=self.conf.get_or_throw(FUGUE_CONF_SQL_DIALECT, str),
+            variables=dfs,  # type: ignore
+            local_vars=params,
         )
         v.visit(sql.tree)
         return v.variables

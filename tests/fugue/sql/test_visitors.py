@@ -20,7 +20,6 @@ def test_json():
             "fugueJsonValue",
             ignore_case=True,
             parse_mode=_PARSE_MODE,
-            dialect="spark",
         )
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
@@ -64,7 +63,6 @@ def test_extension():
             "fugueExtension",
             ignore_case=True,
             parse_mode=_PARSE_MODE,
-            dialect="spark",
         )
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
@@ -84,7 +82,6 @@ def test_schema():
             "fugueSchema",
             ignore_case=True,
             parse_mode=_PARSE_MODE,
-            dialect="spark",
         )
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
@@ -108,7 +105,6 @@ def test_wild_schema():
             "fugueWildSchema",
             ignore_case=True,
             parse_mode=_PARSE_MODE,
-            dialect="spark",
         )
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
@@ -141,7 +137,6 @@ def test_pre_partition():
             "fuguePrepartition",
             ignore_case=True,
             parse_mode=_PARSE_MODE,
-            dialect="spark",
         )
         v = _VisitorBase(sql)
         obj = json.dumps(v.visit(sql.tree).jsondict)
@@ -178,7 +173,6 @@ def test_params():
             "fugueParams",
             ignore_case=True,
             parse_mode=_PARSE_MODE,
-            dialect="spark",
         )
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
@@ -198,7 +192,6 @@ def test_single_output_common_expr():
             "fugueSingleOutputExtensionCommon",
             ignore_case=True,
             parse_mode=_PARSE_MODE,
-            dialect="spark",
         )
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
@@ -231,7 +224,6 @@ def test_assignment():
             "fugueAssignment",
             ignore_case=True,
             parse_mode=_PARSE_MODE,
-            dialect="spark",
         )
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)

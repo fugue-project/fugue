@@ -53,7 +53,7 @@ class DataFrame(Dataset):
     @property
     def schema(self) -> Schema:
         """The schema of the dataframe"""
-        if self._schema_discovered:
+        if self.schema_discovered:
             # we must keep it simple because it could be called on every row by a user
             assert isinstance(self._schema, Schema)
             return self._schema  # type: ignore
@@ -64,6 +64,16 @@ class DataFrame(Dataset):
             self._schema.set_readonly()
             self._schema_discovered = True
             return self._schema
+
+    @property
+    def schema_discovered(self) -> Schema:
+        """Whether the schema has been discovered or still a lambda"""
+        return self._schema_discovered
+
+    @property
+    def columns(self) -> List[str]:
+        """The column names of the dataframe"""
+        return self.schema.names
 
     @abstractmethod
     def native_as_df(self) -> AnyDataFrame:  # pragma: no cover
@@ -94,11 +104,11 @@ class DataFrame(Dataset):
         :raises FugueDatasetEmptyError: if it is empty
         """
         arr = self.peek_array()
-        return {self.schema.names[i]: arr[i] for i in range(len(self.schema))}
+        return {self.columns[i]: arr[i] for i in range(len(self.columns))}
 
     def as_pandas(self) -> pd.DataFrame:
         """Convert to pandas DataFrame"""
-        pdf = pd.DataFrame(self.as_array(), columns=self.schema.names)
+        pdf = pd.DataFrame(self.as_array(), columns=self.columns)
         return PD_UTILS.enforce_type(pdf, self.schema.pa_schema, null_safe=True)
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
@@ -232,7 +242,7 @@ class DataFrame(Dataset):
             The default implementation enforces ``type_safe`` True
         """
         if columns is None:
-            columns = self.schema.names
+            columns = self.columns
         idx = range(len(columns))
         for x in self.as_array_iterable(columns, type_safe=True):
             yield {columns[i]: x[i] for i in idx}

@@ -13,7 +13,7 @@ from fugue import (
 )
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
-from fugue.plugins import is_df, get_column_names, rename
+from fugue.plugins import is_df, get_column_names, rename, drop_columns
 
 from ._compat import IbisTable
 from ._utils import _pa_to_ibis_type, to_schema
@@ -27,14 +27,17 @@ class IbisDataFrame(DataFrame):
 
     def __init__(self, table: IbisTable, schema: Any = None):
         self._table = table
-        _schema = to_schema(table.schema())
         if schema is not None:
-            _to_schema = _input_schema(schema).assert_not_empty()
-            if _to_schema != _schema:
-                table = self._alter_table_columns(table, _schema, _to_schema)
-                _schema = _to_schema
-        self._table = table
-        super().__init__(schema=_schema)
+            _schema = to_schema(table.schema())
+            if schema is not None:
+                _to_schema = _input_schema(schema).assert_not_empty()
+                if _to_schema != _schema:
+                    table = self._alter_table_columns(table, _schema, _to_schema)
+                    _schema = _to_schema
+            self._table = table
+            super().__init__(schema=_schema)
+        else:
+            super().__init__(schema=lambda: to_schema(self._table.schema()))
 
     @property
     def native(self) -> IbisTable:
@@ -74,6 +77,10 @@ class IbisDataFrame(DataFrame):
     def num_partitions(self) -> int:
         return 1  # pragma: no cover
 
+    @property
+    def columns(self) -> List[str]:
+        return self._table.columns
+
     def peek_array(self) -> List[Any]:
         res = self._to_local_df(self._table.head(1)).as_array()
         if len(res) == 0:
@@ -84,10 +91,15 @@ class IbisDataFrame(DataFrame):
         return self._compute_scalar(self._table.count())
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
+        if not self.schema_discovered:
+            keys = [c for c in self.columns if c not in cols]
+            return self._to_new_df(self._table[keys])
         schema = self.schema.exclude(cols)
         return self._to_new_df(self._table[schema.names], schema=schema)
 
     def _select_cols(self, keys: List[Any]) -> DataFrame:
+        if not self.schema_discovered:
+            return self._to_new_df(self._table[keys])
         schema = self.schema.extract(keys)
         return self._to_new_df(self._table[schema.names], schema=schema)
 
@@ -96,7 +108,7 @@ class IbisDataFrame(DataFrame):
             schema = self.schema.rename(columns)
         except Exception as e:
             raise FugueDataFrameOperationError from e
-        df = _rename(self._table, self.schema.names, schema.names)
+        df = _rename(self._table, self.columns, schema.names)
         return self if df is self._table else self._to_new_df(df, schema=schema)
 
     def alter_columns(self, columns: Any) -> DataFrame:
@@ -165,6 +177,16 @@ def _ibis_is_df(df: IbisTable) -> bool:
 @get_column_names.candidate(lambda df: isinstance(df, IbisTable))
 def _get_ibis_columns(df: IbisTable) -> List[Any]:
     return df.columns
+
+
+@drop_columns.candidate(lambda df, *args, **kwargs: isinstance(df, IbisTable))
+def _drop_ibis_columns(df: IbisTable, columns: List[str]) -> IbisTable:
+    cols = [x for x in df.columns if x not in columns]
+    if len(cols) == 0:
+        raise FugueDataFrameOperationError("cannot drop all columns")
+    if len(cols) + len(columns) != len(df.columns):
+        _assert_no_missing(df, columns)
+    return df[cols]
 
 
 @rename.candidate(lambda df, *args, **kwargs: isinstance(df, IbisTable))
