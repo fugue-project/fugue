@@ -60,7 +60,7 @@ def test_schema_incompatible():
     orig = ibis.schema([("x y", dt.GeoSpatial()), ("y", dt.String())])
     with raises(NotImplementedError):
         to_schema(orig)
-    assert to_schema(orig, lambda t: pa.string()) == "`x y`:str,y:str"
+    assert to_schema(orig, lambda n, t: pa.string()) == "`x y`:str,y:str"
 
 
 def test_materialize():

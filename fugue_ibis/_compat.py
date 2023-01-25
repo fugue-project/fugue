@@ -5,4 +5,6 @@ try:  # pragma: no cover
     from ibis.expr.types import Table as IbisTable
 except Exception:  # pragma: no cover
     from ibis.expr.types import TableExpr as IbisTable
+
 from ibis import Schema as IbisSchema
+from ibis.expr.types import Value as IbisValue

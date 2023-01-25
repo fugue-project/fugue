@@ -64,7 +64,7 @@ def to_ibis_schema(schema: Schema) -> ibis.Schema:
 
 def to_schema(
     schema: ibis.Schema,
-    on_incompatible: Optional[Callable[[dt.DataType], pa.DataType]] = None,
+    on_incompatible: Optional[Callable[[str, dt.DataType], pa.DataType]] = None,
 ) -> Schema:
     fields: List[Any] = []
     for n, t in zip(schema.names, schema.types):
@@ -73,7 +73,7 @@ def to_schema(
         except NotImplementedError:
             if on_incompatible is None:
                 raise
-            fields.append((n, on_incompatible(t)))
+            fields.append((n, on_incompatible(n, t)))
     return Schema(fields)
 
 
