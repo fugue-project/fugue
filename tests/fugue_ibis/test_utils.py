@@ -4,13 +4,12 @@ ibis = pytest.importorskip("ibis")
 import ibis.expr.datatypes as dt
 import pandas as pd
 import pyarrow as pa
+from pytest import raises
 from triad import Schema
 
 from fugue import PandasDataFrame
 from fugue.dataframe.utils import _df_eq
 from fugue_ibis._utils import LazyIbisObject, materialize, to_ibis_schema, to_schema
-
-from pytest import raises
 
 
 def test_schema():
