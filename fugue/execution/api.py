@@ -8,12 +8,11 @@ from fugue.constants import _FUGUE_GLOBAL_CONF
 from fugue.exceptions import FugueInvalidOperation
 
 from ..collections.partition import PartitionSpec
-from ..dataframe.dataframe import AnyDataFrame, DataFrame
+from ..dataframe.dataframe import AnyDataFrame, DataFrame, as_fugue_df
 from .execution_engine import (
     _FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT,
     AnyExecutionEngine,
     ExecutionEngine,
-    as_fugue_engine_df,
 )
 from .factory import make_execution_engine, try_get_context_execution_engine
 
@@ -183,7 +182,7 @@ def repartition(
     """
     return run_engine_function(
         lambda e: e.repartition(
-            as_fugue_engine_df(df, e), partition_spec=PartitionSpec(partition)
+            as_fugue_df(df), partition_spec=PartitionSpec(partition)
         ),
         engine=engine,
         engine_conf=engine_conf,
@@ -211,7 +210,7 @@ def broadcast(
     :return: the broadcasted dataframe
     """
     return run_engine_function(
-        lambda e: e.broadcast(as_fugue_engine_df(df, e)),
+        lambda e: e.broadcast(as_fugue_df(df)),
         engine=engine,
         engine_conf=engine_conf,
         infer_by=[df],
@@ -244,7 +243,7 @@ def persist(
     :return: the persisted dataframe
     """
     return run_engine_function(
-        lambda e: e.persist(as_fugue_engine_df(df, e), lazy=lazy, **kwargs),
+        lambda e: e.persist(as_fugue_df(df), lazy=lazy, **kwargs),
         engine=engine,
         engine_conf=engine_conf,
         infer_by=[df],
@@ -271,7 +270,7 @@ def distinct(
     :return: the result with distinct rows
     """
     return run_engine_function(
-        lambda e: e.distinct(as_fugue_engine_df(df, e)),
+        lambda e: e.distinct(as_fugue_df(df)),
         engine=engine,
         engine_conf=engine_conf,
         infer_by=[df],
@@ -305,9 +304,7 @@ def dropna(
     :return: DataFrame with NA records dropped
     """
     return run_engine_function(
-        lambda e: e.dropna(
-            as_fugue_engine_df(df, e), how=how, thresh=thresh, subset=subset
-        ),
+        lambda e: e.dropna(as_fugue_df(df), how=how, thresh=thresh, subset=subset),
         engine=engine,
         engine_conf=engine_conf,
         infer_by=[df],
@@ -342,7 +339,7 @@ def fillna(
     :return: DataFrame with NA records filled
     """
     return run_engine_function(
-        lambda e: e.fillna(as_fugue_engine_df(df, e), value=value, subset=subset),
+        lambda e: e.fillna(as_fugue_df(df), value=value, subset=subset),
         engine=engine,
         engine_conf=engine_conf,
         infer_by=[df],
@@ -381,9 +378,7 @@ def sample(
     :return: the sampled dataframe
     """
     return run_engine_function(
-        lambda e: e.sample(
-            as_fugue_engine_df(df, e), n=n, frac=frac, replace=replace, seed=seed
-        ),
+        lambda e: e.sample(as_fugue_df(df), n=n, frac=frac, replace=replace, seed=seed),
         engine=engine,
         engine_conf=engine_conf,
         infer_by=[df],
@@ -427,7 +422,7 @@ def take(
 
     return run_engine_function(
         lambda e: e.take(
-            as_fugue_engine_df(df, e),
+            as_fugue_df(df),
             n=n,
             presort=presort,
             na_position=na_position,
@@ -507,7 +502,7 @@ def save(
     """
     run_engine_function(
         lambda e: e.save_df(
-            as_fugue_engine_df(df, e),
+            as_fugue_df(df),
             path=path,
             format_hint=format_hint,
             mode=mode,
@@ -1031,9 +1026,7 @@ def select(
     )
 
     return run_engine_function(
-        lambda e: e.select(
-            as_fugue_engine_df(df, e), cols=cols, where=where, having=having
-        ),
+        lambda e: e.select(as_fugue_df(df), cols=cols, where=where, having=having),
         engine=engine,
         engine_conf=engine_conf,
         infer_by=[df],
@@ -1078,7 +1071,7 @@ def filter(
                 fa.filter(df, f.coalesce(col("a"),col("b"))>1)
     """
     return run_engine_function(
-        lambda e: e.filter(as_fugue_engine_df(df, e), condition=condition),
+        lambda e: e.filter(as_fugue_df(df), condition=condition),
         engine=engine,
         engine_conf=engine_conf,
         infer_by=[df],
@@ -1148,7 +1141,7 @@ def assign(
         for k, v in columns.items()
     ]
     return run_engine_function(
-        lambda e: e.assign(as_fugue_engine_df(df, e), columns=cols),
+        lambda e: e.assign(as_fugue_df(df), columns=cols),
         engine=engine,
         engine_conf=engine_conf,
         infer_by=[df],
@@ -1203,7 +1196,7 @@ def aggregate(
     ]
     return run_engine_function(
         lambda e: e.aggregate(
-            as_fugue_engine_df(df, e),
+            as_fugue_df(df),
             partition_spec=None
             if partition_by is None
             else PartitionSpec(by=partition_by),

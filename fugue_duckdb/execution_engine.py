@@ -323,7 +323,7 @@ class DuckExecutionEngine(ExecutionEngine):
             else:
                 return {n: encode_value_to_expr(value[n]) for n in names}
 
-        names = list(df.schema.names)
+        names = df.columns
         if isinstance(value, dict):
             # subset should be ignored
             names = list(value.keys())
@@ -338,7 +338,7 @@ class DuckExecutionEngine(ExecutionEngine):
             f"COALESCE({encode_column_name(f)}, {vd[f]}) AS {encode_column_name(f)}"
             if f in names
             else encode_column_name(f)
-            for f in df.schema.names
+            for f in df.columns
         ]
         return DuckDataFrame(_to_duck_df(self, df).native.project(", ".join(cols)))
 

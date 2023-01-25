@@ -23,7 +23,6 @@ from triad.exceptions import InvalidOperationError
 from triad.utils.convert import to_size
 from triad.utils.string import validate_triad_var_name
 
-from fugue._utils.registry import fugue_plugin
 from fugue.bag import Bag, LocalBag
 from fugue.collections.partition import (
     BagPartitionCursor,
@@ -53,21 +52,6 @@ _FUGUE_EXECUTION_ENGINE_CONTEXT = ContextVar(
 )
 
 _CONTEXT_LOCK = SerializableRLock()
-
-
-@fugue_plugin
-def as_fugue_engine_df(df: AnyDataFrame, engine: "FugueEngineBase") -> DataFrame:
-    """Convert the dataframe to the Fugue engine compatible DataFrame
-
-    :param df: an input dataframe that can be recognized by Fugue
-    :param engine: the execution engine
-    :return: the Fugue engine compatible DataFrame
-
-    .. note::
-
-        By default it will call meth:`~.FugueEngineBase.to_df`
-    """
-    return engine.to_df(df)
 
 
 class _GlobalExecutionEngineContext:
@@ -845,12 +829,13 @@ class ExecutionEngine(FugueEngineBase):
             *columns
         ).assert_no_wildcard().assert_all_with_names().assert_no_agg()
 
-        cols = [col(n) for n in df.schema.names]
+        ck = {v: k for k, v in enumerate(df.columns)}
+        cols = [col(n) for n in ck.keys()]
         for c in columns:
-            if c.output_name not in df.schema:
+            if c.output_name not in ck:
                 cols.append(c)
             else:
-                cols[df.schema.index_of_key(c.output_name)] = c
+                cols[ck[c.output_name]] = c
         return self.select(df, SelectColumns(*cols))
 
     def aggregate(

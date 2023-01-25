@@ -250,13 +250,10 @@ class IbisExecutionEngine(ExecutionEngine):
         return self._to_ibis_dataframe(tb[end_schema.names], schema=end_schema)
 
     def union(self, df1: DataFrame, df2: DataFrame, distinct: bool = True) -> DataFrame:
-        assert_or_throw(
-            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
-        )
         _df1 = self._to_ibis_dataframe(df1)
         _df2 = self._to_ibis_dataframe(df2)
         tb = _df1.native.union(_df2.native, distinct=distinct)
-        return self._to_ibis_dataframe(tb, _df1.schema)
+        return self._to_ibis_dataframe(tb, df1.schema)
 
     def subtract(
         self, df1: DataFrame, df2: DataFrame, distinct: bool = True
@@ -264,7 +261,7 @@ class IbisExecutionEngine(ExecutionEngine):
         _df1 = self._to_ibis_dataframe(df1)
         _df2 = self._to_ibis_dataframe(df2)
         tb = _df1.native.difference(_df2.native, distinct=distinct)
-        return self._to_ibis_dataframe(tb, _df1.schema)
+        return self._to_ibis_dataframe(tb, df1.schema)
 
     def intersect(
         self, df1: DataFrame, df2: DataFrame, distinct: bool = True
@@ -272,14 +269,14 @@ class IbisExecutionEngine(ExecutionEngine):
         _df1 = self._to_ibis_dataframe(df1)
         _df2 = self._to_ibis_dataframe(df2)
         tb = _df1.native.intersect(_df2.native, distinct=distinct)
-        return self._to_ibis_dataframe(tb, _df1.schema)
+        return self._to_ibis_dataframe(tb, df1.schema)
 
     def distinct(self, df: DataFrame) -> DataFrame:
         if self.is_non_ibis(df):
             return self.non_ibis_engine.distinct(df)
         _df = self._to_ibis_dataframe(df)
         tb = _df.native.distinct()
-        return self._to_ibis_dataframe(tb, _df.schema)
+        return self._to_ibis_dataframe(tb, df.schema)
 
     def dropna(
         self,
@@ -298,7 +295,7 @@ class IbisExecutionEngine(ExecutionEngine):
         _df = self._to_ibis_dataframe(df)
         if thresh is None:
             tb = _df.native.dropna(subset=subset, how=how)
-            return self._to_ibis_dataframe(tb, _df.schema)
+            return self._to_ibis_dataframe(tb, df.schema)
         assert_or_throw(
             how == "any", ValueError("when thresh is set, how must be 'any'")
         )
@@ -310,7 +307,7 @@ class IbisExecutionEngine(ExecutionEngine):
             else:
                 sm = sm + expr
         tb = _df.native.filter(sm >= ibis.literal(thresh))
-        return self._to_ibis_dataframe(tb, _df.schema)
+        return self._to_ibis_dataframe(tb, df.schema)
 
     def fillna(self, df: DataFrame, value: Any, subset: List[str] = None) -> DataFrame:
         if self.is_non_ibis(df):
@@ -322,12 +319,17 @@ class IbisExecutionEngine(ExecutionEngine):
             else:
                 return {n: value[n] for n in names}
 
-        names = list(df.schema.names)
+        names = df.columns
         if isinstance(value, dict):
             # subset should be ignored
             names = list(value.keys())
         elif subset is not None:
-            names = list(df.schema.extract(subset).names)
+            st = set(names)
+            assert_or_throw(
+                st.issuperset(subset),
+                ValueError(f"{names} is not a superset of {subset}"),
+            )
+            names = subset
         vd = _build_value_dict(names)
         assert_or_throw(
             all(v is not None for v in vd.values()),
@@ -336,7 +338,7 @@ class IbisExecutionEngine(ExecutionEngine):
         tb = self._to_ibis_dataframe(df).native
         cols = [
             ibis.coalesce(tb[f], ibis.literal(vd[f])).name(f) if f in names else tb[f]
-            for f in df.schema.names
+            for f in df.columns
         ]
         return self._to_ibis_dataframe(tb[cols], schema=df.schema)
 
@@ -382,7 +384,7 @@ class IbisExecutionEngine(ExecutionEngine):
                 f") WHERE __fugue_take_param<={n}"
             )
             tb = self._raw_select(sql, {tbn: idf})
-            return self._to_ibis_dataframe(tb[df.schema.names], schema=df.schema)
+            return self._to_ibis_dataframe(tb[df.columns], schema=df.schema)
 
         sorts: List[str] = []
         for k, v in _presort.items():
@@ -395,7 +397,7 @@ class IbisExecutionEngine(ExecutionEngine):
         if len(partition_spec.partition_by) == 0:
             sql = f"SELECT * FROM {tbn} {sort_expr} LIMIT {n}"
             tb = self._raw_select(sql, {tbn: idf})
-            return self._to_ibis_dataframe(tb[df.schema.names], schema=df.schema)
+            return self._to_ibis_dataframe(tb[df.columns], schema=df.schema)
 
         pcols = ", ".join(
             self.encode_column_name(x) for x in partition_spec.partition_by
@@ -407,7 +409,7 @@ class IbisExecutionEngine(ExecutionEngine):
             f") WHERE __fugue_take_param<={n}"
         )
         tb = self._raw_select(sql, {tbn: idf})
-        return self._to_ibis_dataframe(tb[df.schema.names], schema=df.schema)
+        return self._to_ibis_dataframe(tb[df.columns], schema=df.schema)
 
     def _raw_select(self, statement: str, dfs: Dict[str, Any]) -> IbisTable:
         cte: List[str] = []

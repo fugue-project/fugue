@@ -146,7 +146,7 @@ class DuckDBIO:
                     )
                 query = f"SELECT * FROM read_csv_auto({pm})"
                 tdf = DuckDataFrame(self._con.from_query(query))
-                rn = dict(zip(tdf.schema.names, columns))
+                rn = dict(zip(tdf.columns, columns))
                 return tdf.rename(rn)  # type: ignore
         else:
             if header:

@@ -341,7 +341,7 @@ class DaskExecutionEngine(ExecutionEngine):
             mapping = value
         else:
             # If subset is none, apply to all columns
-            subset = subset or df.schema.names
+            subset = subset or df.columns
             mapping = {col: value for col in subset}
         d = self.to_df(df).native.fillna(mapping)
         return DaskDataFrame(d, df.schema)
