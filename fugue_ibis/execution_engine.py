@@ -56,6 +56,22 @@ class IbisSQLEngine(SQLEngine):
             )
         )
 
+    def table_exists(self, table: str) -> bool:
+        return self._ibis_engine.table_exists(table)
+
+    def save_table(
+        self,
+        df: DataFrame,
+        table: str,
+        mode: str = "overwrite",
+        partition_spec: Optional[PartitionSpec] = None,
+        **kwargs: Any,
+    ) -> None:
+        return self._ibis_engine.save_table(df, table, mode, partition_spec, **kwargs)
+
+    def load_table(self, table: str, **kwargs: Any) -> DataFrame:
+        return self._ibis_engine.load_table(table, **kwargs)
+
 
 class IbisMapEngine(MapEngine):
     """IbisExecutionEngine's MapEngine, it is a wrapper of the map engine
@@ -410,6 +426,22 @@ class IbisExecutionEngine(ExecutionEngine):
         )
         tb = self._raw_select(sql, {tbn: idf})
         return self._to_ibis_dataframe(tb[df.columns], schema=df.schema)
+
+    def table_exists(self, table: str) -> bool:
+        raise NotImplementedError
+
+    def save_table(
+        self,
+        df: DataFrame,
+        table: str,
+        mode: str = "overwrite",
+        partition_spec: Optional[PartitionSpec] = None,
+        **kwargs: Any,
+    ) -> None:
+        raise NotImplementedError
+
+    def load_table(self, table: str, **kwargs: Any) -> DataFrame:
+        raise NotImplementedError
 
     def _raw_select(self, statement: str, dfs: Dict[str, Any]) -> IbisTable:
         cte: List[str] = []
