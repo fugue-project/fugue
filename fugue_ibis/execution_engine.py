@@ -20,6 +20,7 @@ from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 
 from ._compat import IbisTable
+from ._utils import to_ibis_schema
 from .dataframe import IbisDataFrame
 
 _JOIN_RIGHT_SUFFIX = "_ibis_y__"
@@ -428,7 +429,7 @@ class IbisExecutionEngine(ExecutionEngine):
         return self._to_ibis_dataframe(tb[df.columns], schema=df.schema)
 
     def table_exists(self, table: str) -> bool:
-        raise NotImplementedError
+        return table in self.backend.list_tables()
 
     def save_table(
         self,
@@ -438,10 +439,17 @@ class IbisExecutionEngine(ExecutionEngine):
         partition_spec: Optional[PartitionSpec] = None,
         **kwargs: Any,
     ) -> None:
-        raise NotImplementedError
+        if mode == "overwrite":
+            self.backend.drop_table(table, force=True)
+        if isinstance(df, IbisDataFrame):
+            self.backend.create_table(table, df.native)
+        else:
+            self.backend.create_table(
+                table, df.as_pandas(), schema=to_ibis_schema(df.schema)
+            )
 
     def load_table(self, table: str, **kwargs: Any) -> DataFrame:
-        raise NotImplementedError
+        return self._to_ibis_dataframe(self.backend.table(table))
 
     def _raw_select(self, statement: str, dfs: Dict[str, Any]) -> IbisTable:
         cte: List[str] = []

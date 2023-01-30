@@ -12,7 +12,6 @@ from fugue import (
     PartitionSpec,
 )
 from fugue_ibis import IbisDataFrame, IbisExecutionEngine, IbisTable
-from fugue_ibis._utils import to_ibis_schema
 
 from .dataframe import MockDuckDataFrame
 
@@ -138,29 +137,6 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
         return self.non_ibis_engine.save_df(
             _df, path, format_hint, mode, partition_spec, force_single, **kwargs
         )
-
-    def table_exists(self, table: str) -> bool:
-        return table in self.backend.list_tables()
-
-    def save_table(
-        self,
-        df: DataFrame,
-        table: str,
-        mode: str = "overwrite",
-        partition_spec: Optional[PartitionSpec] = None,
-        **kwargs: Any,
-    ) -> None:
-        if mode == "overwrite":
-            self.backend.drop_table(table, force=True)
-        if isinstance(df, MockDuckDataFrame):
-            self.backend.create_table(table, df.native)
-        else:
-            self.backend.create_table(
-                table, df.as_pandas(), schema=to_ibis_schema(df.schema)
-            )
-
-    def load_table(self, table: str, **kwargs: Any) -> DataFrame:
-        return MockDuckDataFrame(self.backend.table(table))
 
     def _register_df(
         self, df: pa.Table, name: Optional[str] = None, schema: Any = None
