@@ -205,6 +205,9 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
         a = FugueWorkflow().df(sdf)
         df_eq(a.compute(SparkExecutionEngine), [[1.1]], "a:double")
 
+    def test_yield_table(self):
+        pass
+
     def test_default_session(self):
         a = FugueWorkflow().df([[0]], "a:int")
         df_eq(a.compute(SparkExecutionEngine), [[0]], "a:int")

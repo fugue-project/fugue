@@ -65,6 +65,9 @@ class NativeExecutionEngineBuiltInSqliteTests(BuiltInTests.Tests):
         e.set_sql_engine(SqliteEngine(e))
         return e
 
+    def test_yield_table(self):
+        pass
+
     def test_annotation(self):
         def m_c(engine: NativeExecutionEngine) -> pa.Table:
             return pa.Table.from_pandas(pd.DataFrame([[0]], columns=["a"]))
@@ -105,6 +108,9 @@ class NativeExecutionEngineBuiltInQPDTests(BuiltInTests.Tests):
         e = NativeExecutionEngine(dict(test=True))
         e.set_sql_engine(QPDPandasEngine(e))
         return e
+
+    def test_yield_table(self):
+        pass
 
 
 def test_get_file_threshold():

@@ -271,15 +271,46 @@ class BuiltInTests(object):
             with raises(FugueWorkflowCompileError):
                 FugueWorkflow().df([[0]], "a:int").checkpoint().yield_file_as("x")
 
-            with raises(FugueWorkflowCompileError):
+            with raises(ValueError):
                 FugueWorkflow().df([[0]], "a:int").persist().yield_file_as("x")
 
             def run_test(deterministic):
                 dag1 = FugueWorkflow()
                 df = dag1.df([[0]], "a:int")
                 if deterministic:
-                    df = df.deterministic_checkpoint()
+                    df = df.deterministic_checkpoint(storage_type="file")
                 df.yield_file_as("x")
+                id1 = dag1.spec_uuid()
+                dag2 = FugueWorkflow()
+                dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))
+                id2 = dag2.spec_uuid()
+                dag1.run(self.engine)
+                dag2.run(self.engine)
+                return id1, id2
+
+            id1, id2 = run_test(False)
+            id3, id4 = run_test(False)
+            assert id1 == id3
+            assert id2 != id4  # non deterministic yield (direct yield)
+
+            id1, id2 = run_test(True)
+            id3, id4 = run_test(True)
+            assert id1 == id3
+            assert id2 == id4  # deterministic yield (yield deterministic checkpoint)
+
+        def test_yield_table(self):
+            with raises(FugueWorkflowCompileError):
+                FugueWorkflow().df([[0]], "a:int").checkpoint().yield_table_as("x")
+
+            with raises(ValueError):
+                FugueWorkflow().df([[0]], "a:int").persist().yield_table_as("x")
+
+            def run_test(deterministic):
+                dag1 = FugueWorkflow()
+                df = dag1.df([[0]], "a:int")
+                if deterministic:
+                    df = df.deterministic_checkpoint(storage_type="table")
+                df.yield_table_as("x")
                 id1 = dag1.spec_uuid()
                 dag2 = FugueWorkflow()
                 dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))

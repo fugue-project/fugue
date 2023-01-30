@@ -6,6 +6,7 @@ import pyarrow as pa
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from triad import SerializableRLock
 from triad.collections.fs import FileSystem
+from triad.utils.schema import quote_name
 from triad.utils.assertion import assert_or_throw
 
 from fugue import (
@@ -55,6 +56,42 @@ class DuckDBEngine(SQLEngine):
             _dfs, _sql = self.encode(dfs, statement)
             return self._other_select(_dfs, _sql)
 
+    def table_exists(self, table: str) -> bool:
+        return self._get_table(table) is not None
+
+    def save_table(
+        self,
+        df: DataFrame,
+        table: str,
+        mode: str = "overwrite",
+        partition_spec: Optional[PartitionSpec] = None,
+        **kwargs: Any,
+    ) -> None:
+        if isinstance(self.execution_engine, DuckExecutionEngine):
+            con = self.execution_engine.connection
+            tdf: DuckDataFrame = _to_duck_df(
+                self.execution_engine, df, create_view=False  # type: ignore
+            )
+            if mode == "overwrite":
+                et = self._get_table(table)
+                if et is not None:
+                    tp = "VIEW" if et["table_type"] == "VIEW" else "TABLE"
+                    tn = encode_column_name(et["table_name"])
+                    con.query(f"DROP {tp} {tn}")
+            tdf.native.create(table)
+        else:  # pragma: no cover
+            raise NotImplementedError(
+                "save_table can only be used with DuckExecutionEngine"
+            )
+
+    def load_table(self, table: str, **kwargs: Any) -> DataFrame:
+        if isinstance(self.execution_engine, DuckExecutionEngine):
+            return DuckDataFrame(self.execution_engine.connection.table(table))
+        else:  # pragma: no cover
+            raise NotImplementedError(
+                "load_table can only be used with DuckExecutionEngine"
+            )
+
     @property
     def is_distributed(self) -> bool:
         return False
@@ -78,6 +115,27 @@ class DuckDBEngine(SQLEngine):
             return ArrowDataFrame(conn.execute(statement).arrow())
         finally:
             conn.close()
+
+    def _get_table(self, table: str) -> Optional[Dict[str, Any]]:
+        if isinstance(self.execution_engine, DuckExecutionEngine):
+            # TODO: this is over simplified
+            con = self.execution_engine.connection
+            qt = quote_name(table, "'")
+            if not qt.startswith("'"):
+                qt = "'" + qt + "'"
+            tables = (
+                con.query(
+                    "SELECT table_catalog,table_schema,table_name,table_type"
+                    f" FROM information_schema.tables WHERE table_name={qt}"
+                )
+                .to_df()
+                .to_dict("records")
+            )
+            return None if len(tables) == 0 else tables[0]
+        else:  # pragma: no cover
+            raise NotImplementedError(
+                "table_exists can only be used with DuckExecutionEngine"
+            )
 
 
 class DuckExecutionEngine(ExecutionEngine):

@@ -127,6 +127,9 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
         e = DaskExecutionEngine(conf=dict(test=True, **_CONF))
         return e
 
+    def test_yield_table(self):
+        pass
+
     def test_default_init(self):
         a = FugueWorkflow().df([[0]], "a:int")
         df_eq(a.compute(DaskExecutionEngine), [[0]], "a:int")

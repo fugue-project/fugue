@@ -32,7 +32,7 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
             {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
         )
         return e
-    
+
     def test_properties(self):
         assert not self.engine.is_distributed
         assert not self.engine.map_engine.is_distributed
@@ -44,6 +44,21 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
         assert isinstance(a, DuckDataFrame)
         b = e.to_df(a.native_as_df())
         assert isinstance(b, DuckDataFrame)
+
+    def test_table_operations(self):
+        se = self.engine.sql_engine
+        df = fa.as_fugue_df([[0, 1]], schema="a:int,b:long")
+        assert se._get_table("_t_x") is None
+        se.save_table(df, "_t_x")
+        assert se._get_table("_t_x") is not None
+        res = se.load_table("_t_x").as_array()
+        assert [[0, 1]] == res
+        df = fa.as_fugue_df([[1, 2]], schema="a:int,b:long")
+        se.save_table(df, "_t_x")
+        res = se.load_table("_t_x").as_array()
+        assert [[1, 2]] == res
+        with raises(Exception):
+            se.save_table(df, "_t_x", mode="error")
 
     def test_intersect_all(self):
         e = self.engine

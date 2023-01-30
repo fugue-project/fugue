@@ -181,6 +181,9 @@ class RayBuiltInTests(BuiltInTests.Tests):
             connection=self._con,
         )
         return e
+    
+    def test_yield_table(self):
+        pass
 
     def test_yield_2(self):
         def assert_data(df: DataFrame) -> None:

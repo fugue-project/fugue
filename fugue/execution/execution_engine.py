@@ -30,6 +30,7 @@ from fugue.collections.partition import (
     PartitionSpec,
 )
 from fugue.collections.sql import StructuredRawSQL, TempTableName
+from fugue.collections.yielded import Yielded, PhysicalYielded
 from fugue.column import (
     ColumnExpr,
     SelectColumns,
@@ -220,6 +221,42 @@ class SQLEngine(EngineFacet):
             from hive without input DataFrames:
 
             >>> sql_engine.select(DataFrames(), "SELECT * FROM hive.a.table")
+        """
+        raise NotImplementedError
+
+    def table_exists(self, table: str) -> bool:  # pragma: no cover
+        """Whether the table exists
+
+        :param table: the table name
+        :return: whether the table exists
+        """
+        raise NotImplementedError
+
+    def load_table(self, table: str, **kwargs: Any) -> DataFrame:  # pragma: no cover
+        """Load table as a dataframe
+
+        :param table: the table name
+        :return: an engine compatible dataframe
+        """
+        raise NotImplementedError
+
+    def save_table(
+        self,
+        df: DataFrame,
+        table: str,
+        mode: str = "overwrite",
+        partition_spec: Optional[PartitionSpec] = None,
+        **kwargs: Any,
+    ) -> None:  # pragma: no cover
+        """Save the dataframe to a table
+
+        :param df: the dataframe to save
+        :param table: the table name
+        :param mode: can accept ``overwrite``, ``error``,
+          defaults to "overwrite"
+        :param partition_spec: how to partition the dataframe before saving,
+          defaults None
+        :param kwargs: parameters to pass to the underlying framework
         """
         raise NotImplementedError
 
@@ -1124,6 +1161,20 @@ class ExecutionEngine(FugueEngineBase):
         return self.map_engine.map_dataframe(
             df, cs.run, output_schema, partition_spec, on_init=cs.on_init
         )
+
+    def load_yielded(self, df: Yielded) -> DataFrame:
+        """Load yielded dataframe
+
+        :param df: the yielded dataframe
+        :return: an engine compatible dataframe
+        """
+        if isinstance(df, PhysicalYielded):
+            if df.storage_type == "file":
+                return self.load_df(path=df.name)
+            else:
+                return self.sql_engine.load_table(table=df.name)
+        else:
+            return self.to_df(df.result)  # type: ignore
 
     @abstractmethod
     def load_df(

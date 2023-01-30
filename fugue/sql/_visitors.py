@@ -286,7 +286,12 @@ class _VisitorBase(FugueSQLVisitor):
             yield_name = self.ctxToStr(ctx.name) if ctx.name is not None else name
             assert_or_throw(yield_name is not None, "yield name is not specified")
             if ctx.DATAFRAME() is None:
-                x.yield_file_as(yield_name)
+                if ctx.FILE() is not None:
+                    x.yield_file_as(yield_name)
+                elif ctx.TABLE() is not None:
+                    x.yield_table_as(yield_name)
+                else:  # pragma: no cover
+                    raise NotImplementedError(self.ctxToStr(ctx))
             else:
                 x.yield_dataframe_as(yield_name, as_local=ctx.LOCAL() is not None)
             return x
