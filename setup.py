@@ -34,7 +34,7 @@ setup(
         "triad>=0.8.1",
         "adagio>=0.2.4",
         "qpd>=0.4.0",
-        "fugue-sql-antlr>=0.1.2",
+        "fugue-sql-antlr>=0.1.5",
         "sqlalchemy",
         "sqlglot",
         "pyarrow>=0.15.1",
@@ -42,7 +42,7 @@ setup(
         "jinja2",
     ],
     extras_require={
-        "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.2"],
+        "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.5"],
         "spark": ["pyspark"],
         "dask": [
             "dask[distributed,dataframe]; python_version < '3.8'",
@@ -61,7 +61,7 @@ setup(
         ],
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
         "all": [
-            "fugue-sql-antlr[cpp]>=0.1.2",
+            "fugue-sql-antlr[cpp]>=0.1.5",
             "pyspark",
             "dask[distributed,dataframe]; python_version < '3.8'",
             "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",

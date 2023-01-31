@@ -844,7 +844,9 @@ class WorkflowDataFrame(DataFrame):
 
         :return: sampled dataframe
         """
-        params: Dict[str, Any] = dict(replace=replace, seed=seed)
+        params: Dict[str, Any] = dict(replace=replace)
+        if seed is not None:
+            params["seed"] = seed
         if n is not None:
             params["n"] = n
         if frac is not None:
