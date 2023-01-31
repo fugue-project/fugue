@@ -33,18 +33,6 @@ class IbisSQLEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    def __init__(self, execution_engine: ExecutionEngine) -> None:
-        super().__init__(execution_engine)
-        self._ibis_engine: IbisExecutionEngine = execution_engine  # type: ignore
-
-    @property
-    def execution_engine_constraint(self) -> Type[ExecutionEngine]:
-        return IbisExecutionEngine
-
-    @property
-    def is_distributed(self) -> bool:
-        return self._ibis_engine.is_distributed
-
     @property
     @abstractmethod
     def backend(self) -> BaseBackend:  # pragma: no cover

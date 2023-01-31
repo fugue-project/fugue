@@ -30,6 +30,10 @@ class MockDuckSQLEngine(IbisSQLEngine):
     def dialect(self) -> str:
         return "duckdb"
 
+    @property
+    def is_distributed(self) -> bool:
+        return False
+
     def encode_column_name(self, name: str) -> str:
         return '"' + name.replace('"', '""') + '"'
 
