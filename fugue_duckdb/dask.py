@@ -52,7 +52,7 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
                 res = DuckDataFrame(
                     duckdb.arrow(ddf.as_arrow(), connection=self.connection)
                 )
-            if ddf.has_metadata:
+            if ddf.has_metadata:  # pragma: no cover
                 res.reset_metadata(ddf.metadata)
             return res
         return super().to_df(df, schema)

@@ -1,9 +1,10 @@
+from abc import abstractmethod
 from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 import pyarrow as pa
 from triad import Schema, assert_or_throw
-import ibis.expr.datatypes as dt
+
 from fugue import (
     DataFrame,
     IterableDataFrame,
@@ -15,8 +16,8 @@ from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from fugue.plugins import drop_columns, get_column_names, is_df, rename
 
-from ._compat import IbisSchema, IbisTable, IbisValue
-from ._utils import pa_to_ibis_type, to_schema, ibis_to_pa_type
+from ._compat import IbisSchema, IbisTable
+from ._utils import pa_to_ibis_type, to_schema
 
 
 class IbisDataFrame(DataFrame):
@@ -33,6 +34,11 @@ class IbisDataFrame(DataFrame):
         self._table = self._alter_table_columns(table, _schema)
         super().__init__(schema=_schema)
 
+    @abstractmethod
+    def to_sql(self) -> str:  # pragma: no cover
+        """Compile IbisTable to SQL"""
+        raise NotImplementedError
+
     @property
     def native(self) -> IbisTable:
         """Ibis Table object"""
@@ -42,13 +48,7 @@ class IbisDataFrame(DataFrame):
         return self._table
 
     def _to_schema(self, schema: IbisSchema) -> Schema:
-        return to_schema(schema, self._on_incompatible_type)
-
-    def _on_incompatible_type(self, name: str, tp: dt.DataType) -> pa.DataType:
-        raise NotImplementedError(f"{name}:{tp}")  # pragma: no cover
-
-    def _on_incompatible_conversion(self, col: IbisValue, tp: dt.DataType) -> IbisValue:
-        raise NotImplementedError(f"{col.name}:{col.type} -> {tp}")  # pragma: no cover
+        return to_schema(schema)
 
     def _to_local_df(self, table: IbisTable, schema: Any = None) -> LocalDataFrame:
         raise NotImplementedError  # pragma: no cover
@@ -155,13 +155,6 @@ class IbisDataFrame(DataFrame):
         return to_local_bounded_df(self._to_local_df(self._table.head(n)))
 
     def _alter_table_columns(self, table: IbisTable, new_schema: Schema) -> IbisTable:
-        def _supported(tp: dt.DataType) -> bool:
-            try:
-                ibis_to_pa_type(tp)
-                return True
-            except NotImplementedError:
-                return False
-
         fields: Dict[str, Any] = {}
         schema = table.schema()
         for _name, _type, f2 in zip(schema.names, schema.types, new_schema.fields):
@@ -172,8 +165,6 @@ class IbisDataFrame(DataFrame):
             )
             if _type == _new_type:
                 continue
-            elif not _supported(_type):
-                fields[_name] = self._on_incompatible_conversion(table[_name], f2.type)
             else:
                 fields[_name] = table[_name].cast(_new_type)
         if len(fields) == 0:

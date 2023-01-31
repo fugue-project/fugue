@@ -33,10 +33,6 @@ class IbisSQLEngine(SQLEngine):
     :param execution_engine: the execution engine this sql engine will run on
     """
 
-    @property
-    def dialect(self) -> Optional[str]:
-        return self._ibis_engine.dialect
-
     def __init__(self, execution_engine: ExecutionEngine) -> None:
         super().__init__(execution_engine)
         self._ibis_engine: IbisExecutionEngine = execution_engine  # type: ignore
@@ -49,16 +45,249 @@ class IbisSQLEngine(SQLEngine):
     def is_distributed(self) -> bool:
         return self._ibis_engine.is_distributed
 
+    @property
+    @abstractmethod
+    def backend(self) -> BaseBackend:  # pragma: no cover
+        raise NotImplementedError
+
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
-        return self._ibis_engine._to_ibis_dataframe(
-            self._ibis_engine._raw_select(
+        return self.to_df(
+            self.query_to_table(
                 statement.construct(dialect=self.dialect, log=self.log),
                 dfs,
             )
         )
 
+    def query_to_table(self, statement: str, dfs: Dict[str, Any]) -> IbisTable:
+        cte: List[str] = []
+        for k, v in dfs.items():
+            idf = self.to_df(v)
+            cte.append(k + " AS (" + idf.to_sql() + ")")  # type: ignore
+        if len(cte) > 0:
+            sql = "WITH " + ",\n".join(cte) + "\n" + statement
+        else:
+            sql = statement
+        return self.backend.sql(sql)
+
+    @abstractmethod
+    def encode_column_name(self, name: str) -> str:  # pragma: no cover
+        raise NotImplementedError
+
+    def get_temp_table_name(self) -> str:
+        return next(_GEN_TABLE_NAMES)
+
+    @abstractmethod
+    def persist(
+        self, df: DataFrame, lazy: bool = False, **kwargs: Any
+    ) -> DataFrame:  # pragma: no cover
+        raise NotImplementedError
+
+    @abstractmethod
+    def sample(
+        self,
+        df: DataFrame,
+        n: Optional[int] = None,
+        frac: Optional[float] = None,
+        replace: bool = False,
+        seed: Optional[int] = None,
+    ) -> DataFrame:  # pragma: no cover
+        raise NotImplementedError
+
+    def join(
+        self,
+        df1: DataFrame,
+        df2: DataFrame,
+        how: str,
+        on: Optional[List[str]] = None,
+    ) -> DataFrame:
+        _df1 = self.to_df(df1)
+        _df2 = self.to_df(df2)
+        key_schema, end_schema = get_join_schemas(_df1, _df2, how=how, on=on)
+        on_fields = [_df1.native[k] == _df2.native[k] for k in key_schema]
+        if how.lower() == "cross":
+            tb = _df1.native.cross_join(_df2.native, suffixes=("", _JOIN_RIGHT_SUFFIX))
+        elif how.lower() == "right_outer":
+            tb = _df2.native.left_join(
+                _df1.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
+            )
+        elif how.lower() == "left_outer":
+            tb = _df1.native.left_join(
+                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
+            )
+        elif how.lower() == "full_outer":
+            tb = _df1.native.outer_join(
+                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
+            )
+            cols: List[Any] = []
+            for k in end_schema.names:
+                if k not in key_schema:
+                    cols.append(k)
+                else:
+                    cols.append(
+                        ibis.coalesce(tb[k], tb[k + _JOIN_RIGHT_SUFFIX]).name(k)
+                    )
+            tb = tb[cols]
+        elif how.lower() in ["semi", "left_semi"]:
+            tb = _df1.native.semi_join(
+                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
+            )
+        elif how.lower() in ["anti", "left_anti"]:
+            tb = _df1.native.anti_join(
+                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
+            )
+        else:
+            tb = _df1.native.inner_join(
+                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
+            )
+        return self.to_df(tb[end_schema.names], schema=end_schema)
+
+    def union(self, df1: DataFrame, df2: DataFrame, distinct: bool = True) -> DataFrame:
+        _df1 = self.to_df(df1)
+        _df2 = self.to_df(df2)
+        tb = _df1.native.union(_df2.native, distinct=distinct)
+        return self.to_df(tb, df1.schema)
+
+    def subtract(
+        self, df1: DataFrame, df2: DataFrame, distinct: bool = True
+    ) -> DataFrame:
+        _df1 = self.to_df(df1)
+        _df2 = self.to_df(df2)
+        tb = _df1.native.difference(_df2.native, distinct=distinct)
+        return self.to_df(tb, df1.schema)
+
+    def intersect(
+        self, df1: DataFrame, df2: DataFrame, distinct: bool = True
+    ) -> DataFrame:
+        _df1 = self.to_df(df1)
+        _df2 = self.to_df(df2)
+        tb = _df1.native.intersect(_df2.native, distinct=distinct)
+        return self.to_df(tb, df1.schema)
+
+    def distinct(self, df: DataFrame) -> DataFrame:
+        _df = self.to_df(df)
+        tb = _df.native.distinct()
+        return self.to_df(tb, df.schema)
+
+    def dropna(
+        self,
+        df: DataFrame,
+        how: str = "any",
+        thresh: int = None,
+        subset: Optional[List[str]] = None,
+    ) -> DataFrame:
+        schema = df.schema
+        if subset is not None:
+            schema = schema.extract(subset)
+        _df = self.to_df(df)
+        if thresh is None:
+            tb = _df.native.dropna(subset=subset, how=how)
+            return self.to_df(tb, df.schema)
+        assert_or_throw(
+            how == "any", ValueError("when thresh is set, how must be 'any'")
+        )
+        sm = None
+        for col in schema.names:
+            expr = _df.native[col].isnull().ifelse(0, 1)
+            if sm is None:
+                sm = expr
+            else:
+                sm = sm + expr
+        tb = _df.native.filter(sm >= ibis.literal(thresh))
+        return self.to_df(tb, df.schema)
+
+    def fillna(self, df: DataFrame, value: Any, subset: List[str] = None) -> DataFrame:
+        def _build_value_dict(names: List[str]) -> Dict[str, str]:
+            if not isinstance(value, dict):
+                return {n: value for n in names}
+            else:
+                return {n: value[n] for n in names}
+
+        names = df.columns
+        if isinstance(value, dict):
+            # subset should be ignored
+            names = list(value.keys())
+        elif subset is not None:
+            st = set(names)
+            assert_or_throw(
+                st.issuperset(subset),
+                ValueError(f"{names} is not a superset of {subset}"),
+            )
+            names = subset
+        vd = _build_value_dict(names)
+        assert_or_throw(
+            all(v is not None for v in vd.values()),
+            ValueError("fillna value can not be None or contain None"),
+        )
+        tb = self.to_df(df).native
+        cols = [
+            ibis.coalesce(tb[f], ibis.literal(vd[f])).name(f) if f in names else tb[f]
+            for f in df.columns
+        ]
+        return self.to_df(tb[cols], schema=df.schema)
+
+    def take(
+        self,
+        df: DataFrame,
+        n: int,
+        presort: str,
+        na_position: str = "last",
+        partition_spec: Optional[PartitionSpec] = None,
+    ) -> DataFrame:
+        partition_spec = partition_spec or PartitionSpec()
+        assert_or_throw(
+            isinstance(n, int),
+            ValueError("n needs to be an integer"),
+        )
+
+        if presort is not None and presort != "":
+            _presort = parse_presort_exp(presort)
+        else:
+            _presort = partition_spec.presort
+        tbn = "_temp"
+        idf = self.to_df(df)
+
+        if len(_presort) == 0:
+            if len(partition_spec.partition_by) == 0:
+                return self.to_df(idf.native.head(n), schema=df.schema)
+            pcols = ", ".join(
+                self.encode_column_name(x) for x in partition_spec.partition_by
+            )
+            sql = (
+                f"SELECT * FROM ("
+                f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {pcols}) "
+                f"AS __fugue_take_param FROM {tbn}"
+                f") WHERE __fugue_take_param<={n}"
+            )
+            tb = self.query_to_table(sql, {tbn: idf})
+            return self.to_df(tb[df.columns], schema=df.schema)
+
+        sorts: List[str] = []
+        for k, v in _presort.items():
+            s = self.encode_column_name(k)
+            s += " ASC" if v else " DESC"
+            s += " NULLS FIRST" if na_position == "first" else " NULLS LAST"
+            sorts.append(s)
+        sort_expr = "ORDER BY " + ", ".join(sorts)
+
+        if len(partition_spec.partition_by) == 0:
+            sql = f"SELECT * FROM {tbn} {sort_expr} LIMIT {n}"
+            tb = self.query_to_table(sql, {tbn: idf})
+            return self.to_df(tb[df.columns], schema=df.schema)
+
+        pcols = ", ".join(
+            self.encode_column_name(x) for x in partition_spec.partition_by
+        )
+        sql = (
+            f"SELECT * FROM ("
+            f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {pcols} {sort_expr}) "
+            f"AS __fugue_take_param FROM {tbn}"
+            f") WHERE __fugue_take_param<={n}"
+        )
+        tb = self.query_to_table(sql, {tbn: idf})
+        return self.to_df(tb[df.columns], schema=df.schema)
+
     def table_exists(self, table: str) -> bool:
-        return self._ibis_engine.table_exists(table)
+        return table in self.backend.list_tables()
 
     def save_table(
         self,
@@ -68,10 +297,17 @@ class IbisSQLEngine(SQLEngine):
         partition_spec: Optional[PartitionSpec] = None,
         **kwargs: Any,
     ) -> None:
-        return self._ibis_engine.save_table(df, table, mode, partition_spec, **kwargs)
+        if mode == "overwrite":
+            self.backend.drop_table(table, force=True)
+        if isinstance(df, IbisDataFrame):
+            self.backend.create_table(table, df.native)
+        else:
+            self.backend.create_table(
+                table, df.as_pandas(), schema=to_ibis_schema(df.schema)
+            )
 
     def load_table(self, table: str, **kwargs: Any) -> DataFrame:
-        return self._ibis_engine.load_table(table, **kwargs)
+        return self.to_df(self.backend.table(table))
 
 
 class IbisMapEngine(MapEngine):
@@ -129,41 +365,10 @@ class IbisExecutionEngine(ExecutionEngine):
         super().__init__(conf)
         self._non_ibis_engine = self.create_non_ibis_execution_engine()
 
-    @property
-    @abstractmethod
-    def dialect(self) -> str:  # pragma: no cover
-        """The dialect of this ibis based engine"""
-        raise NotImplementedError
-
     @abstractmethod
     def create_non_ibis_execution_engine(self) -> ExecutionEngine:
         """Create the execution engine that handles operations beyond SQL"""
         raise NotImplementedError  # pragma: no cover
-
-    @abstractmethod
-    def _to_ibis_dataframe(
-        self, df: Any, schema: Any = None
-    ) -> IbisDataFrame:  # pragma: no cover
-        """Create ``IbisDataFrame`` from the dataframe like input
-
-        :param df: dataframe like object
-        :param schema: dataframe schema, defaults to None
-        :return: the IbisDataFrame
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def _to_non_ibis_dataframe(
-        self, df: Any, schema: Any = None
-    ) -> DataFrame:  # pragma: no cover
-        """Create ``DataFrame`` for map operations
-        from the dataframe like input
-
-        :param df: dataframe like object
-        :param schema: dataframe schema, defaults to None
-        :return: the DataFrame
-        """
-        raise NotImplementedError
 
     def is_non_ibis(self, ds: Any) -> bool:
         return not isinstance(ds, (IbisDataFrame, IbisTable))
@@ -172,8 +377,9 @@ class IbisExecutionEngine(ExecutionEngine):
     def non_ibis_engine(self) -> ExecutionEngine:
         return self._non_ibis_engine
 
-    def create_default_sql_engine(self) -> SQLEngine:
-        return IbisSQLEngine(self)
+    @property
+    def ibis_sql_engine(self) -> IbisSQLEngine:
+        return self.sql_engine  # type: ignore
 
     def create_default_map_engine(self) -> MapEngine:
         return IbisMapEngine(self)
@@ -188,19 +394,6 @@ class IbisExecutionEngine(ExecutionEngine):
 
     def get_current_parallelism(self) -> int:
         return self.non_ibis_engine.get_current_parallelism()
-
-    @property
-    def backend(self) -> BaseBackend:  # pragma: no cover
-        raise NotImplementedError
-
-    def encode_column_name(self, name: str) -> str:  # pragma: no cover
-        raise NotImplementedError
-
-    def get_temp_table_name(self) -> str:
-        return next(_GEN_TABLE_NAMES)
-
-    def _compile_sql(self, df: IbisDataFrame) -> str:
-        return str(df.native.compile())
 
     def to_df(self, df: Any, schema: Any = None) -> DataFrame:
         if self.is_non_ibis(df):
@@ -218,6 +411,16 @@ class IbisExecutionEngine(ExecutionEngine):
             return self.non_ibis_engine.broadcast(df)
         return df
 
+    def persist(
+        self,
+        df: DataFrame,
+        lazy: bool = False,
+        **kwargs: Any,
+    ) -> DataFrame:
+        if self.is_non_ibis(df):
+            return self.non_ibis_engine.persist(df, lazy=lazy, **kwargs)
+        return self.ibis_sql_engine.persist(df, lazy=lazy, **kwargs)
+
     def join(
         self,
         df1: DataFrame,
@@ -225,75 +428,33 @@ class IbisExecutionEngine(ExecutionEngine):
         how: str,
         on: Optional[List[str]] = None,
     ) -> DataFrame:
-        _df1 = self._to_ibis_dataframe(df1)
-        _df2 = self._to_ibis_dataframe(df2)
-        key_schema, end_schema = get_join_schemas(_df1, _df2, how=how, on=on)
-        on_fields = [_df1.native[k] == _df2.native[k] for k in key_schema]
-        if how.lower() == "cross":
-            tb = _df1.native.cross_join(_df2.native, suffixes=("", _JOIN_RIGHT_SUFFIX))
-        elif how.lower() == "right_outer":
-            tb = _df2.native.left_join(
-                _df1.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
-            )
-        elif how.lower() == "left_outer":
-            tb = _df1.native.left_join(
-                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
-            )
-        elif how.lower() == "full_outer":
-            tb = _df1.native.outer_join(
-                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
-            )
-            cols: List[Any] = []
-            for k in end_schema.names:
-                if k not in key_schema:
-                    cols.append(k)
-                else:
-                    cols.append(
-                        ibis.coalesce(tb[k], tb[k + _JOIN_RIGHT_SUFFIX]).name(k)
-                    )
-            tb = tb[cols]
-        elif how.lower() in ["semi", "left_semi"]:
-            tb = _df1.native.semi_join(
-                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
-            )
-        elif how.lower() in ["anti", "left_anti"]:
-            tb = _df1.native.anti_join(
-                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
-            )
-        else:
-            tb = _df1.native.inner_join(
-                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
-            )
-        return self._to_ibis_dataframe(tb[end_schema.names], schema=end_schema)
+        if self.is_non_ibis(df1) and self.is_non_ibis(df2):
+            return self.non_ibis_engine.join(df1, df2, how=how, on=on)
+        return self.ibis_sql_engine.join(df1, df2, how=how, on=on)
 
     def union(self, df1: DataFrame, df2: DataFrame, distinct: bool = True) -> DataFrame:
-        _df1 = self._to_ibis_dataframe(df1)
-        _df2 = self._to_ibis_dataframe(df2)
-        tb = _df1.native.union(_df2.native, distinct=distinct)
-        return self._to_ibis_dataframe(tb, df1.schema)
+        if self.is_non_ibis(df1) and self.is_non_ibis(df2):
+            return self.non_ibis_engine.union(df1, df2, distinct=distinct)
+        return self.ibis_sql_engine.union(df1, df2, distinct=distinct)
 
     def subtract(
         self, df1: DataFrame, df2: DataFrame, distinct: bool = True
     ) -> DataFrame:
-        _df1 = self._to_ibis_dataframe(df1)
-        _df2 = self._to_ibis_dataframe(df2)
-        tb = _df1.native.difference(_df2.native, distinct=distinct)
-        return self._to_ibis_dataframe(tb, df1.schema)
+        if self.is_non_ibis(df1) and self.is_non_ibis(df2):
+            return self.non_ibis_engine.subtract(df1, df2, distinct=distinct)
+        return self.ibis_sql_engine.subtract(df1, df2, distinct=distinct)
 
     def intersect(
         self, df1: DataFrame, df2: DataFrame, distinct: bool = True
     ) -> DataFrame:
-        _df1 = self._to_ibis_dataframe(df1)
-        _df2 = self._to_ibis_dataframe(df2)
-        tb = _df1.native.intersect(_df2.native, distinct=distinct)
-        return self._to_ibis_dataframe(tb, df1.schema)
+        if self.is_non_ibis(df1) and self.is_non_ibis(df2):
+            return self.non_ibis_engine.intersect(df1, df2, distinct=distinct)
+        return self.ibis_sql_engine.intersect(df1, df2, distinct=distinct)
 
     def distinct(self, df: DataFrame) -> DataFrame:
         if self.is_non_ibis(df):
             return self.non_ibis_engine.distinct(df)
-        _df = self._to_ibis_dataframe(df)
-        tb = _df.native.distinct()
-        return self._to_ibis_dataframe(tb, df.schema)
+        return self.ibis_sql_engine.distinct(df)
 
     def dropna(
         self,
@@ -306,58 +467,36 @@ class IbisExecutionEngine(ExecutionEngine):
             return self.non_ibis_engine.dropna(
                 df, how=how, thresh=thresh, subset=subset
             )
-        schema = df.schema
-        if subset is not None:
-            schema = schema.extract(subset)
-        _df = self._to_ibis_dataframe(df)
-        if thresh is None:
-            tb = _df.native.dropna(subset=subset, how=how)
-            return self._to_ibis_dataframe(tb, df.schema)
-        assert_or_throw(
-            how == "any", ValueError("when thresh is set, how must be 'any'")
-        )
-        sm = None
-        for col in schema.names:
-            expr = _df.native[col].isnull().ifelse(0, 1)
-            if sm is None:
-                sm = expr
-            else:
-                sm = sm + expr
-        tb = _df.native.filter(sm >= ibis.literal(thresh))
-        return self._to_ibis_dataframe(tb, df.schema)
+        return self.ibis_sql_engine.dropna(df, how=how, thresh=thresh, subset=subset)
 
     def fillna(self, df: DataFrame, value: Any, subset: List[str] = None) -> DataFrame:
         if self.is_non_ibis(df):
             return self.non_ibis_engine.fillna(df, value=value, subset=subset)
+        return self.ibis_sql_engine.fillna(df, value=value, subset=subset)
 
-        def _build_value_dict(names: List[str]) -> Dict[str, str]:
-            if not isinstance(value, dict):
-                return {n: value for n in names}
-            else:
-                return {n: value[n] for n in names}
-
-        names = df.columns
-        if isinstance(value, dict):
-            # subset should be ignored
-            names = list(value.keys())
-        elif subset is not None:
-            st = set(names)
-            assert_or_throw(
-                st.issuperset(subset),
-                ValueError(f"{names} is not a superset of {subset}"),
+    def sample(
+        self,
+        df: DataFrame,
+        n: Optional[int] = None,
+        frac: Optional[float] = None,
+        replace: bool = False,
+        seed: Optional[int] = None,
+    ) -> DataFrame:
+        if self.is_non_ibis(df):
+            return self.non_ibis_engine.sample(
+                df,
+                n=n,
+                frac=frac,
+                replace=replace,
+                seed=seed,
             )
-            names = subset
-        vd = _build_value_dict(names)
-        assert_or_throw(
-            all(v is not None for v in vd.values()),
-            ValueError("fillna value can not be None or contain None"),
+        return self.ibis_sql_engine.sample(
+            df,
+            n=n,
+            frac=frac,
+            replace=replace,
+            seed=seed,
         )
-        tb = self._to_ibis_dataframe(df).native
-        cols = [
-            ibis.coalesce(tb[f], ibis.literal(vd[f])).name(f) if f in names else tb[f]
-            for f in df.columns
-        ]
-        return self._to_ibis_dataframe(tb[cols], schema=df.schema)
 
     def take(
         self,
@@ -375,89 +514,31 @@ class IbisExecutionEngine(ExecutionEngine):
                 na_position=na_position,
                 partition_spec=partition_spec,
             )
-        partition_spec = partition_spec or PartitionSpec()
-        assert_or_throw(
-            isinstance(n, int),
-            ValueError("n needs to be an integer"),
+        return self.ibis_sql_engine.take(
+            df,
+            n=n,
+            presort=presort,
+            na_position=na_position,
+            partition_spec=partition_spec,
         )
 
-        if presort is not None and presort != "":
-            _presort = parse_presort_exp(presort)
-        else:
-            _presort = partition_spec.presort
-        tbn = "_temp"
-        idf = self._to_ibis_dataframe(df)
+    def _to_ibis_dataframe(self, df: Any, schema: Any = None) -> DataFrame:
+        """Create ``IbisDataFrame`` from the dataframe like input
 
-        if len(_presort) == 0:
-            if len(partition_spec.partition_by) == 0:
-                return self._to_ibis_dataframe(idf.native.head(n), schema=df.schema)
-            pcols = ", ".join(
-                self.encode_column_name(x) for x in partition_spec.partition_by
-            )
-            sql = (
-                f"SELECT * FROM ("
-                f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {pcols}) "
-                f"AS __fugue_take_param FROM {tbn}"
-                f") WHERE __fugue_take_param<={n}"
-            )
-            tb = self._raw_select(sql, {tbn: idf})
-            return self._to_ibis_dataframe(tb[df.columns], schema=df.schema)
+        :param df: dataframe like object
+        :param schema: dataframe schema, defaults to None
+        :return: the IbisDataFrame
+        """
+        return self.sql_engine.to_df(df, schema=schema)
 
-        sorts: List[str] = []
-        for k, v in _presort.items():
-            s = self.encode_column_name(k)
-            s += " ASC" if v else " DESC"
-            s += " NULLS FIRST" if na_position == "first" else " NULLS LAST"
-            sorts.append(s)
-        sort_expr = "ORDER BY " + ", ".join(sorts)
+    def _to_non_ibis_dataframe(
+        self, df: Any, schema: Any = None
+    ) -> DataFrame:  # pragma: no cover
+        """Create ``DataFrame`` for map operations
+        from the dataframe like input
 
-        if len(partition_spec.partition_by) == 0:
-            sql = f"SELECT * FROM {tbn} {sort_expr} LIMIT {n}"
-            tb = self._raw_select(sql, {tbn: idf})
-            return self._to_ibis_dataframe(tb[df.columns], schema=df.schema)
-
-        pcols = ", ".join(
-            self.encode_column_name(x) for x in partition_spec.partition_by
-        )
-        sql = (
-            f"SELECT * FROM ("
-            f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {pcols} {sort_expr}) "
-            f"AS __fugue_take_param FROM {tbn}"
-            f") WHERE __fugue_take_param<={n}"
-        )
-        tb = self._raw_select(sql, {tbn: idf})
-        return self._to_ibis_dataframe(tb[df.columns], schema=df.schema)
-
-    def table_exists(self, table: str) -> bool:
-        return table in self.backend.list_tables()
-
-    def save_table(
-        self,
-        df: DataFrame,
-        table: str,
-        mode: str = "overwrite",
-        partition_spec: Optional[PartitionSpec] = None,
-        **kwargs: Any,
-    ) -> None:
-        if mode == "overwrite":
-            self.backend.drop_table(table, force=True)
-        if isinstance(df, IbisDataFrame):
-            self.backend.create_table(table, df.native)
-        else:
-            self.backend.create_table(
-                table, df.as_pandas(), schema=to_ibis_schema(df.schema)
-            )
-
-    def load_table(self, table: str, **kwargs: Any) -> DataFrame:
-        return self._to_ibis_dataframe(self.backend.table(table))
-
-    def _raw_select(self, statement: str, dfs: Dict[str, Any]) -> IbisTable:
-        cte: List[str] = []
-        for k, v in dfs.items():
-            idf = self._to_ibis_dataframe(v)
-            cte.append(k + " AS (" + self._compile_sql(idf) + ")")
-        if len(cte) > 0:
-            sql = "WITH " + ",\n".join(cte) + "\n" + statement
-        else:
-            sql = statement
-        return self.backend.sql(sql)
+        :param df: dataframe like object
+        :param schema: dataframe schema, defaults to None
+        :return: the DataFrame
+        """
+        return self.non_ibis_engine.to_df(df, schema)

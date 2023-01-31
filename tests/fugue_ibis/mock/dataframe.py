@@ -6,6 +6,9 @@ from fugue_ibis import IbisDataFrame, IbisTable
 
 
 class MockDuckDataFrame(IbisDataFrame):
+    def to_sql(self) -> str:
+        return str(self.native.compile())
+
     def _to_new_df(self, table: IbisTable, schema: Any = None) -> DataFrame:
         return MockDuckDataFrame(table, schema=schema)
 
