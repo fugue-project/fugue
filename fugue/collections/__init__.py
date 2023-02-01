@@ -4,4 +4,4 @@ from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
 )
-from fugue.collections.yielded import Yielded, YieldedFile
+from fugue.collections.yielded import Yielded, PhysicalYielded

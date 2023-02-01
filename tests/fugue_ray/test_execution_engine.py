@@ -43,6 +43,11 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             connection=self._con,
         )
         return e
+    
+    def test_properties(self):
+        assert self.engine.is_distributed
+        assert self.engine.map_engine.is_distributed
+        assert not self.engine.sql_engine.is_distributed
 
     def test_get_parallelism(self):
         assert fa.get_current_parallelism() == 2
@@ -176,6 +181,9 @@ class RayBuiltInTests(BuiltInTests.Tests):
             connection=self._con,
         )
         return e
+    
+    def test_yield_table(self):
+        pass
 
     def test_yield_2(self):
         def assert_data(df: DataFrame) -> None:

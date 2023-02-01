@@ -142,7 +142,7 @@ class RayDataFrame(DataFrame):
         return self._select_cols(cols)
 
     def _select_cols(self, cols: List[Any]) -> DataFrame:
-        if cols == self.schema.names:
+        if cols == self.columns:
             return self
         rdf = self.native.map_batches(
             lambda b: b.select(cols), batch_format="pyarrow", **self._remote_args()

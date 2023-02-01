@@ -189,7 +189,7 @@ def test_global_funcs():
     )
     assert isinstance(make_execution_engine(), _MockExecutionEngine)
 
-    se = SqliteEngine(make_execution_engine)
+    se = SqliteEngine(make_execution_engine())
     assert make_sql_engine(se) is se
     assert not isinstance(
         make_sql_engine(None, make_execution_engine()), _MockSQlEngine

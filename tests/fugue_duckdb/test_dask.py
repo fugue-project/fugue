@@ -45,6 +45,11 @@ class DuckDaskExecutionEngineTests(ExecutionEngineTests.Tests):
             dask_client=client,
         )
         return e
+    
+    def test_properties(self):
+        assert not self.engine.is_distributed
+        assert self.engine.map_engine.is_distributed
+        assert not self.engine.sql_engine.is_distributed
 
     def test_get_parallelism(self):
         assert fa.get_current_parallelism() == 2

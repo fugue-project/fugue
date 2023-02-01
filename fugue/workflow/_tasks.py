@@ -5,13 +5,18 @@ from typing import Any, Callable, List, Optional, no_type_check
 
 from adagio.instances import TaskContext
 from adagio.specs import InputSpec, OutputSpec, TaskSpec
+from triad import ParamDict
+from triad.exceptions import InvalidOperationError
+from triad.utils.assertion import assert_or_throw
+from triad.utils.hash import to_uuid
+
 from fugue._utils.exception import (
+    _MODIFIED_EXCEPTION_VAR_NAME,
     frames_to_traceback,
     modify_traceback,
-    _MODIFIED_EXCEPTION_VAR_NAME,
 )
 from fugue.collections.partition import PartitionSpec
-from fugue.collections.yielded import YieldedFile
+from fugue.collections.yielded import PhysicalYielded
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.exceptions import FugueWorkflowError
@@ -20,12 +25,8 @@ from fugue.extensions.creator.convert import _to_creator
 from fugue.extensions.outputter.convert import _to_outputter
 from fugue.extensions.processor.convert import _to_processor
 from fugue.rpc.base import RPCServer
-from fugue.workflow._checkpoint import Checkpoint
+from fugue.workflow._checkpoint import Checkpoint, StrongCheckpoint
 from fugue.workflow._workflow_context import FugueWorkflowContext
-from triad import ParamDict
-from triad.exceptions import InvalidOperationError
-from triad.utils.assertion import assert_or_throw
-from triad.utils.hash import to_uuid
 
 
 class FugueTask(TaskSpec, ABC):
@@ -126,8 +127,10 @@ class FugueTask(TaskSpec, ABC):
         return not self._checkpoint.is_null
 
     @property
-    def yielded_file(self) -> YieldedFile:
-        return self._checkpoint.yielded_file
+    def yielded(self) -> PhysicalYielded:
+        if isinstance(self._checkpoint, StrongCheckpoint):
+            return self._checkpoint.yielded
+        raise ValueError("can't populate value from non-physical yield")
 
     def broadcast(self) -> "FugueTask":
         self._broadcast = True

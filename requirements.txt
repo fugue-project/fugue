@@ -21,6 +21,8 @@ flask
 pandavro
 fastavro
 psutil
+matplotlib
+seaborn
 
 duckdb-engine>=0.6.4
 

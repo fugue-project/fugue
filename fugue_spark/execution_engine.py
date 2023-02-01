@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
 from uuid import uuid4
 
 import pandas as pd
@@ -71,25 +71,34 @@ class SparkSQLEngine(SQLEngine):
     :raises ValueError: if the engine is not :class:`~.SparkExecutionEngine`
     """
 
-    def __init__(self, execution_engine: ExecutionEngine):
-        assert_or_throw(
-            isinstance(execution_engine, SparkExecutionEngine),
-            ValueError("SparkSQLEngine must use SparkExecutionEngine"),
-        )
-        super().__init__(execution_engine)
+    @property
+    def dialect(self) -> Optional[str]:
+        return "spark"
+
+    @property
+    def execution_engine_constraint(self) -> Type[ExecutionEngine]:
+        return SparkExecutionEngine
+
+    @property
+    def is_distributed(self) -> bool:
+        return True
 
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         _map: Dict[str, str] = {}
         for k, v in dfs.items():
             df = self.execution_engine._to_spark_df(v, create_view=True)  # type: ignore
             _map[k] = df.alias
-        _sql = statement.construct(_map, dialect="spark")
+        _sql = statement.construct(_map, dialect=self.dialect, log=self.log)
         return SparkDataFrame(
             self.execution_engine.spark_session.sql(_sql)  # type: ignore
         )
 
 
 class SparkMapEngine(MapEngine):
+    @property
+    def is_distributed(self) -> bool:
+        return True
+
     def _should_use_pandas_udf(self, schema: Schema) -> bool:
         possible = hasattr(ps.DataFrame, "mapInPandas")  # must be new version of Spark
         if pyspark.__version__ < "3":  # pragma: no cover
@@ -105,7 +114,7 @@ class SparkMapEngine(MapEngine):
         )
         if not possible or any(pa.types.is_nested(t) for t in schema.types):
             if enabled and not possible:  # pragma: no cover
-                self.execution_engine.log.warning(
+                self.log.warning(
                     f"{FUGUE_SPARK_CONF_USE_PANDAS_UDF}"
                     " is enabled but the current PySpark session"
                     "did not enable Pandas UDF support"
@@ -140,12 +149,10 @@ class SparkMapEngine(MapEngine):
                     partition_spec=partition_spec,
                     on_init=on_init,
                 )
-        df = self.execution_engine.to_df(
-            self.execution_engine.repartition(df, partition_spec)
-        )
+        df = self.to_df(self.execution_engine.repartition(df, partition_spec))
         mapper = _Mapper(df, map_func, output_schema, partition_spec, on_init)
         sdf = df.native.rdd.mapPartitionsWithIndex(mapper.run, True)  # type: ignore
-        return self.execution_engine.to_df(sdf, output_schema)
+        return self.to_df(sdf, output_schema)
 
     def _group_map_by_pandas_udf(
         self,
@@ -183,7 +190,7 @@ class SparkMapEngine(MapEngine):
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()
 
-        df = self.execution_engine.to_df(df)
+        df = self.to_df(df)
 
         gdf = df.native.groupBy(*partition_spec.partition_by)  # type: ignore
         sdf = gdf.applyInPandas(_udf, schema=to_spark_schema(output_schema))
@@ -197,9 +204,7 @@ class SparkMapEngine(MapEngine):
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
-        df = self.execution_engine.to_df(
-            self.execution_engine.repartition(df, partition_spec)
-        )
+        df = self.to_df(self.execution_engine.repartition(df, partition_spec))
         output_schema = Schema(output_schema)
         input_schema = df.schema
         on_init_once: Any = (
@@ -236,7 +241,7 @@ class SparkMapEngine(MapEngine):
             else:
                 yield output_df.as_pandas()
 
-        df = self.execution_engine.to_df(df)
+        df = self.to_df(df)
         sdf = df.native.mapInPandas(  # type: ignore
             _udf, schema=to_spark_schema(output_schema)
         )
@@ -285,6 +290,10 @@ class SparkExecutionEngine(ExecutionEngine):
             self._spark_session is not None, "SparkExecutionEngine is not started"
         )
         return self._spark_session
+
+    @property
+    def is_distributed(self) -> bool:
+        return True
 
     @property
     def log(self) -> logging.Logger:
@@ -484,7 +493,7 @@ class SparkExecutionEngine(ExecutionEngine):
             mapping = value
         else:
             # If subset is none, apply to all columns
-            subset = subset or df.schema.names
+            subset = subset or df.columns
             mapping = {col: value for col in subset}
         d = self._to_spark_df(df).native.fillna(mapping)
         return self._to_spark_df(d, df.schema)

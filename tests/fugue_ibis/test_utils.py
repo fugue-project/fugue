@@ -1,11 +1,14 @@
 import pytest
 
 ibis = pytest.importorskip("ibis")
+import ibis.expr.datatypes as dt
 import pandas as pd
-from fugue import PandasDataFrame
-from fugue.dataframe.utils import _df_eq
+import pyarrow as pa
+from pytest import raises
 from triad import Schema
 
+from fugue import PandasDataFrame
+from fugue.dataframe.utils import _df_eq
 from fugue_ibis._utils import LazyIbisObject, materialize, to_ibis_schema, to_schema
 
 
@@ -48,6 +51,16 @@ def test_schema():
 
     a = Schema("a:<int,str>")
     assert to_schema(to_ibis_schema(a)) == a
+
+    a = Schema("a:timestamp(us, GMT)")
+    assert to_schema(to_ibis_schema(a)) == a
+
+
+def test_schema_incompatible():
+    orig = ibis.schema([("x y", dt.GeoSpatial()), ("y", dt.String())])
+    with raises(NotImplementedError):
+        to_schema(orig)
+    assert to_schema(orig, lambda n, t: pa.string()) == "`x y`:str,y:str"
 
 
 def test_materialize():

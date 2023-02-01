@@ -37,7 +37,7 @@ from fugue.constants import (
     FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
     FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT,
     FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE,
-    FUGUE_SQL_DIALECT,
+    FUGUE_SQL_DEFAULT_DIALECT,
 )
 from fugue.dataframe import DataFrame, LocalBoundedDataFrame, YieldedDataFrame
 from fugue.dataframe.api import is_df
@@ -75,7 +75,7 @@ from fugue.extensions._builtins import (
 from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
 from fugue.rpc import to_rpc_handler
 from fugue.rpc.base import EmptyRPCHandler
-from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
+from fugue.workflow._checkpoint import StrongCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, FugueTask, Output, Process
 from fugue.workflow._workflow_context import FugueWorkflowContext
 
@@ -844,7 +844,9 @@ class WorkflowDataFrame(DataFrame):
 
         :return: sampled dataframe
         """
-        params: Dict[str, Any] = dict(replace=replace, seed=seed)
+        params: Dict[str, Any] = dict(replace=replace)
+        if seed is not None:
+            params["seed"] = seed
         if n is not None:
             params["n"] = n
         if frac is not None:
@@ -905,6 +907,7 @@ class WorkflowDataFrame(DataFrame):
 
     def strong_checkpoint(
         self: TDF,
+        storage_type: str = "file",
         lazy: bool = False,
         partition: Any = None,
         single: bool = False,
@@ -912,6 +915,7 @@ class WorkflowDataFrame(DataFrame):
     ) -> TDF:
         """Cache the dataframe as a temporary file
 
+        :param storage_type: can be either ``file`` or ``table``, defaults to ``file``
         :param lazy: whether it is a lazy checkpoint, defaults to False (eager)
         :param partition: |PartitionLikeObject|, defaults to None.
         :param single: force the output as a single file, defaults to False
@@ -927,8 +931,9 @@ class WorkflowDataFrame(DataFrame):
             Strong checkpoint file will be removed after the execution of the workflow.
         """
         self._task.set_checkpoint(
-            FileCheckpoint(
-                file_id=str(uuid4()),
+            StrongCheckpoint(
+                storage_type=storage_type,
+                obj_id=str(uuid4()),
                 deterministic=False,
                 permanent=False,
                 lazy=lazy,
@@ -941,6 +946,7 @@ class WorkflowDataFrame(DataFrame):
 
     def deterministic_checkpoint(
         self: TDF,
+        storage_type: str = "file",
         lazy: bool = False,
         partition: Any = None,
         single: bool = False,
@@ -949,6 +955,7 @@ class WorkflowDataFrame(DataFrame):
     ) -> TDF:
         """Cache the dataframe as a temporary file
 
+        :param storage_type: can be either ``file`` or ``table``, defaults to ``file``
         :param lazy: whether it is a lazy checkpoint, defaults to False (eager)
         :param partition: |PartitionLikeObject|, defaults to None.
         :param single: force the output as a single file, defaults to False
@@ -963,8 +970,9 @@ class WorkflowDataFrame(DataFrame):
             dependent compute logic is not changed.
         """
         self._task.set_checkpoint(
-            FileCheckpoint(
-                file_id=self._task.__uuid__(),
+            StrongCheckpoint(
+                storage_type=storage_type,
+                obj_id=self._task.__uuid__(),
                 deterministic=True,
                 permanent=True,
                 lazy=lazy,
@@ -983,7 +991,7 @@ class WorkflowDataFrame(DataFrame):
 
         .. note::
 
-            In only the following cases you can yield file:
+            In only the following cases you can yield file/table:
 
             * you have not checkpointed (persisted) the dataframe, for example
               ``df.yield_file_as("a")``
@@ -997,8 +1005,32 @@ class WorkflowDataFrame(DataFrame):
         """
         if not self._task.has_checkpoint:
             # the following == a non determinitic, but permanent checkpoint
-            self.deterministic_checkpoint(namespace=str(uuid4()))
-        self.workflow._yields[name] = self._task.yielded_file
+            self.deterministic_checkpoint(storage_type="file", namespace=str(uuid4()))
+        self.workflow._yields[name] = self._task.yielded
+
+    def yield_table_as(self: TDF, name: str) -> None:
+        """Cache the dataframe as a table
+
+        :param name: the name of the yielded dataframe
+
+        .. note::
+
+            In only the following cases you can yield file/table:
+
+            * you have not checkpointed (persisted) the dataframe, for example
+              ``df.yield_file_as("a")``
+            * you have used :meth:`~.deterministic_checkpoint`, for example
+              ``df.deterministic_checkpoint().yield_file_as("a")``
+            * yield is workflow, compile level logic
+
+            For the first case, the yield will also be a strong checkpoint so
+            whenever you yield a dataframe as a file, the dataframe has been saved as a
+            file and loaded back as a new dataframe.
+        """
+        if not self._task.has_checkpoint:
+            # the following == a non determinitic, but permanent checkpoint
+            self.deterministic_checkpoint(storage_type="table", namespace=str(uuid4()))
+        self.workflow._yields[name] = self._task.yielded
 
     def yield_dataframe_as(self: TDF, name: str, as_local: bool = False) -> None:
         """Yield a dataframe that can be accessed without
@@ -1038,8 +1070,8 @@ class WorkflowDataFrame(DataFrame):
         """
         return self.weak_checkpoint(lazy=False)
 
-    def checkpoint(self: TDF) -> TDF:
-        return self.strong_checkpoint(lazy=False)
+    def checkpoint(self: TDF, storage_type: str = "file") -> TDF:
+        return self.strong_checkpoint(storage_type=storage_type, lazy=False)
 
     def broadcast(self: TDF) -> TDF:
         """Broadcast the current dataframe
@@ -2073,7 +2105,7 @@ class FugueWorkflow:
         *statements: Any,
         sql_engine: Any = None,
         sql_engine_params: Any = None,
-        dialect: Optional[str] = FUGUE_SQL_DIALECT,
+        dialect: Optional[str] = FUGUE_SQL_DEFAULT_DIALECT,
     ) -> WorkflowDataFrame:
         """Execute ``SELECT`` statement using
         :class:`~fugue.execution.execution_engine.SQLEngine`

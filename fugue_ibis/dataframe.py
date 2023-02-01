@@ -1,8 +1,9 @@
+from abc import abstractmethod
 from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 import pyarrow as pa
-from triad import Schema
+from triad import Schema, assert_or_throw
 
 from fugue import (
     DataFrame,
@@ -13,10 +14,10 @@ from fugue import (
 )
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
-from fugue.plugins import is_df, get_column_names, rename
+from fugue.plugins import drop_columns, get_column_names, is_df, rename
 
-from ._compat import IbisTable
-from ._utils import _pa_to_ibis_type, to_schema
+from ._compat import IbisSchema, IbisTable
+from ._utils import pa_to_ibis_type, to_schema
 
 
 class IbisDataFrame(DataFrame):
@@ -26,15 +27,17 @@ class IbisDataFrame(DataFrame):
     """
 
     def __init__(self, table: IbisTable, schema: Any = None):
-        self._table = table
-        _schema = to_schema(table.schema())
         if schema is not None:
-            _to_schema = _input_schema(schema).assert_not_empty()
-            if _to_schema != _schema:
-                table = self._alter_table_columns(table, _schema, _to_schema)
-                _schema = _to_schema
-        self._table = table
+            _schema = _input_schema(schema).assert_not_empty()
+        else:
+            _schema = self._to_schema(table.schema())
+        self._table = self._alter_table_columns(table, _schema)
         super().__init__(schema=_schema)
+
+    @abstractmethod
+    def to_sql(self) -> str:  # pragma: no cover
+        """Compile IbisTable to SQL"""
+        raise NotImplementedError
 
     @property
     def native(self) -> IbisTable:
@@ -43,6 +46,9 @@ class IbisDataFrame(DataFrame):
 
     def native_as_df(self) -> IbisTable:
         return self._table
+
+    def _to_schema(self, schema: IbisSchema) -> Schema:
+        return to_schema(schema)
 
     def _to_local_df(self, table: IbisTable, schema: Any = None) -> LocalDataFrame:
         raise NotImplementedError  # pragma: no cover
@@ -74,6 +80,10 @@ class IbisDataFrame(DataFrame):
     def num_partitions(self) -> int:
         return 1  # pragma: no cover
 
+    @property
+    def columns(self) -> List[str]:
+        return self._table.columns
+
     def peek_array(self) -> List[Any]:
         res = self._to_local_df(self._table.head(1)).as_array()
         if len(res) == 0:
@@ -96,7 +106,7 @@ class IbisDataFrame(DataFrame):
             schema = self.schema.rename(columns)
         except Exception as e:
             raise FugueDataFrameOperationError from e
-        df = _rename(self._table, self.schema.names, schema.names)
+        df = _rename(self._table, self.columns, schema.names)
         return self if df is self._table else self._to_new_df(df, schema=schema)
 
     def alter_columns(self, columns: Any) -> DataFrame:
@@ -104,7 +114,7 @@ class IbisDataFrame(DataFrame):
         if new_schema == self.schema:
             return self
         return self._to_new_df(
-            self._alter_table_columns(self._table, self.schema, new_schema),
+            self._alter_table_columns(self._table, new_schema),
             schema=new_schema,
         )
 
@@ -144,17 +154,22 @@ class IbisDataFrame(DataFrame):
             return self[columns].head(n)
         return to_local_bounded_df(self._to_local_df(self._table.head(n)))
 
-    def _alter_table_columns(
-        self, table: IbisTable, schema: Schema, new_schema: Schema
-    ):
+    def _alter_table_columns(self, table: IbisTable, new_schema: Schema) -> IbisTable:
         fields: Dict[str, Any] = {}
-        for f1, f2 in zip(schema.fields, new_schema.fields):
-            if not self._type_equal(f1.type, f2.type):
-                fields[f1.name] = self._table[f1.name].cast(_pa_to_ibis_type(f2.type))
+        schema = table.schema()
+        for _name, _type, f2 in zip(schema.names, schema.types, new_schema.fields):
+            _new_name, _new_type = f2.name, pa_to_ibis_type(f2.type)
+            assert_or_throw(
+                _name == _new_name,
+                lambda: ValueError(f"schema name mismatch: {_name} vs {_new_name}"),
+            )
+            if _type == _new_type:
+                continue
+            else:
+                fields[_name] = table[_name].cast(_new_type)
+        if len(fields) == 0:
+            return table
         return table.mutate(**fields)
-
-    def _type_equal(self, tp1: pa.DataType, tp2: pa.DataType) -> bool:
-        return tp1 == tp2
 
 
 @is_df.candidate(lambda df: isinstance(df, IbisTable))
@@ -165,6 +180,16 @@ def _ibis_is_df(df: IbisTable) -> bool:
 @get_column_names.candidate(lambda df: isinstance(df, IbisTable))
 def _get_ibis_columns(df: IbisTable) -> List[Any]:
     return df.columns
+
+
+@drop_columns.candidate(lambda df, *args, **kwargs: isinstance(df, IbisTable))
+def _drop_ibis_columns(df: IbisTable, columns: List[str]) -> IbisTable:
+    cols = [x for x in df.columns if x not in columns]
+    if len(cols) == 0:
+        raise FugueDataFrameOperationError("cannot drop all columns")
+    if len(cols) + len(columns) != len(df.columns):
+        _assert_no_missing(df, columns)
+    return df[cols]
 
 
 @rename.candidate(lambda df, *args, **kwargs: isinstance(df, IbisTable))

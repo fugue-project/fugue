@@ -49,6 +49,11 @@ class NativeExecutionEngineSqliteTests(ExecutionEngineTests.Tests):
         e.set_sql_engine(SqliteEngine(e))
         return e
 
+    def test_properties(self):
+        assert not self.engine.is_distributed
+        assert not self.engine.map_engine.is_distributed
+        assert not self.engine.sql_engine.is_distributed
+
     def test_map_with_dict_col(self):
         # TODO: add back
         return
@@ -59,6 +64,9 @@ class NativeExecutionEngineBuiltInSqliteTests(BuiltInTests.Tests):
         e = NativeExecutionEngine(dict(test=True))
         e.set_sql_engine(SqliteEngine(e))
         return e
+
+    def test_yield_table(self):
+        pass
 
     def test_annotation(self):
         def m_c(engine: NativeExecutionEngine) -> pa.Table:
@@ -83,6 +91,13 @@ class NativeExecutionEngineQPDTests(ExecutionEngineTests.Tests):
         e.set_sql_engine(QPDPandasEngine(e))
         return e
 
+    def test_properties(self):
+        assert not self.engine.is_distributed
+        assert not self.engine.map_engine.is_distributed
+        assert not self.engine.sql_engine.is_distributed
+        assert self.engine.map_engine.conf is self.engine.conf
+        assert self.engine.sql_engine.conf is self.engine.conf
+
     def test_map_with_dict_col(self):
         # TODO: add back
         return
@@ -93,6 +108,9 @@ class NativeExecutionEngineBuiltInQPDTests(BuiltInTests.Tests):
         e = NativeExecutionEngine(dict(test=True))
         e.set_sql_engine(QPDPandasEngine(e))
         return e
+
+    def test_yield_table(self):
+        pass
 
 
 def test_get_file_threshold():

@@ -94,8 +94,8 @@ def _df_eq(
             d1 = df1.as_pandas()
             d2 = df2.as_pandas()
         if not check_order:
-            d1 = d1.sort_values(df1.schema.names)
-            d2 = d2.sort_values(df1.schema.names)
+            d1 = d1.sort_values(df1.columns)
+            d2 = d2.sort_values(df1.columns)
         d1 = d1.reset_index(drop=True)
         d2 = d2.reset_index(drop=True)
         pd.testing.assert_frame_equal(
@@ -332,11 +332,12 @@ def get_join_schemas(
     on = list(on) if on is not None else []
     aot(len(on) == len(set(on)), f"{on} has duplication")
     if how != "cross" and len(on) == 0:
-        on = list(df1.schema.intersect(df2.schema.names).names)
+        other = set(df2.columns)
+        on = [c for c in df1.columns if c in other]
         aot(
             len(on) > 0,
             lambda: SchemaError(
-                f"no common columns between {df1.schema} and {df2.schema}"
+                f"no common columns between {df1.columns} and {df2.columns}"
             ),
         )
     schema2 = df2.schema

@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 import dask.dataframe as dd
 from distributed import Client
@@ -19,7 +19,13 @@ from fugue.collections.partition import (
     parse_presort_exp,
 )
 from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
-from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame, PandasDataFrame
+from fugue.dataframe import (
+    AnyDataFrame,
+    DataFrame,
+    DataFrames,
+    LocalDataFrame,
+    PandasDataFrame,
+)
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 from fugue.execution.native_execution_engine import NativeExecutionEngine
@@ -30,29 +36,35 @@ from fugue_dask.dataframe import DaskDataFrame
 
 
 class QPDDaskEngine(SQLEngine):
-    """QPD execution implementation.
+    """QPD execution implementation."""
 
-    :param execution_engine: the execution engine this sql engine will run on
-    """
+    @property
+    def dialect(self) -> Optional[str]:
+        return "spark"
 
-    def __init__(self, execution_engine: ExecutionEngine):
-        assert_or_throw(
-            isinstance(execution_engine, DaskExecutionEngine),
-            lambda: f"{self} must be used with DaskExecutionEngine",
-        )
-        super().__init__(execution_engine)
+    def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
+        return to_dask_engine_df(df, schema)
+
+    @property
+    def is_distributed(self) -> bool:
+        return True
 
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
         _dfs, _sql = self.encode(dfs, statement)
-        dask_dfs = {
-            k: self.execution_engine.to_df(v).native  # type: ignore
-            for k, v in _dfs.items()
-        }
+        dask_dfs = {k: self.to_df(v).native for k, v in _dfs.items()}  # type: ignore
         df = run_sql_on_dask(_sql, dask_dfs, ignore_case=True)
         return DaskDataFrame(df)
 
 
 class DaskMapEngine(MapEngine):
+    @property
+    def execution_engine_constraint(self) -> Type[ExecutionEngine]:
+        return DaskExecutionEngine
+
+    @property
+    def is_distributed(self) -> bool:
+        return True
+
     def map_dataframe(
         self,
         df: DataFrame,
@@ -89,7 +101,7 @@ class DaskMapEngine(MapEngine):
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()
 
-        df = self.execution_engine.to_df(df)
+        df = self.to_df(df)
         meta = self.execution_engine.pl_utils.safe_to_pandas_dtype(  # type: ignore
             output_schema.pa_schema
         )
@@ -137,6 +149,10 @@ class DaskExecutionEngine(ExecutionEngine):
         return "DaskExecutionEngine"
 
     @property
+    def is_distributed(self) -> bool:
+        return True
+
+    @property
     def dask_client(self) -> Client:
         """The Dask Client associated with this engine"""
         return self._client
@@ -165,9 +181,9 @@ class DaskExecutionEngine(ExecutionEngine):
         return DaskUtils()
 
     def to_df(self, df: Any, schema: Any = None) -> DaskDataFrame:
-        """Convert a data structure to :class:`~fugue_dask.dataframe.DaskDataFrame`
+        """Convert a data structure to :class:`~.fugue_dask.dataframe.DaskDataFrame`
 
-        :param data: :class:`~fugue.dataframe.dataframe.DataFrame`,
+        :param data: :class:`~.fugue.dataframe.dataframe.DataFrame`,
           :class:`dask:dask.dataframe.DataFrame`,
           pandas DataFrame or list or iterable of arrays
         :param schema: |SchemaLikeObject|, defaults to None.
@@ -175,7 +191,7 @@ class DaskExecutionEngine(ExecutionEngine):
 
         .. note::
 
-            * if the input is already :class:`~fugue_dask.dataframe.DaskDataFrame`,
+            * if the input is already :class:`~.fugue_dask.dataframe.DaskDataFrame`,
               it should return itself
             * For list or iterable of arrays, ``schema`` must be specified
             * When ``schema`` is not None, a potential type cast may happen to ensure
@@ -184,20 +200,7 @@ class DaskExecutionEngine(ExecutionEngine):
               call this method to convert before doing anything
         """
 
-        if isinstance(df, DataFrame):
-            assert_or_throw(
-                schema is None,
-                ValueError("schema must be None when df is a DataFrame"),
-            )
-            if isinstance(df, DaskDataFrame):
-                return df
-            if isinstance(df, PandasDataFrame):
-                res = DaskDataFrame(df.native, df.schema)
-            else:
-                res = DaskDataFrame(df.as_array(type_safe=True), df.schema)
-            res.reset_metadata(df.metadata)
-            return res
-        return DaskDataFrame(df, schema)
+        return to_dask_engine_df(df, schema)
 
     def repartition(
         self, df: DataFrame, partition_spec: PartitionSpec
@@ -338,7 +341,7 @@ class DaskExecutionEngine(ExecutionEngine):
             mapping = value
         else:
             # If subset is none, apply to all columns
-            subset = subset or df.schema.names
+            subset = subset or df.columns
             mapping = {col: value for col in subset}
         d = self.to_df(df).native.fillna(mapping)
         return DaskDataFrame(d, df.schema)
@@ -457,3 +460,39 @@ class DaskExecutionEngine(ExecutionEngine):
             self.fs.makedirs(os.path.dirname(path), recreate=True)
             df = self.to_df(df)
             save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
+
+
+def to_dask_engine_df(df: Any, schema: Any = None) -> DaskDataFrame:
+    """Convert a data structure to :class:`~.fugue_dask.dataframe.DaskDataFrame`
+
+    :param data: :class:`~.fugue.dataframe.dataframe.DataFrame`,
+      :class:`dask:dask.dataframe.DataFrame`,
+      pandas DataFrame or list or iterable of arrays
+    :param schema: |SchemaLikeObject|, defaults to None.
+    :return: engine compatible dataframe
+
+    .. note::
+
+        * if the input is already :class:`~fugue_dask.dataframe.DaskDataFrame`,
+          it should return itself
+        * For list or iterable of arrays, ``schema`` must be specified
+        * When ``schema`` is not None, a potential type cast may happen to ensure
+          the dataframe's schema.
+        * all other methods in the engine can take arbitrary dataframes and
+          call this method to convert before doing anything
+    """
+
+    if isinstance(df, DataFrame):
+        assert_or_throw(
+            schema is None,
+            ValueError("schema must be None when df is a DataFrame"),
+        )
+        if isinstance(df, DaskDataFrame):
+            return df
+        if isinstance(df, PandasDataFrame):
+            res = DaskDataFrame(df.native, df.schema)
+        else:
+            res = DaskDataFrame(df.as_array(type_safe=True), df.schema)
+        res.reset_metadata(df.metadata)
+        return res
+    return DaskDataFrame(df, schema)

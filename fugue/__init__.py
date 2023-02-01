@@ -7,7 +7,7 @@ from fugue.bag.array_bag import ArrayBag
 from fugue.bag.bag import Bag, BagDisplay
 from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.collections.sql import StructuredRawSQL, TempTableName
-from fugue.collections.yielded import Yielded, YieldedFile
+from fugue.collections.yielded import Yielded, PhysicalYielded
 from fugue.constants import register_global_conf
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.arrow_dataframe import ArrowDataFrame
@@ -33,7 +33,7 @@ from fugue.dataset import (
 from fugue.execution.execution_engine import (
     AnyExecutionEngine,
     ExecutionEngine,
-    ExecutionEngineFacet,
+    EngineFacet,
     MapEngine,
     SQLEngine,
 )

@@ -16,7 +16,10 @@ _PARSE_MODE = "auto"
 def test_json():
     def assert_eq(expr, expected):
         sql = FugueSQLParser(
-            expr, "fugueJsonValue", ignore_case=True, parse_mode=_PARSE_MODE
+            expr,
+            "fugueJsonValue",
+            ignore_case=True,
+            parse_mode=_PARSE_MODE,
         )
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
@@ -53,10 +56,32 @@ def test_json():
     assert_eq("(a=1,b='x',c=True,d={x:3},)", dict(a=1, b="x", c=True, d=dict(x=3)))
 
 
+def test_extension():
+    def assert_eq(expr, expected=None):
+        sql = FugueSQLParser(
+            expr,
+            "fugueExtension",
+            ignore_case=True,
+            parse_mode=_PARSE_MODE,
+        )
+        v = _VisitorBase(sql)
+        obj = v.visit(sql.tree)
+        assert expected == obj
+
+    assert_eq("abc", "abc")
+    assert_eq("abc . def", "abc.def")
+    assert_eq("abc . def. ` ` ", "abc.def.` `")
+    assert_eq(" x :abc . def. ` ` ", ("x", "abc.def.` `"))
+    assert_eq("`x:y ` : abc . def. ` ` ", ("x:y ", "abc.def.` `"))
+
+
 def test_schema():
     def assert_eq(expr, expected=None):
         sql = FugueSQLParser(
-            expr, "fugueSchema", ignore_case=True, parse_mode=_PARSE_MODE
+            expr,
+            "fugueSchema",
+            ignore_case=True,
+            parse_mode=_PARSE_MODE,
         )
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
@@ -76,7 +101,10 @@ def test_schema():
 def test_wild_schema():
     def assert_eq(expr, expected=None):
         sql = FugueSQLParser(
-            expr, "fugueWildSchema", ignore_case=True, parse_mode=_PARSE_MODE
+            expr,
+            "fugueWildSchema",
+            ignore_case=True,
+            parse_mode=_PARSE_MODE,
         )
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
@@ -105,7 +133,10 @@ def test_wild_schema():
 def test_pre_partition():
     def assert_eq(expr, expected):
         sql = FugueSQLParser(
-            expr, "fuguePrepartition", ignore_case=True, parse_mode=_PARSE_MODE
+            expr,
+            "fuguePrepartition",
+            ignore_case=True,
+            parse_mode=_PARSE_MODE,
         )
         v = _VisitorBase(sql)
         obj = json.dumps(v.visit(sql.tree).jsondict)
@@ -138,7 +169,10 @@ def test_pre_partition():
 def test_params():
     def assert_eq(expr, expected):
         sql = FugueSQLParser(
-            expr, "fugueParams", ignore_case=True, parse_mode=_PARSE_MODE
+            expr,
+            "fugueParams",
+            ignore_case=True,
+            parse_mode=_PARSE_MODE,
         )
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
@@ -186,7 +220,10 @@ def test_single_output_common_expr():
 def test_assignment():
     def assert_eq(expr, varname, sign):
         sql = FugueSQLParser(
-            expr, "fugueAssignment", ignore_case=True, parse_mode=_PARSE_MODE
+            expr,
+            "fugueAssignment",
+            ignore_case=True,
+            parse_mode=_PARSE_MODE,
         )
         v = _VisitorBase(sql)
         obj = v.visit(sql.tree)
