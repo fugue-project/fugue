@@ -29,8 +29,8 @@ from fugue import (
     PandasDataFrame,
     PartitionSpec,
     Processor,
+    QPDPandasEngine,
     Schema,
-    SqliteEngine,
     Transformer,
     cotransformer,
     output_cotransformer,
@@ -864,7 +864,7 @@ class BuiltInTests(object):
             dag.run(self.engine)
 
         def test_select(self):
-            class MockEngine(SqliteEngine):
+            class MockEngine(QPDPandasEngine):
                 def __init__(self, execution_engine, p: int = 0):
                     super().__init__(execution_engine)
                     self.p = p
@@ -901,7 +901,7 @@ class BuiltInTests(object):
                     "AS t1 INNER JOIN",
                     b,
                     "AS t2 ON t1.x=t2.x",
-                    sql_engine="sqlite",
+                    sql_engine="duckdb",
                 ).assert_eq(c)
 
                 # specify sql engine and params
