@@ -1,13 +1,28 @@
 from typing import Any, Callable, Dict
 
+from triad import Schema
+from triad.utils.assertion import assert_or_throw
+
 from fugue._utils.interfaceless import parse_comment_annotation
 from fugue.collections.partition import PartitionSpec, parse_presort_exp
 from fugue.exceptions import (
     FugueWorkflowCompileValidationError,
     FugueWorkflowRuntimeValidationError,
 )
-from triad import Schema
-from triad.utils.assertion import assert_or_throw
+
+
+def domain_candidate(domain: str, matcher: Callable[..., bool]) -> Callable[..., bool]:
+    def _matcher(obj: Any, *args: Any, **kwargs: Any) -> bool:
+        if (
+            isinstance(obj, tuple)
+            and len(obj) == 2
+            and isinstance(obj[0], str)
+            and obj[0] == domain
+        ):
+            return matcher(obj[1], *args, **kwargs)
+        return False
+
+    return _matcher
 
 
 def parse_validation_rules_from_comment(func: Callable) -> Dict[str, Any]:

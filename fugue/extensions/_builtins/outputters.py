@@ -1,9 +1,9 @@
+import json
 from typing import Any, List, Tuple, no_type_check
 
 import pandas as pd
 from triad import ParamDict, Schema, SerializableRLock, assert_or_throw
 from triad.utils.convert import to_type
-import json
 
 from fugue.collections.partition import PartitionCursor
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
@@ -11,10 +11,12 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq, to_local_bounded_df
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution.execution_engine import _generate_comap_empty_dfs
-from fugue.extensions.outputter import Outputter, parse_outputter
-from fugue.extensions.transformer.convert import _to_output_transformer
-from fugue.extensions.transformer.transformer import CoTransformer, Transformer
 from fugue.rpc import EmptyRPCHandler, to_rpc_handler
+
+from ..outputter import Outputter, parse_outputter
+from ..transformer.convert import _to_output_transformer
+from ..transformer.transformer import CoTransformer, Transformer
+from .._utils import domain_candidate
 
 
 class Show(Outputter):
@@ -72,9 +74,7 @@ class Visualize(Outputter):
         func(**params)
 
 
-@parse_outputter.candidate(
-    lambda x: isinstance(x, tuple) and isinstance(x[0], str) and x[0] == "viz"
-)
+@parse_outputter.candidate(domain_candidate("viz", lambda x: isinstance(x, str)))
 def _parse_plot(obj: Tuple[str, str]) -> Outputter:
     return Visualize(obj[1])
 

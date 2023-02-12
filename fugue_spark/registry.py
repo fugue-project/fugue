@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 import pyspark.rdd as pr
 import pyspark.sql as ps
@@ -14,17 +14,12 @@ from fugue._utils.interfaceless import (
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
+from fugue.extensions import domain_candidate
 from fugue.plugins import as_fugue_dataset, infer_execution_engine, parse_creator
-
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
-
-def _is_sparksql(obj: Any) -> bool:
-    if not isinstance(obj, str):
-        return False
-    obj = obj[:20].lower()
-    return obj.startswith("--sparksql") or obj.startswith("/*sparksql*/")
+_is_sparksql = domain_candidate("sparksql", lambda x: isinstance(x, str))
 
 
 @infer_execution_engine.candidate(
@@ -40,10 +35,10 @@ def _spark_as_fugue_df(df: ps.DataFrame, **kwargs: Any) -> SparkDataFrame:
     return SparkDataFrame(df, **kwargs)
 
 
-@parse_creator.candidate(lambda obj: _is_sparksql(obj))
-def _parse_sparksql_creator(sql):
+@parse_creator.candidate(_is_sparksql)
+def _parse_sparksql_creator(sql: Tuple[str, str]):
     def _run_sql(spark: SparkSession) -> ps.DataFrame:
-        return spark.sql(sql)
+        return spark.sql(sql[1])
 
     return _run_sql
 
