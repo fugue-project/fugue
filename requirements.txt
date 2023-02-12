@@ -13,7 +13,7 @@ pytest
 pytest-cov
 pytest-mock
 pytest-spark
-pytest-rerunfailures
+pytest-rerunfailures==10.2
 sphinx>=2.4.0
 sphinx-rtd-theme
 sphinx-autodoc-typehints
