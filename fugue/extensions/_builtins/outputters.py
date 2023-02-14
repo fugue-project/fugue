@@ -1,7 +1,5 @@
-import json
-from typing import Any, List, Tuple, no_type_check
+from typing import List, no_type_check
 
-import pandas as pd
 from triad import ParamDict, Schema, SerializableRLock, assert_or_throw
 from triad.utils.convert import to_type
 
@@ -13,10 +11,9 @@ from fugue.exceptions import FugueWorkflowError
 from fugue.execution.execution_engine import _generate_comap_empty_dfs
 from fugue.rpc import EmptyRPCHandler, to_rpc_handler
 
-from ..outputter import Outputter, parse_outputter
+from ..outputter import Outputter
 from ..transformer.convert import _to_output_transformer
 from ..transformer.transformer import CoTransformer, Transformer
-from .._utils import domain_candidate
 
 
 class Show(Outputter):
@@ -32,51 +29,6 @@ class Show(Outputter):
             for df in dfs.values():
                 df.show(n=n, with_count=with_count, title=title if m == 0 else None)
                 m += 1
-
-
-class Visualize(Outputter):
-    def __init__(self, func: str) -> None:
-        super().__init__()
-        if func != "plot":
-            getattr(pd.DataFrame.plot, func)  # ensure the func exists
-        self._func = func
-
-    def process(self, dfs: DataFrames) -> None:
-        assert_or_throw(len(dfs) == 1, FugueWorkflowError("not single input"))
-        df = dfs[0].as_pandas()
-        presort = self.partition_spec.presort
-        presort_keys = list(presort.keys())
-        presort_asc = list(presort.values())
-        if len(presort_keys) > 0:
-            df = df.sort_values(presort_keys, ascending=presort_asc).reset_index(
-                drop=True
-            )
-        if len(self.partition_spec.partition_by) == 0:
-            self._plot(df)
-        else:
-            for _, gp in df.groupby(self.partition_spec.partition_by, dropna=False):
-                self._plot(gp.reset_index(drop=True))
-
-    def _plot(self, df: pd.DataFrame) -> None:
-        params = dict(self.params)
-        if len(self.partition_spec.partition_by) > 0:
-            keys = df[self.partition_spec.partition_by].head(1).to_dict("records")[0]
-            kt = json.dumps(keys)[1:-1]
-            if "title" in params:
-                params["title"] = params["title"] + " -- " + kt
-            else:
-                params["title"] = kt
-            df = df.drop(self.partition_spec.partition_by, axis=1)
-        if self._func == "plot":
-            func: Any = df.plot
-        else:
-            func = getattr(df.plot, self._func)
-        func(**params)
-
-
-@parse_outputter.candidate(domain_candidate("viz", lambda x: isinstance(x, str)))
-def _parse_plot(obj: Tuple[str, str]) -> Outputter:
-    return Visualize(obj[1])
 
 
 class AssertEqual(Outputter):
