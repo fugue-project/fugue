@@ -1,13 +1,36 @@
 from typing import Any, Callable, Dict
 
+from triad import Schema
+from triad.utils.assertion import assert_or_throw
+
 from fugue._utils.interfaceless import parse_comment_annotation
 from fugue.collections.partition import PartitionSpec, parse_presort_exp
 from fugue.exceptions import (
     FugueWorkflowCompileValidationError,
     FugueWorkflowRuntimeValidationError,
 )
-from triad import Schema
-from triad.utils.assertion import assert_or_throw
+
+
+def is_namespace_extension(obj: Any) -> bool:
+    return isinstance(obj, tuple) and len(obj) == 2 and isinstance(obj[0], str)
+
+
+def load_namespace_extensions(obj: Any) -> None:
+    if is_namespace_extension(obj):
+        from fugue_contrib import load_namespace
+
+        load_namespace(obj[0])
+
+
+def namespace_candidate(
+    namespace: str, matcher: Callable[..., bool]
+) -> Callable[..., bool]:
+    def _matcher(obj: Any, *args: Any, **kwargs: Any) -> bool:
+        if is_namespace_extension(obj) and obj[0] == namespace:
+            return matcher(obj[1], *args, **kwargs)
+        return False
+
+    return _matcher
 
 
 def parse_validation_rules_from_comment(func: Callable) -> Dict[str, Any]:

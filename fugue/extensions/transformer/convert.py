@@ -1,6 +1,11 @@
 import copy
 from typing import Any, Callable, Dict, List, Optional, Type, Union, no_type_check
 
+from triad import ParamDict, Schema
+from triad.utils.assertion import assert_arg_not_none, assert_or_throw
+from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
+from triad.utils.hash import to_uuid
+
 from fugue._utils.interfaceless import (
     FunctionWrapper,
     is_class_method,
@@ -9,16 +14,14 @@ from fugue._utils.interfaceless import (
 from fugue._utils.registry import fugue_plugin
 from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames, LocalDataFrame
 from fugue.exceptions import FugueInterfacelessError
-from fugue.extensions._utils import (
+from fugue.extensions.transformer.constants import OUTPUT_TRANSFORMER_DUMMY_SCHEMA
+from fugue.extensions.transformer.transformer import CoTransformer, Transformer
+
+from .._utils import (
+    load_namespace_extensions,
     parse_validation_rules_from_comment,
     to_validation_rules,
 )
-from fugue.extensions.transformer.constants import OUTPUT_TRANSFORMER_DUMMY_SCHEMA
-from fugue.extensions.transformer.transformer import CoTransformer, Transformer
-from triad import ParamDict, Schema
-from triad.utils.assertion import assert_arg_not_none, assert_or_throw
-from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
-from triad.utils.hash import to_uuid
 
 _TRANSFORMER_REGISTRY = ParamDict()
 _OUT_TRANSFORMER_REGISTRY = ParamDict()
@@ -565,6 +568,7 @@ def _to_transformer(
     validation_rules: Optional[Dict[str, Any]] = None,
 ) -> Union[Transformer, CoTransformer]:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
+    load_namespace_extensions(obj)
     return _to_general_transformer(
         obj=parse_transformer(obj),
         schema=schema,
@@ -583,6 +587,7 @@ def _to_output_transformer(
     validation_rules: Optional[Dict[str, Any]] = None,
 ) -> Union[Transformer, CoTransformer]:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
+    load_namespace_extensions(obj)
     return _to_general_transformer(
         obj=parse_output_transformer(obj),
         schema=None,

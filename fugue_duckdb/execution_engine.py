@@ -72,12 +72,14 @@ class DuckDBEngine(SQLEngine):
             tdf: DuckDataFrame = _to_duck_df(
                 self.execution_engine, df, create_view=False  # type: ignore
             )
-            if mode == "overwrite":
-                et = self._get_table(table)
-                if et is not None:
+            et = self._get_table(table)
+            if et is not None:
+                if mode == "overwrite":
                     tp = "VIEW" if et["table_type"] == "VIEW" else "TABLE"
                     tn = encode_column_name(et["table_name"])
                     con.query(f"DROP {tp} {tn}")
+                else:
+                    raise Exception(f"{table} exists")
             tdf.native.create(table)
         else:  # pragma: no cover
             raise NotImplementedError(

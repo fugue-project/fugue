@@ -1,17 +1,19 @@
 import copy
 from typing import Any, Callable, Dict, List, Optional, no_type_check
 
+from triad import ParamDict, to_uuid
+from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
+
 from fugue._utils.interfaceless import FunctionWrapper
 from fugue._utils.registry import fugue_plugin
 from fugue.dataframe import DataFrames
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions._utils import (
+    load_namespace_extensions,
     parse_validation_rules_from_comment,
     to_validation_rules,
 )
 from fugue.extensions.outputter.outputter import Outputter
-from triad import ParamDict, to_uuid
-from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 
 _OUTPUTTER_REGISTRY = ParamDict()
 
@@ -144,6 +146,7 @@ def _to_outputter(
     validation_rules: Optional[Dict[str, Any]] = None,
 ) -> Outputter:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
+    load_namespace_extensions(obj)
     obj = parse_outputter(obj)
     exp: Optional[Exception] = None
     if validation_rules is None:

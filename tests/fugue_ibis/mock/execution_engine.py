@@ -89,7 +89,8 @@ class MockDuckSQLEngine(IbisSQLEngine):
         if seed is not None:
             sql += f" REPEATABLE ({seed})"
         idf = self.to_df(df)
-        return self.to_df(idf.native.alias(tn).sql(sql))
+        _res = f"WITH {tn} AS ({idf.native.compile()}) " + sql
+        return self.to_df(self.backend.sql(_res))
 
     def _register_df(
         self, df: pa.Table, name: Optional[str] = None, schema: Any = None
