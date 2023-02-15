@@ -10,13 +10,13 @@ from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from
 from fugue._utils.registry import fugue_plugin
 from fugue.dataframe import DataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
-from fugue.extensions._utils import (
+from fugue.extensions.processor.processor import Processor
+
+from .._utils import (
+    load_namespace_extensions,
     parse_validation_rules_from_comment,
     to_validation_rules,
 )
-from fugue.extensions.processor.processor import Processor
-
-from .._utils import is_namespace_extension
 
 _PROCESSOR_REGISTRY = ParamDict()
 
@@ -152,10 +152,7 @@ def _to_processor(
     validation_rules: Optional[Dict[str, Any]] = None,
 ) -> Processor:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
-    if is_namespace_extension(obj):
-        from fugue_contrib import load_namespace
-
-        load_namespace(obj[0])
+    load_namespace_extensions(obj)
     obj = parse_processor(obj)
     exp: Optional[Exception] = None
     if validation_rules is None:

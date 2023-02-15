@@ -15,6 +15,13 @@ def is_namespace_extension(obj: Any) -> bool:
     return isinstance(obj, tuple) and len(obj) == 2 and isinstance(obj[0], str)
 
 
+def load_namespace_extensions(obj: Any) -> None:
+    if is_namespace_extension(obj):
+        from fugue_contrib import load_namespace
+
+        load_namespace(obj[0])
+
+
 def namespace_candidate(
     namespace: str, matcher: Callable[..., bool]
 ) -> Callable[..., bool]:
