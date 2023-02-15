@@ -4,12 +4,12 @@ from typing import Any, Tuple
 import pandas as pd
 
 from fugue import Outputter
-from fugue.extensions import domain_candidate, parse_outputter
+from fugue.extensions import namespace_candidate, parse_outputter
 
 from ._ext import Visualize
 
 
-@parse_outputter.candidate(domain_candidate("viz", lambda x: isinstance(x, str)))
+@parse_outputter.candidate(namespace_candidate("viz", lambda x: isinstance(x, str)))
 def _parse_pandas_plot(obj: Tuple[str, str]) -> Outputter:
     return _PandasVisualize(obj[1])
 

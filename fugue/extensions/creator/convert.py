@@ -13,7 +13,7 @@ from fugue.dataframe import DataFrame
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.creator.creator import Creator
 
-from .._utils import is_domain_extension
+from .._utils import is_namespace_extension
 
 _CREATOR_REGISTRY = ParamDict()
 
@@ -145,10 +145,10 @@ def _to_creator(
     local_vars: Optional[Dict[str, Any]] = None,
 ) -> Creator:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
-    if is_domain_extension(obj):
-        from fugue_contrib import load_domain
+    if is_namespace_extension(obj):
+        from fugue_contrib import load_namespace
 
-        load_domain(obj[0])
+        load_namespace(obj[0])
     obj = parse_creator(obj)
     exp: Optional[Exception] = None
     try:

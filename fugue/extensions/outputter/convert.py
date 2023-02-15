@@ -8,7 +8,7 @@ from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions._utils import (
     parse_validation_rules_from_comment,
     to_validation_rules,
-    is_domain_extension,
+    is_namespace_extension,
 )
 from fugue.extensions.outputter.outputter import Outputter
 from triad import ParamDict, to_uuid
@@ -145,10 +145,10 @@ def _to_outputter(
     validation_rules: Optional[Dict[str, Any]] = None,
 ) -> Outputter:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
-    if is_domain_extension(obj):
-        from fugue_contrib import load_domain
+    if is_namespace_extension(obj):
+        from fugue_contrib import load_namespace
 
-        load_domain(obj[0])
+        load_namespace(obj[0])
     obj = parse_outputter(obj)
     exp: Optional[Exception] = None
     if validation_rules is None:

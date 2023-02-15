@@ -14,12 +14,12 @@ from fugue._utils.interfaceless import (
     SimpleAnnotationConverter,
     register_annotation_converter,
 )
-from fugue.extensions import domain_candidate
+from fugue.extensions import namespace_candidate
 from fugue.plugins import as_fugue_dataset, infer_execution_engine, parse_creator
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
-_is_sparksql = domain_candidate("sparksql", lambda x: isinstance(x, str))
+_is_sparksql = namespace_candidate("sparksql", lambda x: isinstance(x, str))
 
 
 @infer_execution_engine.candidate(

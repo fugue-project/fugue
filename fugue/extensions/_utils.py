@@ -11,13 +11,15 @@ from fugue.exceptions import (
 )
 
 
-def is_domain_extension(obj: Any) -> bool:
+def is_namespace_extension(obj: Any) -> bool:
     return isinstance(obj, tuple) and len(obj) == 2 and isinstance(obj[0], str)
 
 
-def domain_candidate(domain: str, matcher: Callable[..., bool]) -> Callable[..., bool]:
+def namespace_candidate(
+    namespace: str, matcher: Callable[..., bool]
+) -> Callable[..., bool]:
     def _matcher(obj: Any, *args: Any, **kwargs: Any) -> bool:
-        if is_domain_extension(obj) and obj[0] == domain:
+        if is_namespace_extension(obj) and obj[0] == namespace:
             return matcher(obj[1], *args, **kwargs)
         return False
 

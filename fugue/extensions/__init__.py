@@ -1,5 +1,5 @@
 # flake8: noqa
-from ._utils import domain_candidate
+from ._utils import namespace_candidate
 from .creator import Creator, creator, parse_creator, register_creator
 from .outputter import Outputter, outputter, parse_outputter, register_outputter
 from .processor import Processor, parse_processor, processor, register_processor
