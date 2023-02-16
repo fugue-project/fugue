@@ -85,6 +85,8 @@ def ibis_to_pa_type(tp: dt.DataType) -> pa.DataType:
             return TRIAD_DEFAULT_TIMESTAMP
         else:
             return pa.timestamp("us", tp.timezone)
+    if isinstance(tp, dt.Decimal) and tp.precision is not None:
+        return pa.decimal128(tp.precision, 0 if tp.scale is None else tp.scale)
     if isinstance(tp, dt.Array):
         ttp = ibis_to_pa_type(tp.value_type)
         return pa.list_(ttp)
@@ -103,6 +105,8 @@ def pa_to_ibis_type(tp: pa.DataType) -> dt.DataType:
         if tp.tz is None:
             return dt.Timestamp()
         return dt.Timestamp(timezone=str(tp.tz))
+    if pa.types.is_decimal(tp):
+        return dt.Decimal(tp.precision, tp.scale)
     if pa.types.is_list(tp):
         ttp = pa_to_ibis_type(tp.value_type)
         return dt.Array(value_type=ttp)

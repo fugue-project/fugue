@@ -46,6 +46,9 @@ def test_schema():
     assert to_ibis_schema(a) == b
     assert a == to_schema(b)
 
+    a = Schema("a:decimal(10,2)")
+    assert to_schema(to_ibis_schema(a)) == a
+
     a = Schema("a:[int],b:[{a:str}],c:{a:str},d:{a:[int]}")
     assert to_schema(to_ibis_schema(a)) == a
 
