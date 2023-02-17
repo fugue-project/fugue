@@ -1,5 +1,13 @@
 # Release Notes
 
+## 0.8.1
+
+-   [423](https://github.com/fugue-project/fugue/issues/423) Add seaborn as a domain level extension for visualization
+-   [422](https://github.com/fugue-project/fugue/issues/422) Add pandas_df.plot as the first namespace extension
+-   [421](https://github.com/fugue-project/fugue/issues/421) Add the namespace concept to Fugue extensions
+-   [420](https://github.com/fugue-project/fugue/issues/420) Add is_distributed to engines
+-   [419](https://github.com/fugue-project/fugue/issues/419) Log transpiled SQL query upon error
+
 ## 0.8.0
 
 -   [384](https://github.com/fugue-project/fugue/issues/384) Expanding Fugue API
