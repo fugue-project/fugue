@@ -4,6 +4,8 @@ from triad import ParamDict
 KEYWORD_ROWCOUNT = "ROWCOUNT"
 KEYWORD_CORECOUNT = "CORECOUNT"
 
+FUGUE_ENTRYPOINT = "fugue.plugins"
+
 FUGUE_SQL_DEFAULT_DIALECT = "spark"
 
 FUGUE_CONF_WORKFLOW_CONCURRENCY = "fugue.workflow.concurrency"

@@ -21,8 +21,14 @@ from fugue_duckdb.dataframe import DuckDataFrame
 def _get_single_files(
     fp: Iterable[FileParser], fs: FileSystem, fmt: str
 ) -> Iterable[FileParser]:
+    def _isdir(d: str) -> bool:
+        try:
+            return fs.isdir(d)
+        except Exception:
+            return False
+
     for f in fp:
-        if f.glob_pattern == "" and fs.isdir(f.uri):
+        if f.glob_pattern == "" and _isdir(f.uri):
             yield f.with_glob("*." + fmt, fmt)
         else:
             yield f
@@ -211,7 +217,7 @@ class DuckDBIO:
         # for k, v in kw.items():
         #    params.append(f"{k}=" + encode_value_to_expr(v))
         pm = ", ".join(params)
-        query = f"SELECT {cols} FROM parquet_scan({pm})"
+        query = f"SELECT {cols} FROM parquet_scan([{pm}])"
         res = DuckDataFrame(self._con.from_query(query))
         return (
             res  # type: ignore

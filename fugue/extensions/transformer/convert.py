@@ -6,13 +6,10 @@ from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 from triad.utils.hash import to_uuid
 
-from fugue._utils.interfaceless import (
-    FunctionWrapper,
-    is_class_method,
-    parse_output_schema_from_comment,
-)
+from fugue._utils.interfaceless import is_class_method, parse_output_schema_from_comment
 from fugue._utils.registry import fugue_plugin
 from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames, LocalDataFrame
+from fugue.dataframe.function_wrapper import DataFrameFunctionWrapper
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.transformer.constants import OUTPUT_TRANSFORMER_DUMMY_SCHEMA
 from fugue.extensions.transformer.transformer import CoTransformer, Transformer
@@ -374,7 +371,7 @@ class _FuncAsTransformer(Transformer):
         validation_rules.update(parse_validation_rules_from_comment(func))
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsTransformer()
-        tr._wrapper = FunctionWrapper(  # type: ignore
+        tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
             func, "^[lspq][fF]?x*z?$", "^[lspq]$"
         )
         tr._output_schema_arg = schema  # type: ignore
@@ -405,7 +402,7 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
         assert_or_throw(schema is None, "schema must be None for output transformers")
         validation_rules.update(parse_validation_rules_from_comment(func))
         tr = _FuncAsOutputTransformer()
-        tr._wrapper = FunctionWrapper(  # type: ignore
+        tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
             func, "^[lspq][fF]?x*z?$", "^[lspnq]$"
         )
         tr._output_schema_arg = None  # type: ignore
@@ -494,7 +491,7 @@ class _FuncAsCoTransformer(CoTransformer):
             )
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsCoTransformer()
-        tr._wrapper = FunctionWrapper(  # type: ignore
+        tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
             func, "^(c|[lspq]+)[fF]?x*z?$", "^[lspq]$"
         )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
@@ -549,7 +546,7 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
         )
 
         tr = _FuncAsOutputCoTransformer()
-        tr._wrapper = FunctionWrapper(  # type: ignore
+        tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
             func, "^(c|[lspq]+)[fF]?x*z?$", "^[lspnq]$"
         )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore

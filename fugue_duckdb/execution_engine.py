@@ -37,6 +37,7 @@ from ._utils import (
 from .dataframe import DuckDataFrame
 
 _FUGUE_DUCKDB_PRAGMA_CONFIG_PREFIX = "fugue.duckdb.pragma."
+_FUGUE_DUCKDB_EXTENSIONS = "fugue.duckdb.extensions"
 
 
 class DuckDBEngine(SQLEngine):
@@ -161,6 +162,12 @@ class DuckExecutionEngine(ExecutionEngine):
         try:
             for pg in list(self._get_pragmas()):  # transactional
                 self._con.execute(pg)
+
+            for ext in self.conf.get(_FUGUE_DUCKDB_EXTENSIONS, "").split(","):
+                _ext = ext.strip()
+                if _ext != "":
+                    self._con.install_extension(_ext)
+                    self._con.load_extension(_ext)
         except Exception:
             self.stop()
             raise

@@ -2,6 +2,7 @@
 from triad.collections import Schema
 from triad.collections.fs import FileSystem
 
+from .dev import *
 from fugue.api import out_transform, transform
 from fugue.bag.array_bag import ArrayBag
 from fugue.bag.bag import Bag, BagDisplay

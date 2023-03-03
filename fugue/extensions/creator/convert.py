@@ -7,9 +7,10 @@ from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 from triad.utils.hash import to_uuid
 
-from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
+from fugue._utils.interfaceless import parse_output_schema_from_comment
 from fugue._utils.registry import fugue_plugin
 from fugue.dataframe import DataFrame
+from fugue.dataframe.function_wrapper import DataFrameFunctionWrapper
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.creator.creator import Creator
 
@@ -200,7 +201,9 @@ class _FuncAsCreator(Creator):
         if schema is None:
             schema = parse_output_schema_from_comment(func)
         tr = _FuncAsCreator()
-        tr._wrapper = FunctionWrapper(func, "^e?x*z?$", "^[dlspq]$")  # type: ignore
+        tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
+            func, "^e?x*z?$", "^[dlspq]$"
+        )
         tr._engine_param = (
             tr._wrapper._params.get_value_by_index(0)
             if tr._wrapper.input_code.startswith("e")

@@ -1,3 +1,4 @@
+import inspect
 import logging
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
@@ -17,20 +18,21 @@ from typing import (
 )
 from uuid import uuid4
 
-from triad import ParamDict, Schema, SerializableRLock, assert_or_throw
+from triad import ParamDict, Schema, SerializableRLock, assert_or_throw, to_uuid
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 from triad.utils.convert import to_size
 from triad.utils.string import validate_triad_var_name
 
 from fugue.bag import Bag, LocalBag
+from fugue.collections.function_wrapper import AnnotatedParam, annotated_param
 from fugue.collections.partition import (
     BagPartitionCursor,
     PartitionCursor,
     PartitionSpec,
 )
 from fugue.collections.sql import StructuredRawSQL, TempTableName
-from fugue.collections.yielded import Yielded, PhysicalYielded
+from fugue.collections.yielded import PhysicalYielded, Yielded
 from fugue.column import (
     ColumnExpr,
     SelectColumns,
@@ -44,7 +46,7 @@ from fugue.dataframe import AnyDataFrame, DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
-from fugue.exceptions import FugueBug
+from fugue.exceptions import FugueBug, FugueWorkflowRuntimeError
 
 AnyExecutionEngine = TypeVar("AnyExecutionEngine", object, None)
 
@@ -1296,6 +1298,26 @@ class ExecutionEngine(FugueEngineBase):
         res = self.map_engine.map_dataframe(df, s.run, output_schema, partition_spec)
         res.reset_metadata(metadata)
         return res
+
+
+@annotated_param(ExecutionEngine, "e", child_can_reuse_code=True)
+class ExecutionEngineParam(AnnotatedParam):
+    def __init__(
+        self,
+        param: Optional[inspect.Parameter],
+    ):
+        super().__init__(param)
+        self._type = self.annotation
+
+    def to_input(self, engine: Any) -> Any:
+        assert_or_throw(
+            isinstance(engine, self._type),
+            FugueWorkflowRuntimeError(f"{engine} is not of type {self._type}"),
+        )
+        return engine
+
+    def __uuid__(self) -> str:
+        return to_uuid(self.code, self.annotation, self._type)
 
 
 def _get_file_threshold(size: Any) -> int:

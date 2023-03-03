@@ -14,8 +14,17 @@ from typing import (
 )
 
 import pandas as pd
+import pyarrow as pa
+from triad import IndexedOrderedDict
+from triad.collections import Schema
+from triad.utils.assertion import assert_or_throw
+from triad.utils.convert import get_full_type_path, to_type
+from triad.utils.hash import to_uuid
+from triad.utils.iter import EmptyAwareIterable, make_empty_aware
+
 from fugue.dataframe import (
     ArrayDataFrame,
+    ArrowDataFrame,
     DataFrame,
     IterableDataFrame,
     LocalDataFrame,
@@ -25,12 +34,6 @@ from fugue.dataframe import (
 from fugue.dataframe.dataframes import DataFrames
 from fugue.dataframe.utils import to_local_df
 from fugue.exceptions import FugueWorkflowRuntimeError
-from triad import IndexedOrderedDict
-from triad.collections import Schema
-from triad.utils.assertion import assert_or_throw
-from triad.utils.convert import get_full_type_path, to_type
-from triad.utils.hash import to_uuid
-from triad.utils.iter import EmptyAwareIterable, make_empty_aware
 
 _COMMENT_SCHEMA_ANNOTATION = "schema"
 
@@ -578,6 +581,20 @@ class _PandasParam(_DataFrameParamBase):
         return PandasDataFrame(output, schema)
 
     def count(self, df: pd.DataFrame) -> int:
+        return df.shape[0]
+
+
+class _ArrowParam(_DataFrameParamBase):
+    def __init__(self, param: Optional[inspect.Parameter]):
+        super().__init__(param, "pyarrow.Table", "a")
+
+    def to_input_data(self, df: DataFrame, ctx: Any) -> pa.Table:
+        return df.as_arrow()
+
+    def to_output_df(self, output: pa.Table, schema: Any, ctx: Any) -> DataFrame:
+        return ArrowDataFrame(output, schema)
+
+    def count(self, df: pa.Table) -> int:
         return df.shape[0]
 
 
