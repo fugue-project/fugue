@@ -108,7 +108,11 @@ def annotated_param(  # noqa: C901
             _matcher = matcher
         else:
             anno = annotation
-            _matcher = lambda a: a == anno  # noqa
+
+            def _m(a: Any) -> bool:
+                return a == anno
+
+            _matcher = _m
 
         tp._annotation = annotation
         if code is not None:

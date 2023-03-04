@@ -1,46 +1,10 @@
-import inspect
-from typing import Any, Optional
-
 import pandas as pd
 import pyarrow as pa
-from fugue import (
-    ArrowDataFrame,
-    DataFrame,
-    FugueWorkflow,
-    NativeExecutionEngine,
-    QPDPandasEngine,
-    SqliteEngine,
-)
-from fugue._utils.interfaceless import (
-    DataFrameParam,
-    SimpleAnnotationConverter,
-    register_annotation_converter,
-)
-from fugue.execution.execution_engine import ExecutionEngine, _get_file_threshold
+
+from fugue import FugueWorkflow, NativeExecutionEngine, QPDPandasEngine, SqliteEngine
+from fugue.execution.execution_engine import _get_file_threshold
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
-
-
-class ArrowDataFrameParam(DataFrameParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, annotation="pa.DataFrame")
-
-    def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
-        assert isinstance(ctx, ExecutionEngine)
-        return ArrowDataFrame(ctx.to_df(df).as_pandas()).native
-
-    def to_output_df(self, output: Any, schema: Any, ctx: Any) -> DataFrame:
-        assert isinstance(output, pa.Table)
-        assert isinstance(ctx, ExecutionEngine)
-        return ctx.to_df(output.to_pandas(), schema=schema)
-
-    def count(self, df: DataFrame) -> int:
-        raise NotImplementedError("not allowed")
-
-
-register_annotation_converter(
-    0.8, SimpleAnnotationConverter(pa.Table, lambda param: ArrowDataFrameParam(param))
-)
 
 
 class NativeExecutionEngineSqliteTests(ExecutionEngineTests.Tests):
