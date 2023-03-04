@@ -10,12 +10,12 @@ _RAY_NULL_REPR = "__RAY_NULL__"
 
 
 def get_dataset_format(df: rd.Dataset) -> Optional[str]:
-    try:  # pragma: no cover
-        if hasattr(df, "_dataset_format"):  # ray<2.2
-            return df._dataset_format()
-        return df.dataset_format()  # ray>=2.2
-    except Exception:
+    schema = df.schema(fetch_if_missing=True)
+    if schema is None:
         return None
+    if hasattr(df, "_dataset_format"):  # pragma: no cover
+        return df._dataset_format()  # ray<2.2
+    return df.dataset_format()  # ray>=2.2
 
 
 def build_empty(schema: Schema) -> rd.Dataset:
