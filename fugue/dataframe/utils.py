@@ -29,7 +29,7 @@ rename_dataframe_column_names = rename
 def _pa_type_eq(t1: pa.DataType, t2: pa.DataType) -> bool:
     # should ignore the name difference of list
     # e.g. list<item: string> == list<l: string>
-    if pa.types.is_list(t1) and pa.types.is_list(t2):
+    if pa.types.is_list(t1) and pa.types.is_list(t2):  # pragma: no cover
         return _pa_type_eq(t1.value_type, t2.value_type)
     return t1 == t2
 

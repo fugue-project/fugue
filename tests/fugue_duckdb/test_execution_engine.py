@@ -29,7 +29,12 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def make_engine(self):
         e = DuckExecutionEngine(
-            {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
+            {
+                "test": True,
+                "fugue.duckdb.pragma.threads": 2,
+                "fugue.duckdb.extensions": ", json , , httpfs",
+            },
+            self._con,
         )
         return e
 
@@ -37,6 +42,16 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
         assert not self.engine.is_distributed
         assert not self.engine.map_engine.is_distributed
         assert not self.engine.sql_engine.is_distributed
+
+    def test_duckdb_extensions(self):
+        df = fa.fugue_sql(
+            """
+        SELECT COUNT(*) AS ct FROM duckdb_extensions()
+        WHERE loaded AND extension_name IN ('httpfs', 'json')
+        """,
+            as_fugue=True,
+        )
+        assert 2 == df.as_array()[0][0]
 
     def test_duck_to_df(self):
         e = self.engine

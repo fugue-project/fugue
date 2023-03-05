@@ -24,7 +24,7 @@ def _get_single_files(
     def _isdir(d: str) -> bool:
         try:
             return fs.isdir(d)
-        except Exception:
+        except Exception:  # pragma: no cover
             return False
 
     for f in fp:
