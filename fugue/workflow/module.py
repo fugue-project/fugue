@@ -2,12 +2,17 @@ import copy
 import inspect
 from typing import Any, Callable, Dict, Iterable, Optional
 
-from fugue._utils.interfaceless import FunctionWrapper, _FuncParam
-from fugue.exceptions import FugueInterfacelessError
-from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
+from triad import extension_method
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function
-from triad import extension_method
+
+from fugue.collections.function_wrapper import (
+    AnnotatedParam,
+    FunctionWrapper,
+    annotated_param,
+)
+from fugue.exceptions import FugueInterfacelessError
+from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 
 
 def module(
@@ -50,19 +55,23 @@ def _to_module(
     raise FugueInterfacelessError(f"{obj} is not a valid module", exp)
 
 
-class _FugueWorkflowParam(_FuncParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, "FugueWorkflow", "w")
+@annotated_param(
+    FugueWorkflow,
+    "w",
+    matcher=lambda x: inspect.isclass(x) and issubclass(x, FugueWorkflow),
+)
+class _FugueWorkflowParam(AnnotatedParam):
+    pass
 
 
-class _WorkflowDataFrameParam(_FuncParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, "WorkflowDataFrame", "v")
+@annotated_param(WorkflowDataFrame, "v")
+class _WorkflowDataFrameParam(AnnotatedParam):
+    pass
 
 
-class _WorkflowDataFramesParam(_FuncParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, "WorkflowDataFrame", "u")
+@annotated_param(WorkflowDataFrames, "u")
+class _WorkflowDataFramesParam(AnnotatedParam):
+    pass
 
 
 class _ModuleFunctionWrapper(FunctionWrapper):
@@ -152,21 +161,3 @@ class _ModuleFunctionWrapper(FunctionWrapper):
                     )
                     wf = v.workflow
         return wf
-
-    def _parse_param(
-        self,
-        annotation: Any,
-        param: Optional[inspect.Parameter],
-        none_as_other: bool = True,
-    ) -> _FuncParam:
-        if issubclass(annotation, FugueWorkflow):
-            # to prevent cyclic import
-            return _FugueWorkflowParam(param)
-        elif annotation == WorkflowDataFrame:
-            # to prevent cyclic import
-            return _WorkflowDataFrameParam(param)
-        elif annotation == WorkflowDataFrames:
-            # to prevent cyclic import
-            return _WorkflowDataFramesParam(param)
-        else:
-            return super()._parse_param(annotation, param, none_as_other)

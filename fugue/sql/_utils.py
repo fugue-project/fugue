@@ -5,7 +5,7 @@ import jinja2
 from jinja2 import Template
 from triad import assert_or_throw
 
-from ..collections import Yielded
+from ..collections.yielded import Yielded
 from ..exceptions import FugueSQLError
 from ..workflow.workflow import FugueWorkflow, WorkflowDataFrame
 

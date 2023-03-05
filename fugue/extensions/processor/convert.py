@@ -6,9 +6,10 @@ from triad.collections import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 
-from fugue._utils.interfaceless import FunctionWrapper, parse_output_schema_from_comment
+from fugue._utils.interfaceless import parse_output_schema_from_comment
 from fugue._utils.registry import fugue_plugin
 from fugue.dataframe import DataFrame, DataFrames
+from fugue.dataframe.function_wrapper import DataFrameFunctionWrapper
 from fugue.exceptions import FugueInterfacelessError
 from fugue.extensions.processor.processor import Processor
 
@@ -223,7 +224,7 @@ class _FuncAsProcessor(Processor):
             schema = parse_output_schema_from_comment(func)
         validation_rules.update(parse_validation_rules_from_comment(func))
         tr = _FuncAsProcessor()
-        tr._wrapper = FunctionWrapper(
+        tr._wrapper = DataFrameFunctionWrapper(
             func, "^e?(c|[dlspq]+)x*z?$", "^[dlspq]$"
         )  # type: ignore
         tr._engine_param = (
