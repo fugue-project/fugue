@@ -105,6 +105,7 @@ class PandasMapEngine(MapEngine):
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
         if partition_spec.num_partitions != "0":
             self.log.warning(

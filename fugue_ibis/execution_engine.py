@@ -324,10 +324,16 @@ class IbisMapEngine(MapEngine):
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
         _df = self._ibis_engine._to_non_ibis_dataframe(df)
         return self._ibis_engine.non_ibis_engine.map_engine.map_dataframe(
-            _df, map_func, output_schema, partition_spec, on_init
+            _df,
+            map_func=map_func,
+            output_schema=output_schema,
+            partition_spec=partition_spec,
+            on_init=on_init,
+            map_func_format_hint=map_func_format_hint,
         )
 
     def map_bag(

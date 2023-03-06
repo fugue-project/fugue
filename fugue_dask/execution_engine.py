@@ -72,6 +72,7 @@ class DaskMapEngine(MapEngine):
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
         presort = partition_spec.presort
         presort_keys = list(presort.keys())

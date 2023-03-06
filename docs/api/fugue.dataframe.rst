@@ -75,6 +75,14 @@ fugue.dataframe.dataframes
    :undoc-members:
    :show-inheritance:
 
+fugue.dataframe.function\_wrapper
+---------------------------------
+
+.. automodule:: fugue.dataframe.function_wrapper
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.dataframe.iterable\_dataframe
 -----------------------------------
 

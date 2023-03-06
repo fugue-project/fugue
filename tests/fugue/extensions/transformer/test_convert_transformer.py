@@ -56,8 +56,10 @@ def test__to_transformer():
     assert isinstance(f, Transformer)
     g = _to_transformer("t6", "*,b:int")
     assert isinstance(g, Transformer)
+    assert g.get_format_hint() is None
     h = _to_transformer("t7")
     assert isinstance(h, Transformer)
+    assert h.get_format_hint() == "pandas"
     i = _to_transformer("t8")
     assert isinstance(i, Transformer)
     j = _to_transformer("t9")

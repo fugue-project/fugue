@@ -1,7 +1,8 @@
 import copy
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Iterator
 
 import pandas as pd
+import pyarrow as pa
 from pytest import raises
 from triad import to_uuid
 from triad.utils.iter import EmptyAwareIterable
@@ -29,6 +30,7 @@ def test_function_wrapper():
 
     # test other data types, simple operations
     w = DataFrameFunctionWrapper(f27)
+    assert w.get_format_hint() is None
     assert 3 == w(1, 2)
     assert 3 == w.run([1, 2], dict(), ignore_unknown=False)
     assert 3 == w.run([5], dict(a=1, b=2), ignore_unknown=True)  # dict will overwrite
@@ -62,6 +64,22 @@ def test_function_wrapper():
     w = DataFrameFunctionWrapper(test.t, "^0?.*", ".*")
     assert 4 == w.run([], kwargs={"b": 3}, ignore_unknown=True)
     assert 5 == w.run([2], kwargs={"b": 3}, ignore_unknown=True)
+
+    # format hint
+    w = DataFrameFunctionWrapper(f10)
+    assert w.get_format_hint() == "pyarrow"
+
+    w = DataFrameFunctionWrapper(f11)
+    assert w.get_format_hint() == "pandas"
+
+    w = DataFrameFunctionWrapper(f12)
+    assert w.get_format_hint() == "pyarrow"
+
+    w = DataFrameFunctionWrapper(f13)
+    assert w.get_format_hint() == "pandas"
+
+    w = DataFrameFunctionWrapper(f14)
+    assert w.get_format_hint() == "pandas"
 
 
 def test_function_wrapper_determinism():
@@ -123,12 +141,32 @@ def test_iterable_pandas_dataframe():
     assert data[1].native is not pdf
 
 
+def f10(x: Any, y: pa.Table) -> None:
+    pass
+
+
+def f11(x: Any, y: pd.DataFrame, z: pa.Table) -> pa.Table:
+    pass
+
+
+def f12(x: Any, y) -> pa.Table:
+    pass
+
+
+def f13(x: Any, y: Iterable[pd.DataFrame]) -> pa.Table:
+    pass
+
+
+def f14() -> Iterator[pd.DataFrame]:
+    pass
+
+
 def f20(e: List[List[Any]], a: Iterable[List[Any]]) -> LocalDataFrame:
     e += list(a)
     return IterableDataFrame(e, "a:int")
 
 
-def f21(e: List[Dict[str, Any]], a: Iterable[Dict[str, Any]]) -> DataFrame:
+def f21(e: List[Dict[str, Any]], a: Iterator[Dict[str, Any]]) -> DataFrame:
     e += list(a)
     arr = [[x["a"]] for x in e]
     return IterableDataFrame(arr, "a:int")
@@ -140,7 +178,7 @@ def f212(e: List[Dict[str, Any]], a: Iterable[Dict[str, Any]]) -> DataFrame:
     return ArrayDataFrame(arr, "a:int")
 
 
-def f22(e: List[List[Any]], a: Iterable[List[Any]]) -> List[List[Any]]:
+def f22(e: List[List[Any]], a: Iterator[List[Any]]) -> List[List[Any]]:
     e += list(a)
     return ArrayDataFrame(e, "a:int").as_array()
 
@@ -207,14 +245,6 @@ def f32(
     e += list(a)
     arr = [[x["a"]] for x in e]
     return ArrayDataFrame(arr, "a:int").as_dict_iterable()
-
-
-def f33() -> Iterable[pd.DataFrame]:
-    pass
-
-
-def f34(e: Iterable[pd.DataFrame]):
-    pass
 
 
 def f35(e: pd.DataFrame, a: LocalDataFrame) -> Iterable[pd.DataFrame]:

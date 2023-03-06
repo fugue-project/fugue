@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Dict, Iterable, List, Optional, no_type_check
+from typing import Any, Dict, Iterable, Iterator, List, Optional, no_type_check
 
 import pandas as pd
 import pyarrow as pa
@@ -31,6 +31,15 @@ class DataFrameFunctionWrapper(FunctionWrapper):
             if isinstance(self._rt, _DataFrameParamBase)
             else False
         )
+
+    def get_format_hint(self) -> Optional[str]:
+        for v in self._params.values():
+            if isinstance(v, _DataFrameParamBase):
+                if v.format_hint() is not None:
+                    return v.format_hint()
+        if isinstance(self._rt, _DataFrameParamBase):
+            return self._rt.format_hint()
+        return None
 
     def run(  # noqa: C901
         self,
@@ -96,6 +105,9 @@ class _DataFrameParamBase(AnnotatedParam):
     def need_schema(self) -> Optional[bool]:
         return False
 
+    def format_hint(self) -> Optional[str]:
+        return None
+
 
 @annotated_param(DataFrame, "d", child_can_reuse_code=True)
 class DataFrameParam(_DataFrameParamBase):
@@ -156,7 +168,10 @@ class _ListListParam(_LocalNoSchemaDataFrameParam):
         return len(df)
 
 
-@annotated_param(Iterable[List[Any]])
+@annotated_param(
+    Iterable[List[Any]],
+    matcher=lambda x: x == Iterable[List[Any]] or x == Iterator[List[Any]],
+)
 class _IterableListParam(_LocalNoSchemaDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> Iterable[List[Any]]:
@@ -213,7 +228,10 @@ class _ListDictParam(_LocalNoSchemaDataFrameParam):
         return len(df)
 
 
-@annotated_param(Iterable[Dict[str, Any]])
+@annotated_param(
+    Iterable[Dict[str, Any]],
+    matcher=lambda x: x == Iterable[Dict[str, Any]] or x == Iterator[Dict[str, Any]],
+)
 class _IterableDictParam(_LocalNoSchemaDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> Iterable[Dict[str, Any]]:
@@ -275,8 +293,15 @@ class _PandasParam(LocalDataFrameParam):
     def count(self, df: pd.DataFrame) -> int:
         return df.shape[0]
 
+    def format_hint(self) -> Optional[str]:
+        return "pandas"
 
-@annotated_param(Iterable[pd.DataFrame], "q")
+
+@annotated_param(
+    Iterable[pd.DataFrame],
+    "q",
+    matcher=lambda x: x == Iterable[pd.DataFrame] or x == Iterator[pd.DataFrame],
+)
 class _IterablePandasParam(LocalDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> Iterable[pd.DataFrame]:
@@ -300,6 +325,9 @@ class _IterablePandasParam(LocalDataFrameParam):
     def count(self, df: Iterable[pd.DataFrame]) -> int:
         return sum(_.shape[0] for _ in df)
 
+    def format_hint(self) -> Optional[str]:
+        return "pandas"
+
 
 @annotated_param(pa.Table)
 class _PyArrowTableParam(LocalDataFrameParam):
@@ -312,6 +340,9 @@ class _PyArrowTableParam(LocalDataFrameParam):
 
     def count(self, df: Any) -> int:  # pragma: no cover
         return df.count()
+
+    def format_hint(self) -> Optional[str]:
+        return "pyarrow"
 
 
 @annotated_param(DataFrames, "c")

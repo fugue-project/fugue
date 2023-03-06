@@ -333,6 +333,9 @@ class _FuncAsTransformer(Transformer):
     def get_output_schema(self, df: DataFrame) -> Any:
         return self._parse_schema(self._output_schema_arg, df)  # type: ignore
 
+    def get_format_hint(self) -> Optional[str]:
+        return self._format_hint  # type: ignore
+
     @property
     def validation_rules(self) -> Dict[str, Any]:
         return self._validation_rules  # type: ignore
@@ -378,6 +381,7 @@ class _FuncAsTransformer(Transformer):
         tr._validation_rules = validation_rules  # type: ignore
         tr._uses_callback = "f" in tr._wrapper.input_code.lower()  # type: ignore
         tr._requires_callback = "F" in tr._wrapper.input_code  # type: ignore
+        tr._format_hint = tr._wrapper.get_format_hint()  # type: ignore
         return tr
 
 
@@ -388,6 +392,9 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
 
     def get_output_schema(self, df: DataFrame) -> Any:
         return OUTPUT_TRANSFORMER_DUMMY_SCHEMA
+
+    def get_format_hint(self) -> Optional[str]:
+        return self._format_hint  # type: ignore
 
     @no_type_check
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:
@@ -409,6 +416,7 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
         tr._validation_rules = validation_rules  # type: ignore
         tr._uses_callback = "f" in tr._wrapper.input_code.lower()  # type: ignore
         tr._requires_callback = "F" in tr._wrapper.input_code  # type: ignore
+        tr._format_hint = tr._wrapper.get_format_hint()  # type: ignore
         return tr
 
 
@@ -419,6 +427,9 @@ class _FuncAsCoTransformer(CoTransformer):
 
     def get_output_schema(self, dfs: DataFrames) -> Any:
         return self._parse_schema(self._output_schema_arg, dfs)  # type: ignore
+
+    def get_format_hint(self) -> Optional[str]:
+        return self._format_hint  # type: ignore
 
     @property
     def validation_rules(self) -> ParamDict:
@@ -499,6 +510,7 @@ class _FuncAsCoTransformer(CoTransformer):
         tr._validation_rules = {}  # type: ignore
         tr._uses_callback = "f" in tr._wrapper.input_code.lower()  # type: ignore
         tr._requires_callback = "F" in tr._wrapper.input_code  # type: ignore
+        tr._format_hint = tr._wrapper.get_format_hint()  # type: ignore
         return tr
 
 
@@ -509,6 +521,9 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
 
     def get_output_schema(self, dfs: DataFrames) -> Any:
         return OUTPUT_TRANSFORMER_DUMMY_SCHEMA
+
+    def get_format_hint(self) -> Optional[str]:
+        return self._format_hint  # type: ignore
 
     @no_type_check
     def transform(self, dfs: DataFrames) -> LocalDataFrame:
@@ -554,6 +569,7 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
         tr._validation_rules = {}  # type: ignore
         tr._uses_callback = "f" in tr._wrapper.input_code.lower()  # type: ignore
         tr._requires_callback = "F" in tr._wrapper.input_code  # type: ignore
+        tr._format_hint = tr._wrapper.get_format_hint()  # type: ignore
         return tr
 
 

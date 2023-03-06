@@ -55,6 +55,7 @@ setup(
             "pyarrow>=6.0.1",
             "numpy",
         ],
+        "polars": ["polars"],
         "ibis": [
             "ibis-framework>=2.1.1; python_version < '3.8'",
             "ibis-framework>=3.2.0; python_version >= '3.8'",
@@ -74,6 +75,7 @@ setup(
             "pyarrow>=6.0.1",
             "ibis-framework>=2.1.1; python_version < '3.8'",
             "ibis-framework>=3.2.0; python_version >= '3.8'",
+            "polars",
         ],
     },
     classifiers=[
@@ -101,6 +103,7 @@ setup(
             "dask = fugue_dask.registry[dask]",
             "dask_ibis = fugue_dask.ibis_engine[dask,ibis]",
             "ray = fugue_ray.registry[ray]",
+            "polars = fugue_polars.registry[polars]",
         ]
     },
 )
