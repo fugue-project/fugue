@@ -129,6 +129,7 @@ class SparkMapEngine(MapEngine):
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
         output_schema = Schema(output_schema)
         if self._should_use_pandas_udf(output_schema):
@@ -167,6 +168,7 @@ class SparkMapEngine(MapEngine):
         presort_asc = list(presort.values())
         output_schema = Schema(output_schema)
         input_schema = df.schema
+        cursor = partition_spec.get_cursor(input_schema, 0)
         on_init_once: Any = (
             None
             if on_init is None
@@ -175,7 +177,7 @@ class SparkMapEngine(MapEngine):
             )
         )
 
-        def _udf(pdf: Any) -> pd.DataFrame:  # pragma: no cover
+        def _udf_pandas(pdf: Any) -> pd.DataFrame:  # pragma: no cover
             if pdf.shape[0] == 0:
                 return PandasDataFrame([], output_schema).as_pandas()
             if len(presort_keys) > 0:
@@ -185,7 +187,6 @@ class SparkMapEngine(MapEngine):
             )
             if on_init_once is not None:
                 on_init_once(0, input_df)
-            cursor = partition_spec.get_cursor(input_schema, 0)
             cursor.set(input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()
@@ -193,7 +194,7 @@ class SparkMapEngine(MapEngine):
         df = self.to_df(df)
 
         gdf = df.native.groupBy(*partition_spec.partition_by)  # type: ignore
-        sdf = gdf.applyInPandas(_udf, schema=to_spark_schema(output_schema))
+        sdf = gdf.applyInPandas(_udf_pandas, schema=to_spark_schema(output_schema))
         return SparkDataFrame(sdf)
 
     def _map_by_pandas_udf(
@@ -207,6 +208,7 @@ class SparkMapEngine(MapEngine):
         df = self.to_df(self.execution_engine.repartition(df, partition_spec))
         output_schema = Schema(output_schema)
         input_schema = df.schema
+        cursor = partition_spec.get_cursor(input_schema, 0)
         on_init_once: Any = (
             None
             if on_init is None
@@ -215,7 +217,7 @@ class SparkMapEngine(MapEngine):
             )
         )
 
-        def _udf(
+        def _udf_pandas(
             dfs: Iterable[pd.DataFrame],
         ) -> Iterable[pd.DataFrame]:  # pragma: no cover
             def get_dfs() -> Iterable[LocalDataFrame]:
@@ -232,7 +234,6 @@ class SparkMapEngine(MapEngine):
                 return PandasDataFrame([], output_schema).as_pandas()
             if on_init_once is not None:
                 on_init_once(0, input_df)
-            cursor = partition_spec.get_cursor(input_schema, 0)
             cursor.set(input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
             if isinstance(output_df, LocalDataFrameIterableDataFrame):
@@ -243,7 +244,7 @@ class SparkMapEngine(MapEngine):
 
         df = self.to_df(df)
         sdf = df.native.mapInPandas(  # type: ignore
-            _udf, schema=to_spark_schema(output_schema)
+            _udf_pandas, schema=to_spark_schema(output_schema)
         )
         return SparkDataFrame(sdf)
 

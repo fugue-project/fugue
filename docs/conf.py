@@ -88,9 +88,10 @@ intersphinx_mapping = {
     "tutorial": ("https://fugue-tutorials.readthedocs.io", None),
     "pd": ("https://pandas.pydata.org/docs", None),
     "pa": ("https://arrow.apache.org/docs", None),
+    "pl": ("https://pola-rs.github.io/polars/py-polars/html", None),
     "fs": ("https://docs.pyfilesystem.org/en/latest", None),
     "spark": ("https://spark.apache.org/docs/latest/api/python", None),
     "dask": ("https://docs.dask.org/en/latest", None),
     "ray": ("https://docs.ray.io/en/latest", None),
-    "ibis": ("https://ibis-project.org/docs/3.1.0", None),
+    "ibis": ("https://ibis-project.org", None),
 }

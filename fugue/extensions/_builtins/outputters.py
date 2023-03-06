@@ -99,6 +99,7 @@ class RunOutputTransformer(Outputter):
             output_schema=tf.output_schema,  # type: ignore
             partition_spec=tf.partition_spec,
             on_init=tr.on_init,
+            map_func_format_hint=tf.get_format_hint(),
         )
         self.execution_engine.persist(df, lazy=False)
 

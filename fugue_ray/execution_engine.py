@@ -45,6 +45,7 @@ class RayMapEngine(MapEngine):
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
         if len(partition_spec.partition_by) == 0:
             return self._map(

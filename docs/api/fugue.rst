@@ -57,6 +57,14 @@ fugue.constants
    :undoc-members:
    :show-inheritance:
 
+fugue.dev
+---------
+
+.. automodule:: fugue.dev
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.exceptions
 ----------------
 

@@ -277,6 +277,7 @@ class MapEngine(EngineFacet):
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:  # pragma: no cover
         """Apply a function to each partition after you partition the dataframe in a
         specified way.
@@ -289,6 +290,9 @@ class MapEngine(EngineFacet):
         :param partition_spec: partition specification
         :param on_init: callback function when the physical partition is initializaing,
           defaults to None
+        :param map_func_format_hint: the preferred data format for ``map_func``, it can
+          be ``pandas``, `pyarrow`, etc, defaults to None. Certain engines can provide
+          the most efficient map operations based on the hint.
         :return: the dataframe after the map operation
 
         .. note::

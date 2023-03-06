@@ -43,6 +43,7 @@ def test__to_output_transformer():
     assert "_x" not in d.__dict__
     e = _to_output_transformer("t4")
     assert isinstance(e, CoTransformer)
+    assert e.get_format_hint() == "pandas"
     f = _to_output_transformer("t5")
     assert isinstance(f, CoTransformer)
     g = _to_output_transformer("t6")
