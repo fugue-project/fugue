@@ -154,7 +154,7 @@ class CoTransformer(ExtensionContext):
         """
         raise NotImplementedError
 
-    def get_format_hint(self) -> Optional[str]:
+    def get_format_hint(self) -> Optional[str]:  # pragma: no cover
         """Get the transformer's preferred data format, for example it can be
         ``pandas``, ``pyarrow`` and None. This is to help the execution engine
         use the most efficient way to execute the logic.
