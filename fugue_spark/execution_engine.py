@@ -318,9 +318,13 @@ class SparkExecutionEngine(ExecutionEngine):
         e_cores = int(spark.conf.get("spark.executor.cores", "1"))
         tc = int(spark.conf.get("spark.task.cpus", "1"))
         sc = spark._jsc.sc()
-        nodes = len(list(sc.statusTracker().getExecutorInfos()))
-        workers = 1 if nodes <= 1 else nodes - 1
-        return max(workers * (e_cores // tc), 1)
+        try:
+            return spark.sparkContext.defaultParallelism // tc
+        except Exception:  # pragma: no cover
+            # for pyspark < 3.1.1
+            nodes = len(list(sc.statusTracker().getExecutorInfos()))
+            workers = 1 if nodes <= 1 else nodes - 1
+            return max(workers * (e_cores // tc), 1)
 
     def to_df(self, df: Any, schema: Any = None) -> SparkDataFrame:  # noqa: C901
         """Convert a data structure to :class:`~fugue_spark.dataframe.SparkDataFrame`
