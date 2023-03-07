@@ -221,20 +221,23 @@ class SparkMapEngine(MapEngine):
             dfs: Iterable[pd.DataFrame],
         ) -> Iterable[pd.DataFrame]:  # pragma: no cover
             def get_dfs() -> Iterable[LocalDataFrame]:
+                cursor_set = False
                 for df in dfs:
                     if df.shape[0] > 0:
-                        yield PandasDataFrame(
+                        pdf = PandasDataFrame(
                             df.reset_index(drop=True),
                             input_schema,
                             pandas_df_wrapper=True,
                         )
+                        if not cursor_set:
+                            cursor.set(lambda: pdf.peek_array(), 0, 0)
+                        yield pdf
 
             input_df = LocalDataFrameIterableDataFrame(get_dfs(), input_schema)
             if input_df.empty:
                 return PandasDataFrame([], output_schema).as_pandas()
             if on_init_once is not None:
                 on_init_once(0, input_df)
-            cursor.set(lambda: input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
             if isinstance(output_df, LocalDataFrameIterableDataFrame):
                 for res in output_df.native:
@@ -758,7 +761,7 @@ class _Mapper(object):  # pragma: no cover
             partitioner = self.partition_spec.get_partitioner(self.schema)
             partitions = partitioner.partition(df.native)
         for pn, sn, sub in partitions:
-            self.cursor.set(lambda: sub.peek(), pn, sn)
+            self.cursor.set(sub.peek(), pn, sn)
             sub_df = IterableDataFrame(sub, self.schema)
             res = self.map_func(self.cursor, sub_df)
             for r in res.as_array_iterable(type_safe=True):
