@@ -187,7 +187,7 @@ class SparkMapEngine(MapEngine):
             )
             if on_init_once is not None:
                 on_init_once(0, input_df)
-            cursor.set(input_df.peek_array(), 0, 0)
+            cursor.set(lambda: input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()
 
@@ -234,7 +234,7 @@ class SparkMapEngine(MapEngine):
                 return PandasDataFrame([], output_schema).as_pandas()
             if on_init_once is not None:
                 on_init_once(0, input_df)
-            cursor.set(input_df.peek_array(), 0, 0)
+            cursor.set(lambda: input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
             if isinstance(output_df, LocalDataFrameIterableDataFrame):
                 for res in output_df.native:
@@ -742,12 +742,12 @@ class _Mapper(object):  # pragma: no cover
         self.partition_spec = partition_spec
         self.map_func = map_func
         self.on_init = on_init
+        self.cursor = self.partition_spec.get_cursor(self.schema, 0)
 
     def run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
         df = IterableDataFrame(to_type_safe_input(rows, self.schema), self.schema)
         if df.empty:  # pragma: no cover
             return
-        cursor = self.partition_spec.get_cursor(self.schema, no)
         if self.on_init is not None:
             self.on_init(no, df)
         if self.partition_spec.empty:
@@ -758,8 +758,8 @@ class _Mapper(object):  # pragma: no cover
             partitioner = self.partition_spec.get_partitioner(self.schema)
             partitions = partitioner.partition(df.native)
         for pn, sn, sub in partitions:
-            cursor.set(sub.peek(), pn, sn)
+            self.cursor.set(lambda: sub.peek(), pn, sn)
             sub_df = IterableDataFrame(sub, self.schema)
-            res = self.map_func(cursor, sub_df)
+            res = self.map_func(self.cursor, sub_df)
             for r in res.as_array_iterable(type_safe=True):
                 yield r
