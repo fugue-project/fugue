@@ -168,11 +168,11 @@ def test_iterable_arrow_dataframes():
     assert data[1].native is pdf
 
     # with schema change, there is copy
-    # odf = p.to_output_df(get_pdfs(), "a:double", ctx=None)
-    # data = list(odf.native)
-    # assert 2 == len(data)
-    # assert data[0].native is not pdf
-    # assert data[1].native is not pdf
+    odf = p.to_output_df(get_pdfs(), "a:double", ctx=None)
+    data = list(odf.native)
+    assert 2 == len(data)
+    assert data[0].native is not pdf
+    assert data[1].native is not pdf
 
 
 def f10(x: Any, y: pa.Table) -> None:

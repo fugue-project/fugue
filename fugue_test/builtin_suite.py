@@ -51,7 +51,6 @@ from fugue.column import functions as ff
 from fugue.column import lit
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import (
-    FugueError,
     FugueInterfacelessError,
     FugueWorkflowCompileError,
     FugueWorkflowCompileValidationError,
@@ -446,24 +445,18 @@ class BuiltInTests(object):
                 for df in dfs:
                     yield df
 
-            with FugueWorkflow() as dag:
-                a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
-                b = a.transform(mt_arrow)
-                dag.df([[1, 2], [3, 4]], "a:int,b:int").assert_eq(b)
-            dag.run(self.engine)
-
-            # schema: *
-            def mt_arrow_bad(dfs: Iterable[pa.Table]) -> Iterator[pa.Table]:
+            # schema: a:long
+            def mt_arrow_2(dfs: Iterable[pa.Table]) -> Iterator[pa.Table]:
                 for df in dfs:
                     yield df.drop(["b"])
 
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
-                b = a.transform(mt_arrow_bad)
+                b = a.transform(mt_arrow)
                 dag.df([[1, 2], [3, 4]], "a:int,b:int").assert_eq(b)
-
-            with raises(FugueError):
-                dag.run(self.engine)
+                b = a.transform(mt_arrow_2)
+                dag.df([[1], [3]], "a:long").assert_eq(b)
+            dag.run(self.engine)
 
         def test_transform_binary(self):
             with FugueWorkflow() as dag:

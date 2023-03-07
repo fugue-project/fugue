@@ -21,7 +21,6 @@ from .dataframes import DataFrames
 from .iterable_dataframe import IterableDataFrame
 from .pandas_dataframe import PandasDataFrame
 from .utils import to_local_df
-from fugue.exceptions import FugueError
 
 
 class DataFrameFunctionWrapper(FunctionWrapper):
@@ -363,14 +362,13 @@ class _IterableArrowParam(LocalDataFrameParam):
         self, output: Iterable[pa.Table], schema: Any, ctx: Any
     ) -> DataFrame:
         def dfs():
+            _schema: Optional[Schema] = None if schema is None else Schema(schema)
             for df in output:
                 adf = ArrowDataFrame(df)
-                if schema is not None and not (  # pylint: disable-all
+                if _schema is not None and not (  # pylint: disable-all
                     adf.schema == schema
                 ):
-                    raise FugueError(
-                        f"output schema {adf.schema} does not match {schema}"
-                    )
+                    adf = adf[_schema.names].alter_columns(_schema)
                 yield adf
 
         return LocalDataFrameIterableDataFrame(dfs())
