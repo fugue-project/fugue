@@ -3,12 +3,13 @@
 import datetime
 import os
 import pickle
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional
 from unittest import TestCase
 from uuid import uuid4
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pytest
 from pytest import raises
 from triad import SerializableRLock
@@ -50,6 +51,7 @@ from fugue.column import functions as ff
 from fugue.column import lit
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import (
+    FugueError,
     FugueInterfacelessError,
     FugueWorkflowCompileError,
     FugueWorkflowCompileValidationError,
@@ -425,19 +427,43 @@ class BuiltInTests(object):
                 b.assert_eq(a)
             dag.run(self.engine)
 
-        def test_transform_iterable_pd(self):
+        def test_transform_iterable_dfs(self):
             # this test is important for using mapInPandas in spark
 
             # schema: *,c:int
-            def mt(dfs: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+            def mt_pandas(dfs: Iterable[pd.DataFrame]) -> Iterator[pd.DataFrame]:
                 for df in dfs:
                     yield df.assign(c=2)
 
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
-                b = a.transform(mt)
+                b = a.transform(mt_pandas)
                 dag.df([[1, 2, 2], [3, 4, 2]], "a:int,b:int,c:int").assert_eq(b)
             dag.run(self.engine)
+
+            # schema: *
+            def mt_arrow(dfs: Iterable[pa.Table]) -> Iterator[pa.Table]:
+                for df in dfs:
+                    yield df
+
+            with FugueWorkflow() as dag:
+                a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
+                b = a.transform(mt_arrow)
+                dag.df([[1, 2], [3, 4]], "a:int,b:int").assert_eq(b)
+            dag.run(self.engine)
+
+            # schema: *
+            def mt_arrow_bad(dfs: Iterable[pa.Table]) -> Iterator[pa.Table]:
+                for df in dfs:
+                    yield df.drop(["b"])
+
+            with FugueWorkflow() as dag:
+                a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
+                b = a.transform(mt_arrow_bad)
+                dag.df([[1, 2], [3, 4]], "a:int,b:int").assert_eq(b)
+
+            with raises(FugueError):
+                dag.run(self.engine)
 
         def test_transform_binary(self):
             with FugueWorkflow() as dag:
@@ -626,6 +652,10 @@ class BuiltInTests(object):
                 incr()
                 yield df
 
+            def t10(df: pd.DataFrame) -> Iterable[pa.Table]:
+                incr()
+                yield pa.Table.from_pandas(df)
+
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:double,b:int")
                 a.out_transform(t1)  # +2
@@ -637,6 +667,7 @@ class BuiltInTests(object):
                 a.partition_by("b").out_transform(T7)  # +1
                 a.out_transform(t8, ignore_errors=[NotImplementedError])  # +1
                 a.out_transform(t9)  # +1
+                a.out_transform(t10)  # +1
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t2))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t3))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t4))
@@ -644,7 +675,7 @@ class BuiltInTests(object):
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(T7))
             dag.run(self.engine)
 
-            assert 12 <= incr()
+            assert 13 <= incr()
 
         def test_out_cotransform(self):  # noqa: C901
             tmpdir = str(self.tmpdir)

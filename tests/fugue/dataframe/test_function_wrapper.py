@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Callable, Dict, Iterable, List, Optional, Iterator
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional
 
 import pandas as pd
 import pyarrow as pa
@@ -9,19 +9,20 @@ from triad.utils.iter import EmptyAwareIterable
 
 from fugue import (
     ArrayDataFrame,
+    ArrowDataFrame,
     DataFrame,
     IterableDataFrame,
     LocalDataFrame,
     LocalDataFrameIterableDataFrame,
     PandasDataFrame,
 )
-from fugue.dataframe.function_wrapper import _IterablePandasParam
+from fugue.dataframe.function_wrapper import _IterablePandasParam, _IterableArrowParam
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dev import DataFrameFunctionWrapper
 
 
 def test_function_wrapper():
-    for f in [f20, f21, f212, f22, f23, f24, f25, f26, f30, f31, f32, f35]:
+    for f in [f20, f21, f212, f22, f23, f24, f25, f26, f30, f31, f32, f35, f36]:
         df = ArrayDataFrame([[0]], "a:int")
         w = DataFrameFunctionWrapper(f, "^[ldsp][ldsp]$", "[ldspq]")
         res = w.run([df], dict(a=df), ignore_unknown=False, output_schema="a:int")
@@ -107,7 +108,7 @@ def test_function_wrapper_copy():
     assert 3 == test.n
 
 
-def test_iterable_pandas_dataframe():
+def test_iterable_pandas_dataframes():
     p = _IterablePandasParam(None)
     pdf = pd.DataFrame([[0]], columns=["a"])
     df = PandasDataFrame(pdf)
@@ -139,6 +140,39 @@ def test_iterable_pandas_dataframe():
     assert 2 == len(data)
     assert data[0].native is not pdf
     assert data[1].native is not pdf
+
+
+def test_iterable_arrow_dataframes():
+    p = _IterableArrowParam(None)
+    pdf = pa.Table.from_pandas(pd.DataFrame([[0]], columns=["a"]))
+    df = ArrowDataFrame(pdf)
+    data = list(p.to_input_data(df, ctx=None))
+    assert 1 == len(data)
+    assert data[0] is pdf  # this is to guarantee no copy in any wrapping logic
+
+    dfs = LocalDataFrameIterableDataFrame([df, df])
+    data = list(p.to_input_data(dfs, ctx=None))
+    assert 2 == len(data)
+    assert data[0] is pdf
+    assert data[1] is pdf
+
+    def get_pdfs():
+        yield pdf
+        yield pdf
+
+    # without schema change, there is no copy
+    odf = p.to_output_df(get_pdfs(), df.schema, ctx=None)
+    data = list(odf.native)
+    assert 2 == len(data)
+    assert data[0].native is pdf
+    assert data[1].native is pdf
+
+    # with schema change, there is copy
+    # odf = p.to_output_df(get_pdfs(), "a:double", ctx=None)
+    # data = list(odf.native)
+    # assert 2 == len(data)
+    # assert data[0].native is not pdf
+    # assert data[1].native is not pdf
 
 
 def f10(x: Any, y: pa.Table) -> None:
@@ -253,11 +287,7 @@ def f35(e: pd.DataFrame, a: LocalDataFrame) -> Iterable[pd.DataFrame]:
     return iter([e, a])
 
 
-def f36(
-    f1: Callable,
-    f2: Callable[[str], str],
-    f3: Optional[Callable],
-    f4: Optional[Callable[[str], str]],
-    f5: Optional[callable],
-) -> callable:
-    pass
+def f36(e: pd.DataFrame, a: LocalDataFrame) -> Iterable[pa.Table]:
+    e = PandasDataFrame(e, "a:int").as_arrow()
+    a = ArrayDataFrame(a, "a:int").as_arrow()
+    return iter([e, a])
