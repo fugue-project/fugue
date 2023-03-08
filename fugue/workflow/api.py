@@ -225,7 +225,7 @@ def out_transform(
 
     .. note::
 
-        This function can only take parquet file paths in `df`: Csv and other file
+        This function can only take parquet file paths in `df`. Csv and other file
         formats are disallowed.
 
         This transformation is guaranteed to execute immediately (eager)
