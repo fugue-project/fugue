@@ -17,7 +17,7 @@ def _check_valid_input(df: Any, save_path: Optional[str]) -> None:
         assert_or_throw(
             (".csv" not in df) and (".json" not in df),
             FugueInterfacelessError(
-                """Fugue transform only load parquet file paths.
+                """Fugue transform can only load parquet file paths.
                 Csv and json are disallowed"""
             ),
         )
@@ -25,7 +25,7 @@ def _check_valid_input(df: Any, save_path: Optional[str]) -> None:
         assert_or_throw(
             (".csv" not in save_path) and (".json" not in save_path),
             FugueInterfacelessError(
-                """Fugue transform only load parquet file paths.
+                """Fugue transform can only load parquet file paths.
                 Csv and json are disallowed"""
             ),
         )
@@ -49,10 +49,10 @@ def transform(  # noqa: C901
 ) -> Any:
     """Transform this dataframe using transformer. It's a wrapper of
     :meth:`~fugue.workflow.workflow.FugueWorkflow.transform` and
-    :meth:`~fugue.workflow.workflow.FugueWorkflow.run`. It will let you do 
+    :meth:`~fugue.workflow.workflow.FugueWorkflow.run`. It will let you do
     the basic dataframe transformation without using
     :class:`~fugue.workflow.workflow.FugueWorkflow` and
-    :class:`~fugue.dataframe.dataframe.DataFrame`. Also, only native 
+    :class:`~fugue.dataframe.dataframe.DataFrame`. Also, only native
     types are accepted for both input and output.
 
     Please read |TransformerTutorial|
@@ -80,8 +80,8 @@ def transform(  # noqa: C901
     :param engine_conf: |ParamsLikeObject|, defaults to None
     :param as_fugue: If true, the function will always return
         a ``FugueDataFrame``, otherwise, if ``df`` is in native dataframe types such
-        as pandas dataframe, then the output will also return in its native format. Defaults
-        to False
+        as pandas dataframe, then the output will also return in its native format.
+        Defaults to False
     :param persist: Whether to persist(materialize) the dataframe before returning
     :param as_local: If true, the result will be converted to a ``LocalDataFrame``
     :param save_path: Whether to save the output to a file (see the note)
@@ -199,7 +199,7 @@ def out_transform(
     :meth:`~fugue.workflow.workflow.FugueWorkflow.run`. It let you do the
     basic dataframe transformation without using
     :class:`~fugue.workflow.workflow.FugueWorkflow` and
-    :class:`~fugue.dataframe.dataframe.DataFrame`. Only native types are 
+    :class:`~fugue.dataframe.dataframe.DataFrame`. Only native types are
     accepted for both input and output.
 
     Please read |TransformerTutorial|
@@ -225,7 +225,7 @@ def out_transform(
 
     .. note::
 
-        This function only take parquet file paths in `df`: Csv and other file
+        This function can only take parquet file paths in `df`: Csv and other file
         formats are disallowed.
 
         This transformation is guaranteed to execute immediately (eager)
