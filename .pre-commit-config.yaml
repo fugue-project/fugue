@@ -40,6 +40,8 @@ repos:
         - id: mypy
     - repo: https://github.com/pre-commit/mirrors-pylint
       rev: v2.16.2
+      hooks:
+        - id: pylint
     - repo: https://github.com/ambv/black
       rev: 22.3.0
       hooks:
