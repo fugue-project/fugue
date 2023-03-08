@@ -20,7 +20,7 @@ from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckExecutionEngine
 
-from ._constants import FUGUE_RAY_DEFAULT_BATCH_SIZE
+from ._constants import FUGUE_RAY_DEFAULT_BATCH_SIZE, FUGUE_RAY_ZERO_COPY
 from ._utils.cluster import get_default_partitions, get_default_shuffle_partitions
 from ._utils.dataframe import add_partition_key
 from ._utils.io import RayIO
@@ -176,15 +176,17 @@ class RayMapEngine(MapEngine):
                 rdf = self.execution_engine.repartition(  # type: ignore
                     rdf, PartitionSpec(num=n)
                 )
-        batch_size = (
-            self.conf.get_or_throw(FUGUE_RAY_DEFAULT_BATCH_SIZE, object)
-            if FUGUE_RAY_DEFAULT_BATCH_SIZE in self.execution_engine.conf
-            else "default"
-        )
+        mb_args: Dict[str, Any] = {}
+        if FUGUE_RAY_DEFAULT_BATCH_SIZE in self.conf:
+            mb_args["batch_size"] = self.conf.get_or_throw(
+                FUGUE_RAY_DEFAULT_BATCH_SIZE, int
+            )
+        if ray.__version__ >= "2.3":
+            mb_args["zero_copy_batch"] = self.conf.get(FUGUE_RAY_ZERO_COPY, True)
         sdf = rdf.native.map_batches(
             _udf,
             batch_format="pyarrow",
-            batch_size=batch_size,
+            **mb_args,
             **self.execution_engine._get_remote_args(),  # type: ignore
         )
         return RayDataFrame(sdf, schema=output_schema, internal_schema=True)
