@@ -38,18 +38,8 @@ repos:
       rev: v0.971
       hooks:
         - id: mypy
-    - repo: local
-      hooks:
-        - id: pylint
-          name: pylint
-          entry: pylint
-          language: system
-          types: [python]
-          args:
-            [
-              "-rn", # Only display messages
-              "-sn", # Don't display the score
-            ]
+    - repo: https://github.com/pre-commit/mirrors-pylint
+      rev: v2.16.2
     - repo: https://github.com/ambv/black
       rev: 22.3.0
       hooks:
