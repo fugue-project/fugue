@@ -181,9 +181,7 @@ def transform(  # noqa: C901
             return save_path
     if as_fugue or isinstance(df, (DataFrame, Yielded)):
         return result
-    return (
-        result.as_pandas() if result.is_local else result.native
-    )  # type:ignore
+    return result.as_pandas() if result.is_local else result.native  # type:ignore
 
 
 def out_transform(
@@ -227,7 +225,7 @@ def out_transform(
 
     .. note::
 
-        This function can only take parquet file paths in `df`. Csv and other file
+        This function can only take parquet file paths in `df`. CSV and JSON file
         formats are disallowed.
 
         This transformation is guaranteed to execute immediately (eager)
