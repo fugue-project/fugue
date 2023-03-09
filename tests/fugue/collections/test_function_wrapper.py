@@ -98,7 +98,7 @@ def test_parse_function():
     raises(TypeError, lambda: _parse_function(f15, "^e?(c|[dl]+)x*$", "n"))
     _parse_function(f14, "^0?e?(c|[dl]+)x*$", "n")
     _parse_function(f16, "^0e?(c|[dl]+)x*$", "n")
-    _parse_function(f33, "^$", "q")
+    _parse_function(f33, "^$", "l")
     raises(TypeError, lambda: _parse_function(f34, "^[sq]$", "q"))
     _parse_function(f36, "^FFfff+$", "F")
 

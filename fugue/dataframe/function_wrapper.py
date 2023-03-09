@@ -299,7 +299,6 @@ class _PandasParam(LocalDataFrameParam):
 
 @annotated_param(
     Iterable[pd.DataFrame],
-    "q",
     matcher=lambda x: x == Iterable[pd.DataFrame] or x == Iterator[pd.DataFrame],
 )
 class _IterablePandasParam(LocalDataFrameParam):
@@ -340,6 +339,43 @@ class _PyArrowTableParam(LocalDataFrameParam):
 
     def count(self, df: Any) -> int:  # pragma: no cover
         return df.count()
+
+    def format_hint(self) -> Optional[str]:
+        return "pyarrow"
+
+
+@annotated_param(
+    Iterable[pa.Table],
+    matcher=lambda x: x == Iterable[pa.Table] or x == Iterator[pa.Table],
+)
+class _IterableArrowParam(LocalDataFrameParam):
+    @no_type_check
+    def to_input_data(self, df: DataFrame, ctx: Any) -> Iterable[pa.Table]:
+        if not isinstance(df, LocalDataFrameIterableDataFrame):
+            yield df.as_arrow()
+        else:
+            for sub in df.native:
+                yield sub.as_arrow()
+
+    @no_type_check
+    def to_output_df(
+        self, output: Iterable[pa.Table], schema: Any, ctx: Any
+    ) -> DataFrame:
+        def dfs():
+            _schema: Optional[Schema] = None if schema is None else Schema(schema)
+            for df in output:
+                adf = ArrowDataFrame(df)
+                if _schema is not None and not (  # pylint: disable-all
+                    adf.schema == schema
+                ):
+                    adf = adf[_schema.names].alter_columns(_schema)
+                yield adf
+
+        return LocalDataFrameIterableDataFrame(dfs())
+
+    @no_type_check
+    def count(self, df: Iterable[pa.Table]) -> int:
+        return sum(_.shape[0] for _ in df)
 
     def format_hint(self) -> Optional[str]:
         return "pyarrow"

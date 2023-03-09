@@ -348,7 +348,7 @@ class DatasetPartitionCursor:
         """reset the cursor to a row (which should be the first row of a
         new logical partition)
 
-        :param item: an item of the dataset
+        :param item: an item of the dataset, or an function generating the item
         :param partition_no: logical partition number
         :param slice_no: slice number inside the logical partition (to be deprecated)
         """
@@ -359,6 +359,8 @@ class DatasetPartitionCursor:
     @property
     def item(self) -> Any:
         """Get current item"""
+        if callable(self._item):
+            self._item = self._item()
         return self._item
 
     @property
@@ -417,11 +419,15 @@ class PartitionCursor(DatasetPartitionCursor):
         """reset the cursor to a row (which should be the first row of a
         new logical partition)
 
-        :param row: list-like row data
+        :param row: list-like row data or a function generating a list-like row
         :param partition_no: logical partition number
         :param slice_no: slice number inside the logical partition (to be deprecated)
         """
-        super().set(list(row), partition_no=partition_no, slice_no=slice_no)
+        super().set(
+            list(row) if not callable(row) else lambda: list(row()),
+            partition_no=partition_no,
+            slice_no=slice_no,
+        )
 
     @property
     def row(self) -> List[Any]:

@@ -79,6 +79,7 @@ class DaskMapEngine(MapEngine):
         presort_asc = list(presort.values())
         output_schema = Schema(output_schema)
         input_schema = df.schema
+        cursor = partition_spec.get_cursor(input_schema, 0)
         on_init_once: Any = (
             None
             if on_init is None
@@ -97,8 +98,7 @@ class DaskMapEngine(MapEngine):
             )
             if on_init_once is not None:
                 on_init_once(0, input_df)
-            cursor = partition_spec.get_cursor(input_schema, 0)
-            cursor.set(input_df.peek_array(), 0, 0)
+            cursor.set(lambda: input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()
 

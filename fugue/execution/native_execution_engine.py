@@ -118,7 +118,7 @@ class PandasMapEngine(MapEngine):
             on_init(0, df)
         if len(partition_spec.partition_by) == 0:  # no partition
             df = to_local_df(df)
-            cursor.set(df.peek_array(), 0, 0)
+            cursor.set(lambda: df.peek_array(), 0, 0)
             output_df = map_func(cursor, df)
             if (
                 isinstance(output_df, PandasDataFrame)
@@ -142,7 +142,7 @@ class PandasMapEngine(MapEngine):
                     drop=True
                 )
             input_df = PandasDataFrame(pdf, df.schema, pandas_df_wrapper=True)
-            cursor.set(input_df.peek_array(), cursor.partition_no + 1, 0)
+            cursor.set(lambda: input_df.peek_array(), cursor.partition_no + 1, 0)
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()
 

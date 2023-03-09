@@ -158,7 +158,7 @@ class RayDataFrame(DataFrame):
     def persist(self, **kwargs: Any) -> "RayDataFrame":
         # TODO: it mutates the dataframe, is this a good bahavior
         if not self.native.is_fully_executed():  # pragma: no cover
-            self._native = self.native.fully_executed()
+            self.native.fully_executed()
         return self
 
     def count(self) -> int:

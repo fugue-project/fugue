@@ -39,11 +39,16 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def make_engine(self):
         e = RayExecutionEngine(
-            conf={"test": True, "fugue.duckdb.pragma.threads": 2},
+            conf={
+                "test": True,
+                "fugue.duckdb.pragma.threads": 2,
+                "fugue.ray.zero_copy": True,
+                "fugue.ray.default.batch_size": 10000,
+            },
             connection=self._con,
         )
         return e
-    
+
     def test_properties(self):
         assert self.engine.is_distributed
         assert self.engine.map_engine.is_distributed
@@ -181,7 +186,7 @@ class RayBuiltInTests(BuiltInTests.Tests):
             connection=self._con,
         )
         return e
-    
+
     def test_yield_table(self):
         pass
 
