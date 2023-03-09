@@ -181,7 +181,9 @@ def transform(  # noqa: C901
             return save_path
     if as_fugue or isinstance(df, (DataFrame, Yielded)):
         return result
-    return result.as_pandas() if result.is_local else result.native  # type:ignore
+    return (
+        result.as_pandas() if result.is_local else result.native
+    )  # type:ignore
 
 
 def out_transform(
@@ -196,7 +198,7 @@ def out_transform(
 ) -> None:
     """Transform this dataframe using transformer. It's a wrapper of
     :meth:`~fugue.workflow.workflow.FugueWorkflow.out_transform` and
-    :meth:`~fugue.workflow.workflow.FugueWorkflow.run`. It let you do the
+    :meth:`~fugue.workflow.workflow.FugueWorkflow.run`. It will let you do the
     basic dataframe transformation without using
     :class:`~fugue.workflow.workflow.FugueWorkflow` and
     :class:`~fugue.dataframe.dataframe.DataFrame`. Only native types are
@@ -207,10 +209,10 @@ def out_transform(
     :param df: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
         or a path string to a parquet file
     :param using: transformer-like object, can't be a string expression
-    :param params: |ParamsLikeObject| to run the processor, defaults to None.
+    :param params: |ParamsLikeObject| to run the processor, defaults to None
         The transformer will be able to access this value from
         :meth:`~fugue.extensions.context.ExtensionContext.params`
-    :param partition: |PartitionLikeObject|, defaults to None.
+    :param partition: |PartitionLikeObject|, defaults to None
     :param callback: |RPCHandlerLikeObject|, defaults to None
     :param ignore_errors: list of exception types the transformer can ignore,
         defaults to None (empty list)
