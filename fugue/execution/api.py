@@ -199,10 +199,10 @@ def broadcast(
     as_fugue: bool = False,
     as_local: bool = False,
 ) -> AnyDataFrame:
-    """Broadcast the dataframe to all workers for a distributed computing framework
+    """Broadcast the dataframe to all workers of a distributed computing backend
 
     :param df: an input dataframe that can be recognized by Fugue
-    :param engine: an engine like object, defaults to None
+    :param engine: an engine-like object, defaults to None
     :param engine_conf: the configs for the engine, defaults to None
     :param as_fugue: whether to force return a Fugue DataFrame, defaults to False
     :param as_local: whether to force return a local DataFrame, defaults to False
