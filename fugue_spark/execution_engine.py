@@ -252,34 +252,40 @@ class SparkMapEngine(MapEngine):
                 yield output_df.as_pandas()
 
         def _udf_arrow(
-            dfs: Iterable[pa.Table],
-        ) -> Iterable[pa.Table]:  # pragma: no cover
+            dfs: Iterable[pa.RecordBatch],
+        ) -> Iterable[pa.RecordBatch]:  # pragma: no cover
             def get_dfs() -> Iterable[LocalDataFrame]:
                 cursor_set = False
                 for df in dfs:
-                    if df.shape[0] > 0:
-                        pdf = ArrowDataFrame(df)
+                    if df.num_rows > 0:
+                        # TODO: need coalesce based on byte size
+                        pdf = ArrowDataFrame(pa.Table.from_batches([df]))
                         if not cursor_set:
                             cursor.set(lambda: pdf.peek_array(), 0, 0)
                         yield pdf
 
             input_df = LocalDataFrameIterableDataFrame(get_dfs(), input_schema)
             if input_df.empty:
-                yield _build_empty_arrow(output_schema)
+                yield from _build_empty_arrow(output_schema).to_batches()
                 return
             if on_init_once is not None:
                 on_init_once(0, input_df)
             output_df = map_func(cursor, input_df)
             if isinstance(output_df, LocalDataFrameIterableDataFrame):
                 for res in output_df.native:
-                    yield res.as_arrow()
+                    yield from res.as_arrow().to_batches()
             else:
-                yield output_df.as_arrow()
+                yield from output_df.as_arrow().to_batches()
 
         df = self.to_df(df)
-        sdf = df.native.mapInPandas(  # type: ignore
-            _udf_pandas, schema=to_spark_schema(output_schema)
-        )
+        if hasattr(df.native, "mapInArrow"):
+            sdf = df.native.mapInArrow(  # type: ignore
+                _udf_arrow, schema=to_spark_schema(output_schema)
+            )
+        else:
+            sdf = df.native.mapInPandas(  # type: ignore
+                _udf_pandas, schema=to_spark_schema(output_schema)
+            )
         return SparkDataFrame(sdf)
 
 
