@@ -97,6 +97,9 @@ class IterableDataFrame(LocalUnboundedDataFrame):
             return self
         return IterableDataFrame(self.native, new_schema)
 
+    def as_local_bounded(self) -> LocalBoundedDataFrame:
+        return ArrayDataFrame(self.as_array(), schema=self.schema)
+
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:

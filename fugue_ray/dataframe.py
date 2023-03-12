@@ -6,12 +6,7 @@ import ray
 import ray.data as rd
 from triad.collections.schema import Schema
 
-from fugue.dataframe import (
-    ArrowDataFrame,
-    DataFrame,
-    LocalBoundedDataFrame,
-    LocalDataFrame,
-)
+from fugue.dataframe import ArrowDataFrame, DataFrame, LocalBoundedDataFrame
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from fugue.plugins import (
@@ -115,7 +110,7 @@ class RayDataFrame(DataFrame):
     def is_local(self) -> bool:
         return False
 
-    def as_local(self) -> LocalDataFrame:
+    def as_local_bounded(self) -> LocalBoundedDataFrame:
         adf = self.as_arrow()
         if adf.shape[0] == 0:
             res = ArrowDataFrame([], self.schema)

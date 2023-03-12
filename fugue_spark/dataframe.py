@@ -13,7 +13,6 @@ from fugue.dataframe import (
     DataFrame,
     IterableDataFrame,
     LocalBoundedDataFrame,
-    LocalDataFrame,
     PandasDataFrame,
 )
 from fugue.exceptions import FugueDataFrameOperationError
@@ -90,10 +89,10 @@ class SparkDataFrame(DataFrame):
     def is_bounded(self) -> bool:
         return True
 
-    def as_local(self) -> LocalDataFrame:
+    def as_local_bounded(self) -> LocalBoundedDataFrame:
         if any(pa.types.is_nested(t) for t in self.schema.types):
             data = list(to_type_safe_input(self.native.collect(), self.schema))
-            res: LocalDataFrame = ArrayDataFrame(data, self.schema)
+            res: LocalBoundedDataFrame = ArrayDataFrame(data, self.schema)
         else:
             res = PandasDataFrame(self.native.toPandas(), self.schema)
         if self.has_metadata:

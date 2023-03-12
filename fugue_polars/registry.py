@@ -1,9 +1,16 @@
-from fugue.dev import annotated_param, LocalDataFrameParam
-from fugue import DataFrame, LocalDataFrameIterableDataFrame, ArrowDataFrame
-from triad import Schema, make_empty_aware
+from typing import Any, Iterable, Iterator, Optional, no_type_check
+
 import polars as pl
 import pyarrow as pa
-from typing import Any, Optional, Iterable, no_type_check, Iterator
+from triad import Schema, make_empty_aware
+
+from fugue import (
+    ArrowDataFrame,
+    DataFrame,
+    IterableArrowDataFrame,
+    LocalDataFrameIterableDataFrame,
+)
+from fugue.dev import LocalDataFrameParam, annotated_param
 
 
 @annotated_param(pl.DataFrame)
@@ -51,8 +58,8 @@ class _IterablePolarsParam(LocalDataFrameParam):
         )
         _dfs = make_empty_aware(dfs(_schema))
         if not _dfs.empty:
-            return LocalDataFrameIterableDataFrame(_dfs)
-        return LocalDataFrameIterableDataFrame([], schema=_schema)
+            return IterableArrowDataFrame(_dfs)
+        return IterableArrowDataFrame([], schema=_schema)
 
     @no_type_check
     def count(self, df: Iterable[pl.DataFrame]) -> int:

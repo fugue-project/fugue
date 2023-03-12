@@ -2,13 +2,12 @@
 from triad.collections import Schema
 from triad.collections.fs import FileSystem
 
-from .dev import *
 from fugue.api import out_transform, transform
 from fugue.bag.array_bag import ArrayBag
 from fugue.bag.bag import Bag, BagDisplay
 from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.collections.sql import StructuredRawSQL, TempTableName
-from fugue.collections.yielded import Yielded, PhysicalYielded
+from fugue.collections.yielded import PhysicalYielded, Yielded
 from fugue.constants import register_global_conf
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.arrow_dataframe import ArrowDataFrame
@@ -19,7 +18,11 @@ from fugue.dataframe.dataframe import (
     LocalBoundedDataFrame,
     LocalDataFrame,
 )
-from fugue.dataframe.dataframe_iterable_dataframe import LocalDataFrameIterableDataFrame
+from fugue.dataframe.dataframe_iterable_dataframe import (
+    IterableArrowDataFrame,
+    IterablePandasDataFrame,
+    LocalDataFrameIterableDataFrame,
+)
 from fugue.dataframe.dataframes import DataFrames
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
@@ -33,8 +36,8 @@ from fugue.dataset import (
 )
 from fugue.execution.execution_engine import (
     AnyExecutionEngine,
-    ExecutionEngine,
     EngineFacet,
+    ExecutionEngine,
     MapEngine,
     SQLEngine,
 )
@@ -84,5 +87,7 @@ from fugue.workflow._workflow_context import FugueWorkflowContext
 from fugue.workflow.module import module
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 from fugue_version import __version__
+
+from .dev import *
 
 _register()

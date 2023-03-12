@@ -5,13 +5,7 @@ import pyarrow as pa
 from duckdb import DuckDBPyRelation
 from triad import Schema
 
-from fugue import (
-    ArrayDataFrame,
-    ArrowDataFrame,
-    DataFrame,
-    LocalBoundedDataFrame,
-    LocalDataFrame,
-)
+from fugue import ArrayDataFrame, ArrowDataFrame, DataFrame, LocalBoundedDataFrame
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from fugue.plugins import (
     as_fugue_dataset,
@@ -112,7 +106,7 @@ class DuckDataFrame(LocalBoundedDataFrame):
             return ArrowDataFrame(self.as_arrow()).as_pandas()
         return self._rel.to_df()
 
-    def as_local(self) -> LocalDataFrame:
+    def as_local_bounded(self) -> LocalBoundedDataFrame:
         return ArrowDataFrame(self.as_arrow())
 
     def as_array(

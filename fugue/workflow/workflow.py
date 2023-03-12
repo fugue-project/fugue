@@ -1348,6 +1348,12 @@ class WorkflowDataFrame(DataFrame):
         """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
+    def as_local_bounded(self) -> DataFrame:  # type: ignore  # pragma: no cover
+        """
+        :raises NotImplementedError: don't call this method
+        """
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
+
     @property
     def is_bounded(self) -> bool:  # pragma: no cover
         """

@@ -13,7 +13,7 @@ from fugue import (
     DataFrame,
     IterableDataFrame,
     LocalDataFrame,
-    LocalDataFrameIterableDataFrame,
+    IterablePandasDataFrame,
     PandasDataFrame,
 )
 from fugue.dataframe.function_wrapper import _IterablePandasParam, _IterableArrowParam
@@ -117,7 +117,7 @@ def test_iterable_pandas_dataframes():
     assert data[0] is pdf  # this is to guarantee no copy in any wrapping logic
     assert data[0].values.tolist() == [[0]]
 
-    dfs = LocalDataFrameIterableDataFrame([df, df])
+    dfs = IterablePandasDataFrame([df, df])
     data = list(p.to_input_data(dfs, ctx=None))
     assert 2 == len(data)
     assert data[0] is pdf
@@ -150,7 +150,7 @@ def test_iterable_arrow_dataframes():
     assert 1 == len(data)
     assert data[0] is pdf  # this is to guarantee no copy in any wrapping logic
 
-    dfs = LocalDataFrameIterableDataFrame([df, df])
+    dfs = IterablePandasDataFrame([df, df])
     data = list(p.to_input_data(dfs, ctx=None))
     assert 2 == len(data)
     assert data[0] is pdf

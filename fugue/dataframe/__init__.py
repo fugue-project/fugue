@@ -9,7 +9,11 @@ from .dataframe import (
     LocalDataFrame,
     YieldedDataFrame,
 )
-from .dataframe_iterable_dataframe import LocalDataFrameIterableDataFrame
+from .dataframe_iterable_dataframe import (
+    IterableArrowDataFrame,
+    IterablePandasDataFrame,
+    LocalDataFrameIterableDataFrame,
+)
 from .dataframes import DataFrames
 from .function_wrapper import DataFrameFunctionWrapper
 from .iterable_dataframe import IterableDataFrame

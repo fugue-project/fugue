@@ -171,6 +171,12 @@ def to_local_bounded_df(df: Any, schema: Any = None) -> LocalBoundedDataFrame:
         bounded, so :class:`~fugue.dataframe.iterable_dataframe.IterableDataFrame` will
         be converted although it's local.
     """
+    if isinstance(df, DataFrame):
+        aot(
+            schema is None,
+            ValueError("schema and metadata must be None when df is a DataFrame"),
+        )
+        return df.as_local_bounded()
     df = to_local_df(df, schema)
     if isinstance(df, LocalBoundedDataFrame):
         return df

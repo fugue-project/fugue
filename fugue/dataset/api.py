@@ -41,8 +41,6 @@ def as_local(data: AnyDataset) -> AnyDataset:
 
     :param data: the dataset that can be recognized by Fugue
     """
-    if isinstance(data, Dataset) and data.is_local:
-        return data
     return as_local_bounded(data)
 
 
@@ -52,8 +50,6 @@ def as_local_bounded(data: AnyDataset) -> AnyDataset:
 
     :param data: the dataset that can be recognized by Fugue
     """
-    if isinstance(data, Dataset) and data.is_local and data.is_bounded:
-        return data
     raise NotImplementedError(
         f"no registered function to convert {type(data)} to a local bounded dataset"
     )

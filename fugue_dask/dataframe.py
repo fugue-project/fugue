@@ -11,7 +11,6 @@ from fugue.dataframe import (
     ArrowDataFrame,
     DataFrame,
     LocalBoundedDataFrame,
-    LocalDataFrame,
     PandasDataFrame,
 )
 from fugue.dataframe.dataframe import _input_schema
@@ -100,7 +99,7 @@ class DaskDataFrame(DataFrame):
     def is_local(self) -> bool:
         return False
 
-    def as_local(self) -> LocalDataFrame:
+    def as_local_bounded(self) -> LocalBoundedDataFrame:
         res = PandasDataFrame(self.as_pandas(), self.schema)
         if self.has_metadata:
             res.reset_metadata(self.metadata)

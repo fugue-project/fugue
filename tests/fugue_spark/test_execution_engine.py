@@ -18,6 +18,7 @@ from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import (
     ArrayDataFrame,
     ArrowDataFrame,
+    IterablePandasDataFrame,
     LocalDataFrameIterableDataFrame,
     PandasDataFrame,
 )
@@ -166,7 +167,7 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
                     pdf["zz"] = pdf["xx"] + pdf["yy"]
                     yield PandasDataFrame(pdf)
 
-            return LocalDataFrameIterableDataFrame(get_dfs())
+            return IterablePandasDataFrame(get_dfs())
 
         e = self.engine
         np.random.seed(0)
