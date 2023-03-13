@@ -1,9 +1,12 @@
+from datetime import datetime
 from typing import Iterable, Iterator
 
 import polars as pl
+import ray
+from dask.distributed import Client
+from pyspark.sql import SparkSession
 
 import fugue.api as fa
-from datetime import datetime
 
 
 def test_transform_common():
@@ -68,7 +71,7 @@ def test_polars_on_engines():
             tdf = df.with_column(pl.lit(1, pl.Int32()).alias("c"))
             yield tdf
 
-    for engine in [None, "spark", "dask", "ray"]:
+    def test(engine):
         for tr in [tr1, tr2]:
             with fa.engine_context(engine):
                 df = fa.as_fugue_df(
@@ -80,3 +83,12 @@ def test_polars_on_engines():
                     ["a", datetime(2022, 1, 1), 1],
                     ["b", datetime(2022, 1, 2), 1],
                 ] == sorted(fdf.as_array(), key=lambda x: x[0])
+
+    with SparkSession.builder.getOrCreate() as spark:
+        test(spark)
+
+    with Client(processes=True) as client:
+        test(client)
+
+    with ray.init():
+        test("ray")
