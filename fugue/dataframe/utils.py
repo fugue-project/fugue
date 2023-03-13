@@ -142,7 +142,7 @@ def to_local_df(df: Any, schema: Any = None) -> LocalDataFrame:
         return ArrayDataFrame(df, schema)
     if isinstance(df, Iterable):
         return IterableDataFrame(df, schema)
-    raise TypeError(f"{df} cannot convert to a LocalDataFrame")
+    raise ValueError(f"{df} cannot convert to a LocalDataFrame")
 
 
 def to_local_bounded_df(df: Any, schema: Any = None) -> LocalBoundedDataFrame:
@@ -180,7 +180,7 @@ def to_local_bounded_df(df: Any, schema: Any = None) -> LocalBoundedDataFrame:
     df = to_local_df(df, schema)
     if isinstance(df, LocalBoundedDataFrame):
         return df
-    return ArrayDataFrame(df.as_array(), df.schema)
+    raise ValueError(f"{df} cannot convert to a LocalBoundedDataFrame")
 
 
 def pickle_df(df: DataFrame) -> bytes:

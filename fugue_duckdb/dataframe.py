@@ -107,7 +107,10 @@ class DuckDataFrame(LocalBoundedDataFrame):
         return self._rel.to_df()
 
     def as_local_bounded(self) -> LocalBoundedDataFrame:
-        return ArrowDataFrame(self.as_arrow())
+        res = ArrowDataFrame(self.as_arrow())
+        if self.has_metadata:
+            res.reset_metadata(self.metadata)
+        return res
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
