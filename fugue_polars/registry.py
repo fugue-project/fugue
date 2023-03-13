@@ -3,6 +3,7 @@ from typing import Any, Iterable, Iterator, Optional, no_type_check
 import polars as pl
 import pyarrow as pa
 from triad import Schema, make_empty_aware
+from triad.utils.pyarrow import get_alter_func
 
 from fugue import (
     ArrowDataFrame,
@@ -70,10 +71,9 @@ class _IterablePolarsParam(LocalDataFrameParam):
 
 
 def _to_adf(output: pl.DataFrame, schema: Any) -> ArrowDataFrame:
-    adf = ArrowDataFrame(output.to_arrow())
+    adf = output.to_arrow()
     if schema is None:
-        return adf
+        return ArrowDataFrame(adf)
     _schema = schema if isinstance(schema, Schema) else Schema(schema)
-    if adf.schema == _schema:
-        return adf
-    return adf[_schema.names].alter_columns(_schema)  # type: ignore
+    f = get_alter_func(adf.schema, _schema.pa_schema, safe=False)
+    return ArrowDataFrame(f(adf))

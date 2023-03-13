@@ -26,6 +26,12 @@ def test_transform_common():
         assert fdf.schema == "b:int,a:str"
         assert fdf.as_array() == [[1, "0"], [1, "1"]]
 
+        # polars use large_string, so this needs to be handled
+        df = fa.as_fugue_df([["0"], ["1"]], schema="a:str")
+        fdf = fa.transform(df, tr, schema="b:int,a:str", as_fugue=True)
+        assert fdf.schema == "b:int,a:str"
+        assert fdf.as_array() == [[1, "0"], [1, "1"]]
+
         df = fa.as_fugue_df([], schema="a:int")
         fdf = fa.transform(df, tr, schema="a:int,b:int", as_fugue=True)
         assert fdf.schema == "a:int,b:int"

@@ -33,6 +33,8 @@ from fugue.dataframe import (
     IterableDataFrame,
     LocalDataFrame,
     LocalDataFrameIterableDataFrame,
+    IterableArrowDataFrame,
+    IterablePandasDataFrame,
     PandasDataFrame,
 )
 from fugue.dataframe.arrow_dataframe import _build_empty_arrow
@@ -238,7 +240,7 @@ class SparkMapEngine(MapEngine):
                             cursor.set(lambda: pdf.peek_array(), 0, 0)
                         yield pdf
 
-            input_df = LocalDataFrameIterableDataFrame(get_dfs(), input_schema)
+            input_df = IterablePandasDataFrame(get_dfs(), input_schema)
             if input_df.empty:
                 yield PandasDataFrame([], output_schema).as_pandas()
                 return
@@ -264,7 +266,7 @@ class SparkMapEngine(MapEngine):
                             cursor.set(lambda: pdf.peek_array(), 0, 0)
                         yield pdf
 
-            input_df = LocalDataFrameIterableDataFrame(get_dfs(), input_schema)
+            input_df = IterableArrowDataFrame(get_dfs(), input_schema)
             if input_df.empty:
                 yield from _build_empty_arrow(output_schema).to_batches()
                 return
@@ -278,7 +280,7 @@ class SparkMapEngine(MapEngine):
                 yield from output_df.as_arrow().to_batches()
 
         df = self.to_df(df)
-        if hasattr(df.native, "mapInArrow"):
+        if map_func_format_hint == "pyarrow" and hasattr(df.native, "mapInArrow"):
             sdf = df.native.mapInArrow(  # type: ignore
                 _udf_arrow, schema=to_spark_schema(output_schema)
             )
