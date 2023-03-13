@@ -16,6 +16,7 @@ from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.iter import EmptyAwareIterable
 from triad.utils.pandas_like import PD_UTILS
+from triad.utils.pyarrow import get_alter_func
 from triad.utils.threading import RunOnce
 
 from fugue import StructuredRawSQL
@@ -30,11 +31,11 @@ from fugue.dataframe import (
     ArrowDataFrame,
     DataFrame,
     DataFrames,
+    IterableArrowDataFrame,
     IterableDataFrame,
+    IterablePandasDataFrame,
     LocalDataFrame,
     LocalDataFrameIterableDataFrame,
-    IterableArrowDataFrame,
-    IterablePandasDataFrame,
     PandasDataFrame,
 )
 from fugue.dataframe.arrow_dataframe import _build_empty_arrow
@@ -258,10 +259,18 @@ class SparkMapEngine(MapEngine):
         ) -> Iterable[pa.RecordBatch]:  # pragma: no cover
             def get_dfs() -> Iterable[LocalDataFrame]:
                 cursor_set = False
+                func: Any = None
                 for df in dfs:
                     if df.num_rows > 0:
                         # TODO: need coalesce based on byte size
-                        pdf = ArrowDataFrame(pa.Table.from_batches([df]))
+                        adf = pa.Table.from_batches([df])
+                        if func is None:
+                            # mapInArrow has bugs, the input timestamp will
+                            # be added with a timezong, this is to fix the issue
+                            func = get_alter_func(
+                                adf.schema, input_schema.pa_schema, safe=False
+                            )
+                        pdf = ArrowDataFrame(func(adf))
                         if not cursor_set:
                             cursor.set(lambda: pdf.peek_array(), 0, 0)
                         yield pdf

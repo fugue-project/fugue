@@ -3,6 +3,7 @@ from typing import Iterable, Iterator
 import polars as pl
 
 import fugue.api as fa
+from datetime import datetime
 
 
 def test_transform_common():
@@ -55,3 +56,27 @@ def test_transform_empty_result():
         fdf = fa.transform(df, tr, schema="a:int,b:int", as_fugue=True)
         assert fdf.schema == "a:int,b:int"
         assert fdf.as_array() == []
+
+
+def test_polars_on_engines():
+    def tr1(df: pl.DataFrame) -> pl.DataFrame:
+        tdf = df.with_column(pl.lit(1, pl.Int32()).alias("c"))
+        return tdf
+
+    def tr2(dfs: Iterable[pl.DataFrame]) -> Iterator[pl.DataFrame]:
+        for df in dfs:
+            tdf = df.with_column(pl.lit(1, pl.Int32()).alias("c"))
+            yield tdf
+
+    for engine in [None, "spark", "dask", "ray"]:
+        for tr in [tr1, tr2]:
+            with fa.engine_context(engine):
+                df = fa.as_fugue_df(
+                    [["a", datetime(2022, 1, 1)], ["b", datetime(2022, 1, 2)]],
+                    schema="a:str,b:datetime",
+                )
+                fdf = fa.transform(df, tr, schema="*,c:int", as_fugue=True)
+                assert [
+                    ["a", datetime(2022, 1, 1), 1],
+                    ["b", datetime(2022, 1, 2), 1],
+                ] == sorted(fdf.as_array(), key=lambda x: x[0])
