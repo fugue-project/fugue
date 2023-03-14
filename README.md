@@ -234,6 +234,8 @@ Feel free to message us on [Slack](http://slack.fugue.ai). We also have [contrib
 
 ### Mentioned Uses
 
+*   [Productionizing Data Science at Interos, Inc. (LinkedIn post by Anthony Holten)](https://www.linkedin.com/posts/anthony-holten_pandas-spark-dask-activity-7022628193983459328-QvcF)
+
 ## Further Resources
 
 View some of our latest conferences presentations and content. For a more complete list, check the [Content](https://fugue-tutorials.readthedocs.io/tutorials/resources/content.html) page in the tutorials.
