@@ -27,6 +27,14 @@ fugue.collections
 .. |FugueDataTypes| replace:: :doc:`Fugue Data Types <tutorial:tutorials/appendix/generate_types>`
 
 
+fugue.collections.function\_wrapper
+-----------------------------------
+
+.. automodule:: fugue.collections.function_wrapper
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.collections.partition
 ---------------------------
 

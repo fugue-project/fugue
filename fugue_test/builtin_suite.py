@@ -3,12 +3,13 @@
 import datetime
 import os
 import pickle
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional
 from unittest import TestCase
 from uuid import uuid4
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pytest
 from pytest import raises
 from triad import SerializableRLock
@@ -29,8 +30,8 @@ from fugue import (
     PandasDataFrame,
     PartitionSpec,
     Processor,
+    QPDPandasEngine,
     Schema,
-    SqliteEngine,
     Transformer,
     cotransformer,
     output_cotransformer,
@@ -271,15 +272,46 @@ class BuiltInTests(object):
             with raises(FugueWorkflowCompileError):
                 FugueWorkflow().df([[0]], "a:int").checkpoint().yield_file_as("x")
 
-            with raises(FugueWorkflowCompileError):
+            with raises(ValueError):
                 FugueWorkflow().df([[0]], "a:int").persist().yield_file_as("x")
 
             def run_test(deterministic):
                 dag1 = FugueWorkflow()
                 df = dag1.df([[0]], "a:int")
                 if deterministic:
-                    df = df.deterministic_checkpoint()
+                    df = df.deterministic_checkpoint(storage_type="file")
                 df.yield_file_as("x")
+                id1 = dag1.spec_uuid()
+                dag2 = FugueWorkflow()
+                dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))
+                id2 = dag2.spec_uuid()
+                dag1.run(self.engine)
+                dag2.run(self.engine)
+                return id1, id2
+
+            id1, id2 = run_test(False)
+            id3, id4 = run_test(False)
+            assert id1 == id3
+            assert id2 != id4  # non deterministic yield (direct yield)
+
+            id1, id2 = run_test(True)
+            id3, id4 = run_test(True)
+            assert id1 == id3
+            assert id2 == id4  # deterministic yield (yield deterministic checkpoint)
+
+        def test_yield_table(self):
+            with raises(FugueWorkflowCompileError):
+                FugueWorkflow().df([[0]], "a:int").checkpoint().yield_table_as("x")
+
+            with raises(ValueError):
+                FugueWorkflow().df([[0]], "a:int").persist().yield_table_as("x")
+
+            def run_test(deterministic):
+                dag1 = FugueWorkflow()
+                df = dag1.df([[0]], "a:int")
+                if deterministic:
+                    df = df.deterministic_checkpoint(storage_type="table")
+                df.yield_table_as("x")
                 id1 = dag1.spec_uuid()
                 dag2 = FugueWorkflow()
                 dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))
@@ -394,18 +426,36 @@ class BuiltInTests(object):
                 b.assert_eq(a)
             dag.run(self.engine)
 
-        def test_transform_iterable_pd(self):
+        def test_transform_iterable_dfs(self):
             # this test is important for using mapInPandas in spark
 
             # schema: *,c:int
-            def mt(dfs: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+            def mt_pandas(dfs: Iterable[pd.DataFrame]) -> Iterator[pd.DataFrame]:
                 for df in dfs:
                     yield df.assign(c=2)
 
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
-                b = a.transform(mt)
+                b = a.transform(mt_pandas)
                 dag.df([[1, 2, 2], [3, 4, 2]], "a:int,b:int,c:int").assert_eq(b)
+            dag.run(self.engine)
+
+            # schema: *
+            def mt_arrow(dfs: Iterable[pa.Table]) -> Iterator[pa.Table]:
+                for df in dfs:
+                    yield df
+
+            # schema: a:long
+            def mt_arrow_2(dfs: Iterable[pa.Table]) -> Iterator[pa.Table]:
+                for df in dfs:
+                    yield df.drop(["b"])
+
+            with FugueWorkflow() as dag:
+                a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
+                b = a.transform(mt_arrow)
+                dag.df([[1, 2], [3, 4]], "a:int,b:int").assert_eq(b)
+                b = a.transform(mt_arrow_2)
+                dag.df([[1], [3]], "a:long").assert_eq(b)
             dag.run(self.engine)
 
         def test_transform_binary(self):
@@ -595,6 +645,10 @@ class BuiltInTests(object):
                 incr()
                 yield df
 
+            def t10(df: pd.DataFrame) -> Iterable[pa.Table]:
+                incr()
+                yield pa.Table.from_pandas(df)
+
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:double,b:int")
                 a.out_transform(t1)  # +2
@@ -606,6 +660,7 @@ class BuiltInTests(object):
                 a.partition_by("b").out_transform(T7)  # +1
                 a.out_transform(t8, ignore_errors=[NotImplementedError])  # +1
                 a.out_transform(t9)  # +1
+                a.out_transform(t10)  # +1
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t2))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t3))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t4))
@@ -613,7 +668,7 @@ class BuiltInTests(object):
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(T7))
             dag.run(self.engine)
 
-            assert 12 <= incr()
+            assert 13 <= incr()
 
         def test_out_cotransform(self):  # noqa: C901
             tmpdir = str(self.tmpdir)
@@ -833,7 +888,7 @@ class BuiltInTests(object):
             dag.run(self.engine)
 
         def test_select(self):
-            class MockEngine(SqliteEngine):
+            class MockEngine(QPDPandasEngine):
                 def __init__(self, execution_engine, p: int = 0):
                     super().__init__(execution_engine)
                     self.p = p
@@ -870,7 +925,7 @@ class BuiltInTests(object):
                     "AS t1 INNER JOIN",
                     b,
                     "AS t2 ON t1.x=t2.x",
-                    sql_engine="sqlite",
+                    sql_engine="qpdpandas",
                 ).assert_eq(c)
 
                 # specify sql engine and params

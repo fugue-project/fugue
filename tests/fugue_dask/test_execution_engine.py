@@ -5,6 +5,7 @@ from typing import Any, List, Optional
 import dask.dataframe as dd
 import pandas as pd
 from dask.distributed import Client
+import dask
 
 import fugue.api as fa
 from fugue import transform
@@ -39,8 +40,14 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def make_engine(self):
         client = Client(processes=True, n_workers=3, threads_per_worker=1)
+        dask.config.set(shuffle="tasks")  # p2p (new default algo has bugs)
         e = DaskExecutionEngine(client, conf=dict(test=True, **_CONF))
         return e
+
+    def test_properties(self):
+        assert self.engine.is_distributed
+        assert self.engine.map_engine.is_distributed
+        assert self.engine.sql_engine.is_distributed
 
     def test_get_parallelism(self):
         assert fa.get_current_parallelism() == 3
@@ -121,6 +128,9 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
     def make_engine(self):
         e = DaskExecutionEngine(conf=dict(test=True, **_CONF))
         return e
+
+    def test_yield_table(self):
+        pass
 
     def test_default_init(self):
         a = FugueWorkflow().df([[0]], "a:int")

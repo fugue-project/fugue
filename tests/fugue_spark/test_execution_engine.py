@@ -43,6 +43,11 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         )
         return e
 
+    def test_properties(self):
+        assert self.engine.is_distributed
+        assert self.engine.map_engine.is_distributed
+        assert self.engine.sql_engine.is_distributed
+
     def test_get_parallelism(self):
         assert fa.get_current_parallelism() == 4
 
@@ -199,6 +204,9 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
         sdf = self.spark_session.createDataFrame([[1.1]], "a:double")
         a = FugueWorkflow().df(sdf)
         df_eq(a.compute(SparkExecutionEngine), [[1.1]], "a:double")
+
+    def test_yield_table(self):
+        pass
 
     def test_default_session(self):
         a = FugueWorkflow().df([[0]], "a:int")

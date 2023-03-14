@@ -310,6 +310,7 @@ def test_yield():
     dag.create(mock_create1).yield_dataframe_as("a", as_local=False)
     dag.create(mock_create1).yield_dataframe_as("aaa", as_local=True)
     dag.create(mock_create1).yield_file_as("aa")
+    dag.create(mock_create1).yield_table_as("aaaa")
     dag.create(mock_create1).deterministic_checkpoint().yield_dataframe_as("c")
     dag.create(mock_create1).deterministic_checkpoint().yield_file_as("bb")
     dag.create(mock_create1).deterministic_checkpoint().yield_file_as("cc")
@@ -319,6 +320,7 @@ def test_yield():
     a=create using mock_create1 yield dataframe
     create using mock_create1 yield local dataframe as aaa
     create using mock_create1 yield file as aa
+    create using mock_create1 yield table as aaaa
     c=create using mock_create1 deterministic checkpoint yield dataframe
     d=create using mock_create1 deterministic checkpoint yield file as bb
     create using mock_create1 deterministic checkpoint yield file as cc
@@ -758,7 +760,12 @@ def assert_eq(expr, expected: FugueWorkflow):
     sql = FugueSQLParser(expr, "fugueLanguage", ignore_case=True, parse_mode="auto")
     wf = FugueWorkflow()
     v = _Extensions(
-        sql, FugueSQLHooks(), wf, global_vars=global_vars, local_vars=local_vars
+        sql,
+        FugueSQLHooks(),
+        wf,
+        dialect="spark",
+        global_vars=global_vars,
+        local_vars=local_vars,
     )
     obj = v.visit(sql.tree)
     assert expected.spec_uuid() == v.workflow.spec_uuid()

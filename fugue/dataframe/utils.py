@@ -29,7 +29,7 @@ rename_dataframe_column_names = rename
 def _pa_type_eq(t1: pa.DataType, t2: pa.DataType) -> bool:
     # should ignore the name difference of list
     # e.g. list<item: string> == list<l: string>
-    if pa.types.is_list(t1) and pa.types.is_list(t2):
+    if pa.types.is_list(t1) and pa.types.is_list(t2):  # pragma: no cover
         return _pa_type_eq(t1.value_type, t2.value_type)
     return t1 == t2
 
@@ -94,8 +94,8 @@ def _df_eq(
             d1 = df1.as_pandas()
             d2 = df2.as_pandas()
         if not check_order:
-            d1 = d1.sort_values(df1.schema.names)
-            d2 = d2.sort_values(df1.schema.names)
+            d1 = d1.sort_values(df1.columns)
+            d2 = d2.sort_values(df1.columns)
         d1 = d1.reset_index(drop=True)
         d2 = d2.reset_index(drop=True)
         pd.testing.assert_frame_equal(
@@ -332,11 +332,12 @@ def get_join_schemas(
     on = list(on) if on is not None else []
     aot(len(on) == len(set(on)), f"{on} has duplication")
     if how != "cross" and len(on) == 0:
-        on = list(df1.schema.intersect(df2.schema.names).names)
+        other = set(df2.columns)
+        on = [c for c in df1.columns if c in other]
         aot(
             len(on) > 0,
             lambda: SchemaError(
-                f"no common columns between {df1.schema} and {df2.schema}"
+                f"no common columns between {df1.columns} and {df2.columns}"
             ),
         )
     schema2 = df2.schema

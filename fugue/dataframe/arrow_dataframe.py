@@ -162,7 +162,9 @@ class ArrowDataFrame(LocalBoundedDataFrame):
 
     def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
-            new_cols = self.schema.rename(columns).names
+            cols = dict(columns)
+            new_cols = [cols.pop(c, c) for c in self.columns]
+            assert_or_throw(len(cols) == 0)
         except Exception as e:
             raise FugueDataFrameOperationError from e
         return ArrowDataFrame(self.native.rename_columns(new_cols))
@@ -236,7 +238,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
                 yield x
         else:
             d = self.native.to_pydict()
-            cols = [d[n] for n in self.schema.names]
+            cols = [d[n] for n in self.columns]
             for arr in zip(*cols):
                 yield list(arr)
 

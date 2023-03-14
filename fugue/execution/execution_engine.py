@@ -1,3 +1,4 @@
+import inspect
 import logging
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
@@ -11,24 +12,27 @@ from typing import (
     List,
     Optional,
     Tuple,
+    Type,
     TypeVar,
     Union,
 )
 from uuid import uuid4
 
-from triad import ParamDict, Schema, SerializableRLock, assert_or_throw
+from triad import ParamDict, Schema, SerializableRLock, assert_or_throw, to_uuid
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 from triad.utils.convert import to_size
 from triad.utils.string import validate_triad_var_name
 
 from fugue.bag import Bag, LocalBag
+from fugue.collections.function_wrapper import AnnotatedParam, annotated_param
 from fugue.collections.partition import (
     BagPartitionCursor,
     PartitionCursor,
     PartitionSpec,
 )
 from fugue.collections.sql import StructuredRawSQL, TempTableName
+from fugue.collections.yielded import PhysicalYielded, Yielded
 from fugue.column import (
     ColumnExpr,
     SelectColumns,
@@ -37,12 +41,12 @@ from fugue.column import (
     col,
     is_agg,
 )
-from fugue.constants import _FUGUE_GLOBAL_CONF, FUGUE_SQL_DIALECT
-from fugue.dataframe import DataFrame, DataFrames
+from fugue.constants import _FUGUE_GLOBAL_CONF, FUGUE_SQL_DEFAULT_DIALECT
+from fugue.dataframe import AnyDataFrame, DataFrame, DataFrames
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
-from fugue.exceptions import FugueBug
+from fugue.exceptions import FugueBug, FugueWorkflowRuntimeError
 
 AnyExecutionEngine = TypeVar("AnyExecutionEngine", object, None)
 
@@ -74,13 +78,70 @@ class _GlobalExecutionEngineContext:
 _FUGUE_GLOBAL_EXECUTION_ENGINE_CONTEXT = _GlobalExecutionEngineContext()
 
 
-class ExecutionEngineFacet:
+class FugueEngineBase(ABC):
+    @abstractmethod
+    def to_df(
+        self, df: AnyDataFrame, schema: Any = None
+    ) -> DataFrame:  # pragma: no cover
+        """Convert a data structure to this engine compatible DataFrame
+
+        :param data: :class:`~fugue.dataframe.dataframe.DataFrame`,
+          pandas DataFramme or list or iterable of arrays or others that
+          is supported by certain engine implementation
+        :param schema: |SchemaLikeObject|, defaults to None
+        :return: engine compatible dataframe
+
+        .. note::
+
+            There are certain conventions to follow for a new implementation:
+
+            * if the input is already in compatible dataframe type, it should return
+              itself
+            * all other methods in the engine interface should take arbitrary
+              dataframes and call this method to convert before doing anything
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def log(self) -> logging.Logger:  # pragma: no cover
+        """Logger of this engine instance"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def conf(self) -> ParamDict:  # pragma: no cover
+        """All configurations of this engine instance.
+
+        .. note::
+
+            It can contain more than you providec, for example
+            in :class:`~.fugue_spark.execution_engine.SparkExecutionEngine`,
+            the Spark session can bring in more config, they are all accessible
+            using this property.
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def is_distributed(self) -> bool:  # pragma: no cover
+        """Whether this engine is a distributed engine"""
+        raise NotImplementedError
+
+
+class EngineFacet(FugueEngineBase):
     """The base class for different factes of the execution engines.
 
     :param execution_engine: the execution engine this sql engine will run on
     """
 
     def __init__(self, execution_engine: "ExecutionEngine") -> None:
+        tp = self.execution_engine_constraint
+        if not isinstance(execution_engine, tp):
+            raise TypeError(
+                f"{self} expects the engine type to be "
+                f"{tp}, but got {type(execution_engine)}"
+            )
         self._execution_engine = execution_engine
 
     @property
@@ -88,8 +149,27 @@ class ExecutionEngineFacet:
         """the execution engine this sql engine will run on"""
         return self._execution_engine
 
+    @property
+    def log(self) -> logging.Logger:
+        return self.execution_engine.log
 
-class SQLEngine(ExecutionEngineFacet, ABC):
+    @property
+    def conf(self) -> ParamDict:
+        return self.execution_engine.conf
+
+    def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
+        return self.execution_engine.to_df(df, schema)
+
+    @property
+    def execution_engine_constraint(self) -> Type["ExecutionEngine"]:
+        """This defines the required ExecutionEngine type of this facet
+
+        :return: a subtype of :class:`~.ExecutionEngine`
+        """
+        return ExecutionEngine
+
+
+class SQLEngine(EngineFacet):
     """The abstract base class for different SQL execution implementations. Please read
     :ref:`this <tutorial:tutorials/advanced/execution_engine:sqlengine>`
     to understand the concept
@@ -102,7 +182,7 @@ class SQLEngine(ExecutionEngineFacet, ABC):
         self._uid = "_" + str(uuid4())[:5] + "_"
 
     @property
-    def dialect(self) -> Optional[str]:
+    def dialect(self) -> Optional[str]:  # pragma: no cover
         return None
 
     def encode_name(self, name: str) -> str:
@@ -112,7 +192,7 @@ class SQLEngine(ExecutionEngineFacet, ABC):
         self, dfs: DataFrames, statement: StructuredRawSQL
     ) -> Tuple[DataFrames, str]:
         d = DataFrames({self.encode_name(k): v for k, v in dfs.items()})
-        s = statement.construct(self.encode_name, dialect=self.dialect)
+        s = statement.construct(self.encode_name, dialect=self.dialect, log=self.log)
         return d, s
 
     @abstractmethod
@@ -146,8 +226,44 @@ class SQLEngine(ExecutionEngineFacet, ABC):
         """
         raise NotImplementedError
 
+    def table_exists(self, table: str) -> bool:  # pragma: no cover
+        """Whether the table exists
 
-class MapEngine(ExecutionEngineFacet, ABC):
+        :param table: the table name
+        :return: whether the table exists
+        """
+        raise NotImplementedError
+
+    def load_table(self, table: str, **kwargs: Any) -> DataFrame:  # pragma: no cover
+        """Load table as a dataframe
+
+        :param table: the table name
+        :return: an engine compatible dataframe
+        """
+        raise NotImplementedError
+
+    def save_table(
+        self,
+        df: DataFrame,
+        table: str,
+        mode: str = "overwrite",
+        partition_spec: Optional[PartitionSpec] = None,
+        **kwargs: Any,
+    ) -> None:  # pragma: no cover
+        """Save the dataframe to a table
+
+        :param df: the dataframe to save
+        :param table: the table name
+        :param mode: can accept ``overwrite``, ``error``,
+          defaults to "overwrite"
+        :param partition_spec: how to partition the dataframe before saving,
+          defaults None
+        :param kwargs: parameters to pass to the underlying framework
+        """
+        raise NotImplementedError
+
+
+class MapEngine(EngineFacet):
     """The abstract base class for different map operation implementations.
 
     :param execution_engine: the execution engine this sql engine will run on
@@ -161,6 +277,7 @@ class MapEngine(ExecutionEngineFacet, ABC):
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:  # pragma: no cover
         """Apply a function to each partition after you partition the dataframe in a
         specified way.
@@ -173,6 +290,9 @@ class MapEngine(ExecutionEngineFacet, ABC):
         :param partition_spec: partition specification
         :param on_init: callback function when the physical partition is initializaing,
           defaults to None
+        :param map_func_format_hint: the preferred data format for ``map_func``, it can
+          be ``pandas``, `pyarrow`, etc, defaults to None. Certain engines can provide
+          the most efficient map operations based on the hint.
         :return: the dataframe after the map operation
 
         .. note::
@@ -204,7 +324,7 @@ class MapEngine(ExecutionEngineFacet, ABC):
         raise NotImplementedError
 
 
-class ExecutionEngine(ABC):
+class ExecutionEngine(FugueEngineBase):
     """The abstract base class for execution engines.
     It is the layer that unifies core concepts of distributed computing,
     and separates the underlying computing frameworks from user's higher level logic.
@@ -309,15 +429,6 @@ class ExecutionEngine(ABC):
 
     @property
     def conf(self) -> ParamDict:
-        """All configurations of this engine instance.
-
-        .. note::
-
-            It can contain more than you providec, for example
-            in :class:`~fugue_spark.execution_engine.SparkExecutionEngine`,
-            the Spark session can bring in more config, they are all accessible
-            using this property.
-        """
         return self._conf
 
     @property
@@ -350,12 +461,6 @@ class ExecutionEngine(ABC):
 
     @property
     @abstractmethod
-    def log(self) -> logging.Logger:  # pragma: no cover
-        """Logger of this engine instance"""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
     def fs(self) -> FileSystem:  # pragma: no cover
         """File system of this engine instance"""
         raise NotImplementedError
@@ -373,27 +478,6 @@ class ExecutionEngine(ABC):
     @abstractmethod
     def get_current_parallelism(self) -> int:  # pragma: no cover
         """Get the current number of parallelism of this engine"""
-        raise NotImplementedError
-
-    @abstractmethod
-    def to_df(self, data: Any, schema: Any = None) -> DataFrame:  # pragma: no cover
-        """Convert a data structure to this engine compatible DataFrame
-
-        :param data: :class:`~fugue.dataframe.dataframe.DataFrame`,
-          pandas DataFramme or list or iterable of arrays or others that
-          is supported by certain engine implementation
-        :param schema: |SchemaLikeObject|, defaults to None
-        :return: engine compatible dataframe
-
-        .. note::
-
-            There are certain conventions to follow for a new implementation:
-
-            * if the input is already in compatible dataframe type, it should return
-              itself
-            * all other methods in the engine interface should take arbitrary
-              dataframes and call this method to convert before doing anything
-        """
         raise NotImplementedError
 
     @abstractmethod
@@ -710,7 +794,7 @@ class ExecutionEngine(ABC):
         df_name = TempTableName()
         sql = StructuredRawSQL(
             gen.select(cols, df_name.key, where=where, having=having),
-            dialect=FUGUE_SQL_DIALECT,
+            dialect=FUGUE_SQL_DEFAULT_DIALECT,
         )
         res = self.sql_engine.select(DataFrames({df_name.key: self.to_df(df)}), sql)
         diff = gen.correct_select_schema(df.schema, cols, res.schema)
@@ -788,12 +872,13 @@ class ExecutionEngine(ABC):
             *columns
         ).assert_no_wildcard().assert_all_with_names().assert_no_agg()
 
-        cols = [col(n) for n in df.schema.names]
+        ck = {v: k for k, v in enumerate(df.columns)}
+        cols = [col(n) for n in ck.keys()]
         for c in columns:
-            if c.output_name not in df.schema:
+            if c.output_name not in ck:
                 cols.append(c)
             else:
-                cols[df.schema.index_of_key(c.output_name)] = c
+                cols[ck[c.output_name]] = c
         return self.select(df, SelectColumns(*cols))
 
     def aggregate(
@@ -1083,6 +1168,20 @@ class ExecutionEngine(ABC):
             df, cs.run, output_schema, partition_spec, on_init=cs.on_init
         )
 
+    def load_yielded(self, df: Yielded) -> DataFrame:
+        """Load yielded dataframe
+
+        :param df: the yielded dataframe
+        :return: an engine compatible dataframe
+        """
+        if isinstance(df, PhysicalYielded):
+            if df.storage_type == "file":
+                return self.load_df(path=df.name)
+            else:
+                return self.sql_engine.load_table(table=df.name)
+        else:
+            return self.to_df(df.result)  # type: ignore
+
     @abstractmethod
     def load_df(
         self,
@@ -1203,6 +1302,26 @@ class ExecutionEngine(ABC):
         res = self.map_engine.map_dataframe(df, s.run, output_schema, partition_spec)
         res.reset_metadata(metadata)
         return res
+
+
+@annotated_param(ExecutionEngine, "e", child_can_reuse_code=True)
+class ExecutionEngineParam(AnnotatedParam):
+    def __init__(
+        self,
+        param: Optional[inspect.Parameter],
+    ):
+        super().__init__(param)
+        self._type = self.annotation
+
+    def to_input(self, engine: Any) -> Any:
+        assert_or_throw(
+            isinstance(engine, self._type),
+            FugueWorkflowRuntimeError(f"{engine} is not of type {self._type}"),
+        )
+        return engine
+
+    def __uuid__(self) -> str:
+        return to_uuid(self.code, self.annotation, self._type)
 
 
 def _get_file_threshold(size: Any) -> int:

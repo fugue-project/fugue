@@ -212,6 +212,10 @@ def test_partition_cursor():
     assert 2 == c.physical_partition_no
     assert 6 == c.slice_no
 
+    c.set(lambda: [1, 2, 2, 2], 5, 6)
+    assert [2, 1] == c.key_value_array
+    assert dict(a=1, b=2) == c.key_value_dict
+
 
 def test_get_num_partitions():
     p = PartitionSpec(dict(partition_by=["b", "a"]))

@@ -142,7 +142,7 @@ class RayDataFrame(DataFrame):
         return self._select_cols(cols)
 
     def _select_cols(self, cols: List[Any]) -> DataFrame:
-        if cols == self.schema.names:
+        if cols == self.columns:
             return self
         rdf = self.native.map_batches(
             lambda b: b.select(cols), batch_format="pyarrow", **self._remote_args()
@@ -158,7 +158,7 @@ class RayDataFrame(DataFrame):
     def persist(self, **kwargs: Any) -> "RayDataFrame":
         # TODO: it mutates the dataframe, is this a good bahavior
         if not self.native.is_fully_executed():  # pragma: no cover
-            self._native = self.native.fully_executed()
+            self.native.fully_executed()
         return self
 
     def count(self) -> int:

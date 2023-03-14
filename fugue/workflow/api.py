@@ -49,11 +49,11 @@ def transform(  # noqa: C901
 ) -> Any:
     """Transform this dataframe using transformer. It's a wrapper of
     :meth:`~fugue.workflow.workflow.FugueWorkflow.transform` and
-    :meth:`~fugue.workflow.workflow.FugueWorkflow.run`. It let you do the
-    basic dataframe transformation without using
+    :meth:`~fugue.workflow.workflow.FugueWorkflow.run`. It will let you do
+    the basic dataframe transformation without using
     :class:`~fugue.workflow.workflow.FugueWorkflow` and
-    :class:`~fugue.dataframe.dataframe.DataFrame`. Both input and output
-    can be native types only.
+    :class:`~fugue.dataframe.dataframe.DataFrame`. Also, only native
+    types are accepted for both input and output.
 
     Please read |TransformerTutorial|
 
@@ -80,8 +80,8 @@ def transform(  # noqa: C901
     :param engine_conf: |ParamsLikeObject|, defaults to None
     :param as_fugue: If true, the function will always return
         a ``FugueDataFrame``, otherwise, if ``df`` is in native dataframe types such
-        as pandas dataframe, then the output will also in its native format. Defaults
-        to False
+        as pandas dataframe, then the output will also return in its native format.
+        Defaults to False
     :param persist: Whether to persist(materialize) the dataframe before returning
     :param as_local: If true, the result will be converted to a ``LocalDataFrame``
     :param save_path: Whether to save the output to a file (see the note)
@@ -109,7 +109,7 @@ def transform(  # noqa: C901
 
         * When `save_path` is None and `checkpoint` is False, then the output will
           not be saved into a file. The return will be a dataframe.
-        * When `save_path` is None and `checkpoint` is True, then the output will be
+        * When `save_path` is None and `checkpoint` is True, then the output is
           saved into the path set by `fugue.workflow.checkpoint.path`, the name will
           be randomly chosen, and it is NOT a deterministic checkpoint, so if you run
           multiple times, the output will be saved into different files. The return
@@ -196,21 +196,21 @@ def out_transform(
 ) -> None:
     """Transform this dataframe using transformer. It's a wrapper of
     :meth:`~fugue.workflow.workflow.FugueWorkflow.out_transform` and
-    :meth:`~fugue.workflow.workflow.FugueWorkflow.run`. It let you do the
+    :meth:`~fugue.workflow.workflow.FugueWorkflow.run`. It will let you do the
     basic dataframe transformation without using
     :class:`~fugue.workflow.workflow.FugueWorkflow` and
-    :class:`~fugue.dataframe.dataframe.DataFrame`. The input can be native
-    type only
+    :class:`~fugue.dataframe.dataframe.DataFrame`. Only native types are
+    accepted for both input and output.
 
     Please read |TransformerTutorial|
 
     :param df: |DataFrameLikeObject| or :class:`~fugue.workflow.yielded.Yielded`
         or a path string to a parquet file
     :param using: transformer-like object, can't be a string expression
-    :param params: |ParamsLikeObject| to run the processor, defaults to None.
+    :param params: |ParamsLikeObject| to run the processor, defaults to None
         The transformer will be able to access this value from
         :meth:`~fugue.extensions.context.ExtensionContext.params`
-    :param partition: |PartitionLikeObject|, defaults to None.
+    :param partition: |PartitionLikeObject|, defaults to None
     :param callback: |RPCHandlerLikeObject|, defaults to None
     :param ignore_errors: list of exception types the transformer can ignore,
         defaults to None (empty list)
@@ -225,7 +225,7 @@ def out_transform(
 
     .. note::
 
-        This function can only take parquet file paths in `df`. Csv and other file
+        This function can only take parquet file paths in `df`. CSV and JSON file
         formats are disallowed.
 
         This transformation is guaranteed to execute immediately (eager)

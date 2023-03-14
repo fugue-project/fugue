@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 import pyarrow as pa
 import ray
@@ -9,6 +9,7 @@ from triad.utils.threading import RunOnce
 from fugue import (
     ArrowDataFrame,
     DataFrame,
+    ExecutionEngine,
     LocalDataFrame,
     MapEngine,
     PartitionCursor,
@@ -19,6 +20,7 @@ from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckExecutionEngine
 
+from ._constants import FUGUE_RAY_DEFAULT_BATCH_SIZE, FUGUE_RAY_ZERO_COPY
 from ._utils.cluster import get_default_partitions, get_default_shuffle_partitions
 from ._utils.dataframe import add_partition_key
 from ._utils.io import RayIO
@@ -28,6 +30,14 @@ _RAY_PARTITION_KEY = "__ray_partition_key__"
 
 
 class RayMapEngine(MapEngine):
+    @property
+    def execution_engine_constraint(self) -> Type[ExecutionEngine]:
+        return RayExecutionEngine
+
+    @property
+    def is_distributed(self) -> bool:
+        return True
+
     def map_dataframe(
         self,
         df: DataFrame,
@@ -35,6 +45,7 @@ class RayMapEngine(MapEngine):
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
         if len(partition_spec.partition_by) == 0:
             return self._map(
@@ -67,6 +78,7 @@ class RayMapEngine(MapEngine):
         ]
         output_schema = Schema(output_schema)
         input_schema = df.schema
+        cursor = partition_spec.get_cursor(input_schema, 0)
         on_init_once: Any = (
             None
             if on_init is None
@@ -90,8 +102,7 @@ class RayMapEngine(MapEngine):
             input_df = ArrowDataFrame(adf)
             if on_init_once is not None:
                 on_init_once(0, input_df)
-            cursor = partition_spec.get_cursor(input_schema, 0)
-            cursor.set(input_df.peek_array(), 0, 0)
+            cursor.set(lambda: input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
             return output_df.as_arrow()
 
@@ -132,6 +143,7 @@ class RayMapEngine(MapEngine):
     ) -> DataFrame:
         output_schema = Schema(output_schema)
         input_schema = df.schema
+        cursor = partition_spec.get_cursor(input_schema, 0)
         on_init_once: Any = (
             None
             if on_init is None
@@ -146,8 +158,7 @@ class RayMapEngine(MapEngine):
             input_df = ArrowDataFrame(adf)
             if on_init_once is not None:
                 on_init_once(0, input_df)
-            cursor = partition_spec.get_cursor(input_schema, 0)
-            cursor.set(input_df.peek_array(), 0, 0)
+            cursor.set(lambda: input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
             return output_df.as_arrow()
 
@@ -165,9 +176,17 @@ class RayMapEngine(MapEngine):
                 rdf = self.execution_engine.repartition(  # type: ignore
                     rdf, PartitionSpec(num=n)
                 )
+        mb_args: Dict[str, Any] = {}
+        if FUGUE_RAY_DEFAULT_BATCH_SIZE in self.conf:
+            mb_args["batch_size"] = self.conf.get_or_throw(
+                FUGUE_RAY_DEFAULT_BATCH_SIZE, int
+            )
+        if ray.__version__ >= "2.3":
+            mb_args["zero_copy_batch"] = self.conf.get(FUGUE_RAY_ZERO_COPY, True)
         sdf = rdf.native.map_batches(
             _udf,
             batch_format="pyarrow",
+            **mb_args,
             **self.execution_engine._get_remote_args(),  # type: ignore
         )
         return RayDataFrame(sdf, schema=output_schema, internal_schema=True)
@@ -191,6 +210,10 @@ class RayExecutionEngine(DuckExecutionEngine):
 
     def __repr__(self) -> str:
         return "RayExecutionEngine"
+
+    @property
+    def is_distributed(self) -> bool:
+        return True
 
     def create_default_map_engine(self) -> MapEngine:
         return RayMapEngine(self)

@@ -7,7 +7,11 @@ from fugue.exceptions import FugueSQLError
 from fugue.execution import AnyExecutionEngine
 from fugue.execution.api import get_current_conf
 
-from ..constants import FUGUE_CONF_SQL_IGNORE_CASE
+from ..constants import (
+    FUGUE_CONF_SQL_IGNORE_CASE,
+    FUGUE_CONF_SQL_DIALECT,
+    FUGUE_SQL_DEFAULT_DIALECT,
+)
 from .workflow import FugueSQLWorkflow
 
 
@@ -15,6 +19,7 @@ def fugue_sql(
     query: str,
     *args: Any,
     fsql_ignore_case: Optional[bool] = None,
+    fsql_dialect: Optional[str] = None,
     engine: AnyExecutionEngine = None,
     engine_conf: Any = None,
     as_fugue: bool = False,
@@ -29,7 +34,9 @@ def fugue_sql(
 
     :param query: the Fugue SQL string (can be a jinja template)
     :param args: variables related to the SQL string
-    :param fsql_ignore_case: whether to ignore case when parsing the SQL string
+    :param fsql_ignore_case: whether to ignore case when parsing the SQL string,
+        defaults to None (it depends on the engine/global config).
+    :param fsql_dialect: the dialect of this fsql,
         defaults to None (it depends on the engine/global config).
     :param kwargs: variables related to the SQL string
     :param engine: an engine like object, defaults to None
@@ -85,7 +92,13 @@ def fugue_sql(
             assert fa.as_array(res) == [[0,1,2]]
     """
 
-    dag = _build_dag(query, fsql_ignore_case=fsql_ignore_case, args=args, kwargs=kwargs)
+    dag = _build_dag(
+        query,
+        fsql_ignore_case=fsql_ignore_case,
+        fsql_dialect=fsql_dialect,
+        args=args,
+        kwargs=kwargs,
+    )
     if dag.last_df is not None:
         dag.last_df.yield_dataframe_as("result", as_local=as_local)
     else:  # pragma: no cover
@@ -96,14 +109,20 @@ def fugue_sql(
 
 
 def fugue_sql_flow(
-    query: str, *args: Any, fsql_ignore_case: Optional[bool] = None, **kwargs: Any
+    query: str,
+    *args: Any,
+    fsql_ignore_case: Optional[bool] = None,
+    fsql_dialect: Optional[str] = None,
+    **kwargs: Any,
 ) -> FugueSQLWorkflow:
     """Fugue SQL full functional interface. This function allows full workflow
     definition using Fugue SQL, and it allows multiple outputs using ``YIELD``.
 
     :param query: the Fugue SQL string (can be a jinja template)
     :param args: variables related to the SQL string
-    :param fsql_ignore_case: whether to ignore case when parsing the SQL string
+    :param fsql_ignore_case: whether to ignore case when parsing the SQL string,
+        defaults to None (it depends on the engine/global config).
+    :param fsql_dialect: the dialect of this fsql,
         defaults to None (it depends on the engine/global config).
     :param kwargs: variables related to the SQL string
     :return: the translated Fugue workflow
@@ -230,13 +249,20 @@ def fugue_sql_flow(
         print
         ''', df=df, t=t, fsql_ignore_case=True).run()
     """
-    dag = _build_dag(query, fsql_ignore_case=fsql_ignore_case, args=args, kwargs=kwargs)
+    dag = _build_dag(
+        query,
+        fsql_ignore_case=fsql_ignore_case,
+        fsql_dialect=fsql_dialect,
+        args=args,
+        kwargs=kwargs,
+    )
     return dag
 
 
 def _build_dag(
     query: str,
     fsql_ignore_case: Optional[bool],
+    fsql_dialect: Optional[str],
     args: Tuple[Any, ...],
     kwargs: Dict[str, Any],
     level: int = -2,
@@ -244,7 +270,16 @@ def _build_dag(
     global_vars, local_vars = get_caller_global_local_vars(start=level, end=level)
     if fsql_ignore_case is None:
         fsql_ignore_case = get_current_conf().get(FUGUE_CONF_SQL_IGNORE_CASE, False)
-    dag = FugueSQLWorkflow(compile_conf={FUGUE_CONF_SQL_IGNORE_CASE: fsql_ignore_case})
+    if fsql_dialect is None:
+        fsql_dialect = get_current_conf().get(
+            FUGUE_CONF_SQL_DIALECT, FUGUE_SQL_DEFAULT_DIALECT
+        )
+    dag = FugueSQLWorkflow(
+        compile_conf={
+            FUGUE_CONF_SQL_IGNORE_CASE: fsql_ignore_case,
+            FUGUE_CONF_SQL_DIALECT: fsql_dialect,
+        }
+    )
     try:
         dag._sql(query, global_vars, local_vars, *args, **kwargs)
     except SyntaxError as ex:

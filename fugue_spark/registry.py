@@ -1,5 +1,4 @@
-import inspect
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 import pyspark.rdd as pr
 import pyspark.sql as ps
@@ -7,24 +6,19 @@ from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from triad import run_at_def
 
-from fugue import DataFrame, ExecutionEngine, is_pandas_or, register_execution_engine
-from fugue._utils.interfaceless import (
+from fugue import DataFrame, ExecutionEngine, register_execution_engine
+from fugue.dev import (
     DataFrameParam,
     ExecutionEngineParam,
-    SimpleAnnotationConverter,
-    register_annotation_converter,
+    annotated_param,
+    is_pandas_or,
 )
+from fugue.extensions import namespace_candidate
 from fugue.plugins import as_fugue_dataset, infer_execution_engine, parse_creator
-
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
-
-def _is_sparksql(obj: Any) -> bool:
-    if not isinstance(obj, str):
-        return False
-    obj = obj[:20].lower()
-    return obj.startswith("--sparksql") or obj.startswith("/*sparksql*/")
+_is_sparksql = namespace_candidate("sparksql", lambda x: isinstance(x, str))
 
 
 @infer_execution_engine.candidate(
@@ -40,10 +34,10 @@ def _spark_as_fugue_df(df: ps.DataFrame, **kwargs: Any) -> SparkDataFrame:
     return SparkDataFrame(df, **kwargs)
 
 
-@parse_creator.candidate(lambda obj: _is_sparksql(obj))
-def _parse_sparksql_creator(sql):
+@parse_creator.candidate(_is_sparksql)
+def _parse_sparksql_creator(sql: Tuple[str, str]):
     def _run_sql(spark: SparkSession) -> ps.DataFrame:
-        return spark.sql(sql)
+        return spark.sql(sql[1])
 
     return _run_sql
 
@@ -61,84 +55,27 @@ def _register_engines() -> None:
     )
 
 
-def _register_annotation_converters() -> None:
-    register_annotation_converter(
-        0.8,
-        SimpleAnnotationConverter(
-            SparkExecutionEngine,
-            lambda param: _SparkExecutionEngineParam(param),
-        ),
-    )
-    register_annotation_converter(
-        0.8,
-        SimpleAnnotationConverter(
-            SparkSession,
-            lambda param: _SparkSessionParam(param),
-        ),
-    )
-    register_annotation_converter(
-        0.8,
-        SimpleAnnotationConverter(
-            SparkContext,
-            lambda param: _SparkContextParam(param),
-        ),
-    )
-    register_annotation_converter(
-        0.8,
-        SimpleAnnotationConverter(
-            ps.DataFrame,
-            lambda param: _SparkDataFrameParam(param),
-        ),
-    )
-    register_annotation_converter(
-        0.8,
-        SimpleAnnotationConverter(
-            pr.RDD,
-            lambda param: _RddParam(param),
-        ),
-    )
-
-
+@annotated_param(SparkExecutionEngine)
 class _SparkExecutionEngineParam(ExecutionEngineParam):
-    def __init__(
-        self,
-        param: Optional[inspect.Parameter],
-    ):
-        super().__init__(
-            param, annotation="SparkExecutionEngine", engine_type=SparkExecutionEngine
-        )
+    pass
 
 
+@annotated_param(SparkSession)
 class _SparkSessionParam(ExecutionEngineParam):
-    def __init__(
-        self,
-        param: Optional[inspect.Parameter],
-    ):
-        super().__init__(
-            param, annotation="SparkSession", engine_type=SparkExecutionEngine
-        )
-
     def to_input(self, engine: ExecutionEngine) -> Any:
-        return super().to_input(engine).spark_session  # type:ignore
+        assert isinstance(engine, SparkExecutionEngine)
+        return engine.spark_session  # type:ignore
 
 
+@annotated_param(SparkContext)
 class _SparkContextParam(ExecutionEngineParam):
-    def __init__(
-        self,
-        param: Optional[inspect.Parameter],
-    ):
-        super().__init__(
-            param, annotation="SparkContext", engine_type=SparkExecutionEngine
-        )
-
     def to_input(self, engine: ExecutionEngine) -> Any:
-        return super().to_input(engine).spark_session.sparkContext  # type:ignore
+        assert isinstance(engine, SparkExecutionEngine)
+        return engine.spark_session.sparkContext  # type:ignore
 
 
+@annotated_param(ps.DataFrame)
 class _SparkDataFrameParam(DataFrameParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, annotation="pyspark.sql.DataFrame")
-
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         assert isinstance(ctx, SparkExecutionEngine)
         return ctx.to_df(df).native
@@ -152,10 +89,8 @@ class _SparkDataFrameParam(DataFrameParam):
         raise NotImplementedError("not allowed")
 
 
+@annotated_param(pr.RDD)
 class _RddParam(DataFrameParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, annotation="pyspark.rdd.RDD")
-
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         assert isinstance(ctx, SparkExecutionEngine)
         return ctx.to_df(df).native.rdd
@@ -183,4 +118,3 @@ def _register() -> None:
         >>> import fugue_spark
     """
     _register_engines()
-    _register_annotation_converters()

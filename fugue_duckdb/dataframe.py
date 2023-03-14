@@ -56,16 +56,16 @@ class DuckDataFrame(LocalBoundedDataFrame):
 
     @property
     def empty(self) -> bool:
-        return self._rel.fetchone() is None
+        return self.count() == 0
 
     def peek_array(self) -> List[Any]:
-        res = self._rel.fetchone()
-        if res is None:
+        res = self._rel.limit(1).to_df()
+        if res.shape[0] == 0:
             raise FugueDatasetEmptyError()
-        return list(res)  # type: ignore
+        return res.values.tolist()[0]
 
     def count(self) -> int:
-        return self._rel.aggregate("count(1) AS ct").fetchone()[0]
+        return len(self._rel)
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         cols = [col for col in self._rel.columns if col not in cols]

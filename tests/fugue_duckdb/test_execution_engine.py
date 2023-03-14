@@ -29,9 +29,29 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def make_engine(self):
         e = DuckExecutionEngine(
-            {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
+            {
+                "test": True,
+                "fugue.duckdb.pragma.threads": 2,
+                "fugue.duckdb.extensions": ", json , , httpfs",
+            },
+            self._con,
         )
         return e
+
+    def test_properties(self):
+        assert not self.engine.is_distributed
+        assert not self.engine.map_engine.is_distributed
+        assert not self.engine.sql_engine.is_distributed
+
+    def test_duckdb_extensions(self):
+        df = fa.fugue_sql(
+            """
+        SELECT COUNT(*) AS ct FROM duckdb_extensions()
+        WHERE loaded AND extension_name IN ('httpfs', 'json')
+        """,
+            as_fugue=True,
+        )
+        assert 2 == df.as_array()[0][0]
 
     def test_duck_to_df(self):
         e = self.engine
@@ -39,6 +59,21 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
         assert isinstance(a, DuckDataFrame)
         b = e.to_df(a.native_as_df())
         assert isinstance(b, DuckDataFrame)
+
+    def test_table_operations(self):
+        se = self.engine.sql_engine
+        df = fa.as_fugue_df([[0, 1]], schema="a:int,b:long")
+        assert se._get_table("_t_x") is None
+        se.save_table(df, "_t_x")
+        assert se._get_table("_t_x") is not None
+        res = se.load_table("_t_x").as_array()
+        assert [[0, 1]] == res
+        df = fa.as_fugue_df([[1, 2]], schema="a:int,b:long")
+        se.save_table(df, "_t_x")
+        res = se.load_table("_t_x").as_array()
+        assert [[1, 2]] == res
+        with raises(Exception):
+            se.save_table(df, "_t_x", mode="error")
 
     def test_intersect_all(self):
         e = self.engine

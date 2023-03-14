@@ -53,6 +53,7 @@ class RunTransformer(Processor):
             output_schema=tf.output_schema,  # type: ignore
             partition_spec=tf.partition_spec,
             on_init=tr.on_init,
+            map_func_format_hint=tf.get_format_hint(),
         )
 
     @no_type_check

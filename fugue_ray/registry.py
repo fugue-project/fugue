@@ -1,18 +1,16 @@
-import inspect
-from typing import Any, Optional
+from typing import Any
 
 import ray.data as rd
 from triad import run_at_def
 
-from fugue import DataFrame, is_pandas_or, register_execution_engine
-from fugue._utils.interfaceless import (
+from fugue import DataFrame, register_execution_engine
+from fugue.dev import (
     DataFrameParam,
     ExecutionEngineParam,
-    SimpleAnnotationConverter,
-    register_annotation_converter,
+    annotated_param,
+    is_pandas_or,
 )
 from fugue.plugins import as_fugue_dataset, infer_execution_engine
-
 
 from .dataframe import RayDataFrame
 from .execution_engine import RayExecutionEngine
@@ -36,34 +34,13 @@ def _register_engines() -> None:
     )
 
 
-def _register_annotation_converters() -> None:
-    register_annotation_converter(
-        0.8,
-        SimpleAnnotationConverter(
-            RayExecutionEngine,
-            lambda param: _RayExecutionEngineParam(param),
-        ),
-    )
-    register_annotation_converter(
-        0.8,
-        SimpleAnnotationConverter(rd.Dataset, lambda param: _RayDatasetParam(param)),
-    )
-
-
+@annotated_param(RayExecutionEngine)
 class _RayExecutionEngineParam(ExecutionEngineParam):
-    def __init__(
-        self,
-        param: Optional[inspect.Parameter],
-    ):
-        super().__init__(
-            param, annotation="RayExecutionEngine", engine_type=RayExecutionEngine
-        )
+    pass
 
 
+@annotated_param(rd.Dataset)
 class _RayDatasetParam(DataFrameParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, annotation="ray.data.Dataset")
-
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         assert isinstance(ctx, RayExecutionEngine)
         return ctx._to_ray_df(df).native
@@ -81,4 +58,3 @@ class _RayDatasetParam(DataFrameParam):
 def _register() -> None:
     """Register Ray Execution Engine"""
     _register_engines()
-    _register_annotation_converters()

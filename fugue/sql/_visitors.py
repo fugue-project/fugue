@@ -28,7 +28,7 @@ from triad.utils.convert import (
     to_type,
 )
 from triad.utils.pyarrow import to_pa_datatype
-from triad.utils.schema import unquote_name
+from triad.utils.schema import unquote_name, safe_split_out_of_quote
 from triad.utils.string import validate_triad_var_name
 
 from ..collections.partition import PartitionSpec
@@ -192,8 +192,12 @@ class _VisitorBase(FugueSQLVisitor):
     def visitFugueParamsObj(self, ctx: fp.FugueParamsObjContext) -> Any:
         return self.visit(ctx.obj)
 
-    def visitFugueExtension(self, ctx: fp.FugueExtensionContext) -> str:
-        return self.ctxToStr(ctx, delimit="")
+    def visitFugueExtension(self, ctx: fp.FugueExtensionContext) -> Any:
+        s = self.ctxToStr(ctx, delimit="")
+        if ctx.domain is None:
+            return s
+        p = safe_split_out_of_quote(s, ":", 1)
+        return unquote_name(p[0]), p[1]
 
     def visitFugueSingleOutputExtensionCommon(
         self, ctx: fp.FugueSingleOutputExtensionCommonContext
@@ -282,7 +286,12 @@ class _VisitorBase(FugueSQLVisitor):
             yield_name = self.ctxToStr(ctx.name) if ctx.name is not None else name
             assert_or_throw(yield_name is not None, "yield name is not specified")
             if ctx.DATAFRAME() is None:
-                x.yield_file_as(yield_name)
+                if ctx.FILE() is not None:
+                    x.yield_file_as(yield_name)
+                elif ctx.TABLE() is not None:
+                    x.yield_table_as(yield_name)
+                else:  # pragma: no cover
+                    raise NotImplementedError(self.ctxToStr(ctx))
             else:
                 x.yield_dataframe_as(yield_name, as_local=ctx.LOCAL() is not None)
             return x
@@ -299,6 +308,7 @@ class _Extensions(_VisitorBase):
         sql: FugueSQLParser,
         hooks: FugueSQLHooks,
         workflow: FugueWorkflow,
+        dialect: str,
         variables: Optional[
             Dict[
                 str, Tuple[WorkflowDataFrame, WorkflowDataFrames, LazyWorkflowDataFrame]
@@ -320,6 +330,7 @@ class _Extensions(_VisitorBase):
         self._global_vars, self._local_vars = get_caller_global_local_vars(
             global_vars, local_vars
         )
+        self._dialect = dialect
 
     @property
     def workflow(self) -> FugueWorkflow:
@@ -390,6 +401,7 @@ class _Extensions(_VisitorBase):
             self.sql,
             self.hooks,
             workflow=self.workflow,
+            dialect=self._dialect,
             variables=self.variables,
             last=self._last,
             global_vars=self.global_vars,
@@ -679,7 +691,7 @@ class _Extensions(_VisitorBase):
             df: Any = statements[0]
         else:
             __modified_exception__ = self.to_runtime_error(ctx)  # noqa
-            df = self.workflow.select(*statements)
+            df = self.workflow.select(*statements, dialect=self._dialect)
         self._process_assignable(df, ctx)
 
     def visitFugueModuleTask(self, ctx: fp.FugueModuleTaskContext) -> None:
@@ -742,13 +754,16 @@ class _Extensions(_VisitorBase):
             engine, engine_params = self.visitFugueSqlEngine(ctx.fugueSqlEngine())
             __modified_exception__ = self.to_runtime_error(ctx)  # noqa
             yield self.workflow.select(
-                get_sql(), sql_engine=engine, sql_engine_params=engine_params
+                get_sql(),
+                sql_engine=engine,
+                sql_engine_params=engine_params,
+                dialect=self._dialect,
             )
         elif ctx.ctes() is None:
             yield from self._get_query_elements(ctx)
         else:
             __modified_exception__ = self.to_runtime_error(ctx)  # noqa
-            yield self.workflow.select(get_sql())
+            yield self.workflow.select(get_sql(), dialect=self._dialect)
 
     def visitOptionalFromClause(
         self, ctx: fp.OptionalFromClauseContext
@@ -795,6 +810,7 @@ class _Extensions(_VisitorBase):
                 self.sql,
                 self.hooks,
                 workflow=self.workflow,
+                dialect=self._dialect,
                 variables=self.variables,
                 last=last,
                 global_vars=self.global_vars,

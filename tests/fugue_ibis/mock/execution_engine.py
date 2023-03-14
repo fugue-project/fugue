@@ -1,47 +1,43 @@
-import logging
-from typing import Any, Callable, Iterable, List, Optional, Union
+from typing import Any, Iterable, List, Optional, Union
 
 import ibis
 import pyarrow as pa
+from triad import assert_or_throw
+
 from fugue import (
     ArrowDataFrame,
     DataFrame,
-    LocalDataFrame,
-    MapEngine,
+    ExecutionEngine,
     NativeExecutionEngine,
-    PartitionCursor,
     PartitionSpec,
+    SQLEngine,
 )
-from fugue_ibis import IbisDataFrame, IbisExecutionEngine, IbisTable
-from triad import FileSystem, assert_or_throw
+from fugue_ibis import IbisDataFrame, IbisExecutionEngine, IbisSQLEngine, IbisTable
 
 from .dataframe import MockDuckDataFrame
 
 
-class MockDuckExecutionEngine(IbisExecutionEngine):
-    def __init__(self, conf: Any):
-        super().__init__(conf)
+class MockDuckSQLEngine(IbisSQLEngine):
+    def __init__(self, execution_engine: ExecutionEngine) -> None:
+        super().__init__(execution_engine)
         self._backend = ibis.duckdb.connect()
-        self._native_engine = NativeExecutionEngine(conf)
-
-    @property
-    def dialect(self) -> str:
-        return "duckdb"
-
-    def get_current_parallelism(self) -> int:
-        return 1
 
     @property
     def backend(self) -> ibis.BaseBackend:
         return self._backend
 
+    @property
+    def dialect(self) -> str:
+        return "duckdb"
+
+    @property
+    def is_distributed(self) -> bool:
+        return False
+
     def encode_column_name(self, name: str) -> str:
         return '"' + name.replace('"', '""') + '"'
 
-    def create_default_map_engine(self) -> MapEngine:
-        return self._native_engine.create_default_map_engine()
-
-    def _to_ibis_dataframe(self, df: Any, schema: Any = None) -> IbisDataFrame:
+    def to_df(self, df: Any, schema: Any = None) -> IbisDataFrame:
         if isinstance(df, MockDuckDataFrame):
             return df
         if isinstance(df, DataFrame):
@@ -56,26 +52,6 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
             adf = ArrowDataFrame(df, schema)
             return self._register_df(adf.native, schema=schema)
         raise NotImplementedError
-
-    def __repr__(self) -> str:
-        return "MockDuckExecutionEngine"
-
-    @property
-    def log(self) -> logging.Logger:
-        return self._native_engine.log
-
-    @property
-    def fs(self) -> FileSystem:
-        return self._native_engine.fs
-
-    def repartition(
-        self, df: DataFrame, partition_spec: PartitionSpec
-    ) -> DataFrame:  # pragma: no cover
-        self.log.warning("%s doesn't respect repartition", self)
-        return df
-
-    def broadcast(self, df: DataFrame) -> DataFrame:
-        return df
 
     def persist(
         self,
@@ -112,8 +88,40 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
             sql = f"SELECT * FROM {tn} USING SAMPLE reservoir({n} ROWS)"
         if seed is not None:
             sql += f" REPEATABLE ({seed})"
-        idf = self._to_ibis_dataframe(df)
-        return self._to_ibis_dataframe(idf.native.alias(tn).sql(sql))
+        idf = self.to_df(df)
+        _res = f"WITH {tn} AS ({idf.native.compile()}) " + sql
+        return self.to_df(self.backend.sql(_res))
+
+    def _register_df(
+        self, df: pa.Table, name: Optional[str] = None, schema: Any = None
+    ) -> MockDuckDataFrame:
+        tb = self.backend.register(df, name)
+        return MockDuckDataFrame(tb)
+
+
+class MockDuckExecutionEngine(IbisExecutionEngine):
+    def __init__(self, conf: Any, force_is_ibis: bool = False):
+        super().__init__(conf)
+
+        self._force_is_ibis = force_is_ibis
+
+    @property
+    def is_distributed(self) -> bool:
+        return False
+
+    def create_non_ibis_execution_engine(self) -> ExecutionEngine:
+        return NativeExecutionEngine(self.conf)
+
+    def create_default_sql_engine(self) -> SQLEngine:
+        return MockDuckSQLEngine(self)
+
+    def is_non_ibis(self, ds: Any) -> bool:
+        if self._force_is_ibis:
+            return False
+        return super().is_non_ibis(ds)
+
+    def __repr__(self) -> str:
+        return "MockDuckExecutionEngine"
 
     def load_df(
         self,
@@ -122,7 +130,7 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
         columns: Any = None,
         **kwargs: Any,
     ) -> DataFrame:
-        return self._native_engine.load_df(path, format_hint, columns, **kwargs)
+        return self.non_ibis_engine.load_df(path, format_hint, columns, **kwargs)
 
     def save_df(
         self,
@@ -135,12 +143,7 @@ class MockDuckExecutionEngine(IbisExecutionEngine):
         **kwargs: Any,
     ) -> None:
         partition_spec = partition_spec or PartitionSpec()
-        return self._native_engine.save_df(
-            df, path, format_hint, mode, partition_spec, force_single, **kwargs
+        _df = self._to_non_ibis_dataframe(df)
+        return self.non_ibis_engine.save_df(
+            _df, path, format_hint, mode, partition_spec, force_single, **kwargs
         )
-
-    def _register_df(
-        self, df: pa.Table, name: Optional[str] = None, schema: Any = None
-    ) -> MockDuckDataFrame:
-        tb = self.backend.register(df, name)
-        return MockDuckDataFrame(tb)

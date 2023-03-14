@@ -9,10 +9,11 @@ from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq, to_local_bounded_df
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution.execution_engine import _generate_comap_empty_dfs
-from fugue.extensions.outputter import Outputter
-from fugue.extensions.transformer.convert import _to_output_transformer
-from fugue.extensions.transformer.transformer import CoTransformer, Transformer
 from fugue.rpc import EmptyRPCHandler, to_rpc_handler
+
+from ..outputter import Outputter
+from ..transformer.convert import _to_output_transformer
+from ..transformer.transformer import CoTransformer, Transformer
 
 
 class Show(Outputter):
@@ -98,6 +99,7 @@ class RunOutputTransformer(Outputter):
             output_schema=tf.output_schema,  # type: ignore
             partition_spec=tf.partition_spec,
             on_init=tr.on_init,
+            map_func_format_hint=tf.get_format_hint(),
         )
         self.execution_engine.persist(df, lazy=False)
 

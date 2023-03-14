@@ -31,10 +31,10 @@ setup(
     keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
     install_requires=[
-        "triad>=0.8.0",
+        "triad>=0.8.1",
         "adagio>=0.2.4",
         "qpd>=0.4.0",
-        "fugue-sql-antlr>=0.1.1",
+        "fugue-sql-antlr>=0.1.5",
         "sqlalchemy",
         "sqlglot",
         "pyarrow>=0.15.1",
@@ -42,7 +42,7 @@ setup(
         "jinja2",
     ],
     extras_require={
-        "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.1"],
+        "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.5"],
         "spark": ["pyspark"],
         "dask": [
             "dask[distributed,dataframe]; python_version < '3.8'",
@@ -55,13 +55,14 @@ setup(
             "pyarrow>=6.0.1",
             "numpy",
         ],
+        "polars": ["polars"],
         "ibis": [
             "ibis-framework>=2.1.1; python_version < '3.8'",
             "ibis-framework>=3.2.0; python_version >= '3.8'",
         ],
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
         "all": [
-            "fugue-sql-antlr[cpp]>=0.1.0",
+            "fugue-sql-antlr[cpp]>=0.1.5",
             "pyspark",
             "dask[distributed,dataframe]; python_version < '3.8'",
             "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
@@ -74,6 +75,7 @@ setup(
             "pyarrow>=6.0.1",
             "ibis-framework>=2.1.1; python_version < '3.8'",
             "ibis-framework>=3.2.0; python_version >= '3.8'",
+            "polars",
         ],
     },
     classifiers=[
@@ -101,6 +103,7 @@ setup(
             "dask = fugue_dask.registry[dask]",
             "dask_ibis = fugue_dask.ibis_engine[dask,ibis]",
             "ray = fugue_ray.registry[ray]",
+            "polars = fugue_polars.registry[polars]",
         ]
     },
 )

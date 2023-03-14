@@ -8,12 +8,12 @@ black>=22.3.0
 mypy
 flake8
 autopep8
-pylint
+pylint==2.16.2
 pytest
 pytest-cov
 pytest-mock
 pytest-spark
-pytest-rerunfailures
+pytest-rerunfailures==10.2
 sphinx>=2.4.0
 sphinx-rtd-theme
 sphinx-autodoc-typehints
@@ -21,6 +21,8 @@ flask
 pandavro
 fastavro
 psutil
+matplotlib
+seaborn
 
 duckdb-engine>=0.6.4
 
