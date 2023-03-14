@@ -234,8 +234,6 @@ Feel free to message us on [Slack](http://slack.fugue.ai). We also have [contrib
 
 ### Mentioned Uses
 
-*
-
 ## Further Resources
 
 View some of our latest conferences presentations and content. For a more complete list, check the [Content](https://fugue-tutorials.readthedocs.io/tutorials/resources/content.html) page in the tutorials.
