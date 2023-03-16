@@ -266,8 +266,8 @@ class DataFrameTests(object):
             df = self.df(data, "a:[float]")
             assert [[[None, 2.0]]] == ArrowDataFrame(fi.as_arrow(df)).as_array()
             # dict
-            data = [[dict(b="x")]]
-            df = self.df(data, "a:{b:str}")
+            data = [[dict(b=True)]]
+            df = self.df(data, "a:{b:bool}")
             assert data == ArrowDataFrame(fi.as_arrow(df)).as_array()
             # list[dict]
             data = [[[dict(b=[30, 40])]]]

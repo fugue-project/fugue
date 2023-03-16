@@ -49,7 +49,6 @@ class ArrowDataFrame(LocalBoundedDataFrame):
         self,
         df: Any = None,
         schema: Any = None,
-        pandas_df_wrapper: bool = False,
     ):
         if df is None:
             schema = _input_schema(schema).assert_not_empty()

@@ -9,7 +9,6 @@ from fugue import (
     DataFrame,
     IterableDataFrame,
     LocalBoundedDataFrame,
-    LocalDataFrame,
     to_local_bounded_df,
 )
 from fugue.dataframe.dataframe import _input_schema
@@ -50,7 +49,9 @@ class IbisDataFrame(DataFrame):
     def _to_schema(self, schema: IbisSchema) -> Schema:
         return to_schema(schema)
 
-    def _to_local_df(self, table: IbisTable, schema: Any = None) -> LocalDataFrame:
+    def _to_local_df(
+        self, table: IbisTable, schema: Any = None
+    ) -> LocalBoundedDataFrame:
         raise NotImplementedError  # pragma: no cover
 
     def _to_iterable_df(
@@ -124,7 +125,7 @@ class IbisDataFrame(DataFrame):
     def as_pandas(self) -> pd.DataFrame:
         return self.as_local().as_pandas()
 
-    def as_local(self) -> LocalDataFrame:
+    def as_local_bounded(self) -> LocalBoundedDataFrame:
         res = self._to_local_df(self._table, schema=self.schema)
         if res is not self and self.has_metadata:
             res.reset_metadata(self.metadata)

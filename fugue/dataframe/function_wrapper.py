@@ -16,7 +16,11 @@ from ..collections.function_wrapper import (
 from .array_dataframe import ArrayDataFrame
 from .arrow_dataframe import ArrowDataFrame
 from .dataframe import DataFrame, LocalDataFrame
-from .dataframe_iterable_dataframe import LocalDataFrameIterableDataFrame
+from .dataframe_iterable_dataframe import (
+    IterableArrowDataFrame,
+    IterablePandasDataFrame,
+    LocalDataFrameIterableDataFrame,
+)
 from .dataframes import DataFrames
 from .iterable_dataframe import IterableDataFrame
 from .pandas_dataframe import PandasDataFrame
@@ -318,7 +322,7 @@ class _IterablePandasParam(LocalDataFrameParam):
             for df in output:
                 yield PandasDataFrame(df, schema)
 
-        return LocalDataFrameIterableDataFrame(dfs())
+        return IterablePandasDataFrame(dfs())
 
     @no_type_check
     def count(self, df: Iterable[pd.DataFrame]) -> int:
@@ -371,7 +375,7 @@ class _IterableArrowParam(LocalDataFrameParam):
                     adf = adf[_schema.names].alter_columns(_schema)
                 yield adf
 
-        return LocalDataFrameIterableDataFrame(dfs())
+        return IterableArrowDataFrame(dfs())
 
     @no_type_check
     def count(self, df: Iterable[pa.Table]) -> int:

@@ -16,6 +16,7 @@ from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.iter import EmptyAwareIterable
 from triad.utils.pandas_like import PD_UTILS
+from triad.utils.pyarrow import get_alter_func
 from triad.utils.threading import RunOnce
 
 from fugue import StructuredRawSQL
@@ -30,11 +31,14 @@ from fugue.dataframe import (
     ArrowDataFrame,
     DataFrame,
     DataFrames,
+    IterableArrowDataFrame,
     IterableDataFrame,
+    IterablePandasDataFrame,
     LocalDataFrame,
     LocalDataFrameIterableDataFrame,
     PandasDataFrame,
 )
+from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue.dataframe.utils import get_join_schemas
 from fugue.exceptions import FugueDataFrameInitError
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
@@ -141,6 +145,7 @@ class SparkMapEngine(MapEngine):
                     output_schema=output_schema,
                     partition_spec=partition_spec,
                     on_init=on_init,
+                    map_func_format_hint=map_func_format_hint,
                 )
             elif len(partition_spec.partition_by) == 0:
                 return self._map_by_pandas_udf(
@@ -149,6 +154,7 @@ class SparkMapEngine(MapEngine):
                     output_schema=output_schema,
                     partition_spec=partition_spec,
                     on_init=on_init,
+                    map_func_format_hint=map_func_format_hint,
                 )
         df = self.to_df(self.execution_engine.repartition(df, partition_spec))
         mapper = _Mapper(df, map_func, output_schema, partition_spec, on_init)
@@ -162,6 +168,7 @@ class SparkMapEngine(MapEngine):
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
         presort = partition_spec.presort
         presort_keys = list(presort.keys())
@@ -197,13 +204,14 @@ class SparkMapEngine(MapEngine):
         sdf = gdf.applyInPandas(_udf_pandas, schema=to_spark_schema(output_schema))
         return SparkDataFrame(sdf)
 
-    def _map_by_pandas_udf(
+    def _map_by_pandas_udf(  # noqa: C901
         self,
         df: DataFrame,
         map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
         df = self.to_df(self.execution_engine.repartition(df, partition_spec))
         output_schema = Schema(output_schema)
@@ -233,9 +241,10 @@ class SparkMapEngine(MapEngine):
                             cursor.set(lambda: pdf.peek_array(), 0, 0)
                         yield pdf
 
-            input_df = LocalDataFrameIterableDataFrame(get_dfs(), input_schema)
+            input_df = IterablePandasDataFrame(get_dfs(), input_schema)
             if input_df.empty:
-                return PandasDataFrame([], output_schema).as_pandas()
+                yield PandasDataFrame([], output_schema).as_pandas()
+                return
             if on_init_once is not None:
                 on_init_once(0, input_df)
             output_df = map_func(cursor, input_df)
@@ -245,10 +254,49 @@ class SparkMapEngine(MapEngine):
             else:
                 yield output_df.as_pandas()
 
+        def _udf_arrow(
+            dfs: Iterable[pa.RecordBatch],
+        ) -> Iterable[pa.RecordBatch]:  # pragma: no cover
+            def get_dfs() -> Iterable[LocalDataFrame]:
+                cursor_set = False
+                func: Any = None
+                for df in dfs:
+                    if df.num_rows > 0:
+                        # TODO: need coalesce based on byte size
+                        adf = pa.Table.from_batches([df])
+                        if func is None:
+                            # mapInArrow has bugs, the input timestamp will
+                            # be added with a timezong, this is to fix the issue
+                            func = get_alter_func(
+                                adf.schema, input_schema.pa_schema, safe=False
+                            )
+                        pdf = ArrowDataFrame(func(adf))
+                        if not cursor_set:
+                            cursor.set(lambda: pdf.peek_array(), 0, 0)
+                        yield pdf
+
+            input_df = IterableArrowDataFrame(get_dfs(), input_schema)
+            if input_df.empty:
+                yield from _build_empty_arrow(output_schema).to_batches()
+                return
+            if on_init_once is not None:
+                on_init_once(0, input_df)
+            output_df = map_func(cursor, input_df)
+            if isinstance(output_df, LocalDataFrameIterableDataFrame):
+                for res in output_df.native:
+                    yield from res.as_arrow().to_batches()
+            else:
+                yield from output_df.as_arrow().to_batches()
+
         df = self.to_df(df)
-        sdf = df.native.mapInPandas(  # type: ignore
-            _udf_pandas, schema=to_spark_schema(output_schema)
-        )
+        if map_func_format_hint == "pyarrow" and hasattr(df.native, "mapInArrow"):
+            sdf = df.native.mapInArrow(  # type: ignore
+                _udf_arrow, schema=to_spark_schema(output_schema)
+            )
+        else:
+            sdf = df.native.mapInPandas(  # type: ignore
+                _udf_pandas, schema=to_spark_schema(output_schema)
+            )
         return SparkDataFrame(sdf)
 
 

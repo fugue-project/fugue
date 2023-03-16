@@ -142,7 +142,7 @@ def to_local_df(df: Any, schema: Any = None) -> LocalDataFrame:
         return ArrayDataFrame(df, schema)
     if isinstance(df, Iterable):
         return IterableDataFrame(df, schema)
-    raise TypeError(f"{df} cannot convert to a LocalDataFrame")
+    raise ValueError(f"{df} cannot convert to a LocalDataFrame")
 
 
 def to_local_bounded_df(df: Any, schema: Any = None) -> LocalBoundedDataFrame:
@@ -171,10 +171,16 @@ def to_local_bounded_df(df: Any, schema: Any = None) -> LocalBoundedDataFrame:
         bounded, so :class:`~fugue.dataframe.iterable_dataframe.IterableDataFrame` will
         be converted although it's local.
     """
+    if isinstance(df, DataFrame):
+        aot(
+            schema is None,
+            ValueError("schema and metadata must be None when df is a DataFrame"),
+        )
+        return df.as_local_bounded()
     df = to_local_df(df, schema)
     if isinstance(df, LocalBoundedDataFrame):
         return df
-    return ArrayDataFrame(df.as_array(), df.schema)
+    raise ValueError(f"{df} cannot convert to a LocalBoundedDataFrame")
 
 
 def pickle_df(df: DataFrame) -> bytes:

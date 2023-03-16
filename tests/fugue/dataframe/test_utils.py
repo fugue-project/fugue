@@ -34,7 +34,7 @@ def test_to_local_df():
     assert isinstance(to_local_df(df.native, "a:int,b:int"), ArrayDataFrame)
     assert isinstance(to_local_df(pdf.native, "a:int,b:int"), PandasDataFrame)
     assert isinstance(to_local_df(idf.native, "a:int,b:int"), IterableDataFrame)
-    raises(TypeError, lambda: to_local_df(123))
+    raises(ValueError, lambda: to_local_df(123))
 
     raises(NoneArgumentError, lambda: to_local_df(None))
     raises(ValueError, lambda: to_local_df(df, "a:int,b:int"))
@@ -53,6 +53,15 @@ def test_to_local_bounded_df():
     assert isinstance(r, ArrowDataFrame)
     assert r.as_array() == [[0, 1]]
     assert r.schema == "a:int,b:int"
+
+    raises(ValueError, lambda: to_local_bounded_df(123))
+
+    def rows():
+        yield [0]
+        yield [1]
+
+    with raises(ValueError):
+        to_local_bounded_df(rows(), schema="a:int")
 
 
 def test_schema_eq():

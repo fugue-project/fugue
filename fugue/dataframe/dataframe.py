@@ -85,9 +85,13 @@ class DataFrame(Dataset):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def as_local(self) -> "LocalDataFrame":  # pragma: no cover
         """Convert this dataframe to a :class:`.LocalDataFrame`"""
+        return self.as_local_bounded()
+
+    @abstractmethod
+    def as_local_bounded(self) -> "LocalBoundedDataFrame":  # pragma: no cover
+        """Convert this dataframe to a :class:`.LocalBoundedDataFrame`"""
         raise NotImplementedError
 
     @abstractmethod
@@ -317,10 +321,6 @@ class LocalDataFrame(DataFrame):
         """Always True because it's a LocalDataFrame"""
         return True
 
-    def as_local(self) -> "LocalDataFrame":
-        """Always return self, because it's a LocalDataFrame"""
-        return self
-
     @property
     def num_partitions(self) -> int:  # pragma: no cover
         """Always 1 because it's a LocalDataFrame"""
@@ -346,6 +346,10 @@ class LocalBoundedDataFrame(LocalDataFrame):
         """Always True because it's a bounded dataframe"""
         return True
 
+    def as_local_bounded(self) -> "LocalBoundedDataFrame":
+        """Always True because it's a bounded dataframe"""
+        return self
+
 
 class LocalUnboundedDataFrame(LocalDataFrame):
     """Base class of all local unbounded dataframes. Read
@@ -366,6 +370,9 @@ class LocalUnboundedDataFrame(LocalDataFrame):
     def is_bounded(self):
         """Always False because it's an unbounded dataframe"""
         return False
+
+    def as_local(self) -> "LocalDataFrame":
+        return self
 
     def count(self) -> int:
         """
@@ -458,22 +465,14 @@ def _get_dataframe_display(ds: DataFrame):
     return DataFrameDisplay(ds)
 
 
-@as_local.candidate(lambda df: isinstance(df, DataFrame) and not df.is_local)
-def _df_to_local(df: DataFrame) -> DataFrame:
+@as_local.candidate(lambda df: isinstance(df, DataFrame))
+def _df_to_local(df: DataFrame) -> LocalDataFrame:
     return df.as_local()
 
 
-@as_local_bounded.candidate(
-    lambda df: isinstance(df, DataFrame) and not (df.is_local and df.is_bounded),
-    priority=0.9,
-)
-def _df_to_local_bounded(df: DataFrame) -> DataFrame:
-    res: DataFrame = df.as_local()
-    if not res.is_bounded:
-        res = as_fugue_df(res.as_array(), schema=df.schema)
-    if res is not df and df.has_metadata:
-        res.reset_metadata(df.metadata)
-    return res
+@as_local_bounded.candidate(lambda df: isinstance(df, DataFrame))
+def _df_to_local_bounded(df: DataFrame) -> LocalBoundedDataFrame:
+    return df.as_local_bounded()
 
 
 def _get_schema_change(
