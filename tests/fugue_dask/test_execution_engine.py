@@ -40,7 +40,8 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def make_engine(self):
         client = Client(processes=True, n_workers=3, threads_per_worker=1)
-        # dask.config.set(shuffle="tasks")  # p2p (new default algo has bugs)
+        # p2p (new default algo has bugs)
+        dask.config.set({"dataframe.shuffle.method": "tasks"})
         e = DaskExecutionEngine(client, conf=dict(test=True, **_CONF))
         return e
 
