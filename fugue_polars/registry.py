@@ -12,6 +12,13 @@ from fugue import (
     LocalDataFrameIterableDataFrame,
 )
 from fugue.dev import LocalDataFrameParam, annotated_param
+from .polars_dataframe import PolarsDataFrame
+from fugue.plugins import as_fugue_dataset
+
+
+@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, pl.DataFrame))
+def _pl_as_fugue_df(df: pl.DataFrame, **kwargs: Any) -> PolarsDataFrame:
+    return PolarsDataFrame(df, **kwargs)
 
 
 @annotated_param(pl.DataFrame)
@@ -39,7 +46,7 @@ class _IterablePolarsParam(LocalDataFrameParam):
     def to_input_data(self, df: DataFrame, ctx: Any) -> Iterable[pa.Table]:
         if not isinstance(df, LocalDataFrameIterableDataFrame):
             yield pl.from_arrow(df.as_arrow())
-        else:
+        else:  # pragma: no cover # spark code coverage can't be included
             for sub in df.native:
                 yield pl.from_arrow(sub.as_arrow())
 
@@ -63,7 +70,7 @@ class _IterablePolarsParam(LocalDataFrameParam):
         return IterableArrowDataFrame([], schema=_schema)
 
     @no_type_check
-    def count(self, df: Iterable[pl.DataFrame]) -> int:
+    def count(self, df: Iterable[pl.DataFrame]) -> int:  # pragma: no cover
         return sum(_.shape[0] for _ in df)
 
     def format_hint(self) -> Optional[str]:
@@ -72,7 +79,7 @@ class _IterablePolarsParam(LocalDataFrameParam):
 
 def _to_adf(output: pl.DataFrame, schema: Any) -> ArrowDataFrame:
     adf = output.to_arrow()
-    if schema is None:
+    if schema is None:  # pragma: no cover
         return ArrowDataFrame(adf)
     _schema = schema if isinstance(schema, Schema) else Schema(schema)
     f = get_alter_func(adf.schema, _schema.pa_schema, safe=False)

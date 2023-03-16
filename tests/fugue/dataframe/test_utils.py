@@ -56,6 +56,13 @@ def test_to_local_bounded_df():
 
     raises(ValueError, lambda: to_local_bounded_df(123))
 
+    def rows():
+        yield [0]
+        yield [1]
+
+    with raises(ValueError):
+        to_local_bounded_df(rows(), schema="a:int")
+
 
 def test_schema_eq():
     assert not _schema_eq(Schema("a:int"), Schema("a:int8"))

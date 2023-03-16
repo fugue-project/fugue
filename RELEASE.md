@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.8.2
+
+-   [430](https://github.com/fugue-project/fugue/issues/430) Support Polars DataFrames
+-   [434](https://github.com/fugue-project/fugue/issues/434) Make Transformations data format aware
+
 ## 0.8.1
 
 -   [423](https://github.com/fugue-project/fugue/issues/423) Add seaborn as a domain level extension for visualization
