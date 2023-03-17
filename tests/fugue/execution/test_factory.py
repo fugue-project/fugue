@@ -5,7 +5,6 @@ from pytest import raises
 
 from fugue import (
     NativeExecutionEngine,
-    SqliteEngine,
     make_execution_engine,
     make_sql_engine,
     register_default_execution_engine,
@@ -20,13 +19,12 @@ from fugue.execution.factory import (
     is_pandas_or,
     make_execution_engine,
     make_sql_engine,
-    parse_execution_engine,
-    parse_sql_engine,
     register_default_execution_engine,
     register_default_sql_engine,
     register_execution_engine,
     register_sql_engine,
 )
+from fugue_duckdb import DuckDBEngine
 
 
 class _MockExecutionEngine(NativeExecutionEngine):
@@ -50,7 +48,7 @@ class _MockExecutionEngine2(NativeExecutionEngine):
         self.other = other
 
 
-class _MockSQlEngine(SqliteEngine):
+class _MockSQlEngine(DuckDBEngine):
     def __init__(self, execution_engine, other: int = 1):
         super().__init__(execution_engine)
         self.other = other
@@ -189,7 +187,7 @@ def test_global_funcs():
     )
     assert isinstance(make_execution_engine(), _MockExecutionEngine)
 
-    se = SqliteEngine(make_execution_engine())
+    se = DuckDBEngine(make_execution_engine())
     assert make_sql_engine(se) is se
     assert not isinstance(
         make_sql_engine(None, make_execution_engine()), _MockSQlEngine
@@ -229,7 +227,7 @@ def test_make_execution_engine():
     assert e.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
 
     e = make_execution_engine(
-        (NativeExecutionEngine, "sqlite"), {FUGUE_CONF_SQL_IGNORE_CASE: True}
+        (NativeExecutionEngine, "duckdb"), {FUGUE_CONF_SQL_IGNORE_CASE: True}
     )
     assert isinstance(e, NativeExecutionEngine)
     assert e.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
@@ -239,14 +237,14 @@ def test_make_execution_engine():
     assert e.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
 
     e = make_execution_engine(
-        (NativeExecutionEngine({FUGUE_CONF_SQL_IGNORE_CASE: True}), "sqlite")
+        (NativeExecutionEngine({FUGUE_CONF_SQL_IGNORE_CASE: True}), "duckdb")
     )
     e = make_execution_engine(e)
     assert isinstance(e, NativeExecutionEngine)
     assert e.conf.get_or_throw(FUGUE_CONF_SQL_IGNORE_CASE, bool)
-    assert isinstance(e.sql_engine, SqliteEngine)
+    assert isinstance(e.sql_engine, DuckDBEngine)
 
-    assert isinstance(make_sql_engine(None, e), SqliteEngine)
+    assert isinstance(make_sql_engine(None, e), DuckDBEngine)
 
     # MUST HAVE THIS STEP, or other tests will fail
     _reset()

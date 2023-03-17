@@ -492,9 +492,6 @@ def make_sql_engine(
 
             # S2(engine)
             make_sql_engine("s2", engine)
-
-            # SqliteEngine(engine)
-            make_sql_engine(SqliteEngine)
     """
     if isinstance(engine, SQLEngine):
         assert_or_throw(
@@ -554,9 +551,6 @@ def parse_sql_engine(
 
             # S2(engine)
             make_sql_engine("s2", engine)
-
-            # SqliteEngine(engine)
-            make_sql_engine(SqliteEngine)
     """
     if engine is None or (isinstance(engine, str) and engine == ""):
         assert_or_throw(

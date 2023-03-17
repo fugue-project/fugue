@@ -35,7 +35,6 @@ setup(
         "adagio>=0.2.4",
         "qpd>=0.4.0",
         "fugue-sql-antlr>=0.1.5",
-        "sqlalchemy",
         "sqlglot",
         "pyarrow>=0.15.1",
         "pandas>=1.0.2",

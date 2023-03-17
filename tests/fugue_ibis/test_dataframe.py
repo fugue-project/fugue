@@ -24,7 +24,8 @@ class IbisDataFrameTests(DataFrameTests.Tests):
     def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
         df = ArrowDataFrame(data, schema)
         name = f"_{id(df.native)}"
-        self._con.con.execute("register", (name, df.native))
+        # self._con.con.execute("register", (name, df.native))
+        self._con.register(df.native, name)
         return MockDuckDataFrame(self._con.table(name), schema=schema)
 
     def test_init_df(self):
@@ -71,12 +72,14 @@ class NativeIbisDataFrameTests(DataFrameTests.NativeTests):
     def df(self, data: Any = None, schema: Any = None):
         df = ArrowDataFrame(data, schema)
         name = f"_{id(df.native)}"
-        self._con.con.execute("register", (name, df.native))
+        # self._con.con.execute("register", (name, df.native))
+        self._con.register(df.native, name)
         return MockDuckDataFrame(self._con.table(name), schema=schema).native
 
     def to_native_df(self, pdf: pd.DataFrame) -> Any:
         name = f"_{id(pdf)}"
-        self._con.con.execute("register", (name, pa.Table.from_pandas(pdf)))
+        # self._con.con.execute("register", (name, pa.Table.from_pandas(pdf)))
+        self._con.register(pa.Table.from_pandas(pdf), name)
         return self._con.table(name)
 
     def test_is_local(self):

@@ -114,7 +114,7 @@ def test_jinja_keyword_in_sql():
         OUTPUT df, df2 USING assert_eq
         """
         )
-    dag.run(("", "sqlite"))
+    dag.run(("", "duckdb"))
 
 
 def test_use_df(tmpdir):

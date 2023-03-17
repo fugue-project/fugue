@@ -4,6 +4,7 @@
 
 -   [430](https://github.com/fugue-project/fugue/issues/430) Support Polars DataFrames
 -   [434](https://github.com/fugue-project/fugue/issues/434) Make Transformations data format aware
+-   [408](https://github.com/fugue-project/fugue/issues/408) Remove SQLite support
 
 ## 0.8.1
 
