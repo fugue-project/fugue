@@ -5,7 +5,6 @@ from typing import Any, Callable, Dict, List, Optional, Type, Union
 import pandas as pd
 from qpd_pandas import run_sql_on_pandas
 from qpd_pandas.engine import PandasUtils
-from sqlalchemy import create_engine
 from triad import Schema
 from triad.collections.dict import IndexedOrderedDict
 from triad.collections.fs import FileSystem
@@ -36,29 +35,6 @@ from .execution_engine import (
     MapEngine,
     SQLEngine,
 )
-
-
-class SqliteEngine(SQLEngine):
-    """Sqlite execution implementation.
-
-    :param execution_engine: the execution engine this sql engine will run on
-    """
-
-    @property
-    def is_distributed(self) -> bool:
-        return False
-
-    @property
-    def dialect(self) -> Optional[str]:
-        return "sqlite"
-
-    def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
-        _dfs, _sql = self.encode(dfs, statement)
-        sql_engine = create_engine("sqlite:///:memory:")
-        for k, v in _dfs.items():
-            v.as_pandas().to_sql(k, sql_engine, if_exists="replace", index=False)
-        df = pd.read_sql_query(_sql, sql_engine)
-        return PandasDataFrame(df)
 
 
 class QPDPandasEngine(SQLEngine):

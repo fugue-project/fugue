@@ -32,7 +32,6 @@ from fugue.execution.factory import (
 from fugue.execution.native_execution_engine import (
     PandasMapEngine,
     QPDPandasEngine,
-    SqliteEngine,
 )
 from fugue.rpc import (
     EmptyRPCHandler,

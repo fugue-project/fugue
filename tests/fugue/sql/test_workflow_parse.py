@@ -1,4 +1,3 @@
-import json
 from typing import Any, Iterable, List
 
 from fugue_sql_antlr import FugueSQLParser
@@ -8,21 +7,20 @@ from triad.collections.schema import Schema
 from triad.utils.convert import get_caller_global_local_vars
 
 from fugue import (
-    DataFrame,
     DataFrames,
     FugueWorkflow,
     LocalDataFrame,
     OutputTransformer,
     PartitionSpec,
-    SqliteEngine,
     WorkflowDataFrame,
     WorkflowDataFrames,
     module,
     register_sql_engine,
 )
 from fugue.extensions.transformer.convert import _to_output_transformer
-from fugue.sql._visitors import FugueSQLHooks, _Extensions, _VisitorBase
+from fugue.sql._visitors import FugueSQLHooks, _Extensions
 from fugue.exceptions import FugueSQLError
+from fugue.execution.native_execution_engine import QPDPandasEngine
 
 
 def test_create_data():
@@ -421,7 +419,7 @@ def test_select_with():
 
 
 def test_select_plus_engine():
-    class MockEngine(SqliteEngine):
+    class MockEngine(QPDPandasEngine):
         def __init__(self, execution_engine, p: int = 0):
             super().__init__(execution_engine)
             self.p = p
