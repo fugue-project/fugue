@@ -3,14 +3,15 @@ import inspect
 from typing import Any, Callable, Dict, Iterable, Optional
 
 from triad import extension_method
+from triad.collections.function_wrapper import (
+    AnnotatedParam,
+    FunctionWrapper,
+    function_wrapper,
+)
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function
 
-from fugue.collections.function_wrapper import (
-    AnnotatedParam,
-    FunctionWrapper,
-    annotated_param,
-)
+from fugue.constants import FUGUE_ENTRYPOINT
 from fugue.exceptions import FugueInterfacelessError
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 
@@ -55,27 +56,9 @@ def _to_module(
     raise FugueInterfacelessError(f"{obj} is not a valid module", exp)
 
 
-@annotated_param(
-    FugueWorkflow,
-    "w",
-    matcher=lambda x: inspect.isclass(x) and issubclass(x, FugueWorkflow),
-)
-class _FugueWorkflowParam(AnnotatedParam):
-    pass
-
-
-@annotated_param(WorkflowDataFrame, "v")
-class _WorkflowDataFrameParam(AnnotatedParam):
-    pass
-
-
-@annotated_param(WorkflowDataFrames, "u")
-class _WorkflowDataFramesParam(AnnotatedParam):
-    pass
-
-
+@function_wrapper(FUGUE_ENTRYPOINT)
 class _ModuleFunctionWrapper(FunctionWrapper):
-    def __init__(
+    def __init__(  # pylint: disable-all
         self,
         func: Callable,
         params_re: str = "^(w?(u|v+)|w(u?|v*))x*z?$",
@@ -161,3 +144,22 @@ class _ModuleFunctionWrapper(FunctionWrapper):
                     )
                     wf = v.workflow
         return wf
+
+
+@_ModuleFunctionWrapper.annotated_param(
+    FugueWorkflow,
+    "w",
+    matcher=lambda x: inspect.isclass(x) and issubclass(x, FugueWorkflow),
+)
+class _FugueWorkflowParam(AnnotatedParam):
+    pass
+
+
+@_ModuleFunctionWrapper.annotated_param(WorkflowDataFrame, "v")
+class _WorkflowDataFrameParam(AnnotatedParam):
+    pass
+
+
+@_ModuleFunctionWrapper.annotated_param(WorkflowDataFrames, "u")
+class _WorkflowDataFramesParam(AnnotatedParam):
+    pass

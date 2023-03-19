@@ -10,7 +10,7 @@ from fugue import DataFrame, ExecutionEngine, register_execution_engine
 from fugue.dev import (
     DataFrameParam,
     ExecutionEngineParam,
-    annotated_param,
+    fugue_annotated_param,
     is_pandas_or,
 )
 from fugue.extensions import namespace_candidate
@@ -55,26 +55,26 @@ def _register_engines() -> None:
     )
 
 
-@annotated_param(SparkExecutionEngine)
+@fugue_annotated_param(SparkExecutionEngine)
 class _SparkExecutionEngineParam(ExecutionEngineParam):
     pass
 
 
-@annotated_param(SparkSession)
+@fugue_annotated_param(SparkSession)
 class _SparkSessionParam(ExecutionEngineParam):
     def to_input(self, engine: ExecutionEngine) -> Any:
         assert isinstance(engine, SparkExecutionEngine)
         return engine.spark_session  # type:ignore
 
 
-@annotated_param(SparkContext)
+@fugue_annotated_param(SparkContext)
 class _SparkContextParam(ExecutionEngineParam):
     def to_input(self, engine: ExecutionEngine) -> Any:
         assert isinstance(engine, SparkExecutionEngine)
         return engine.spark_session.sparkContext  # type:ignore
 
 
-@annotated_param(ps.DataFrame)
+@fugue_annotated_param(ps.DataFrame)
 class _SparkDataFrameParam(DataFrameParam):
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         assert isinstance(ctx, SparkExecutionEngine)
@@ -89,7 +89,7 @@ class _SparkDataFrameParam(DataFrameParam):
         raise NotImplementedError("not allowed")
 
 
-@annotated_param(pr.RDD)
+@fugue_annotated_param(pr.RDD)
 class _RddParam(DataFrameParam):
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         assert isinstance(ctx, SparkExecutionEngine)

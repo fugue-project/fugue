@@ -1,18 +1,28 @@
 import inspect
-from typing import Any, Dict, Iterable, Iterator, List, Optional, no_type_check
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    no_type_check,
+)
 
 import pandas as pd
 import pyarrow as pa
 from triad import Schema, assert_or_throw
-from triad.utils.iter import EmptyAwareIterable, make_empty_aware
-
-from ..collections.function_wrapper import (
+from triad.collections.function_wrapper import (
     AnnotatedParam,
     FunctionWrapper,
-    _KeywordParam,
-    _PositionalParam,
-    annotated_param,
+    KeywordParam,
+    PositionalParam,
+    function_wrapper,
 )
+from triad.utils.iter import EmptyAwareIterable, make_empty_aware
+
+from ..constants import FUGUE_ENTRYPOINT
 from .array_dataframe import ArrayDataFrame
 from .arrow_dataframe import ArrowDataFrame
 from .dataframe import DataFrame, LocalDataFrame
@@ -27,6 +37,7 @@ from .pandas_dataframe import PandasDataFrame
 from .utils import to_local_df
 
 
+@function_wrapper(FUGUE_ENTRYPOINT)
 class DataFrameFunctionWrapper(FunctionWrapper):
     @property
     def need_output_schema(self) -> Optional[bool]:
@@ -61,8 +72,8 @@ class DataFrameFunctionWrapper(FunctionWrapper):
         has_kw = False
         rargs: Dict[str, Any] = {}
         for k, v in self._params.items():
-            if isinstance(v, (_PositionalParam, _KeywordParam)):
-                if isinstance(v, _KeywordParam):
+            if isinstance(v, (PositionalParam, KeywordParam)):
+                if isinstance(v, KeywordParam):
                     has_kw = True
             elif k in p:
                 if isinstance(v, _DataFrameParamBase):
@@ -90,6 +101,36 @@ class DataFrameFunctionWrapper(FunctionWrapper):
         return rt
 
 
+fugue_annotated_param = DataFrameFunctionWrapper.annotated_param
+
+
+@fugue_annotated_param(
+    "Callable",
+    "F",
+    lambda annotation: (
+        annotation == Callable
+        or annotation == callable  # pylint: disable=comparison-with-callable
+        or str(annotation).startswith("typing.Callable")
+    ),
+)
+class _CallableParam(AnnotatedParam):
+    pass
+
+
+@fugue_annotated_param(
+    "Callable",
+    "f",
+    lambda annotation: (
+        annotation == Optional[Callable]
+        or annotation == Optional[callable]
+        or str(annotation).startswith("typing.Union[typing.Callable")  # 3.8-
+        or str(annotation).startswith("typing.Optional[typing.Callable")  # 3.9+
+    ),
+)
+class _OptionalCallableParam(AnnotatedParam):
+    pass
+
+
 class _DataFrameParamBase(AnnotatedParam):
     def __init__(self, param: Optional[inspect.Parameter]):
         super().__init__(param)
@@ -113,7 +154,7 @@ class _DataFrameParamBase(AnnotatedParam):
         return None
 
 
-@annotated_param(DataFrame, "d", child_can_reuse_code=True)
+@fugue_annotated_param(DataFrame, "d", child_can_reuse_code=True)
 class DataFrameParam(_DataFrameParamBase):
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         return df
@@ -132,7 +173,7 @@ class DataFrameParam(_DataFrameParamBase):
             return sum(1 for _ in df.as_array_iterable())
 
 
-@annotated_param(LocalDataFrame, "l", child_can_reuse_code=True)
+@fugue_annotated_param(LocalDataFrame, "l", child_can_reuse_code=True)
 class LocalDataFrameParam(DataFrameParam):
     def to_input_data(self, df: DataFrame, ctx: Any) -> LocalDataFrame:
         return to_local_df(df)
@@ -151,13 +192,15 @@ class LocalDataFrameParam(DataFrameParam):
             return sum(1 for _ in df.as_array_iterable())
 
 
-@annotated_param("[NoSchema]", "s", matcher=lambda x: False, child_can_reuse_code=True)
+@fugue_annotated_param(
+    "[NoSchema]", "s", matcher=lambda x: False, child_can_reuse_code=True
+)
 class _LocalNoSchemaDataFrameParam(LocalDataFrameParam):
     def need_schema(self) -> Optional[bool]:
         return True
 
 
-@annotated_param(List[List[Any]])
+@fugue_annotated_param(List[List[Any]])
 class _ListListParam(_LocalNoSchemaDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> List[List[Any]]:
@@ -172,7 +215,7 @@ class _ListListParam(_LocalNoSchemaDataFrameParam):
         return len(df)
 
 
-@annotated_param(
+@fugue_annotated_param(
     Iterable[List[Any]],
     matcher=lambda x: x == Iterable[List[Any]] or x == Iterator[List[Any]],
 )
@@ -192,7 +235,7 @@ class _IterableListParam(_LocalNoSchemaDataFrameParam):
         return sum(1 for _ in df)
 
 
-@annotated_param(EmptyAwareIterable[List[Any]])
+@fugue_annotated_param(EmptyAwareIterable[List[Any]])
 class _EmptyAwareIterableListParam(_LocalNoSchemaDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> EmptyAwareIterable[List[Any]]:
@@ -209,7 +252,7 @@ class _EmptyAwareIterableListParam(_LocalNoSchemaDataFrameParam):
         return sum(1 for _ in df)
 
 
-@annotated_param(List[Dict[str, Any]])
+@fugue_annotated_param(List[Dict[str, Any]])
 class _ListDictParam(_LocalNoSchemaDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> List[Dict[str, Any]]:
@@ -232,7 +275,7 @@ class _ListDictParam(_LocalNoSchemaDataFrameParam):
         return len(df)
 
 
-@annotated_param(
+@fugue_annotated_param(
     Iterable[Dict[str, Any]],
     matcher=lambda x: x == Iterable[Dict[str, Any]] or x == Iterator[Dict[str, Any]],
 )
@@ -258,7 +301,7 @@ class _IterableDictParam(_LocalNoSchemaDataFrameParam):
         return sum(1 for _ in df)
 
 
-@annotated_param(EmptyAwareIterable[Dict[str, Any]])
+@fugue_annotated_param(EmptyAwareIterable[Dict[str, Any]])
 class _EmptyAwareIterableDictParam(_LocalNoSchemaDataFrameParam):
     @no_type_check
     def to_input_data(
@@ -283,7 +326,7 @@ class _EmptyAwareIterableDictParam(_LocalNoSchemaDataFrameParam):
         return sum(1 for _ in df)
 
 
-@annotated_param(pd.DataFrame, "p")
+@fugue_annotated_param(pd.DataFrame, "p")
 class _PandasParam(LocalDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> pd.DataFrame:
@@ -301,7 +344,7 @@ class _PandasParam(LocalDataFrameParam):
         return "pandas"
 
 
-@annotated_param(
+@fugue_annotated_param(
     Iterable[pd.DataFrame],
     matcher=lambda x: x == Iterable[pd.DataFrame] or x == Iterator[pd.DataFrame],
 )
@@ -332,7 +375,7 @@ class _IterablePandasParam(LocalDataFrameParam):
         return "pandas"
 
 
-@annotated_param(pa.Table)
+@fugue_annotated_param(pa.Table)
 class _PyArrowTableParam(LocalDataFrameParam):
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         return df.as_arrow()
@@ -348,7 +391,7 @@ class _PyArrowTableParam(LocalDataFrameParam):
         return "pyarrow"
 
 
-@annotated_param(
+@fugue_annotated_param(
     Iterable[pa.Table],
     matcher=lambda x: x == Iterable[pa.Table] or x == Iterator[pa.Table],
 )
@@ -385,6 +428,6 @@ class _IterableArrowParam(LocalDataFrameParam):
         return "pyarrow"
 
 
-@annotated_param(DataFrames, "c")
+@fugue_annotated_param(DataFrames, "c")
 class _DataFramesParam(AnnotatedParam):
     pass

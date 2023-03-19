@@ -12,7 +12,7 @@ from fugue import (
 from fugue.dev import (
     DataFrameParam,
     ExecutionEngineParam,
-    annotated_param,
+    fugue_annotated_param,
     is_pandas_or,
 )
 from fugue.plugins import infer_execution_engine
@@ -67,19 +67,19 @@ def _register_engines() -> None:
     register_sql_engine("duckdb", lambda engine: DuckDBEngine(engine))
 
 
-@annotated_param(DuckExecutionEngine)
+@fugue_annotated_param(DuckExecutionEngine)
 class _DuckExecutionEngineParam(ExecutionEngineParam):
     pass
 
 
-@annotated_param(DuckDBPyConnection)
+@fugue_annotated_param(DuckDBPyConnection)
 class _DuckDBPyConnectionParam(ExecutionEngineParam):
     def to_input(self, engine: ExecutionEngine) -> Any:
         assert isinstance(engine, DuckExecutionEngine)
         return engine.connection  # type:ignore
 
 
-@annotated_param(DuckDBPyRelation)
+@fugue_annotated_param(DuckDBPyRelation)
 class _DuckDBPyRelationParam(DataFrameParam):
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         assert isinstance(ctx, DuckExecutionEngine)

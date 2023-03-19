@@ -15,7 +15,7 @@ from .dataframe_iterable_dataframe import (
     LocalDataFrameIterableDataFrame,
 )
 from .dataframes import DataFrames
-from .function_wrapper import DataFrameFunctionWrapper
+from .function_wrapper import DataFrameFunctionWrapper, fugue_annotated_param
 from .iterable_dataframe import IterableDataFrame
 from .pandas_dataframe import PandasDataFrame
 from .utils import (
