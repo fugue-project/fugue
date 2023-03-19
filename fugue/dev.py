@@ -3,8 +3,10 @@ All modeuls for developing and extending Fugue
 """
 # flake8: noqa
 # pylint: disable-all
+
+from triad.collections.function_wrapper import AnnotatedParam
+
 from fugue.bag.bag import BagDisplay
-from fugue.collections.function_wrapper import AnnotatedParam, annotated_param
 from fugue.collections.partition import PartitionCursor, PartitionSpec
 from fugue.collections.sql import StructuredRawSQL, TempTableName
 from fugue.collections.yielded import PhysicalYielded, Yielded
@@ -12,6 +14,7 @@ from fugue.dataframe.function_wrapper import (
     DataFrameFunctionWrapper,
     DataFrameParam,
     LocalDataFrameParam,
+    fugue_annotated_param,
 )
 from fugue.dataset import DatasetDisplay
 from fugue.execution.execution_engine import (
@@ -29,10 +32,7 @@ from fugue.execution.factory import (
     register_execution_engine,
     register_sql_engine,
 )
-from fugue.execution.native_execution_engine import (
-    PandasMapEngine,
-    QPDPandasEngine,
-)
+from fugue.execution.native_execution_engine import PandasMapEngine, QPDPandasEngine
 from fugue.rpc import (
     EmptyRPCHandler,
     RPCClient,

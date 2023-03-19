@@ -8,7 +8,7 @@ from fugue import DataFrame, register_execution_engine
 from fugue.dev import (
     DataFrameParam,
     ExecutionEngineParam,
-    annotated_param,
+    fugue_annotated_param,
     is_pandas_or,
 )
 from fugue.plugins import as_fugue_dataset, infer_execution_engine
@@ -44,12 +44,12 @@ def _register_engines() -> None:
     )
 
 
-@annotated_param(DaskExecutionEngine)
+@fugue_annotated_param(DaskExecutionEngine)
 class _DaskExecutionEngineParam(ExecutionEngineParam):
     pass
 
 
-@annotated_param(dd.DataFrame)
+@fugue_annotated_param(dd.DataFrame)
 class _DaskDataFrameParam(DataFrameParam):
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         assert isinstance(ctx, DaskExecutionEngine)

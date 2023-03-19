@@ -7,7 +7,7 @@ from fugue import DataFrame, register_execution_engine
 from fugue.dev import (
     DataFrameParam,
     ExecutionEngineParam,
-    annotated_param,
+    fugue_annotated_param,
     is_pandas_or,
 )
 from fugue.plugins import as_fugue_dataset, infer_execution_engine
@@ -34,12 +34,12 @@ def _register_engines() -> None:
     )
 
 
-@annotated_param(RayExecutionEngine)
+@fugue_annotated_param(RayExecutionEngine)
 class _RayExecutionEngineParam(ExecutionEngineParam):
     pass
 
 
-@annotated_param(rd.Dataset)
+@fugue_annotated_param(rd.Dataset)
 class _RayDatasetParam(DataFrameParam):
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         assert isinstance(ctx, RayExecutionEngine)

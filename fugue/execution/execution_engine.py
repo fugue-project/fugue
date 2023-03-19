@@ -20,12 +20,12 @@ from uuid import uuid4
 
 from triad import ParamDict, Schema, SerializableRLock, assert_or_throw, to_uuid
 from triad.collections.fs import FileSystem
+from triad.collections.function_wrapper import AnnotatedParam
 from triad.exceptions import InvalidOperationError
 from triad.utils.convert import to_size
 from triad.utils.string import validate_triad_var_name
 
 from fugue.bag import Bag, LocalBag
-from fugue.collections.function_wrapper import AnnotatedParam, annotated_param
 from fugue.collections.partition import (
     BagPartitionCursor,
     PartitionCursor,
@@ -42,7 +42,7 @@ from fugue.column import (
     is_agg,
 )
 from fugue.constants import _FUGUE_GLOBAL_CONF, FUGUE_SQL_DEFAULT_DIALECT
-from fugue.dataframe import AnyDataFrame, DataFrame, DataFrames
+from fugue.dataframe import AnyDataFrame, DataFrame, DataFrames, fugue_annotated_param
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
@@ -1304,7 +1304,7 @@ class ExecutionEngine(FugueEngineBase):
         return res
 
 
-@annotated_param(ExecutionEngine, "e", child_can_reuse_code=True)
+@fugue_annotated_param(ExecutionEngine, "e", child_can_reuse_code=True)
 class ExecutionEngineParam(AnnotatedParam):
     def __init__(
         self,

@@ -11,7 +11,7 @@ from fugue import (
     IterableArrowDataFrame,
     LocalDataFrameIterableDataFrame,
 )
-from fugue.dev import LocalDataFrameParam, annotated_param
+from fugue.dev import LocalDataFrameParam, fugue_annotated_param
 from .polars_dataframe import PolarsDataFrame
 from fugue.plugins import as_fugue_dataset
 
@@ -21,7 +21,7 @@ def _pl_as_fugue_df(df: pl.DataFrame, **kwargs: Any) -> PolarsDataFrame:
     return PolarsDataFrame(df, **kwargs)
 
 
-@annotated_param(pl.DataFrame)
+@fugue_annotated_param(pl.DataFrame)
 class _PolarsParam(LocalDataFrameParam):
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         return pl.from_arrow(df.as_arrow())
@@ -37,7 +37,7 @@ class _PolarsParam(LocalDataFrameParam):
         return "pyarrow"
 
 
-@annotated_param(
+@fugue_annotated_param(
     Iterable[pl.DataFrame],
     matcher=lambda x: x == Iterable[pl.DataFrame] or x == Iterator[pl.DataFrame],
 )

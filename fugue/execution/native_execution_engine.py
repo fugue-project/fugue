@@ -11,7 +11,6 @@ from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 
 from fugue._utils.io import load_df, save_df
-from fugue.collections.function_wrapper import annotated_param
 from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
@@ -25,6 +24,7 @@ from fugue.dataframe import (
     LocalBoundedDataFrame,
     LocalDataFrame,
     PandasDataFrame,
+    fugue_annotated_param,
     to_local_bounded_df,
 )
 from fugue.dataframe.utils import get_join_schemas, to_local_df
@@ -378,7 +378,7 @@ class NativeExecutionEngine(ExecutionEngine):
         save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
 
 
-@annotated_param(NativeExecutionEngine)
+@fugue_annotated_param(NativeExecutionEngine)
 class _NativeExecutionEngineParam(ExecutionEngineParam):
     pass
 

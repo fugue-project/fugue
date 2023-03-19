@@ -1,6 +1,5 @@
 # flake8: noqa
 # pylint: disable-all
-from fugue.collections.function_wrapper import annotated_param
 from fugue.collections.sql import transpile_sql
 from fugue.dataframe import (
     alter_columns,
@@ -10,6 +9,7 @@ from fugue.dataframe import (
     as_dict_iterable,
     as_pandas,
     drop_columns,
+    fugue_annotated_param,
     get_column_names,
     get_schema,
     head,
