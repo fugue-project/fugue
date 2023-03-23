@@ -148,6 +148,7 @@ It also has the following installation extras:
 *   **dask**: to support Dask as the ExecutionEngine.
 *   **ray**: to support Ray as the ExecutionEngine.
 *   **duckdb**: to support DuckDB as the ExecutionEngine, read [details](https://fugue-tutorials.readthedocs.io/tutorials/integrations/backends/duckdb.html).
+*   **polars**: to support Polars DataFrames and extensions using Polars.
 *   **ibis**: to enable Ibis for Fugue workflows, read [details](https://fugue-tutorials.readthedocs.io/tutorials/integrations/backends/ibis.html).
 *   **cpp_sql_parser**: to enable the CPP antlr parser for Fugue SQL. It can be 50+ times faster than the pure Python parser. For the main Python versions and platforms, there is already pre-built binaries, but for the remaining, it needs a C++ compiler to build on the fly.
 
@@ -201,6 +202,7 @@ By being an abstraction layer, Fugue can be used with a lot of other open-source
 Python backends:
 
 *   [Pandas](https://github.com/pandas-dev/pandas)
+*   [Polars](https://www.pola.rs) (DataFrames only)
 *   [Spark](https://github.com/apache/spark)
 *   [Dask](https://github.com/dask/dask)
 *   [Ray](http://github.com/ray-project/ray)
@@ -223,6 +225,13 @@ Fugue is available as a backend or can integrate with the following projects:
 *   [Prefect](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ecosystem/prefect.html) - workflow orchestration
 *   [Pandera](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ecosystem/pandera.html) - data validation
 
+Registered 3rd party extensions (majorly for Fugue SQL) include:
+
+*   [Pandas plot](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.plot.html) - visualize data using matplotlib or plotly
+*   [Seaborn](https://seaborn.pydata.org/api.html) - visualize data using seaborn
+*   [WhyLogs](https://whylogs.readthedocs.io/en/latest/examples/integrations/Fugue_Profiling.html?highlight=fugue) - visualize data profiling
+*   [Vizzu](https://github.com/vizzuhq/ipyvizzu) - visualize data using ipyvizzu
+
 ## Community and Contributing
 
 Feel free to message us on [Slack](http://slack.fugue.ai). We also have [contributing instructions](CONTRIBUTING.md).
@@ -237,6 +246,7 @@ Feel free to message us on [Slack](http://slack.fugue.ai). We also have [contrib
 *   [Productionizing Data Science at Interos, Inc. (LinkedIn post by Anthony Holten)](https://www.linkedin.com/posts/anthony-holten_pandas-spark-dask-activity-7022628193983459328-QvcF)
 
 *   [Multiple Time Series Forecasting with Fugue & Nixtla at Bain & Company(LinkedIn post by Fahad Akbar)](https://www.linkedin.com/posts/fahadakbar_fugue-datascience-forecasting-activity-7041119034813124608-u08q?utm_source=share&utm_medium=member_desktop)
+
 ## Further Resources
 
 View some of our latest conferences presentations and content. For a more complete list, check the [Content](https://fugue-tutorials.readthedocs.io/tutorials/resources/content.html) page in the tutorials.
