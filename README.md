@@ -7,9 +7,9 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/4fa5f2f53e6f48aaa1218a89f4808b91)](https://www.codacy.com/gh/fugue-project/fugue/dashboard?utm_source=github.com&utm_medium=referral&utm_content=fugue-project/fugue&utm_campaign=Badge_Grade)
 [![Downloads](https://pepy.tech/badge/fugue)](https://pepy.tech/project/fugue)
 
-| Tutorials | API Documentation | Chat with us on slack! |
-| --- | --- | --- |
-| [![Jupyter Book Badge](https://jupyterbook.org/badge.svg)](https://fugue-tutorials.readthedocs.io/) | [![Doc](https://readthedocs.org/projects/fugue/badge)](https://fugue.readthedocs.org)  | [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](http://slack.fugue.ai) |
+| Tutorials                                                                                           | API Documentation                                                                     | Chat with us on slack!                                                                                                   |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [![Jupyter Book Badge](https://jupyterbook.org/badge.svg)](https://fugue-tutorials.readthedocs.io/) | [![Doc](https://readthedocs.org/projects/fugue/badge)](https://fugue.readthedocs.org) | [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](http://slack.fugue.ai) |
 
 
 **Fugue is a unified interface for distributed computing that lets users execute Python, Pandas, and SQL code on Spark, Dask, and Ray with minimal rewrites**.
@@ -245,6 +245,7 @@ Feel free to message us on [Slack](http://slack.fugue.ai). We also have [contrib
 
 *   [Productionizing Data Science at Interos, Inc. (LinkedIn post by Anthony Holten)](https://www.linkedin.com/posts/anthony-holten_pandas-spark-dask-activity-7022628193983459328-QvcF)
 
+*   [Multiple Time Series Forecasting with Fugue & Nixtla at Bain & Company(LinkedIn post by Fahad Akbar)](https://www.linkedin.com/posts/fahadakbar_fugue-datascience-forecasting-activity-7041119034813124608-u08q?utm_source=share&utm_medium=member_desktop)
 ## Further Resources
 
 View some of our latest conferences presentations and content. For a more complete list, check the [Content](https://fugue-tutorials.readthedocs.io/tutorials/resources/content.html) page in the tutorials.
