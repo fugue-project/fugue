@@ -6,7 +6,7 @@ from triad.utils.convert import to_type
 from fugue.collections.partition import PartitionCursor
 from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.utils import _df_eq, to_local_bounded_df
+from fugue.dataframe.utils import _df_eq
 from fugue.exceptions import FugueWorkflowError
 from fugue.execution.execution_engine import _generate_comap_empty_dfs
 from fugue.rpc import EmptyRPCHandler, to_rpc_handler
@@ -136,7 +136,7 @@ class _TransformerRunner(object):
     def run(self, cursor: PartitionCursor, df: LocalDataFrame) -> LocalDataFrame:
         self.transformer._cursor = cursor  # type: ignore
         try:
-            to_local_bounded_df(self.transformer.transform(df))
+            self.transformer.transform(df).as_local_bounded()
             return ArrayDataFrame([], self.transformer.output_schema)
         except self.ignore_errors:  # type: ignore
             return ArrayDataFrame([], self.transformer.output_schema)
@@ -160,7 +160,7 @@ class _CoTransformerRunner(object):
     def run(self, cursor: PartitionCursor, dfs: DataFrames) -> LocalDataFrame:
         self.transformer._cursor = cursor  # type: ignore
         try:
-            to_local_bounded_df(self.transformer.transform(dfs))
+            self.transformer.transform(dfs).as_local_bounded()
             return ArrayDataFrame([], self.transformer.output_schema)
         except self.ignore_errors:  # type: ignore
             return ArrayDataFrame([], self.transformer.output_schema)

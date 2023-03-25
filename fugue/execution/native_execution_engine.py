@@ -25,9 +25,9 @@ from fugue.dataframe import (
     LocalDataFrame,
     PandasDataFrame,
     fugue_annotated_param,
-    to_local_bounded_df,
 )
-from fugue.dataframe.utils import get_join_schemas, to_local_df
+from fugue.dataframe.dataframe import as_fugue_df
+from fugue.dataframe.utils import get_join_schemas
 
 from .execution_engine import (
     ExecutionEngine,
@@ -93,7 +93,7 @@ class PandasMapEngine(MapEngine):
         if on_init is not None:
             on_init(0, df)
         if len(partition_spec.partition_by) == 0:  # no partition
-            df = to_local_df(df)
+            df = df.as_local()
             cursor.set(lambda: df.peek_array(), 0, 0)
             output_df = map_func(cursor, df)
             if (
@@ -384,4 +384,6 @@ class _NativeExecutionEngineParam(ExecutionEngineParam):
 
 
 def _to_native_execution_engine_df(df: AnyDataFrame, schema: Any = None) -> DataFrame:
-    return to_local_bounded_df(df, schema)
+    if schema is None:
+        return as_fugue_df(df).as_local_bounded()
+    return as_fugue_df(df, schema=schema).as_local_bounded()

@@ -5,6 +5,7 @@ import polars as pl
 import ray
 from dask.distributed import Client
 from pyspark.sql import SparkSession
+import pandas as pd
 
 import fugue.api as fa
 
@@ -40,6 +41,11 @@ def test_transform_common():
         fdf = fa.transform(df, tr, schema="a:int,b:int", as_fugue=True)
         assert fdf.schema == "a:int,b:int"
         assert fdf.as_array() == []
+
+        df = pl.from_pandas(pd.DataFrame({"a": [0, 1]}))
+        fdf = fa.transform(df, tr, schema="a:int,b:int", as_fugue=True)
+        assert fdf.schema == "a:int,b:int"
+        assert fdf.as_array() == [[0, 1], [1, 1]]
 
 
 def test_transform_empty_result():

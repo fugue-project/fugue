@@ -8,8 +8,7 @@ from triad import FileSystem, Schema
 from triad.collections.schema import SchemaError
 from triad.exceptions import InvalidOperationError, NoneArgumentError
 
-from fugue import ArrayDataFrame, ArrowDataFrame, IterableDataFrame, PandasDataFrame
-from fugue.dataframe import to_local_bounded_df, to_local_df
+from fugue import ArrayDataFrame, IterableDataFrame, PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dataframe.utils import (
     _schema_eq,
@@ -22,46 +21,6 @@ from fugue.dataframe.utils import (
     serialize_df,
     unpickle_df,
 )
-
-
-def test_to_local_df():
-    df = ArrayDataFrame([[0, 1]], "a:int,b:int")
-    pdf = PandasDataFrame(df.as_pandas(), "a:int,b:int")
-    idf = IterableDataFrame([[0, 1]], "a:int,b:int")
-    assert to_local_df(df) is df
-    assert to_local_df(pdf) is pdf
-    assert to_local_df(idf) is idf
-    assert isinstance(to_local_df(df.native, "a:int,b:int"), ArrayDataFrame)
-    assert isinstance(to_local_df(pdf.native, "a:int,b:int"), PandasDataFrame)
-    assert isinstance(to_local_df(idf.native, "a:int,b:int"), IterableDataFrame)
-    raises(ValueError, lambda: to_local_df(123))
-
-    raises(NoneArgumentError, lambda: to_local_df(None))
-    raises(ValueError, lambda: to_local_df(df, "a:int,b:int"))
-
-
-def test_to_local_bounded_df():
-    df = ArrayDataFrame([[0, 1]], "a:int,b:int")
-    idf = IterableDataFrame([[0, 1]], "a:int,b:int")
-    adf = ArrowDataFrame(df.as_array(), "a:int,b:int")
-    assert to_local_bounded_df(df) is df
-    r = to_local_bounded_df(idf)
-    assert r is not idf
-    assert r.as_array() == [[0, 1]]
-    assert r.schema == "a:int,b:int"
-    r = to_local_bounded_df(adf.native)
-    assert isinstance(r, ArrowDataFrame)
-    assert r.as_array() == [[0, 1]]
-    assert r.schema == "a:int,b:int"
-
-    raises(ValueError, lambda: to_local_bounded_df(123))
-
-    def rows():
-        yield [0]
-        yield [1]
-
-    with raises(ValueError):
-        to_local_bounded_df(rows(), schema="a:int")
 
 
 def test_schema_eq():

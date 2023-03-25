@@ -6,7 +6,6 @@ from fugue.dataframe import (
     DataFrame,
     DataFrames,
     LocalDataFrame,
-    to_local_bounded_df,
 )
 from fugue.column import ColumnExpr, SelectColumns as ColumnsSelect
 from fugue.exceptions import FugueWorkflowError
@@ -334,7 +333,7 @@ class _TransformerRunner(object):
             return self.transformer.transform(df)
         else:
             try:
-                return to_local_bounded_df(self.transformer.transform(df))
+                return self.transformer.transform(df).as_local_bounded()
             except self.ignore_errors:  # type: ignore  # pylint: disable=E0712
                 return ArrayDataFrame([], self.transformer.output_schema)
 
@@ -364,7 +363,7 @@ class _CoTransformerRunner(object):
 
         else:
             try:
-                return to_local_bounded_df(self.transformer.transform(dfs))
+                return self.transformer.transform(dfs).as_local_bounded()
             except self.ignore_errors:  # type: ignore  # pylint: disable=E0712
                 return ArrayDataFrame([], self.transformer.output_schema)
 
