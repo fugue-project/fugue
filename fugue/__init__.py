@@ -26,7 +26,6 @@ from fugue.dataframe.dataframe_iterable_dataframe import (
 from fugue.dataframe.dataframes import DataFrames
 from fugue.dataframe.iterable_dataframe import IterableDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
-from fugue.dataframe.utils import to_local_bounded_df, to_local_df
 from fugue.dataset import (
     AnyDataset,
     Dataset,

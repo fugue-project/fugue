@@ -30,7 +30,6 @@ def convert_field(field: pa.Field) -> pa.Field:
     tp = convert_type(field.type)
     if tp == field.type:
         return field
-    print(field.type, tp)
     return pa.field(field.name, tp)
 
 

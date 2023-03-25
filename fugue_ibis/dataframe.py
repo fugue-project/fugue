@@ -5,12 +5,7 @@ import pandas as pd
 import pyarrow as pa
 from triad import Schema, assert_or_throw
 
-from fugue import (
-    DataFrame,
-    IterableDataFrame,
-    LocalBoundedDataFrame,
-    to_local_bounded_df,
-)
+from fugue import DataFrame, IterableDataFrame, LocalBoundedDataFrame
 from fugue.dataframe.dataframe import _input_schema
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from fugue.plugins import drop_columns, get_column_names, is_df, rename
@@ -153,7 +148,7 @@ class IbisDataFrame(DataFrame):
     ) -> LocalBoundedDataFrame:
         if columns is not None:
             return self[columns].head(n)
-        return to_local_bounded_df(self._to_local_df(self._table.head(n)))
+        return self._to_local_df(self._table.head(n)).as_local_bounded()
 
     def _alter_table_columns(self, table: IbisTable, new_schema: Schema) -> IbisTable:
         fields: Dict[str, Any] = {}

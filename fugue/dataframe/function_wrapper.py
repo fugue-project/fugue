@@ -34,7 +34,6 @@ from .dataframe_iterable_dataframe import (
 from .dataframes import DataFrames
 from .iterable_dataframe import IterableDataFrame
 from .pandas_dataframe import PandasDataFrame
-from .utils import to_local_df
 
 
 @function_wrapper(FUGUE_ENTRYPOINT)
@@ -176,7 +175,7 @@ class DataFrameParam(_DataFrameParamBase):
 @fugue_annotated_param(LocalDataFrame, "l", child_can_reuse_code=True)
 class LocalDataFrameParam(DataFrameParam):
     def to_input_data(self, df: DataFrame, ctx: Any) -> LocalDataFrame:
-        return to_local_df(df)
+        return df.as_local()
 
     def to_output_df(self, output: LocalDataFrame, schema: Any, ctx: Any) -> DataFrame:
         assert_or_throw(
@@ -256,7 +255,7 @@ class _EmptyAwareIterableListParam(_LocalNoSchemaDataFrameParam):
 class _ListDictParam(_LocalNoSchemaDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> List[Dict[str, Any]]:
-        return list(to_local_df(df).as_dict_iterable())
+        return list(df.as_local().as_dict_iterable())
 
     @no_type_check
     def to_output_df(

@@ -13,11 +13,9 @@ from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.assertion import assert_or_throw as aot
 
-from .api import get_column_names, normalize_column_names, rename
+from .api import get_column_names, normalize_column_names, rename, as_fugue_df
 from .array_dataframe import ArrayDataFrame
-from .arrow_dataframe import ArrowDataFrame
-from .dataframe import DataFrame, LocalBoundedDataFrame, LocalDataFrame
-from .iterable_dataframe import IterableDataFrame
+from .dataframe import DataFrame, LocalBoundedDataFrame
 from .pandas_dataframe import PandasDataFrame
 
 # For backward compatibility, TODO: remove!
@@ -74,8 +72,11 @@ def _df_eq(
     :param throw: if to throw error if not equal, defaults to False
     :return: if they equal
     """
-    df1 = to_local_bounded_df(df)
-    df2 = to_local_bounded_df(data, schema)
+    df1 = as_fugue_df(df).as_local_bounded()
+    if schema is not None:
+        df2 = as_fugue_df(data, schema=schema).as_local_bounded()
+    else:
+        df2 = as_fugue_df(data).as_local_bounded()
     try:
         assert (
             df1.count() == df2.count()
@@ -108,84 +109,9 @@ def _df_eq(
         return False
 
 
-def to_local_df(df: Any, schema: Any = None) -> LocalDataFrame:
-    """Convert a data structure to :class:`~fugue.dataframe.dataframe.LocalDataFrame`
-
-    :param df: :class:`~fugue.dataframe.dataframe.DataFrame`, pandas DataFramme and
-      list or iterable of arrays
-    :param schema: |SchemaLikeObject|, defaults to None, it should not be set for
-      :class:`~fugue.dataframe.dataframe.DataFrame` type
-    :raises ValueError: if ``df`` is :class:`~fugue.dataframe.dataframe.DataFrame`
-      but you set ``schema``
-    :raises TypeError: if ``df`` is not compatible
-    :return: the dataframe itself if it's
-      :class:`~fugue.dataframe.dataframe.LocalDataFrame` else a converted one
-
-    .. admonition:: Examples
-
-        >>> a = to_local_df([[0,'a'],[1,'b']],"a:int,b:str")
-        >>> assert to_local_df(a) is a
-        >>> to_local_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
-    """
-    assert_arg_not_none(df, "df")
-    if isinstance(df, DataFrame):
-        aot(
-            schema is None,
-            ValueError("schema and metadata must be None when df is a DataFrame"),
-        )
-        return df.as_local()
-    if isinstance(df, pd.DataFrame):
-        return PandasDataFrame(df, schema)
-    if isinstance(df, pa.Table):
-        return ArrowDataFrame(df, schema)
-    if isinstance(df, List):
-        return ArrayDataFrame(df, schema)
-    if isinstance(df, Iterable):
-        return IterableDataFrame(df, schema)
-    raise ValueError(f"{df} cannot convert to a LocalDataFrame")
-
-
-def to_local_bounded_df(df: Any, schema: Any = None) -> LocalBoundedDataFrame:
-    """Convert a data structure to
-    :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`
-
-    :param df: :class:`~fugue.dataframe.dataframe.DataFrame`, pandas DataFramme and
-      list or iterable of arrays
-    :param schema: |SchemaLikeObject|, defaults to None, it should not be set for
-      :class:`~fugue.dataframe.dataframe.DataFrame` type
-    :raises ValueError: if ``df`` is :class:`~fugue.dataframe.dataframe.DataFrame`
-      but you set ``schema``
-    :raises TypeError: if ``df`` is not compatible
-    :return: the dataframe itself if it's
-      :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame` else a converted one
-
-    .. admonition:: Examples
-
-        >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
-        >>> assert isinstance(to_local_bounded_df(a), LocalBoundedDataFrame)
-        >>> to_local_bounded_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
-
-    .. note::
-
-        Compared to :func:`.to_local_df`, this function makes sure the dataframe is also
-        bounded, so :class:`~fugue.dataframe.iterable_dataframe.IterableDataFrame` will
-        be converted although it's local.
-    """
-    if isinstance(df, DataFrame):
-        aot(
-            schema is None,
-            ValueError("schema and metadata must be None when df is a DataFrame"),
-        )
-        return df.as_local_bounded()
-    df = to_local_df(df, schema)
-    if isinstance(df, LocalBoundedDataFrame):
-        return df
-    raise ValueError(f"{df} cannot convert to a LocalBoundedDataFrame")
-
-
 def pickle_df(df: DataFrame) -> bytes:
     """Pickles a dataframe to bytes array. It firstly converts the dataframe
-    using :func:`.to_local_bounded_df`, and then serialize the underlying data.
+    local bounded, and then serialize the underlying data.
 
     :param df: input DataFrame
     :return: pickled binary data
@@ -195,7 +121,7 @@ def pickle_df(df: DataFrame) -> bytes:
         Be careful to use on large dataframes or non-local, un-materialized dataframes,
         it can be slow. You should always use :func:`.unpickle_df` to deserialize.
     """
-    df = to_local_bounded_df(df)
+    df = df.as_local_bounded()
     o: List[Any] = [df.schema]
     if isinstance(df, PandasDataFrame):
         o.append("p")
