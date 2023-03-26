@@ -18,7 +18,7 @@ from fugue.collections.partition import (
     PartitionSpec,
     parse_presort_exp,
 )
-from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
+from fugue.constants import KEYWORD_PARALLELISM, KEYWORD_ROWCOUNT
 from fugue.dataframe import (
     AnyDataFrame,
     DataFrame,
@@ -214,7 +214,7 @@ class DaskExecutionEngine(ExecutionEngine):
         p = partition_spec.get_num_partitions(
             **{
                 KEYWORD_ROWCOUNT: lambda: df.persist().count(),  # type: ignore
-                KEYWORD_CORECOUNT: lambda: self.get_current_parallelism(),
+                KEYWORD_PARALLELISM: lambda: self.get_current_parallelism(),
             }
         )
         if p > 0:

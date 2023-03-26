@@ -15,7 +15,7 @@ from fugue import (
     PartitionCursor,
     PartitionSpec,
 )
-from fugue.constants import KEYWORD_ROWCOUNT
+from fugue.constants import KEYWORD_ROWCOUNT, KEYWORD_PARALLELISM
 from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckExecutionEngine
@@ -235,7 +235,10 @@ class RayExecutionEngine(DuckExecutionEngine):
 
         rdf = self._to_ray_df(df)
 
-        num_funcs = {KEYWORD_ROWCOUNT: lambda: _persist_and_count(rdf)}
+        num_funcs = {
+            KEYWORD_ROWCOUNT: lambda: _persist_and_count(rdf),
+            KEYWORD_PARALLELISM: lambda: self.get_current_parallelism(),
+        }
         num = partition_spec.get_num_partitions(**num_funcs)
         pdf = rdf.native
 
