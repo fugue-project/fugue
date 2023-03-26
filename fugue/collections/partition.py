@@ -260,11 +260,14 @@ class PartitionSpec(object):
         """Get deterministic unique id of this object"""
         return to_uuid(self.jsondict)
 
-    def get_sorts(self, schema: Schema) -> IndexedOrderedDict[str, bool]:
+    def get_sorts(
+        self, schema: Schema, with_partition_keys: bool = True
+    ) -> IndexedOrderedDict[str, bool]:
         """Get keys for sorting in a partition, it's the combination of partition
         keys plus the presort keys
 
         :param schema: the dataframe schema this partition spec to operate on
+        :param with_partition_keys: whether to include partition keys
         :return: an ordered dictionary of key, order pairs
 
         .. admonition:: Examples
@@ -274,9 +277,10 @@ class PartitionSpec(object):
             >>> assert p.get_sorts(schema) == {"a":True, "b":True, "c": False}
         """
         d: IndexedOrderedDict[str, bool] = IndexedOrderedDict()
-        for p in self.partition_by:
-            aot(p in schema, lambda: KeyError(f"{p} not in {schema}"))
-            d[p] = True
+        if with_partition_keys:
+            for p in self.partition_by:
+                aot(p in schema, lambda: KeyError(f"{p} not in {schema}"))
+                d[p] = True
         for p, v in self.presort.items():
             aot(p in schema, lambda: KeyError(f"{p} not in {schema}"))
             d[p] = v

@@ -148,6 +148,9 @@ def test_partition_spec():
     assert dict(a=True, d=True, e=False) == p.get_sorts(
         Schema("a:int,b:int,d:int,e:int")
     )
+    assert dict(d=True, e=False) == p.get_sorts(
+        Schema("a:int,b:int,d:int,e:int"), with_partition_keys=False
+    )
     p = PartitionSpec(dict(partition_by=["e", "a"], presort="d asc"))
     assert p.get_key_schema(Schema("a:int,b:int,d:int,e:int")) == "e:int,a:int"
 

@@ -17,6 +17,7 @@ from fugue.plugins import (
     rename,
 )
 
+from ._constants import _ZERO_COPY
 from ._utils.dataframe import build_empty, get_dataset_format
 
 
@@ -140,7 +141,10 @@ class RayDataFrame(DataFrame):
         if cols == self.columns:
             return self
         rdf = self.native.map_batches(
-            lambda b: b.select(cols), batch_format="pyarrow", **self._remote_args()
+            lambda b: b.select(cols),
+            batch_format="pyarrow",
+            **_ZERO_COPY,
+            **self._remote_args(),
         )
         return RayDataFrame(rdf, self.schema.extract(cols), internal_schema=True)
 
@@ -174,6 +178,7 @@ class RayDataFrame(DataFrame):
         rdf = self.native.map_batches(
             lambda b: b.rename_columns(new_cols),
             batch_format="pyarrow",
+            **_ZERO_COPY,
             **self._remote_args(),
         )
         return RayDataFrame(rdf, schema=new_schema, internal_schema=True)
@@ -188,7 +193,7 @@ class RayDataFrame(DataFrame):
         if self.schema == new_schema:
             return self
         rdf = self.native.map_batches(
-            _alter, batch_format="pyarrow", **self._remote_args()
+            _alter, batch_format="pyarrow", **_ZERO_COPY, **self._remote_args()
         )
         return RayDataFrame(rdf, schema=new_schema, internal_schema=True)
 
@@ -231,7 +236,9 @@ class RayDataFrame(DataFrame):
             return ArrowDataFrame(table).alter_columns(schema).native  # type: ignore
 
         return (
-            rdf.map_batches(_alter, batch_format="pyarrow", **self._remote_args()),
+            rdf.map_batches(
+                _alter, batch_format="pyarrow", **_ZERO_COPY, **self._remote_args()
+            ),
             schema,
         )
 
@@ -273,7 +280,9 @@ def _rename_ray_dataframe(df: rd.Dataset, columns: Dict[str, Any]) -> rd.Dataset
     if len(missing) > 0:
         raise FugueDataFrameOperationError("found nonexistent columns: {missing}")
     new_cols = [columns.get(name, name) for name in cols]
-    return df.map_batches(lambda b: b.rename_columns(new_cols), batch_format="pyarrow")
+    return df.map_batches(
+        lambda b: b.rename_columns(new_cols), batch_format="pyarrow", **_ZERO_COPY
+    )
 
 
 def _get_arrow_tables(df: rd.Dataset) -> Iterable[pa.Table]:

@@ -1,10 +1,14 @@
 import pickle
-from typing import List, Optional, Tuple, Dict, Any
+from typing import Any, Dict, List, Optional, Tuple
 
+import pandas as pd
 import pyarrow as pa
 import ray.data as rd
-from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from triad import Schema
+
+from fugue.dataframe.arrow_dataframe import _build_empty_arrow
+
+from .._constants import _ZERO_COPY
 
 _RAY_NULL_REPR = "__RAY_NULL__"
 
@@ -50,7 +54,7 @@ def add_partition_key(
             )
 
         return df.map_batches(
-            add_simple_key, batch_format="pyarrow", **ray_remote_args
+            add_simple_key, batch_format="pyarrow", **_ZERO_COPY, **ray_remote_args
         ), input_schema + (
             output_key,
             str,
@@ -67,8 +71,29 @@ def add_partition_key(
             return fdf.append_column(output_key, sarr)
 
         return df.map_batches(
-            add_key, batch_format="pyarrow", **ray_remote_args
+            add_key, batch_format="pyarrow", **_ZERO_COPY, **ray_remote_args
         ), input_schema + (
             output_key,
             pa.binary(),
         )
+
+
+def add_coarse_partition_key(
+    df: rd.Dataset,
+    keys: List[str],
+    output_key: str,
+    bucket: int,
+) -> rd.Dataset:
+    ray_remote_args: Dict[str, Any] = {"num_cpus": 1}
+
+    def add_coarse_key(arrow_df: pa.Table) -> pa.Table:  # pragma: no cover
+        hdf = arrow_df.select(keys).to_pandas()
+        _hash = pd.util.hash_pandas_object(hdf, index=False).mod(bucket)
+        return arrow_df.append_column(output_key, pa.Array.from_pandas(_hash))
+
+    return df.map_batches(
+        add_coarse_key,
+        batch_format="pyarrow",
+        **_ZERO_COPY,
+        **ray_remote_args,
+    )
