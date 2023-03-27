@@ -231,7 +231,7 @@ def test_get_num_partitions():
     assert 6 == p.get_num_partitions(x=lambda: 1, Y=lambda: 2)
     raises(Exception, lambda: p.get_num_partitions(x=lambda: 1))
 
-    p = PartitionSpec(dict(partition_by=["b", "a"], num="min(ROWCOUNT,PARALLELISM)"))
+    p = PartitionSpec(dict(partition_by=["b", "a"], num="min(ROWCOUNT,CONCURRENCY)"))
     assert 90 == p.get_num_partitions(
         **{KEYWORD_ROWCOUNT: lambda: 100, KEYWORD_PARALLELISM: lambda: 90}
     )
