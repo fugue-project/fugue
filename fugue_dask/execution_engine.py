@@ -3,6 +3,7 @@ import os
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 import dask.dataframe as dd
+import pandas as pd
 from distributed import Client
 from qpd_dask import run_sql_on_dask
 from triad.collections import Schema
@@ -33,6 +34,8 @@ from fugue_dask._constants import FUGUE_DASK_DEFAULT_CONF
 from fugue_dask._io import load_df, save_df
 from fugue_dask._utils import DASK_UTILS, DaskUtils
 from fugue_dask.dataframe import DaskDataFrame
+
+_DASK_PARTITION_KEY = "__dask_partition_key__"
 
 
 class QPDDaskEngine(SQLEngine):
@@ -74,9 +77,13 @@ class DaskMapEngine(MapEngine):
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
         map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
+        is_corase = partition_spec.algo == "coarse"
         presort = partition_spec.presort
         presort_keys = list(presort.keys())
         presort_asc = list(presort.values())
+        if is_corase and len(partition_spec.partition_by) > 0:
+            presort_keys = partition_spec.partition_by + presort_keys
+            presort_asc = [True] * len(partition_spec.partition_by) + presort_asc
         output_schema = Schema(output_schema)
         input_schema = df.schema
         cursor = partition_spec.get_cursor(input_schema, 0)
@@ -88,9 +95,11 @@ class DaskMapEngine(MapEngine):
             )
         )
 
-        def _map(pdf: Any) -> dd.DataFrame:
+        def _map(pdf: Any) -> pd.DataFrame:
             if pdf.shape[0] == 0:
                 return PandasDataFrame([], output_schema).as_pandas()
+            if is_corase:
+                pdf = pdf.drop(columns=[_DASK_PARTITION_KEY])
             if len(presort_keys) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             input_df = PandasDataFrame(
@@ -100,7 +109,7 @@ class DaskMapEngine(MapEngine):
                 on_init_once(0, input_df)
             cursor.set(lambda: input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
-            return output_df.as_pandas()
+            return output_df.as_pandas()[output_schema.names]
 
         df = self.to_df(df)
         meta = self.execution_engine.pl_utils.safe_to_pandas_dtype(  # type: ignore
@@ -113,8 +122,28 @@ class DaskMapEngine(MapEngine):
             df = self.execution_engine.repartition(
                 df, PartitionSpec(num=partition_spec.num_partitions)
             )
+            if is_corase:
+                input_num_partitions = df.num_partitions
+                _utils = self.execution_engine.pl_utils  # type: ignore
+                input_meta = _utils.safe_to_pandas_dtype(
+                    (input_schema + (_DASK_PARTITION_KEY, "uint64")).pa_schema
+                )
+                tddf = df.native.map_partitions(
+                    lambda pdf: pdf.assign(
+                        **{
+                            _DASK_PARTITION_KEY: pd.util.hash_pandas_object(
+                                pdf[partition_spec.partition_by], index=False
+                            ).mod(input_num_partitions)
+                        }
+                    ),
+                    meta=input_meta,
+                )
+                keys = [_DASK_PARTITION_KEY]
+            else:
+                tddf = df.native
+                keys = partition_spec.partition_by
             result = self.execution_engine.pl_utils.safe_groupby_apply(  # type: ignore
-                df.native, partition_spec.partition_by, _map, meta=meta  # type: ignore
+                tddf, keys, _map, meta=meta  # type: ignore
             )
         return DaskDataFrame(result, output_schema)
 
