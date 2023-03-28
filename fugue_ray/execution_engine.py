@@ -93,7 +93,7 @@ class RayMapEngine(MapEngine):
             if adf.shape[0] == 0:
                 return _build_empty_arrow(output_schema)
             adf = adf.remove_column(len(input_schema))  # remove partition key
-            if len(presort_tuples) > 0:
+            if len(partition_spec.presort) > 0:
                 if pa.__version__ < "7":  # pragma: no cover
                     idx = pa.compute.sort_indices(
                         adf, options=pa.compute.SortOptions(presort_tuples)

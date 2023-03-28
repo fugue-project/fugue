@@ -77,13 +77,10 @@ class DaskMapEngine(MapEngine):
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
         map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
-        is_corase = partition_spec.algo == "coarse"
-        presort = partition_spec.presort
+        is_coarse = partition_spec.algo == "coarse"
+        presort = partition_spec.get_sorts(df.schema, with_partition_keys=is_coarse)
         presort_keys = list(presort.keys())
         presort_asc = list(presort.values())
-        if is_corase and len(partition_spec.partition_by) > 0:
-            presort_keys = partition_spec.partition_by + presort_keys
-            presort_asc = [True] * len(partition_spec.partition_by) + presort_asc
         output_schema = Schema(output_schema)
         input_schema = df.schema
         cursor = partition_spec.get_cursor(input_schema, 0)
@@ -98,9 +95,9 @@ class DaskMapEngine(MapEngine):
         def _map(pdf: Any) -> pd.DataFrame:
             if pdf.shape[0] == 0:
                 return PandasDataFrame([], output_schema).as_pandas()
-            if is_corase:
+            if is_coarse:
                 pdf = pdf.drop(columns=[_DASK_PARTITION_KEY])
-            if len(presort_keys) > 0:
+            if len(partition_spec.presort) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             input_df = PandasDataFrame(
                 pdf.reset_index(drop=True), input_schema, pandas_df_wrapper=True
@@ -122,7 +119,7 @@ class DaskMapEngine(MapEngine):
             df = self.execution_engine.repartition(
                 df, PartitionSpec(num=partition_spec.num_partitions)
             )
-            if is_corase:
+            if is_coarse:
                 input_num_partitions = df.num_partitions
                 _utils = self.execution_engine.pl_utils  # type: ignore
                 input_meta = _utils.safe_to_pandas_dtype(

@@ -195,7 +195,7 @@ class SparkMapEngine(MapEngine):
         def _udf_pandas(pdf: Any) -> pd.DataFrame:  # pragma: no cover
             if pdf.shape[0] == 0:
                 return PandasDataFrame([], output_schema).as_pandas()
-            if len(presort_keys) > 0:
+            if len(partition_spec.presort) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             input_df = PandasDataFrame(
                 pdf.reset_index(drop=True), input_schema, pandas_df_wrapper=True

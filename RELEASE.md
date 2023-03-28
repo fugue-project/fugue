@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.8.3
+
+-   [449](https://github.com/fugue-project/fugue/issues/449) Add coarse partitioning concept
+-   [452](https://github.com/fugue-project/fugue/issues/452) Add as_fugue_engine_df
+
 ## 0.8.2
 
 -   [430](https://github.com/fugue-project/fugue/issues/430) Support Polars DataFrames

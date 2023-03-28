@@ -86,6 +86,11 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         res = a.as_array(type_safe=True)
         assert res[0][0] == {"a": "b"}
 
+        pdf = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        pdf = pdf[pdf.a < 1]
+        a = e.to_df(pdf)
+        assert fa.get_schema(a) == "a:long,b:long"
+
     def test_persist(self):
         e = self.engine
 

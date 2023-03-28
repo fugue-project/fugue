@@ -89,13 +89,30 @@ class PandasMapEngine(MapEngine):
         #         self,
         #         partition_spec.num_partitions,
         #     )
+        is_coarse = partition_spec.algo == "coarse"
+        presort = partition_spec.get_sorts(df.schema, with_partition_keys=is_coarse)
+        presort_keys = list(presort.keys())
+        presort_asc = list(presort.values())
+        output_schema = Schema(output_schema)
         cursor = partition_spec.get_cursor(df.schema, 0)
         if on_init is not None:
             on_init(0, df)
-        if len(partition_spec.partition_by) == 0:  # no partition
-            df = df.as_local()
-            cursor.set(lambda: df.peek_array(), 0, 0)
-            output_df = map_func(cursor, df)
+        if (
+            len(partition_spec.partition_by) == 0 or partition_spec.algo == "coarse"
+        ):  # no partition
+            if len(partition_spec.presort) > 0:
+                pdf = (
+                    df.as_pandas()
+                    .sort_values(presort_keys, ascending=presort_asc)
+                    .reset_index(drop=True)
+                )
+                input_df = PandasDataFrame(pdf, df.schema, pandas_df_wrapper=True)
+                cursor.set(lambda: input_df.peek_array(), cursor.partition_no + 1, 0)
+                output_df = map_func(cursor, input_df)
+            else:
+                df = df.as_local()
+                cursor.set(lambda: df.peek_array(), 0, 0)
+                output_df = map_func(cursor, df)
             if (
                 isinstance(output_df, PandasDataFrame)
                 and output_df.schema != output_schema
@@ -107,13 +124,9 @@ class PandasMapEngine(MapEngine):
                 f"mismatches given {output_schema}",
             )
             return self.to_df(output_df)  # type: ignore
-        presort = partition_spec.presort
-        presort_keys = list(presort.keys())
-        presort_asc = list(presort.values())
-        output_schema = Schema(output_schema)
 
         def _map(pdf: pd.DataFrame) -> pd.DataFrame:
-            if len(presort_keys) > 0:
+            if len(partition_spec.presort) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc).reset_index(
                     drop=True
                 )
@@ -384,6 +397,5 @@ class _NativeExecutionEngineParam(ExecutionEngineParam):
 
 
 def _to_native_execution_engine_df(df: AnyDataFrame, schema: Any = None) -> DataFrame:
-    if schema is None:
-        return as_fugue_df(df).as_local_bounded()
-    return as_fugue_df(df, schema=schema).as_local_bounded()
+    fdf = as_fugue_df(df) if schema is None else as_fugue_df(df, schema=schema)
+    return fdf.as_local_bounded()
