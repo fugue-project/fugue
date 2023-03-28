@@ -72,20 +72,20 @@ class ExecutionEngineTests(object):
             )
             # all engines should accept these types of inputs
             # should take fugue.DataFrame
-            df_eq(o, e.to_df(o), throw=True)
+            df_eq(o, fa.as_fugue_engine_df(e, o), throw=True)
             # should take array, shema
             df_eq(
                 o,
-                e.to_df([[1.1, 2.2], [3.3, 4.4]], "a:double,b:double"),
+                fa.as_fugue_engine_df(e, [[1.1, 2.2], [3.3, 4.4]], "a:double,b:double"),
                 throw=True,
             )
             # should take pandas dataframe
             pdf = pd.DataFrame([[1.1, 2.2], [3.3, 4.4]], columns=["a", "b"])
-            df_eq(o, e.to_df(pdf), throw=True)
+            df_eq(o, fa.as_fugue_engine_df(e, pdf), throw=True)
 
             # should convert string to datetime in to_df
             df_eq(
-                e.to_df([["2020-01-01"]], "a:datetime"),
+                fa.as_fugue_engine_df(e, [["2020-01-01"]], "a:datetime"),
                 [[datetime(2020, 1, 1)]],
                 "a:datetime",
                 throw=True,
@@ -95,7 +95,7 @@ class ExecutionEngineTests(object):
             o = ArrayDataFrame([], "a:double,b:str")
             pdf = pd.DataFrame([[0.1, "a"]], columns=["a", "b"])
             pdf = pdf[pdf.a < 0]
-            df_eq(o, e.to_df(pdf), throw=True)
+            df_eq(o, fa.as_fugue_engine_df(e, pdf), throw=True)
 
         def test_filter(self):
             a = ArrayDataFrame(
@@ -230,7 +230,7 @@ class ExecutionEngineTests(object):
             o = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
             )
-            a = e.to_df(o)
+            a = fa.as_fugue_engine_df(e, o)
             # no partition
             c = e.map_engine.map_dataframe(a, noop, a.schema, PartitionSpec())
             df_eq(c, o, throw=True)
@@ -353,9 +353,9 @@ class ExecutionEngineTests(object):
 
         def test_join_multiple(self):
             e = self.engine
-            a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
-            b = e.to_df([[1, 20], [3, 40]], "a:int,c:int")
-            c = e.to_df([[1, 200], [3, 400]], "a:int,d:int")
+            a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4]], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [[1, 20], [3, 40]], "a:int,c:int")
+            c = fa.as_fugue_engine_df(e, [[1, 200], [3, 400]], "a:int,d:int")
             d = fa.inner_join(a, b, c)
             df_eq(
                 d,
@@ -366,8 +366,8 @@ class ExecutionEngineTests(object):
 
         def test__join_cross(self):
             e = self.engine
-            a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
-            b = e.to_df([[6], [7]], "c:int")
+            a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4]], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [[6], [7]], "c:int")
             c = fa.join(a, b, how="Cross")
             df_eq(
                 c,
@@ -376,56 +376,56 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
 
-            b = e.to_df([], "c:int")
+            b = fa.as_fugue_engine_df(e, [], "c:int")
             c = fa.cross_join(a, b)
             df_eq(c, [], "a:int,b:int,c:int", throw=True)
 
-            a = e.to_df([], "a:int,b:int")
-            b = e.to_df([], "c:int")
+            a = fa.as_fugue_engine_df(e, [], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [], "c:int")
             c = fa.join(a, b, how="Cross")
             df_eq(c, [], "a:int,b:int,c:int", throw=True)
 
         def test__join_inner(self):
             e = self.engine
-            a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
-            b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
+            a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4]], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "c:int,a:int")
             c = fa.join(a, b, how="INNER", on=["a"])
             df_eq(c, [[1, 2, 6]], "a:int,b:int,c:int", throw=True)
             c = fa.inner_join(b, a)
             df_eq(c, [[6, 1, 2]], "c:int,a:int,b:int", throw=True)
 
-            a = e.to_df([], "a:int,b:int")
-            b = e.to_df([], "c:int,a:int")
+            a = fa.as_fugue_engine_df(e, [], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [], "c:int,a:int")
             c = fa.join(a, b, how="INNER", on=["a"])
             df_eq(c, [], "a:int,b:int,c:int", throw=True)
 
         def test__join_outer(self):
             e = self.engine
 
-            a = e.to_df([], "a:int,b:int")
-            b = e.to_df([], "c:str,a:int")
+            a = fa.as_fugue_engine_df(e, [], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [], "c:str,a:int")
             c = fa.left_outer_join(a, b)
             df_eq(c, [], "a:int,b:int,c:str", throw=True)
 
-            a = e.to_df([], "a:int,b:str")
-            b = e.to_df([], "c:int,a:int")
+            a = fa.as_fugue_engine_df(e, [], "a:int,b:str")
+            b = fa.as_fugue_engine_df(e, [], "c:int,a:int")
             c = fa.right_outer_join(a, b)
             df_eq(c, [], "a:int,b:str,c:int", throw=True)
 
-            a = e.to_df([], "a:int,b:str")
-            b = e.to_df([], "c:str,a:int")
+            a = fa.as_fugue_engine_df(e, [], "a:int,b:str")
+            b = fa.as_fugue_engine_df(e, [], "c:str,a:int")
             c = fa.full_outer_join(a, b)
             df_eq(c, [], "a:int,b:str,c:str", throw=True)
 
-            a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
-            b = e.to_df([["6", 1], ["2", 7]], "c:str,a:int")
+            a = fa.as_fugue_engine_df(e, [[1, "2"], [3, "4"]], "a:int,b:str")
+            b = fa.as_fugue_engine_df(e, [["6", 1], ["2", 7]], "c:str,a:int")
             c = fa.join(a, b, how="left_OUTER", on=["a"])
             df_eq(c, [[1, "2", "6"], [3, "4", None]], "a:int,b:str,c:str", throw=True)
             c = fa.join(b, a, how="left_outer", on=["a"])
             df_eq(c, [["6", 1, "2"], ["2", 7, None]], "c:str,a:int,b:str", throw=True)
 
-            a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
-            b = e.to_df([[6, 1], [2, 7]], "c:double,a:int")
+            a = fa.as_fugue_engine_df(e, [[1, "2"], [3, "4"]], "a:int,b:str")
+            b = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "c:double,a:int")
             c = fa.join(a, b, how="left_OUTER", on=["a"])
             df_eq(
                 c, [[1, "2", 6.0], [3, "4", None]], "a:int,b:str,c:double", throw=True
@@ -436,8 +436,8 @@ class ExecutionEngineTests(object):
                 c, [[6.0, 1, "2"], [2.0, 7, None]], "c:double,a:int,b:str", throw=True
             )
 
-            a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
-            b = e.to_df([["6", 1], ["2", 7]], "c:str,a:int")
+            a = fa.as_fugue_engine_df(e, [[1, "2"], [3, "4"]], "a:int,b:str")
+            b = fa.as_fugue_engine_df(e, [["6", 1], ["2", 7]], "c:str,a:int")
             c = fa.join(a, b, how="right_outer", on=["a"])
             # assert c.as_pandas().values.tolist()[1][1] is None
             df_eq(c, [[1, "2", "6"], [7, None, "2"]], "a:int,b:str,c:str", throw=True)
@@ -453,8 +453,8 @@ class ExecutionEngineTests(object):
         def test__join_outer_pandas_incompatible(self):
             e = self.engine
 
-            a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
-            b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
+            a = fa.as_fugue_engine_df(e, [[1, "2"], [3, "4"]], "a:int,b:str")
+            b = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "c:int,a:int")
             c = fa.join(a, b, how="left_OUTER", on=["a"])
             df_eq(
                 c,
@@ -465,8 +465,8 @@ class ExecutionEngineTests(object):
             c = fa.join(b, a, how="left_outer", on=["a"])
             df_eq(c, [[6, 1, "2"], [2, 7, None]], "c:int,a:int,b:str", throw=True)
 
-            a = e.to_df([[1, "2"], [3, "4"]], "a:int,b:str")
-            b = e.to_df([[True, 1], [False, 7]], "c:bool,a:int")
+            a = fa.as_fugue_engine_df(e, [[1, "2"], [3, "4"]], "a:int,b:str")
+            b = fa.as_fugue_engine_df(e, [[True, 1], [False, 7]], "c:bool,a:int")
             c = fa.join(a, b, how="left_OUTER", on=["a"])
             df_eq(c, [[1, "2", True], [3, "4", None]], "a:int,b:str,c:bool", throw=True)
             c = fa.join(b, a, how="left_outer", on=["a"])
@@ -476,52 +476,60 @@ class ExecutionEngineTests(object):
 
         def test__join_semi(self):
             e = self.engine
-            a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
-            b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
+            a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4]], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "c:int,a:int")
             c = fa.join(a, b, how="semi", on=["a"])
             df_eq(c, [[1, 2]], "a:int,b:int", throw=True)
             c = fa.semi_join(b, a)
             df_eq(c, [[6, 1]], "c:int,a:int", throw=True)
 
-            b = e.to_df([], "c:int,a:int")
+            b = fa.as_fugue_engine_df(e, [], "c:int,a:int")
             c = fa.join(a, b, how="semi", on=["a"])
             df_eq(c, [], "a:int,b:int", throw=True)
 
-            a = e.to_df([], "a:int,b:int")
-            b = e.to_df([], "c:int,a:int")
+            a = fa.as_fugue_engine_df(e, [], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [], "c:int,a:int")
             c = fa.join(a, b, how="semi", on=["a"])
             df_eq(c, [], "a:int,b:int", throw=True)
 
         def test__join_anti(self):
             e = self.engine
-            a = e.to_df([[1, 2], [3, 4]], "a:int,b:int")
-            b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
+            a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4]], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "c:int,a:int")
             c = fa.join(a, b, how="anti", on=["a"])
             df_eq(c, [[3, 4]], "a:int,b:int", throw=True)
             c = fa.anti_join(b, a)
             df_eq(c, [[2, 7]], "c:int,a:int", throw=True)
 
-            b = e.to_df([], "c:int,a:int")
+            b = fa.as_fugue_engine_df(e, [], "c:int,a:int")
             c = fa.join(a, b, how="anti", on=["a"])
             df_eq(c, [[1, 2], [3, 4]], "a:int,b:int", throw=True)
 
-            a = e.to_df([], "a:int,b:int")
-            b = e.to_df([], "c:int,a:int")
+            a = fa.as_fugue_engine_df(e, [], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [], "c:int,a:int")
             c = fa.join(a, b, how="anti", on=["a"])
             df_eq(c, [], "a:int,b:int", throw=True)
 
         def test__join_with_null_keys(self):
             # SQL will not match null values
             e = self.engine
-            a = e.to_df([[1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
-            b = e.to_df([[1, 2, 33], [4, None, 63]], "a:double,b:double,d:int")
+            a = fa.as_fugue_engine_df(
+                e, [[1, 2, 3], [4, None, 6]], "a:double,b:double,c:int"
+            )
+            b = fa.as_fugue_engine_df(
+                e, [[1, 2, 33], [4, None, 63]], "a:double,b:double,d:int"
+            )
             c = fa.join(a, b, how="INNER")
             df_eq(c, [[1, 2, 3, 33]], "a:double,b:double,c:int,d:int", throw=True)
 
         def test_union(self):
             e = self.engine
-            a = e.to_df([[1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
-            b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
+            a = fa.as_fugue_engine_df(
+                e, [[1, 2, 3], [4, None, 6]], "a:double,b:double,c:int"
+            )
+            b = fa.as_fugue_engine_df(
+                e, [[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int"
+            )
             c = fa.union(a, b)
             df_eq(
                 c,
@@ -555,8 +563,12 @@ class ExecutionEngineTests(object):
 
         def test_subtract(self):
             e = self.engine
-            a = e.to_df([[1, 2, 3], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int")
-            b = e.to_df([[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int")
+            a = fa.as_fugue_engine_df(
+                e, [[1, 2, 3], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int"
+            )
+            b = fa.as_fugue_engine_df(
+                e, [[1, 2, 33], [4, None, 6]], "a:double,b:double,c:int"
+            )
             c = fa.subtract(a, b)
             df_eq(
                 c,
@@ -564,8 +576,8 @@ class ExecutionEngineTests(object):
                 "a:double,b:double,c:int",
                 throw=True,
             )
-            x = e.to_df([[1, 2, 33]], "a:double,b:double,c:int")
-            y = e.to_df([[4, None, 6]], "a:double,b:double,c:int")
+            x = fa.as_fugue_engine_df(e, [[1, 2, 33]], "a:double,b:double,c:int")
+            y = fa.as_fugue_engine_df(e, [[4, None, 6]], "a:double,b:double,c:int")
             z = fa.subtract(a, x, y)
             df_eq(
                 z,
@@ -584,10 +596,11 @@ class ExecutionEngineTests(object):
 
         def test_intersect(self):
             e = self.engine
-            a = e.to_df(
-                [[1, 2, 3], [4, None, 6], [4, None, 6]], "a:double,b:double,c:int"
+            a = fa.as_fugue_engine_df(
+                e, [[1, 2, 3], [4, None, 6], [4, None, 6]], "a:double,b:double,c:int"
             )
-            b = e.to_df(
+            b = fa.as_fugue_engine_df(
+                e,
                 [[1, 2, 33], [4, None, 6], [4, None, 6], [4, None, 6]],
                 "a:double,b:double,c:int",
             )
@@ -598,11 +611,13 @@ class ExecutionEngineTests(object):
                 "a:double,b:double,c:int",
                 throw=True,
             )
-            x = e.to_df(
+            x = fa.as_fugue_engine_df(
+                e,
                 [[1, 2, 33]],
                 "a:double,b:double,c:int",
             )
-            y = e.to_df(
+            y = fa.as_fugue_engine_df(
+                e,
                 [[4, None, 6], [4, None, 6], [4, None, 6]],
                 "a:double,b:double,c:int",
             )
@@ -624,8 +639,8 @@ class ExecutionEngineTests(object):
 
         def test_distinct(self):
             e = self.engine
-            a = e.to_df(
-                [[4, None, 6], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int"
+            a = fa.as_fugue_engine_df(
+                e, [[4, None, 6], [1, 2, 3], [4, None, 6]], "a:double,b:double,c:int"
             )
             c = fa.distinct(a)
             df_eq(
@@ -637,8 +652,10 @@ class ExecutionEngineTests(object):
 
         def test_dropna(self):
             e = self.engine
-            a = e.to_df(
-                [[4, None, 6], [1, 2, 3], [4, None, None]], "a:double,b:double,c:double"
+            a = fa.as_fugue_engine_df(
+                e,
+                [[4, None, 6], [1, 2, 3], [4, None, None]],
+                "a:double,b:double,c:double",
             )
             c = fa.dropna(a)  # default
             d = fa.dropna(a, how="all")
@@ -672,8 +689,10 @@ class ExecutionEngineTests(object):
 
         def test_fillna(self):
             e = self.engine
-            a = e.to_df(
-                [[4, None, 6], [1, 2, 3], [4, None, None]], "a:double,b:double,c:double"
+            a = fa.as_fugue_engine_df(
+                e,
+                [[4, None, 6], [1, 2, 3], [4, None, None]],
+                "a:double,b:double,c:double",
             )
             c = fa.fillna(a, value=1)
             d = fa.fillna(a, {"b": 99, "c": -99})
@@ -703,8 +722,8 @@ class ExecutionEngineTests(object):
             # raises(ValueError, lambda: fa.fillna(a, ["b"]))
 
         def test_sample(self):
-            engine = self.engine
-            a = engine.to_df([[x] for x in range(100)], "a:int")
+            e = self.engine
+            a = fa.as_fugue_engine_df(e, [[x] for x in range(100)], "a:int")
 
             with raises(ValueError):
                 fa.sample(a)  # must set one
@@ -725,7 +744,8 @@ class ExecutionEngineTests(object):
             e = self.engine
             ps = dict(by=["a"], presort="b DESC,c DESC")
             ps2 = dict(by=["c"], presort="b ASC")
-            a = e.to_df(
+            a = fa.as_fugue_engine_df(
+                e,
                 [
                     ["a", 2, 3],
                     ["a", 3, 4],
@@ -784,8 +804,8 @@ class ExecutionEngineTests(object):
             raises(ValueError, lambda: fa.take(a, n=0.5, presort=None))
 
         def test_sample_n(self):
-            engine = self.engine
-            a = engine.to_df([[x] for x in range(100)], "a:int")
+            e = self.engine
+            a = fa.as_fugue_engine_df(e, [[x] for x in range(100)], "a:int")
 
             b = fa.sample(a, n=90, replace=False)
             c = fa.sample(a, n=90, replace=True)
@@ -799,7 +819,7 @@ class ExecutionEngineTests(object):
 
         def test__serialize_by_partition(self):
             e = self.engine
-            a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
+            a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4], [1, 5]], "a:int,b:int")
             s = e._serialize_by_partition(
                 a, PartitionSpec(by=["a"], presort="b"), df_name="_0"
             )
@@ -814,8 +834,8 @@ class ExecutionEngineTests(object):
         def test_zip(self):
             ps = PartitionSpec(by=["a"], presort="b DESC,c DESC")
             e = self.engine
-            a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
-            b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
+            a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4], [1, 5]], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "c:int,a:int")
             sa = e._serialize_by_partition(a, ps, df_name="_0")
             sb = e._serialize_by_partition(b, ps, df_name="_1")
             # test zip with serialized dfs
@@ -874,7 +894,7 @@ class ExecutionEngineTests(object):
 
         def test_zip_all(self):
             e = self.engine
-            a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
+            a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4], [1, 5]], "a:int,b:int")
             z = fa.persist(e.zip_all(DataFrames(a)))
             assert 1 == z.count()
             assert z.metadata.get("serialized", False)
@@ -890,8 +910,8 @@ class ExecutionEngineTests(object):
             assert z.metadata.get("serialized", False)
             assert z.metadata.get("serialized_has_name", False)
 
-            b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            c = e.to_df([[6, 1], [2, 7]], "d:int,a:int")
+            b = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "c:int,a:int")
+            c = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "d:int,a:int")
             z = fa.persist(e.zip_all(DataFrames(a, b, c)))
             assert 1 == z.count()
             assert not z.metadata.get("serialized_has_name", False)
@@ -918,8 +938,8 @@ class ExecutionEngineTests(object):
         def test_comap(self):
             ps = PartitionSpec(presort="b,c")
             e = self.engine
-            a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
-            b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
+            a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4], [1, 5]], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "c:int,a:int")
             z1 = fa.persist(e.zip(a, b))
             z2 = fa.persist(e.zip(a, b, partition_spec=ps, how="left_outer"))
             z3 = fa.persist(
@@ -966,9 +986,9 @@ class ExecutionEngineTests(object):
 
         def test_comap_with_key(self):
             e = self.engine
-            a = e.to_df([[1, 2], [3, 4], [1, 5]], "a:int,b:int")
-            b = e.to_df([[6, 1], [2, 7]], "c:int,a:int")
-            c = e.to_df([[6, 1]], "c:int,a:int")
+            a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4], [1, 5]], "a:int,b:int")
+            b = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "c:int,a:int")
+            c = fa.as_fugue_engine_df(e, [[6, 1]], "c:int,a:int")
             z1 = fa.persist(e.zip(a, b, df1_name="x", df2_name="y"))
             z2 = fa.persist(e.zip_all(DataFrames(x=a, y=b, z=b)))
             z3 = fa.persist(
@@ -1297,7 +1317,7 @@ class ExecutionEngineTests(object):
             b = ArrayDataFrame([[6, 1], [3, 4], [2, 7], [4, 8], [6, 7]], "c:int,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
             fa.save(
-                e.repartition(e.to_df(b), PartitionSpec(num=2)),
+                e.repartition(fa.as_fugue_engine_df(e, b), PartitionSpec(num=2)),
                 path,
                 format_hint="json",
             )
