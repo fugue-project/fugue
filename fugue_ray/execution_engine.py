@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 import pyarrow as pa
 import ray
-from duckdb import DuckDBPyConnection, DuckDBPyRelation
+from duckdb import DuckDBPyConnection
 from triad import Schema, assert_or_throw, to_uuid
 from triad.utils.threading import RunOnce
 
@@ -328,12 +328,6 @@ class RayExecutionEngine(DuckExecutionEngine):
                 ValueError("schema must be None when df is a DataFrame"),
             )
             return df
-        if isinstance(df, DuckDBPyRelation):
-            assert_or_throw(
-                schema is None,
-                ValueError("schema must be None when df is a DuckDBPyRelation"),
-            )
-            return DuckDataFrame(df)
         return RayDataFrame(df, schema)
 
     def _get_remote_args(self) -> Dict[str, Any]:

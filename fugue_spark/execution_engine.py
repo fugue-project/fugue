@@ -720,13 +720,13 @@ class SparkExecutionEngine(ExecutionEngine):
                     return df
                 if isinstance(df, ArrowDataFrame):
                     sdf = self.spark_session.createDataFrame(
-                        df.as_array(), to_spark_schema(df.schema)
+                        df.as_pandas(), to_spark_schema(df.schema)
                     )
                     return SparkDataFrame(sdf, df.schema)
                 if isinstance(df, (ArrayDataFrame, IterableDataFrame)):
                     adf = ArrowDataFrame(df.as_array(type_safe=False), df.schema)
                     sdf = self.spark_session.createDataFrame(
-                        adf.as_array(), to_spark_schema(df.schema)
+                        adf.as_pandas(), to_spark_schema(df.schema)
                     )
                     return SparkDataFrame(sdf, df.schema)
                 if any(pa.types.is_struct(t) for t in df.schema.types):
