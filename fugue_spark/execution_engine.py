@@ -730,7 +730,7 @@ class SparkExecutionEngine(ExecutionEngine):
                     return SparkDataFrame(sdf, df.schema)
                 if isinstance(df, (ArrayDataFrame, IterableDataFrame)):
                     adf = ArrowDataFrame(df.as_array(type_safe=False), df.schema)
-                    raw_df = df.as_array() if _IS_SPARK_2 else df.as_pandas()
+                    raw_df = adf.as_array() if _IS_SPARK_2 else adf.as_pandas()
                     sdf = self.spark_session.createDataFrame(
                         raw_df, to_spark_schema(df.schema)
                     )
