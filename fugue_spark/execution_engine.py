@@ -43,7 +43,11 @@ from fugue.dataframe.utils import get_join_schemas
 from fugue.exceptions import FugueDataFrameInitError
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 
-from ._constants import FUGUE_SPARK_CONF_USE_PANDAS_UDF, FUGUE_SPARK_DEFAULT_CONF
+from ._constants import (
+    FUGUE_SPARK_CONF_USE_PANDAS_UDF,
+    FUGUE_SPARK_DEFAULT_CONF,
+    _IS_SPARK_2,
+)
 from ._utils.convert import to_schema, to_spark_schema, to_type_safe_input
 from ._utils.io import SparkIO
 from ._utils.partition import even_repartition, hash_repartition, rand_repartition
@@ -719,14 +723,16 @@ class SparkExecutionEngine(ExecutionEngine):
                 if isinstance(df, SparkDataFrame):
                     return df
                 if isinstance(df, ArrowDataFrame):
+                    raw_df: Any = df.as_array() if _IS_SPARK_2 else df.as_pandas()
                     sdf = self.spark_session.createDataFrame(
-                        df.as_pandas(), to_spark_schema(df.schema)
+                        raw_df, to_spark_schema(df.schema)
                     )
                     return SparkDataFrame(sdf, df.schema)
                 if isinstance(df, (ArrayDataFrame, IterableDataFrame)):
                     adf = ArrowDataFrame(df.as_array(type_safe=False), df.schema)
+                    raw_df = df.as_array() if _IS_SPARK_2 else df.as_pandas()
                     sdf = self.spark_session.createDataFrame(
-                        adf.as_pandas(), to_spark_schema(df.schema)
+                        raw_df, to_spark_schema(df.schema)
                     )
                     return SparkDataFrame(sdf, df.schema)
                 if any(pa.types.is_struct(t) for t in df.schema.types):
