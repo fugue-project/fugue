@@ -166,7 +166,7 @@ class CheckpointPath(object):
 
     def get_table_name(self, obj_id: str, permanent: bool) -> str:
         path = self._path if permanent else self._temp_path
-        return to_uuid(path, obj_id)[:5]
+        return "temp_" + to_uuid(path, obj_id)[:5]
 
     def temp_file_exists(self, path: str) -> bool:
         try:

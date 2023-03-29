@@ -34,6 +34,7 @@ from .dataset.api import (
 from .execution.api import (
     aggregate,
     anti_join,
+    as_fugue_engine_df,
     assign,
     broadcast,
     clear_global_engine,

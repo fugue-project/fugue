@@ -1,3 +1,5 @@
+from typing import Any, List
+
 import pandas as pd
 import pyarrow as pa
 
@@ -33,6 +35,37 @@ class NativeExecutionEngineBuiltInQPDTests(BuiltInTests.Tests):
 
     def test_yield_table(self):
         pass
+
+    def test_coarse_partition(self):
+        def verify_coarse_partition(df: pd.DataFrame) -> List[List[Any]]:
+            ct = df.a.nunique()
+            s = df.a * 1000 + df.b
+            ordered = ((s - s.shift(1)).dropna() >= 0).all(axis=None)
+            return [[ct, ordered]]
+
+        def assert_(df: pd.DataFrame, rc: int, n: int, check_ordered: bool) -> None:
+            if rc > 0:
+                assert len(df) == rc
+            assert df.ct.sum() == n
+            if check_ordered:
+                assert (df.ordered == True).all()
+
+        gps = 100
+        partition_num = 6
+        df = pd.DataFrame(dict(a=list(range(gps)) * 10, b=range(gps * 10))).sample(
+            frac=1.0
+        )
+        with FugueWorkflow() as dag:
+            a = dag.df(df)
+            c = a.partition(
+                algo="coarse", by="a", presort="b", num=partition_num
+            ).transform(verify_coarse_partition, schema="ct:int,ordered:bool")
+            dag.output(
+                c,
+                using=assert_,
+                params=dict(rc=0, n=gps, check_ordered=True),
+            )
+        dag.run(self.engine)
 
 
 def test_get_file_threshold():

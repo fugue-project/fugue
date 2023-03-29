@@ -2,10 +2,11 @@ import random
 from typing import Any, Iterable, List
 
 import pyspark.sql as ps
-from fugue_spark._utils.convert import to_schema, to_spark_schema
 from pyspark import RDD
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import lit
+
+from fugue_spark._utils.convert import to_schema, to_spark_schema
 
 _PARTITION_DUMMY_KEY = "__partition_dummy_key__"
 

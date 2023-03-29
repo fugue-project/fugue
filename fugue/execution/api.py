@@ -15,6 +15,7 @@ from .execution_engine import (
     ExecutionEngine,
 )
 from .factory import make_execution_engine, try_get_context_execution_engine
+from .._utils.registry import fugue_plugin
 
 
 @contextmanager
@@ -118,6 +119,27 @@ def get_current_parallelism() -> int:
     :return: the size of the parallelism
     """
     return make_execution_engine().get_current_parallelism()
+
+
+@fugue_plugin
+def as_fugue_engine_df(
+    engine: ExecutionEngine, df: AnyDataFrame, schema: Any = None
+) -> DataFrame:
+    """Convert a dataframe to a Fugue engine dependent DataFrame.
+    This function is used internally by Fugue. It is not recommended
+    to use
+
+    :param engine: the ExecutionEngine to use, must not be None
+    :param df: a dataframe like object
+    :param schema: the schema of the dataframe, defaults to None
+
+    :return: the engine dependent DataFrame
+    """
+    if schema is None:
+        fdf = as_fugue_df(df)
+    else:
+        fdf = as_fugue_df(df, schema=schema)
+    return engine.to_df(fdf)
 
 
 def run_engine_function(
@@ -549,11 +571,11 @@ def join(
     """
 
     def _join(e: ExecutionEngine):
-        edf1 = e.to_df(df1)
-        edf2 = e.to_df(df2)
+        edf1 = as_fugue_engine_df(e, df1)
+        edf2 = as_fugue_engine_df(e, df2)
         res = e.join(edf1, edf2, how=how, on=on)
         for odf in dfs:
-            res = e.join(res, e.to_df(odf), how=how, on=on)
+            res = e.join(res, as_fugue_engine_df(e, odf), how=how, on=on)
         return res
 
     return run_engine_function(
@@ -837,11 +859,11 @@ def union(
     """
 
     def _union(e: ExecutionEngine):
-        edf1 = e.to_df(df1)
-        edf2 = e.to_df(df2)
+        edf1 = as_fugue_engine_df(e, df1)
+        edf2 = as_fugue_engine_df(e, df2)
         res = e.union(edf1, edf2, distinct=distinct)
         for odf in dfs:
-            res = e.union(res, e.to_df(odf), distinct=distinct)
+            res = e.union(res, as_fugue_engine_df(e, odf), distinct=distinct)
         return res
 
     return run_engine_function(
@@ -885,11 +907,11 @@ def subtract(
     """
 
     def _subtract(e: ExecutionEngine):
-        edf1 = e.to_df(df1)
-        edf2 = e.to_df(df2)
+        edf1 = as_fugue_engine_df(e, df1)
+        edf2 = as_fugue_engine_df(e, df2)
         res = e.subtract(edf1, edf2, distinct=distinct)
         for odf in dfs:
-            res = e.subtract(res, e.to_df(odf), distinct=distinct)
+            res = e.subtract(res, as_fugue_engine_df(e, odf), distinct=distinct)
         return res
 
     return run_engine_function(
@@ -933,11 +955,11 @@ def intersect(
     """
 
     def _intersect(e: ExecutionEngine):
-        edf1 = e.to_df(df1)
-        edf2 = e.to_df(df2)
+        edf1 = as_fugue_engine_df(e, df1)
+        edf2 = as_fugue_engine_df(e, df2)
         res = e.intersect(edf1, edf2, distinct=distinct)
         for odf in dfs:
-            res = e.intersect(res, e.to_df(odf), distinct=distinct)
+            res = e.intersect(res, as_fugue_engine_df(e, odf), distinct=distinct)
         return res
 
     return run_engine_function(

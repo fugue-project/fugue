@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 import pyarrow as pa
 import ray
-from duckdb import DuckDBPyConnection, DuckDBPyRelation
+from duckdb import DuckDBPyConnection
 from triad import Schema, assert_or_throw, to_uuid
 from triad.utils.threading import RunOnce
 
@@ -15,14 +15,14 @@ from fugue import (
     PartitionCursor,
     PartitionSpec,
 )
-from fugue.constants import KEYWORD_ROWCOUNT
+from fugue.constants import KEYWORD_PARALLELISM, KEYWORD_ROWCOUNT
 from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckExecutionEngine
 
 from ._constants import FUGUE_RAY_DEFAULT_BATCH_SIZE, FUGUE_RAY_ZERO_COPY
 from ._utils.cluster import get_default_partitions, get_default_shuffle_partitions
-from ._utils.dataframe import add_partition_key
+from ._utils.dataframe import add_partition_key, add_coarse_partition_key
 from ._utils.io import RayIO
 from .dataframe import RayDataFrame
 
@@ -72,12 +72,14 @@ class RayMapEngine(MapEngine):
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
     ) -> DataFrame:
-        presort = partition_spec.presort
+        output_schema = Schema(output_schema)
+        input_schema = df.schema
+        presort = partition_spec.get_sorts(
+            input_schema, with_partition_keys=partition_spec.algo == "coarse"
+        )
         presort_tuples = [
             (k, "ascending" if v else "descending") for k, v in presort.items()
         ]
-        output_schema = Schema(output_schema)
-        input_schema = df.schema
         cursor = partition_spec.get_cursor(input_schema, 0)
         on_init_once: Any = (
             None
@@ -91,7 +93,7 @@ class RayMapEngine(MapEngine):
             if adf.shape[0] == 0:
                 return _build_empty_arrow(output_schema)
             adf = adf.remove_column(len(input_schema))  # remove partition key
-            if len(presort_tuples) > 0:
+            if len(partition_spec.presort) > 0:
                 if pa.__version__ < "7":  # pragma: no cover
                     idx = pa.compute.sort_indices(
                         adf, options=pa.compute.SortOptions(presort_tuples)
@@ -118,12 +120,20 @@ class RayMapEngine(MapEngine):
                 _df = self.execution_engine.repartition(  # type: ignore
                     _df, PartitionSpec(num=n)
                 )
-        rdf, _ = add_partition_key(
-            _df.native,
-            keys=partition_spec.partition_by,
-            input_schema=input_schema,
-            output_key=_RAY_PARTITION_KEY,
-        )
+        if partition_spec.algo != "coarse":
+            rdf, _ = add_partition_key(
+                _df.native,
+                keys=partition_spec.partition_by,
+                input_schema=input_schema,
+                output_key=_RAY_PARTITION_KEY,
+            )
+        else:
+            rdf = add_coarse_partition_key(
+                _df.native,
+                keys=partition_spec.partition_by,
+                output_key=_RAY_PARTITION_KEY,
+                bucket=_df.num_partitions,
+            )
 
         gdf = rdf.groupby(_RAY_PARTITION_KEY)
         sdf = gdf.map_groups(
@@ -235,12 +245,15 @@ class RayExecutionEngine(DuckExecutionEngine):
 
         rdf = self._to_ray_df(df)
 
-        num_funcs = {KEYWORD_ROWCOUNT: lambda: _persist_and_count(rdf)}
+        num_funcs = {
+            KEYWORD_ROWCOUNT: lambda: _persist_and_count(rdf),
+            KEYWORD_PARALLELISM: lambda: self.get_current_parallelism(),
+        }
         num = partition_spec.get_num_partitions(**num_funcs)
         pdf = rdf.native
 
         if num > 0:
-            if partition_spec.algo in ["hash", "even"]:
+            if partition_spec.algo in ["hash", "even", "coarse"]:
                 pdf = pdf.repartition(num)
             elif partition_spec.algo == "rand":
                 pdf = pdf.repartition(num, shuffle=True)
@@ -315,12 +328,6 @@ class RayExecutionEngine(DuckExecutionEngine):
                 ValueError("schema must be None when df is a DataFrame"),
             )
             return df
-        if isinstance(df, DuckDBPyRelation):
-            assert_or_throw(
-                schema is None,
-                ValueError("schema must be None when df is a DuckDBPyRelation"),
-            )
-            return DuckDataFrame(df)
         return RayDataFrame(df, schema)
 
     def _get_remote_args(self) -> Dict[str, Any]:

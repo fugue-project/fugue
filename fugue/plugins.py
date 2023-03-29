@@ -30,6 +30,7 @@ from fugue.dataset import (
     is_empty,
     is_local,
 )
+from fugue.execution.api import as_fugue_engine_df
 from fugue.execution.factory import (
     infer_execution_engine,
     parse_execution_engine,

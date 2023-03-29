@@ -86,6 +86,11 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         res = a.as_array(type_safe=True)
         assert res[0][0] == {"a": "b"}
 
+        pdf = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        pdf = pdf[pdf.a < 1]
+        a = e.to_df(pdf)
+        assert fa.get_schema(a) == "a:long,b:long"
+
     def test_persist(self):
         e = self.engine
 
@@ -192,6 +197,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             session,
             {
                 "test": True,
+                "fugue.spark.use_pandas_udf": False,
                 "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
                 "fugue.rpc.flask_server.host": "127.0.0.1",
                 "fugue.rpc.flask_server.port": "1234",
@@ -256,6 +262,37 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             dag.output(c, using=assert_all_n, params=dict(n=2, l=50))
             c = a.partition(num=1).transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[100]))
+        dag.run(self.engine)
+
+    def test_coarse_partition(self):
+        def verify_coarse_partition(df: pd.DataFrame) -> List[List[Any]]:
+            ct = df.a.nunique()
+            s = df.a * 1000 + df.b
+            ordered = ((s - s.shift(1)).dropna() >= 0).all(axis=None)
+            return [[ct, ordered]]
+
+        def assert_(df: pd.DataFrame, rc: int, n: int, check_ordered: bool) -> None:
+            if rc > 0:
+                assert len(df) == rc
+            assert df.ct.sum() == n
+            if check_ordered:
+                assert (df.ordered == True).all()
+
+        gps = 100
+        partition_num = 6
+        df = pd.DataFrame(dict(a=list(range(gps)) * 10, b=range(gps * 10))).sample(
+            frac=1.0
+        )
+        with FugueWorkflow() as dag:
+            a = dag.df(df)
+            c = a.partition(
+                algo="coarse", by="a", presort="b", num=partition_num
+            ).transform(verify_coarse_partition, schema="ct:int,ordered:bool")
+            dag.output(
+                c,
+                using=assert_,
+                params=dict(rc=partition_num, n=gps, check_ordered=True),
+            )
         dag.run(self.engine)
 
     def test_session_as_engine(self):

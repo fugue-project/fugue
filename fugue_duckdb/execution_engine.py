@@ -2,12 +2,11 @@ import logging
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 import duckdb
-import pyarrow as pa
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from triad import SerializableRLock
 from triad.collections.fs import FileSystem
-from triad.utils.schema import quote_name
 from triad.utils.assertion import assert_or_throw
+from triad.utils.schema import quote_name
 
 from fugue import (
     ArrowDataFrame,
@@ -19,12 +18,7 @@ from fugue import (
 )
 from fugue.collections.partition import PartitionSpec, parse_presort_exp
 from fugue.collections.sql import StructuredRawSQL, TempTableName
-from fugue.dataframe import (
-    DataFrame,
-    DataFrames,
-    LocalBoundedDataFrame,
-    PandasDataFrame,
-)
+from fugue.dataframe import DataFrame, DataFrames, LocalBoundedDataFrame
 from fugue.dataframe.utils import get_join_schemas
 
 from ._io import DuckDBIO
@@ -545,15 +539,9 @@ def _to_duck_df(
             )
             if isinstance(df, DuckDataFrame):
                 return df
-
-            if isinstance(df, PandasDataFrame) and all(
-                not pa.types.is_nested(f.type) for f in df.schema.fields
-            ):
-                rdf = DuckDataFrame(engine.connection.from_df(df.as_pandas()))
-            else:
-                rdf = DuckDataFrame(
-                    duckdb.arrow(df.as_arrow(), connection=engine.connection)
-                )
+            rdf = DuckDataFrame(
+                duckdb.arrow(df.as_arrow(), connection=engine.connection)
+            )
             rdf.reset_metadata(df.metadata if df.has_metadata else None)
             return rdf
         tdf = ArrowDataFrame(df, schema)

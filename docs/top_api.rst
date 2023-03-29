@@ -32,6 +32,7 @@ IO
 .. autofunction:: fugue.api.as_fugue_dataset
 
 .. autofunction:: fugue.api.as_fugue_df
+.. autofunction:: fugue.api.as_fugue_engine_df
 .. autofunction:: fugue.api.load
 .. autofunction:: fugue.api.save
 

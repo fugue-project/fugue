@@ -98,7 +98,7 @@ class BuiltInTests(object):
             dag.run(self.engine)
 
         def test_create_df_equivalence(self):
-            ndf = self.engine.to_df(pd.DataFrame([[0]], columns=["a"]))
+            ndf = fa.as_fugue_engine_df(self.engine, pd.DataFrame([[0]], columns=["a"]))
             dag1 = FugueWorkflow()
             dag1.df(ndf).show()
             dag2 = FugueWorkflow()

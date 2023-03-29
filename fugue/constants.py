@@ -2,7 +2,7 @@ from typing import Any, Dict
 from triad import ParamDict
 
 KEYWORD_ROWCOUNT = "ROWCOUNT"
-KEYWORD_CORECOUNT = "CORECOUNT"
+KEYWORD_PARALLELISM = "CONCURRENCY"
 
 FUGUE_ENTRYPOINT = "fugue.plugins"
 

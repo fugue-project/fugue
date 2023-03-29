@@ -1,7 +1,7 @@
 import json
 
 from fugue.collections.partition import parse_presort_exp, PartitionSpec
-from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
+from fugue.constants import KEYWORD_PARALLELISM, KEYWORD_ROWCOUNT
 from pytest import raises
 from triad.collections.schema import Schema
 from triad.utils.hash import to_uuid
@@ -148,6 +148,9 @@ def test_partition_spec():
     assert dict(a=True, d=True, e=False) == p.get_sorts(
         Schema("a:int,b:int,d:int,e:int")
     )
+    assert dict(d=True, e=False) == p.get_sorts(
+        Schema("a:int,b:int,d:int,e:int"), with_partition_keys=False
+    )
     p = PartitionSpec(dict(partition_by=["e", "a"], presort="d asc"))
     assert p.get_key_schema(Schema("a:int,b:int,d:int,e:int")) == "e:int,a:int"
 
@@ -228,9 +231,9 @@ def test_get_num_partitions():
     assert 6 == p.get_num_partitions(x=lambda: 1, Y=lambda: 2)
     raises(Exception, lambda: p.get_num_partitions(x=lambda: 1))
 
-    p = PartitionSpec(dict(partition_by=["b", "a"], num="min(ROWCOUNT,CORECOUNT)"))
+    p = PartitionSpec(dict(partition_by=["b", "a"], num="min(ROWCOUNT,CONCURRENCY)"))
     assert 90 == p.get_num_partitions(
-        **{KEYWORD_ROWCOUNT: lambda: 100, KEYWORD_CORECOUNT: lambda: 90}
+        **{KEYWORD_ROWCOUNT: lambda: 100, KEYWORD_PARALLELISM: lambda: 90}
     )
 
 
