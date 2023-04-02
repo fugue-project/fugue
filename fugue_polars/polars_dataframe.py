@@ -75,7 +75,7 @@ class PolarsDataFrame(LocalBoundedDataFrame):
 
     def peek_dict(self) -> Dict[str, Any]:
         self.assert_not_empty()
-        return dict(zip(self._native.columns, self._native.row(0)))
+        return self._native.row(0, named=True)
 
     def count(self) -> int:
         return self.native.shape[0]
