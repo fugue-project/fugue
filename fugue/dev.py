@@ -32,7 +32,7 @@ from fugue.execution.factory import (
     register_execution_engine,
     register_sql_engine,
 )
-from fugue.execution.native_execution_engine import PandasMapEngine, QPDPandasEngine
+from fugue.duckdb.execution_engine import PandasMapEngine
 from fugue.rpc import (
     EmptyRPCHandler,
     RPCClient,

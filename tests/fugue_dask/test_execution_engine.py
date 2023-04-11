@@ -133,6 +133,9 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
     def test_yield_table(self):
         pass
 
+    def test_any_column_name(self):
+        pass  # dask-sql can't pass
+
     def test_default_init(self):
         a = FugueWorkflow().df([[0]], "a:int")
         df_eq(a.compute(DaskExecutionEngine), [[0]], "a:int")

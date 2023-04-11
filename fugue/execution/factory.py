@@ -12,7 +12,6 @@ from .execution_engine import (
     ExecutionEngine,
     SQLEngine,
 )
-from .native_execution_engine import NativeExecutionEngine
 
 
 def register_execution_engine(
@@ -387,8 +386,6 @@ def parse_execution_engine(
             # SparkExecutionEngine + S2
             make_execution_engine((SparkExecutionEngine, "s"))
     """
-    if engine is None or (isinstance(engine, str) and engine == ""):
-        return NativeExecutionEngine(conf)
     try:
         return to_instance(engine, ExecutionEngine, kwargs=dict(conf=conf, **kwargs))
     except Exception as e:

@@ -1,8 +1,4 @@
-from fugue.execution.factory import register_execution_engine, register_sql_engine
-from fugue.execution.native_execution_engine import (
-    NativeExecutionEngine,
-    QPDPandasEngine,
-)
+from fugue.duckdb.registry import _register_engines
 
 
 def _register() -> None:
@@ -15,18 +11,3 @@ def _register() -> None:
         >>> import fugue
     """
     _register_engines()
-
-
-def _register_engines() -> None:
-    register_execution_engine(
-        "native", lambda conf: NativeExecutionEngine(conf), on_dup="ignore"
-    )
-    register_execution_engine(
-        "pandas", lambda conf: NativeExecutionEngine(conf), on_dup="ignore"
-    )
-    register_sql_engine(
-        "qpdpandas", lambda engine: QPDPandasEngine(engine), on_dup="ignore"
-    )
-    register_sql_engine(
-        "qpd_pandas", lambda engine: QPDPandasEngine(engine), on_dup="ignore"
-    )

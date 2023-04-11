@@ -28,17 +28,18 @@ setup(
     license="Apache-2.0",
     author="The Fugue Development Team",
     author_email="hello@fugue.ai",
-    keywords="distributed spark dask sql dsl domain specific language",
+    keywords="distributed spark dask ray duckdb polars sql",
     url="http://github.com/fugue-project/fugue",
     install_requires=[
-        "triad>=0.8.4",
+        "triad>=0.8.5",
         "adagio>=0.2.4",
-        "qpd>=0.4.0",
+        "duckdb>=0.5.0",
         "fugue-sql-antlr>=0.1.6",
-        "pyarrow>=0.15.1",
+        "pyarrow>=6.0.1",
         "pandas>=1.2.0,<2",
         "sqlglot",
         "jinja2",
+        "numpy",
     ],
     extras_require={
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.6"],
@@ -46,14 +47,9 @@ setup(
         "dask": [
             "dask[distributed,dataframe]; python_version < '3.8'",
             "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
-            "qpd[dask]>=0.4.0",
+            # dask-sql is not an explicit dependency, but it is required for SQL on dask
         ],
         "ray": ["ray[data]>=2.0.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
-        "duckdb": [
-            "duckdb>=0.5.0",
-            "pyarrow>=6.0.1",
-            "numpy",
-        ],
         "polars": ["polars"],
         "ibis": [
             "ibis-framework>=2.1.1; python_version < '3.8'",
@@ -65,8 +61,8 @@ setup(
             "pyspark",
             "dask[distributed,dataframe]; python_version < '3.8'",
             "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
+            "dask-sql",
             "ray[data]>=2.0.0",
-            "qpd[dask]>=0.4.0",
             "notebook",
             "jupyterlab",
             "ipython>=7.10.0",

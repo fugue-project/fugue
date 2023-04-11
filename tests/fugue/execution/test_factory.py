@@ -4,6 +4,7 @@ import pandas as pd
 from pytest import raises
 
 from fugue import (
+    DuckDBEngine,
     NativeExecutionEngine,
     make_execution_engine,
     make_sql_engine,
@@ -14,17 +15,7 @@ from fugue import (
 )
 from fugue.constants import FUGUE_CONF_SQL_IGNORE_CASE
 from fugue.exceptions import FuguePluginsRegistrationError
-from fugue.execution.factory import (
-    infer_execution_engine,
-    is_pandas_or,
-    make_execution_engine,
-    make_sql_engine,
-    register_default_execution_engine,
-    register_default_sql_engine,
-    register_execution_engine,
-    register_sql_engine,
-)
-from fugue_duckdb import DuckDBEngine
+from fugue.execution.factory import infer_execution_engine, is_pandas_or
 
 
 class _MockExecutionEngine(NativeExecutionEngine):

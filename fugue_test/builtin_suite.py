@@ -20,6 +20,7 @@ from fugue import (
     CoTransformer,
     DataFrame,
     DataFrames,
+    DuckDBEngine,
     ExecutionEngine,
     FileSystem,
     FugueWorkflow,
@@ -30,7 +31,6 @@ from fugue import (
     PandasDataFrame,
     PartitionSpec,
     Processor,
-    QPDPandasEngine,
     Schema,
     Transformer,
     cotransformer,
@@ -888,7 +888,7 @@ class BuiltInTests(object):
             dag.run(self.engine)
 
         def test_select(self):
-            class MockEngine(QPDPandasEngine):
+            class MockEngine(DuckDBEngine):
                 def __init__(self, execution_engine, p: int = 0):
                     super().__init__(execution_engine)
                     self.p = p
@@ -925,7 +925,7 @@ class BuiltInTests(object):
                     "AS t1 INNER JOIN",
                     b,
                     "AS t2 ON t1.x=t2.x",
-                    sql_engine="qpdpandas",
+                    sql_engine="duckdb",
                 ).assert_eq(c)
 
                 # specify sql engine and params
@@ -999,7 +999,6 @@ class BuiltInTests(object):
                         "x:long,y:double",
                     )
                 )
-                # TODO: INTERSECT ALL is not implemented (QPD issue)
                 # a.intersect(b, distinct=False).assert_eq(
                 #     ArrayDataFrame(
                 #         [[2, None], [2, None]],
@@ -1031,7 +1030,6 @@ class BuiltInTests(object):
                         "x:long,y:double",
                     )
                 )
-                # # TODO: EXCEPT ALL is not implemented (QPD issue)
                 # a.subtract(c, distinct=False).assert_eq(
                 #     ArrayDataFrame(
                 #         [[2, None], [2, None]],

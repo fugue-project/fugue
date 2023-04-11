@@ -76,7 +76,7 @@ class StructuredRawSQL:
         name_map: Union[None, Callable[[str], str], Dict[str, str]] = None,
         dialect: Optional[str] = None,
         log: Optional[Logger] = None,
-    ):
+    ) -> str:
         """Construct the final SQL given the ``dialect``
 
         :param name_map: the name map from the original statement to

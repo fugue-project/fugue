@@ -1,8 +1,17 @@
 from typing import Any, Dict, Iterable
 
-from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
+from pytest import raises
+from triad.collections.dict import ParamDict
+from triad.utils.hash import to_uuid
+
+from fugue import (
+    ArrayDataFrame,
+    DataFrame,
+    DataFrames,
+    ExecutionEngine,
+    NativeExecutionEngine,
+)
 from fugue.exceptions import FugueInterfacelessError
-from fugue.execution import ExecutionEngine, NativeExecutionEngine
 from fugue.extensions.outputter import (
     Outputter,
     _to_outputter,
@@ -10,9 +19,6 @@ from fugue.extensions.outputter import (
     parse_outputter,
     register_outputter,
 )
-from pytest import raises
-from triad.collections.dict import ParamDict
-from triad.utils.hash import to_uuid
 
 
 def test_outputter():

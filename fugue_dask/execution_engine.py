@@ -5,7 +5,6 @@ from typing import Any, Callable, Dict, List, Optional, Type, Union
 import dask.dataframe as dd
 import pandas as pd
 from distributed import Client
-from qpd_dask import run_sql_on_dask
 from triad.collections import Schema
 from triad.collections.dict import IndexedOrderedDict, ParamDict
 from triad.collections.fs import FileSystem
@@ -29,7 +28,7 @@ from fugue.dataframe import (
 )
 from fugue.dataframe.utils import get_join_schemas
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
-from fugue.execution.native_execution_engine import NativeExecutionEngine
+from fugue import NativeExecutionEngine
 from fugue_dask._constants import FUGUE_DASK_DEFAULT_CONF
 from fugue_dask._io import load_df, save_df
 from fugue_dask._utils import DASK_UTILS, DaskUtils
@@ -38,12 +37,12 @@ from fugue_dask.dataframe import DaskDataFrame
 _DASK_PARTITION_KEY = "__dask_partition_key__"
 
 
-class QPDDaskEngine(SQLEngine):
-    """QPD execution implementation."""
+class DaskSQLEngine(SQLEngine):
+    """Dask-sql implementation."""
 
     @property
     def dialect(self) -> Optional[str]:
-        return "spark"
+        return "trino"
 
     def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
         return to_dask_engine_df(df, schema)
@@ -53,10 +52,25 @@ class QPDDaskEngine(SQLEngine):
         return True
 
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
-        _dfs, _sql = self.encode(dfs, statement)
-        dask_dfs = {k: self.to_df(v).native for k, v in _dfs.items()}  # type: ignore
-        df = run_sql_on_dask(_sql, dask_dfs, ignore_case=True)
-        return DaskDataFrame(df)
+        try:
+            from dask_sql import Context
+        except ImportError:  # pragma: no cover
+            raise ImportError(
+                "dask-sql is not installed. "
+                "Please install it with `pip install dask-sql`"
+            )
+        ctx = Context()
+        _dfs: Dict[str, dd.DataFrame] = {
+            k: self.to_df(v).native for k, v in dfs.items()
+        }
+        sql = statement.construct(dialect=self.dialect, log=self.log)
+        res = ctx.sql(
+            sql,
+            return_futures=False,
+            dataframes=_dfs,
+            config_options={"sql.identifier.case_sensitive": True},
+        )
+        return DaskDataFrame(res)
 
 
 class DaskMapEngine(MapEngine):
@@ -193,7 +207,7 @@ class DaskExecutionEngine(ExecutionEngine):
         return self._fs
 
     def create_default_sql_engine(self) -> SQLEngine:
-        return QPDDaskEngine(self)
+        return DaskSQLEngine(self)
 
     def create_default_map_engine(self) -> MapEngine:
         return DaskMapEngine(self)

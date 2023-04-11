@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from pytest import raises
 
+import fugue.api as fa
 from fugue import (
     ArrayDataFrame,
     DataFrame,
@@ -142,42 +143,42 @@ def test_use_df(tmpdir):
         dag.sql_vars["b"].assert_eq(dag.df([[0], [1]], "a:int"))
     dag.run()
     # from yield file
-    engine = NativeExecutionEngine(
-        conf={"fugue.workflow.checkpoint.path": os.path.join(tmpdir, "ck")}
-    )
-    with FugueSQLWorkflow() as dag:
-        dag("CREATE[[0], [1]] SCHEMA a: int YIELD FILE AS b")
-        res = dag.yields["b"]
-    dag.run(engine)
-    with FugueSQLWorkflow() as dag:
-        dag(
-            """
-        b=CREATE[[0], [1]] SCHEMA a: int
-        OUTPUT a, b USING assert_eq
-        """,
-            a=res,
-        )
-    dag.run(engine)
+    with fa.engine_context(
+        engine_conf={"fugue.workflow.checkpoint.path": os.path.join(tmpdir, "ck")}
+    ) as engine:
+        with FugueSQLWorkflow() as dag:
+            dag("CREATE[[0], [1]] SCHEMA a: int YIELD FILE AS b")
+            res = dag.yields["b"]
+        dag.run(engine)
+        with FugueSQLWorkflow() as dag:
+            dag(
+                """
+            b=CREATE[[0], [1]] SCHEMA a: int
+            OUTPUT a, b USING assert_eq
+            """,
+                a=res,
+            )
+        dag.run(engine)
 
-    # from yield dataframe
-    engine = NativeExecutionEngine()
-    with FugueSQLWorkflow() as dag:
-        dag("CREATE[[0], [1]] SCHEMA a: int YIELD DATAFRAME AS b")
-        res = dag.yields["b"]
-    dag.run(engine)
+        # from yield dataframe
+        engine = NativeExecutionEngine()
+        with FugueSQLWorkflow() as dag:
+            dag("CREATE[[0], [1]] SCHEMA a: int YIELD DATAFRAME AS b")
+            res = dag.yields["b"]
+        dag.run(engine)
 
-    with FugueSQLWorkflow() as dag:
-        dag(
-            """
-        b=CREATE[[0], [1]] SCHEMA a: int
-        OUTPUT a, b USING assert_eq
-        """,
-            a=res,
-        )
-    dag.run(engine)
+        with FugueSQLWorkflow() as dag:
+            dag(
+                """
+            b=CREATE[[0], [1]] SCHEMA a: int
+            OUTPUT a, b USING assert_eq
+            """,
+                a=res,
+            )
+        dag.run(engine)
 
 
-def test_use_soecial_df(tmpdir):
+def test_use_special_df(tmpdir):
     # external non-workflowdataframe
     arr = ArrayDataFrame([[0], [1]], "a:int")
     fsql(
@@ -195,23 +196,23 @@ def test_use_soecial_df(tmpdir):
     ).run()
 
     # from yield file
-    engine = NativeExecutionEngine(
-        conf={"fugue.workflow.checkpoint.path": os.path.join(tmpdir, "ck")}
-    )
-    with FugueSQLWorkflow() as dag:
-        dag("CREATE[[0], [1]] SCHEMA a: int YIELD FILE AS b")
-        res = dag.yields["b"]
-    dag.run(engine)
-    with FugueSQLWorkflow() as dag:
-        dag(
-            """
-        b=CREATE[[0], [1]] SCHEMA a: int
-        a = SELECT * FROM a.x
-        OUTPUT a, b USING assert_eq
-        """,
-            {"a.x": res},
-        )
-    dag.run(engine)
+    with fa.engine_context(
+        engine_conf={"fugue.workflow.checkpoint.path": os.path.join(tmpdir, "ck")}
+    ) as engine:
+        with FugueSQLWorkflow() as dag:
+            dag("CREATE[[0], [1]] SCHEMA a: int YIELD FILE AS b")
+            res = dag.yields["b"]
+        dag.run(engine)
+        with FugueSQLWorkflow() as dag:
+            dag(
+                """
+            b=CREATE[[0], [1]] SCHEMA a: int
+            a = SELECT * FROM a.x
+            OUTPUT a, b USING assert_eq
+            """,
+                {"a.x": res},
+            )
+        dag.run(engine)
 
 
 def test_lazy_use_df():
