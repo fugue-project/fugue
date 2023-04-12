@@ -1268,12 +1268,14 @@ class ExecutionEngineTests(object):
                 os.path.join(path, "a.csv"),
                 format_hint="csv",
                 header=True,
+                force_single=True,
             )
             fa.save(
                 b,
                 os.path.join(path, "b.csv"),
                 format_hint="csv",
                 header=True,
+                force_single=True,
             )
             FileSystem().touch(os.path.join(path, "_SUCCESS"))
             c = fa.load(
@@ -1323,8 +1325,12 @@ class ExecutionEngineTests(object):
             a = ArrayDataFrame([[6, 1], [3, 4]], "c:int,a:long")
             b = ArrayDataFrame([[2, 7], [4, 8]], "c:int,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
-            fa.save(a, os.path.join(path, "a.json"), format_hint="json")
-            fa.save(b, os.path.join(path, "b.json"), format_hint="json")
+            fa.save(
+                a, os.path.join(path, "a.json"), format_hint="json", force_single=True
+            )
+            fa.save(
+                b, os.path.join(path, "b.json"), format_hint="json", force_single=True
+            )
             FileSystem().touch(os.path.join(path, "_SUCCESS"))
             c = fa.load(path, format_hint="json", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2], [8, 4], [4, 3]], "a:long,c:long", throw=True)
