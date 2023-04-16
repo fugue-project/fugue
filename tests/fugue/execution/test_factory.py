@@ -7,7 +7,6 @@ from fugue import (
     DuckDBEngine,
     NativeExecutionEngine,
     make_execution_engine,
-    make_sql_engine,
     register_default_execution_engine,
     register_default_sql_engine,
     register_execution_engine,
@@ -16,6 +15,7 @@ from fugue import (
 from fugue.constants import FUGUE_CONF_SQL_IGNORE_CASE
 from fugue.exceptions import FuguePluginsRegistrationError
 from fugue.execution.factory import infer_execution_engine, is_pandas_or
+from fugue.plugins import parse_sql_engine
 
 
 class _MockExecutionEngine(NativeExecutionEngine):

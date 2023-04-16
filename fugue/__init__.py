@@ -49,7 +49,6 @@ from fugue.execution.execution_engine import (
 from fugue.execution.factory import (
     is_pandas_or,
     make_execution_engine,
-    make_sql_engine,
     register_default_execution_engine,
     register_default_sql_engine,
     register_execution_engine,

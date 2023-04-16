@@ -322,17 +322,10 @@ def make_execution_engine(
         if engine is None and infer_by is not None:
             engine = infer_execution_engine(infer_by)
 
-    if isinstance(engine, tuple):
-        execution_engine = make_execution_engine(engine[0], conf=conf, **kwargs)
-        sql_engine = make_sql_engine(engine[1], execution_engine)
-        execution_engine.set_sql_engine(sql_engine)
-        return execution_engine
     if isinstance(engine, ExecutionEngine):
         result = engine
     else:
         result = parse_execution_engine(engine, conf, **kwargs)
-        sql_engine = make_sql_engine(None, result)
-        result.set_sql_engine(sql_engine)
     result.conf.update(conf, on_dup=ParamDict.OVERWRITE)
     result.conf.update(kwargs, on_dup=ParamDict.OVERWRITE)
     return result
@@ -444,64 +437,6 @@ def infer_execution_engine(obj: List[Any]) -> Any:
     return None
 
 
-def make_sql_engine(
-    engine: Any = None,
-    execution_engine: Optional[ExecutionEngine] = None,
-    **kwargs: Any,
-) -> SQLEngine:
-    """Create :class:`~fugue.execution.execution_engine.SQLEngine`
-    with specified ``engine``
-
-    :param engine: it can be empty string or null (use the default SQL
-      engine), a string (use the registered SQL engine), an
-      :class:`~fugue.execution.execution_engine.SQLEngine` type, or
-      the :class:`~fugue.execution.execution_engine.SQLEngine` instance
-      (you can use ``None`` to use the default one), defaults to None
-    :param execution_engine: the
-      :class:`~fugue.execution.execution_engine.ExecutionEngine` instance
-      to create
-      the :class:`~fugue.execution.execution_engine.SQLEngine`. Normally you
-      should always provide this value.
-    :param kwargs: additional parameters to initialize the sql engine
-
-    :return: the :class:`~fugue.execution.execution_engine.SQLEngine`
-      instance
-
-    .. note::
-
-        For users, you normally don't need to call this function directly.
-        Use ``make_execution_engine`` instead
-
-    .. admonition:: Examples
-
-        .. code-block:: python
-
-            register_default_sql_engine(lambda conf: S1(conf))
-            register_sql_engine("s2", lambda conf: S2(conf))
-
-            engine = NativeExecutionEngine()
-
-            # S1(engine)
-            make_sql_engine(None, engine)
-
-            # S1(engine, a=1)
-            make_sql_engine(None, engine, a=1)
-
-            # S2(engine)
-            make_sql_engine("s2", engine)
-    """
-    if isinstance(engine, SQLEngine):
-        assert_or_throw(
-            execution_engine is None and len(kwargs) == 0,
-            lambda: ValueError(
-                f"{engine} is an instance, can't take arguments "
-                f"execution_engine={execution_engine}, kwargs={kwargs}"
-            ),
-        )
-        return engine
-    return parse_sql_engine(engine, execution_engine, **kwargs)
-
-
 @fugue_plugin
 def parse_sql_engine(
     engine: Any = None,
@@ -528,8 +463,7 @@ def parse_sql_engine(
 
     .. note::
 
-        For users, you normally don't need to call this function directly.
-        Use ``make_execution_engine`` instead
+        This is an internal function, users should not call this function.
 
     .. admonition:: Examples
 
@@ -541,14 +475,22 @@ def parse_sql_engine(
             engine = NativeExecutionEngine()
 
             # S1(engine)
-            make_sql_engine(None, engine)
+            parse_sql_engine(None, engine)
 
             # S1(engine, a=1)
-            make_sql_engine(None, engine, a=1)
+            parse_sql_engine(None, engine, a=1)
 
             # S2(engine)
-            make_sql_engine("s2", engine)
+            parse_sql_engine("s2", engine)
     """
+    if isinstance(engine, SQLEngine):
+        assert_or_throw(
+            engine.execution_engine is execution_engine,
+            lambda: ValueError(
+                f"{engine}'s parent execution engine is not {execution_engine}"
+            ),
+        )
+        return engine
     if engine is None or (isinstance(engine, str) and engine == ""):
         assert_or_throw(
             execution_engine is not None,
