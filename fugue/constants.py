@@ -37,7 +37,7 @@ _FUGUE_GLOBAL_CONF = ParamDict(
         FUGUE_CONF_WORKFLOW_CONCURRENCY: 1,
         FUGUE_CONF_WORKFLOW_AUTO_PERSIST: False,
         FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE: "fugue.,six,adagio.,pandas,"
-        "fugue_dask.,dask.,fugue_spark.,pyspark.,antlr4,_qpd_antlr,qpd,triad,"
+        "fugue_dask.,dask.,fugue_spark.,pyspark.,antlr4,triad,"
         "fugue_notebook.,ipython.,jupyter.,ipykernel,_pytest,pytest,fugue_ibis.",
         FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 3,
         FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE: True,

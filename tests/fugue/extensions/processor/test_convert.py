@@ -1,9 +1,18 @@
 from typing import Any, Dict, Iterable, List
 
 import pandas as pd
-from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
+from pytest import raises
+from triad.collections.dict import ParamDict
+from triad.utils.hash import to_uuid
+
+from fugue import (
+    ArrayDataFrame,
+    DataFrame,
+    DataFrames,
+    ExecutionEngine,
+    NativeExecutionEngine,
+)
 from fugue.exceptions import FugueInterfacelessError
-from fugue.execution import ExecutionEngine, NativeExecutionEngine
 from fugue.extensions.processor import (
     Processor,
     _to_processor,
@@ -11,9 +20,6 @@ from fugue.extensions.processor import (
     processor,
     register_processor,
 )
-from pytest import raises
-from triad.collections.dict import ParamDict
-from triad.utils.hash import to_uuid
 
 
 def test_processor():

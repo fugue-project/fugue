@@ -44,7 +44,7 @@ def test_df_eq():
     df1 = ArrayDataFrame([[0, 100.0, "a"]], "a:int,b:double,c:str")
     df2 = ArrayDataFrame([[0, 100.001, "a"]], "a:int,b:double,c:str")
     assert df_eq(df1, df1)
-    assert df_eq(df1, df2, digits=4)
+    assert df_eq(df1, df2, digits=2)
     # precision
     assert not df_eq(df1, df2, digits=6)
     # no content

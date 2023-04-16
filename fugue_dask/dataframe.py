@@ -140,6 +140,9 @@ class DaskDataFrame(DataFrame):
     def as_pandas(self) -> pandas.DataFrame:
         return self.native.compute().reset_index(drop=True)
 
+    def as_arrow(self, type_safe: bool = False) -> pa.Table:
+        return pa.Table.from_pandas(self.as_pandas(), schema=self.schema.pa_schema)
+
     def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
             schema = self.schema.rename(columns)

@@ -33,6 +33,12 @@ from fugue.dataset import (
     as_fugue_dataset,
     get_dataset_display,
 )
+from fugue.duckdb.execution_engine import (
+    DuckDataFrame,
+    DuckDBEngine,
+    NativeExecutionEngine,
+    PandasMapEngine,
+)
 from fugue.execution.execution_engine import (
     AnyExecutionEngine,
     EngineFacet,
@@ -43,16 +49,10 @@ from fugue.execution.execution_engine import (
 from fugue.execution.factory import (
     is_pandas_or,
     make_execution_engine,
-    make_sql_engine,
     register_default_execution_engine,
     register_default_sql_engine,
     register_execution_engine,
     register_sql_engine,
-)
-from fugue.execution.native_execution_engine import (
-    NativeExecutionEngine,
-    PandasMapEngine,
-    QPDPandasEngine,
 )
 from fugue.extensions.creator import Creator, creator, register_creator
 from fugue.extensions.outputter import Outputter, outputter, register_outputter

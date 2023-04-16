@@ -11,9 +11,9 @@ from triad.exceptions import InvalidOperationError
 from fugue import (
     ArrayDataFrame,
     DataFrame,
+    DuckDBEngine,
     FugueWorkflow,
     NativeExecutionEngine,
-    QPDPandasEngine,
     PandasDataFrame,
     WorkflowDataFrames,
 )
@@ -25,7 +25,6 @@ from fugue.constants import (
 )
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import FuguePluginsRegistrationError, FugueWorkflowCompileError
-from fugue.execution import NativeExecutionEngine
 from fugue.extensions.transformer.convert import transformer
 
 
@@ -96,7 +95,7 @@ def test_workflow():
     df_eq(a.result, [[0], [0], [1]], "a:int")
     raises(FuguePluginsRegistrationError, lambda: builder.run("abc"))
 
-    builder.run("NativeExecutionEngine")
+    builder.run("native")
     df_eq(b.result, [[0, 2], [0, 2], [1, 1]], "a:int,b:int")
     df_eq(b.compute(), [[0, 2], [0, 2], [1, 1]], "a:int,b:int")
     df_eq(b.compute(NativeExecutionEngine), [[0, 2], [0, 2], [1, 1]], "a:int,b:int")
@@ -152,7 +151,7 @@ def test_compile_conf():
     assert dag.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str) != ""
 
 
-class MockSQLEngine(QPDPandasEngine):
+class MockSQLEngine(DuckDBEngine):
     def table_exists(self, table: str) -> bool:
         path = os.path.join(
             self.conf[FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH], table + ".parquet"

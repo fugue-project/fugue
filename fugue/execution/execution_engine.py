@@ -443,21 +443,10 @@ class ExecutionEngine(FugueEngineBase):
 
     @property
     def sql_engine(self) -> SQLEngine:
-        """The :class:`~.SQLEngine` currently used by this execution engine.
-        You should use :meth:`~.set_sql_engine` to set a new SQLEngine
-        instance. If not set, the default is :meth:`~.create_default_sql_engine`
-        """
+        """The :class:`~.SQLEngine` of this execution engine."""
         if self._sql_engine is None:
             self._sql_engine = self.create_default_sql_engine()
         return self._sql_engine
-
-    def set_sql_engine(self, engine: SQLEngine) -> None:
-        """Set :class:`~.SQLEngine` for this execution engine.
-        If not set, the default is :meth:`~.create_default_sql_engine`
-
-        :param engine: :class:`~.SQLEngine` instance
-        """
-        self._sql_engine = engine
 
     @property
     @abstractmethod

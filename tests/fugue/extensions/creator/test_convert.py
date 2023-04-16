@@ -1,9 +1,12 @@
 from typing import Any, Iterable, List
 
 import pandas as pd
-from fugue.dataframe import ArrayDataFrame, DataFrame
+from pytest import raises
+from triad.collections.dict import ParamDict
+from triad.utils.hash import to_uuid
+
+from fugue import ArrayDataFrame, DataFrame, ExecutionEngine, NativeExecutionEngine
 from fugue.exceptions import FugueInterfacelessError
-from fugue.execution import ExecutionEngine, NativeExecutionEngine
 from fugue.extensions.creator import (
     Creator,
     _to_creator,
@@ -11,9 +14,6 @@ from fugue.extensions.creator import (
     parse_creator,
     register_creator,
 )
-from pytest import raises
-from triad.collections.dict import ParamDict
-from triad.utils.hash import to_uuid
 
 
 def test_creator():

@@ -2,16 +2,19 @@ from typing import Any
 
 import dask.dataframe as dd
 from dask.distributed import Client
-from triad import run_at_def
 
-from fugue import DataFrame, register_execution_engine
+from fugue import DataFrame
 from fugue.dev import (
     DataFrameParam,
     ExecutionEngineParam,
     fugue_annotated_param,
     is_pandas_or,
 )
-from fugue.plugins import as_fugue_dataset, infer_execution_engine
+from fugue.plugins import (
+    as_fugue_dataset,
+    infer_execution_engine,
+    parse_execution_engine,
+)
 from fugue_dask._utils import DASK_UTILS
 from fugue_dask.dataframe import DaskDataFrame
 from fugue_dask.execution_engine import DaskExecutionEngine
@@ -29,19 +32,20 @@ def _dask_as_fugue_df(df: dd.DataFrame, **kwargs: Any) -> DaskDataFrame:
     return DaskDataFrame(df, **kwargs)
 
 
-def _register_engines() -> None:
-    register_execution_engine(
-        "dask",
-        lambda conf, **kwargs: DaskExecutionEngine(conf=conf),
-        on_dup="ignore",
-    )
-    register_execution_engine(
-        Client,
-        lambda engine, conf, **kwargs: DaskExecutionEngine(
-            dask_client=engine, conf=conf
-        ),
-        on_dup="ignore",
-    )
+@parse_execution_engine.candidate(
+    lambda engine, conf, **kwargs: isinstance(engine, Client),
+    priority=4,  # TODO: this is to overwrite dask-sql fugue integration
+)
+def _parse_dask_client(engine: Client, conf: Any, **kwargs: Any) -> DaskExecutionEngine:
+    return DaskExecutionEngine(dask_client=engine, conf=conf)
+
+
+@parse_execution_engine.candidate(
+    lambda engine, conf, **kwargs: isinstance(engine, str) and engine == "dask",
+    priority=4,  # TODO: this is to overwrite dask-sql fugue integration
+)
+def _parse_dask_str(engine: str, conf: Any, **kwargs: Any) -> DaskExecutionEngine:
+    return DaskExecutionEngine(conf=conf)
 
 
 @fugue_annotated_param(DaskExecutionEngine)
@@ -62,16 +66,3 @@ class _DaskDataFrameParam(DataFrameParam):
 
     def count(self, df: DataFrame) -> int:  # pragma: no cover
         raise NotImplementedError("not allowed")
-
-
-@run_at_def
-def _register() -> None:
-    """Register Dask Execution Engine
-
-    .. note::
-
-        This function is automatically called when you do
-
-        >>> import fugue_dask
-    """
-    _register_engines()

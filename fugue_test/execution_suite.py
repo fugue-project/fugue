@@ -25,7 +25,6 @@ from fugue import (
 )
 from fugue.column import all_cols, col, lit
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.execution.native_execution_engine import NativeExecutionEngine
 from fugue_test._utils import skip_spark2
 
 
@@ -585,7 +584,6 @@ class ExecutionEngineTests(object):
                 "a:double,b:double,c:int",
                 throw=True,
             )
-            # TODO: EXCEPT ALL is not implemented (QPD issue)
             # c = fa.subtract(a, b, distinct=False)
             # df_eq(
             #     c,
@@ -628,7 +626,6 @@ class ExecutionEngineTests(object):
                 "a:double,b:double,c:int",
                 throw=True,
             )
-            # TODO: INTERSECT ALL is not implemented (QPD issue)
             # c = fa.intersect(a, b, distinct=False)
             # df_eq(
             #     c,
@@ -762,6 +759,7 @@ class ExecutionEngineTests(object):
             f = fa.take(a, n=1, presort=None, partition=ps2)
             g = fa.take(a, n=2, presort="a desc", na_position="last")
             h = fa.take(a, n=2, presort="a", na_position="first")
+            i = fa.take(a, n=2, presort=None, partition="a")
             df_eq(
                 b,
                 [[None, 4, 2]],
@@ -801,6 +799,7 @@ class ExecutionEngineTests(object):
                 "a:str,b:int,c:long",
                 throw=True,
             )
+            df_eq(i, a, check_order=False, throw=True)
             raises(ValueError, lambda: fa.take(a, n=0.5, presort=None))
 
         def test_sample_n(self):
@@ -1064,25 +1063,23 @@ class ExecutionEngineTests(object):
             df_eq(c, [[1, 6], [7, 2]], "a:long,c:int", throw=True)
 
         def test_load_parquet_folder(self):
-            native = NativeExecutionEngine()
             a = ArrayDataFrame([[6, 1]], "c:int,a:long")
             b = ArrayDataFrame([[2, 7], [4, 8]], "c:int,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
-            fa.save(a, os.path.join(path, "a.parquet"), engine=native)
-            fa.save(b, os.path.join(path, "b.parquet"), engine=native)
+            fa.save(a, os.path.join(path, "a.parquet"))
+            fa.save(b, os.path.join(path, "b.parquet"))
             FileSystem().touch(os.path.join(path, "_SUCCESS"))
             c = fa.load(path, format_hint="parquet", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:int", throw=True)
 
         def test_load_parquet_files(self):
-            native = NativeExecutionEngine()
             a = ArrayDataFrame([[6, 1]], "c:int,a:long")
             b = ArrayDataFrame([[2, 7], [4, 8]], "c:int,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
             f1 = os.path.join(path, "a.parquet")
             f2 = os.path.join(path, "b.parquet")
-            fa.save(a, f1, engine=native)
-            fa.save(b, f2, engine=native)
+            fa.save(a, f1)
+            fa.save(b, f2)
             c = fa.load(
                 [f1, f2], format_hint="parquet", columns=["a", "c"], as_fugue=True
             )
@@ -1119,12 +1116,11 @@ class ExecutionEngineTests(object):
         @skip_spark2
         def test_load_avro_folder(self):
             # TODO: switch to c:int,a:long when we can preserve schema to avro
-            native = NativeExecutionEngine()
             a = ArrayDataFrame([[6, 1]], "c:long,a:long")
             b = ArrayDataFrame([[2, 7], [4, 8]], "c:long,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
-            fa.save(a, os.path.join(path, "a.avro"), engine=native)
-            fa.save(b, os.path.join(path, "b.avro"), engine=native)
+            fa.save(a, os.path.join(path, "a.avro"))
+            fa.save(b, os.path.join(path, "b.avro"))
             FileSystem().touch(os.path.join(path, "_SUCCESS"))
             c = fa.load(path, format_hint="avro", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:long", throw=True)
@@ -1264,7 +1260,6 @@ class ExecutionEngineTests(object):
             df_eq(c, [[1.1, 6.1], [7.1, 2.1]], "a:double,c:double", throw=True)
 
         def test_load_csv_folder(self):
-            native = NativeExecutionEngine()
             a = ArrayDataFrame([[6.1, 1.1]], "c:double,a:double")
             b = ArrayDataFrame([[2.1, 7.1], [4.1, 8.1]], "c:double,a:double")
             path = os.path.join(self.tmpdir, "a", "b")
@@ -1273,14 +1268,14 @@ class ExecutionEngineTests(object):
                 os.path.join(path, "a.csv"),
                 format_hint="csv",
                 header=True,
-                engine=native,
+                force_single=True,
             )
             fa.save(
                 b,
                 os.path.join(path, "b.csv"),
                 format_hint="csv",
                 header=True,
-                engine=native,
+                force_single=True,
             )
             FileSystem().touch(os.path.join(path, "_SUCCESS"))
             c = fa.load(
@@ -1327,12 +1322,15 @@ class ExecutionEngineTests(object):
             )
 
         def test_load_json_folder(self):
-            native = NativeExecutionEngine()
             a = ArrayDataFrame([[6, 1], [3, 4]], "c:int,a:long")
             b = ArrayDataFrame([[2, 7], [4, 8]], "c:int,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
-            fa.save(a, os.path.join(path, "a.json"), format_hint="json", engine=native)
-            fa.save(b, os.path.join(path, "b.json"), format_hint="json", engine=native)
+            fa.save(
+                a, os.path.join(path, "a.json"), format_hint="json", force_single=True
+            )
+            fa.save(
+                b, os.path.join(path, "b.json"), format_hint="json", force_single=True
+            )
             FileSystem().touch(os.path.join(path, "_SUCCESS"))
             c = fa.load(path, format_hint="json", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2], [8, 4], [4, 3]], "a:long,c:long", throw=True)

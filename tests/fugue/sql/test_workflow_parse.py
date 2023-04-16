@@ -8,6 +8,7 @@ from triad.utils.convert import get_caller_global_local_vars
 
 from fugue import (
     DataFrames,
+    DuckDBEngine,
     FugueWorkflow,
     LocalDataFrame,
     OutputTransformer,
@@ -17,10 +18,9 @@ from fugue import (
     module,
     register_sql_engine,
 )
+from fugue.exceptions import FugueSQLError
 from fugue.extensions.transformer.convert import _to_output_transformer
 from fugue.sql._visitors import FugueSQLHooks, _Extensions
-from fugue.exceptions import FugueSQLError
-from fugue.execution.native_execution_engine import QPDPandasEngine
 
 
 def test_create_data():
@@ -419,7 +419,7 @@ def test_select_with():
 
 
 def test_select_plus_engine():
-    class MockEngine(QPDPandasEngine):
+    class MockEngine(DuckDBEngine):
         def __init__(self, execution_engine, p: int = 0):
             super().__init__(execution_engine)
             self.p = p

@@ -454,7 +454,11 @@ def as_fugue_df(df: AnyDataFrame, **kwargs: Any) -> DataFrame:
 
     :param df: the object to wrap
     """
-    ds = as_fugue_dataset(df, **kwargs)
+    if len(kwargs) == 0:
+        ds = as_fugue_dataset(df)
+    else:
+        kw = {k: v for k, v in kwargs.items() if v is not None}
+        ds = as_fugue_dataset(df, **kw)
     if isinstance(ds, DataFrame):
         return ds
     raise TypeError(f"{type(df)} {kwargs} is not recognized as a Fugue DataFrame: {ds}")

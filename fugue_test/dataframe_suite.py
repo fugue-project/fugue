@@ -415,7 +415,7 @@ class DataFrameTests(object):
 
             # str -> date
             df = self.df(
-                [["1", "2020-01-01"], ["2", "2020-01-02 01:02:03"], ["3", None]],
+                [["1", "2020-01-01"], ["2", "2020-01-02"], ["3", None]],
                 "a:str,b:str",
             )
             ndf = fi.alter_columns(df, "b:date,a:int", as_fugue=True)
@@ -428,12 +428,16 @@ class DataFrameTests(object):
 
             # str -> datetime
             df = self.df(
-                [["1", "2020-01-01"], ["2", "2020-01-02 01:02:03"], ["3", None]],
+                [
+                    ["1", "2020-01-01 01:02:03"],
+                    ["2", "2020-01-02 01:02:03"],
+                    ["3", None],
+                ],
                 "a:str,b:str",
             )
             ndf = fi.alter_columns(df, "b:datetime,a:int", as_fugue=True)
             assert [
-                [1, datetime(2020, 1, 1)],
+                [1, datetime(2020, 1, 1, 1, 2, 3)],
                 [2, datetime(2020, 1, 2, 1, 2, 3)],
                 [3, None],
             ] == fi.as_array(ndf, type_safe=True)

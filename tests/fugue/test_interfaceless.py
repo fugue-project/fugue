@@ -2,18 +2,19 @@ import os
 from typing import Any, Dict, Iterable
 
 import pandas as pd
+from pytest import raises
 
+import fugue.api as fa
 from fugue import (
     DataFrame,
     FugueWorkflow,
     PandasDataFrame,
+    make_execution_engine,
     out_transform,
     transform,
-    make_execution_engine,
 )
 from fugue.constants import FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH
 from fugue.exceptions import FugueInterfacelessError, FugueWorkflowCompileError
-from pytest import raises
 
 
 def test_transform():
@@ -41,9 +42,7 @@ def test_transform():
     result = transform(pdf, f2, partition=dict(by=["a"]))
     assert isinstance(result, pd.DataFrame)
     assert sorted(result.values.tolist(), key=lambda x: x[0]) == [[0, 0], [1, 1]]
-    result = transform(
-        pdf, f2, partition=dict(by=["a"]), as_fugue=True
-    )
+    result = transform(pdf, f2, partition=dict(by=["a"]), as_fugue=True)
     assert isinstance(result, DataFrame)
 
     ppdf = PandasDataFrame(pdf)
@@ -110,71 +109,63 @@ def test_transform_to_file(tmpdir):
     def f(df: pd.DataFrame) -> pd.DataFrame:
         return df.assign(x=1)
 
-    engine = make_execution_engine(
-        None, {FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)}
-    )
+    with fa.engine_context(
+        engine_conf={FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)}
+    ):
+        # checkpoint is True, save_path is None
+        result = transform(tdf, f, as_fugue=True, checkpoint=True)
+        assert result.as_array() == [[2, 1]]
 
-    # checkpoint is True, save_path is None
-    result = transform(
-        tdf, f, as_fugue=True, checkpoint=True, engine=engine
-    )
-    assert result.as_array() == [[2, 1]]
-
-    # checkpoint is True, save_path is not None
-    result = transform(
-        tdf,
-        f,
-        as_fugue=True,
-        checkpoint=True,
-        save_path=fp,
-        engine=engine,
-    )
-    assert result.as_array() == [[2, 1]]
-    os.remove(fp)
-
-    # checkpoint is False, save_path is not None
-    result = transform(
-        tdf,
-        f,
-        as_fugue=True,
-        save_path=fp,
-        engine=engine,
-    )
-    assert os.path.exists(fp)
-    assert result == fp
-    assert pd.read_parquet(fp).values.tolist() == [[2, 1]]
-    os.remove(fp)
-
-    # test that parquet format is used for saving when
-    # no file extension is provided
-    fp = os.path.join(tmpdir, "test")
-    transform(
-        tdf,
-        f,
-        save_path=fp,
-        engine=engine,
-    )
-    loaded = pd.read_parquet(fp)
-    assert pd.read_parquet(fp).values.tolist() == [[2, 1]]
-    os.remove(fp)
-
-    # catch invalid file paths
-    with raises(FugueInterfacelessError):
-        transform(
+        # checkpoint is True, save_path is not None
+        result = transform(
             tdf,
             f,
             as_fugue=True,
-            save_path="f.csv",
-            engine=engine,
+            checkpoint=True,
+            save_path=fp,
         )
-    with raises(FugueInterfacelessError):
-        transform(
+        assert result.as_array() == [[2, 1]]
+        os.remove(fp)
+
+        # checkpoint is False, save_path is not None
+        result = transform(
             tdf,
             f,
             as_fugue=True,
-            save_path="f.json",
-            engine=engine,
+            save_path=fp,
         )
+        assert os.path.exists(fp)
+        assert result == fp
+        assert pd.read_parquet(fp).values.tolist() == [[2, 1]]
+        os.remove(fp)
+
+        # test that parquet format is used for saving when
+        # no file extension is provided
+        fp = os.path.join(tmpdir, "test")
+        transform(
+            tdf,
+            f,
+            save_path=fp,
+        )
+        loaded = pd.read_parquet(fp)
+        assert pd.read_parquet(fp).values.tolist() == [[2, 1]]
+        os.remove(fp)
+
+        # catch invalid file paths
+        with raises(FugueInterfacelessError):
+            transform(
+                tdf,
+                f,
+                as_fugue=True,
+                save_path="f.csv",
+            )
+        with raises(FugueInterfacelessError):
+            transform(
+                tdf,
+                f,
+                as_fugue=True,
+                save_path="f.json",
+            )
 
 
 def test_out_transform(tmpdir):
