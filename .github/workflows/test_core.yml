@@ -35,7 +35,7 @@ jobs:
     - name: Fix setuptools_scm
       run: pip install "setuptools_scm<7"
     - name: Install pandas 2
-      if: matrix.python-version == "3.10"
+      if: matrix.python-version == '3.10'
       run: pip install "pandas>=2"
     - name: Install dependencies
       run: make devenv
