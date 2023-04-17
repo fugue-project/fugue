@@ -1316,11 +1316,11 @@ class BuiltInTests(object):
             assert FileSystem().isdir(os.path.join(path3, "c=2"))
             # TODO: in test below, once issue #288 is fixed, use dag.load
             #  instead of pd.read_parquet
+            pdf = pd.read_parquet(path3).sort_values("a").reset_index(drop=True)
+            pdf["c"] = pdf["c"].astype("int")
             pd.testing.assert_frame_equal(
-                pd.read_parquet(path3).sort_values("a").reset_index(drop=True),
-                pd.DataFrame({"c": pd.Categorical([6, 2]), "a": [1, 7]}).reset_index(
-                    drop=True
-                ),
+                pdf,
+                pd.DataFrame({"c": [6, 2], "a": [1, 7]}).reset_index(drop=True),
                 check_like=True,
             )
 

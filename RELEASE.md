@@ -1,5 +1,9 @@
 # Release Notes
 
+## 0.8.4
+
+-   [455](https://github.com/fugue-project/fugue/issues/455) Make Fugue pandas 2 compatible
+
 ## 0.8.3
 
 -   [449](https://github.com/fugue-project/fugue/issues/449) Add coarse partitioning concept

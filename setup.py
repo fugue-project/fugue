@@ -31,12 +31,12 @@ setup(
     keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
     install_requires=[
-        "triad>=0.8.4",
+        "triad>=0.8.6",
         "adagio>=0.2.4",
-        "qpd>=0.4.0",
+        "qpd>=0.4.1",
         "fugue-sql-antlr>=0.1.6",
         "pyarrow>=0.15.1",
-        "pandas>=1.2.0,<2",
+        "pandas>=1.2.0",
         "sqlglot",
         "jinja2",
     ],
@@ -46,7 +46,7 @@ setup(
         "dask": [
             "dask[distributed,dataframe]; python_version < '3.8'",
             "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
-            "qpd[dask]>=0.4.0",
+            "qpd[dask]>=0.4.1",
         ],
         "ray": ["ray[data]>=2.0.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
         "duckdb": [
