@@ -21,7 +21,6 @@ class SparkIO(object):
             "csv": self._load_csv,
             "parquet": self._load_parquet,
             "json": self._load_json,
-            "avro": self._load_avro,
         }
 
     def load_df(
@@ -129,18 +128,6 @@ class SparkIO(object):
 
     def _load_json(self, p: List[str], columns: Any = None, **kwargs: Any) -> DataFrame:
         reader = self._session.read.format("json")
-        reader.options(**kwargs)
-        if columns is None:
-            return SparkDataFrame(reader.load(p))
-        if isinstance(columns, list):  # column names
-            return SparkDataFrame(reader.load(p))[columns]
-        schema = Schema(columns)
-        return SparkDataFrame(reader.load(p)[schema.names], schema)
-
-    def _load_avro(self, p: List[str], columns: Any = None, **kwargs: Any) -> DataFrame:
-        reader = self._session.read.format(
-            "avro"
-        )  # avro is an external data source that has built-in support since spark 2.4
         reader.options(**kwargs)
         if columns is None:
             return SparkDataFrame(reader.load(p))

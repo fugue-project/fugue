@@ -3,8 +3,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import fs as pfs
 from dask import dataframe as dd
 from fugue._utils.io import FileParser, _get_single_files
-from fugue._utils.io import _load_avro as _pd_load_avro
-from fugue._utils.io import _save_avro
 from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
@@ -153,25 +151,14 @@ def _load_json(
     return pdf[schema.names], schema
 
 
-def _load_avro(
-    p: FileParser, columns: Any = None, **kwargs: Any
-) -> Tuple[dd.DataFrame, Any]:
-    # TODO: change this hacky implementation!
-    pdf, schema = _pd_load_avro(p, columns, **kwargs)
-
-    return dd.from_pandas(pdf, npartitions=4), schema
-
-
 _FORMAT_LOAD: Dict[str, Callable[..., Tuple[dd.DataFrame, Any]]] = {
     "csv": _load_csv,
     "parquet": _load_parquet,
     "json": _load_json,
-    "avro": _load_avro,
 }
 
 _FORMAT_SAVE: Dict[str, Callable] = {
     "csv": _save_csv,
     "parquet": _save_parquet,
     "json": _save_json,
-    "avro": _save_avro,
 }

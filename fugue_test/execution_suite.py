@@ -26,7 +26,6 @@ from fugue import (
 from fugue.column import all_cols, col, lit
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.execution.native_execution_engine import NativeExecutionEngine
-from fugue_test._utils import skip_spark2
 
 
 class ExecutionEngineTests(object):
@@ -1087,47 +1086,6 @@ class ExecutionEngineTests(object):
                 [f1, f2], format_hint="parquet", columns=["a", "c"], as_fugue=True
             )
             df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:int", throw=True)
-
-        @skip_spark2
-        def test_save_single_and_load_avro(self):
-            # TODO: switch to c:int,a:long when we can preserve schema to avro
-            e = self.engine
-            b = ArrayDataFrame([[6, 1], [2, 7]], "c:long,a:long")
-            path = os.path.join(self.tmpdir, "a", "b")
-            e.fs.makedirs(path, recreate=True)
-            # over write folder with single file
-            fa.save(b, path, format_hint="avro", force_single=True)
-            assert e.fs.isfile(path)
-            c = fa.load(path, format_hint="avro", columns=["a", "c"], as_fugue=True)
-            df_eq(c, [[1, 6], [7, 2]], "a:long,c:long", throw=True)
-
-            # overwirte single with folder (if applicable)
-            b = ArrayDataFrame([[60, 1], [20, 7]], "c:long,a:long")
-            fa.save(b, path, format_hint="avro", mode="overwrite")
-            c = fa.load(path, format_hint="avro", columns=["a", "c"], as_fugue=True)
-            df_eq(c, [[1, 60], [7, 20]], "a:long,c:long", throw=True)
-
-        @skip_spark2
-        def test_save_and_load_avro(self):
-            # TODO: switch to c:int,a:long when we can preserve schema to avro
-            b = ArrayDataFrame([[6, 1], [2, 7]], "c:long,a:long")
-            path = os.path.join(self.tmpdir, "a", "b")
-            fa.save(b, path, format_hint="avro")
-            c = fa.load(path, format_hint="avro", columns=["a", "c"], as_fugue=True)
-            df_eq(c, [[1, 6], [7, 2]], "a:long,c:long", throw=True)
-
-        @skip_spark2
-        def test_load_avro_folder(self):
-            # TODO: switch to c:int,a:long when we can preserve schema to avro
-            native = NativeExecutionEngine()
-            a = ArrayDataFrame([[6, 1]], "c:long,a:long")
-            b = ArrayDataFrame([[2, 7], [4, 8]], "c:long,a:long")
-            path = os.path.join(self.tmpdir, "a", "b")
-            fa.save(a, os.path.join(path, "a.avro"), engine=native)
-            fa.save(b, os.path.join(path, "b.avro"), engine=native)
-            FileSystem().touch(os.path.join(path, "_SUCCESS"))
-            c = fa.load(path, format_hint="avro", columns=["a", "c"], as_fugue=True)
-            df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:long", throw=True)
 
         def test_save_single_and_load_csv(self):
             e = self.engine

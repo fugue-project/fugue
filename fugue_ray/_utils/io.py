@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 import pyarrow as pa
 import ray.data as rd
 from fugue import ExecutionEngine
-from fugue._utils.io import FileParser, load_df, save_df
+from fugue._utils.io import FileParser, save_df
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame
 from fugue_ray.dataframe import RayDataFrame
@@ -49,8 +49,6 @@ class RayIO(object):
             len(fmts) == 1, NotImplementedError("can't support multiple formats")
         )
         fmt = fmts[0]
-        if fmt == "avro":  # TODO: remove avro support
-            return load_df(uri, format_hint=format_hint, columns=columns, **kwargs)
         files = [f.uri for f in fp]
         return self._loads[fmt](files, columns, **kwargs)
 
@@ -75,7 +73,7 @@ class RayIO(object):
                 except Exception:  # pragma: no cover
                     pass
         p = FileParser(uri, format_hint)
-        if not force_single and p.file_format != "avro":
+        if not force_single:
             df = self._prepartition(df, partition_spec=partition_spec)
 
             self._saves[p.file_format](df=df, uri=p.uri, **kwargs)
