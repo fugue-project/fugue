@@ -126,7 +126,6 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         assert isinstance(infer_execution_engine([fdf]), SparkSession)
 
 
-@pytest.mark.skipif(pyspark.__version__ < "3", reason="pyspark < 3")
 class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
     @pytest.fixture(autouse=True)
     def init_session(self, spark_session):

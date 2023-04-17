@@ -31,10 +31,6 @@ class SparkDataFrameTests(DataFrameTests.Tests):
         # TODO: Spark will silently cast invalid data to nulls without exceptions
         pass
 
-    def test_map_type(self):
-        if pyspark.__version__ >= "3":
-            return super().test_map_type()
-
 
 class NativeSparkDataFrameTests(DataFrameTests.NativeTests):
     @pytest.fixture(autouse=True)
@@ -54,10 +50,6 @@ class NativeSparkDataFrameTests(DataFrameTests.NativeTests):
     def test_alter_columns_invalid(self):
         # TODO: Spark will silently cast invalid data to nulls without exceptions
         pass
-
-    def test_map_type(self):
-        if pyspark.__version__ >= "3":
-            return super().test_map_type()
 
 
 def test_init(spark_session):

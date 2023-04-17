@@ -57,7 +57,6 @@ from fugue.exceptions import (
     FugueWorkflowError,
     FugueWorkflowRuntimeValidationError,
 )
-from fugue_test._utils import _is_spark2
 
 
 class BuiltInTests(object):
@@ -1675,9 +1674,7 @@ class BuiltInTests(object):
                 assert not isinstance(sdf4, DataFrame)
                 assert fa.is_local(sdf4)
 
-        @pytest.mark.skipif(
-            _is_spark2() or os.name == "nt", reason="Skip Spark<3 or Windows"
-        )
+        @pytest.mark.skipif(os.name == "nt", reason="Skip Windows")
         def test_any_column_name(self):
 
             f_parquet = os.path.join(str(self.tmpdir), "a.parquet")
