@@ -30,7 +30,12 @@ from fugue.plugins import (
     rename,
     select_columns,
 )
-from fugue_spark._utils.convert import to_cast_expression, to_schema, to_type_safe_input
+from fugue_spark._utils.convert import (
+    to_cast_expression,
+    to_pandas,
+    to_schema,
+    to_type_safe_input,
+)
 
 
 class SparkDataFrame(DataFrame):
@@ -94,7 +99,7 @@ class SparkDataFrame(DataFrame):
             data = list(to_type_safe_input(self.native.collect(), self.schema))
             res: LocalBoundedDataFrame = ArrayDataFrame(data, self.schema)
         else:
-            res = PandasDataFrame(self.native.toPandas(), self.schema)
+            res = PandasDataFrame(self.as_pandas(), self.schema)
         if self.has_metadata:
             res.reset_metadata(self.metadata)
         return res
@@ -126,7 +131,7 @@ class SparkDataFrame(DataFrame):
         return SparkDataFrame(self.native[schema.names])
 
     def as_pandas(self) -> pd.DataFrame:
-        return self.native.toPandas()
+        return to_pandas(self.native)
 
     def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
@@ -214,7 +219,7 @@ def _spark_df_is_local(df: ps.DataFrame) -> bool:
 
 @as_local_bounded.candidate(lambda df: isinstance(df, ps.DataFrame))
 def _spark_df_as_local(df: ps.DataFrame) -> pd.DataFrame:
-    return df.toPandas()
+    return to_pandas(df)
 
 
 @get_column_names.candidate(lambda df: isinstance(df, ps.DataFrame))
@@ -264,7 +269,7 @@ def _spark_df_head(
     if columns is not None:
         df = df[columns]
     res = df.limit(n)
-    return SparkDataFrame(res).as_local() if as_fugue else res.toPandas()
+    return SparkDataFrame(res).as_local() if as_fugue else to_pandas(res)
 
 
 def _rename_spark_dataframe(df: ps.DataFrame, names: Dict[str, Any]) -> ps.DataFrame:

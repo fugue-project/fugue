@@ -1,18 +1,12 @@
 from typing import Any, Iterable, List, Tuple
 
+import cloudpickle
+import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
 import pyspark.sql.types as pt
-
-try:  # pyspark < 3
-    from pyspark.sql.types import from_arrow_type, to_arrow_type  # type: ignore
-
-    # https://issues.apache.org/jira/browse/SPARK-29041
-    pt._acceptable_types[pt.BinaryType] = (bytearray, bytes)  # type: ignore  # pragma: no cover  # noqa: E501  # pylint: disable=line-too-long
-except ImportError:  # pyspark >=3
-    from pyspark.sql.pandas.types import from_arrow_type, to_arrow_type
-
 from pyarrow.types import is_list, is_struct, is_timestamp
+from pyspark.sql.pandas.types import from_arrow_type, to_arrow_type
 from triad.collections import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
@@ -111,6 +105,22 @@ def to_type_safe_input(rows: Iterable[ps.Row], schema: Schema) -> Iterable[List[
             data = row.asDict(recursive=True)
             r = [data[n] for n in schema.names]
             yield r
+
+
+def to_pandas(df: ps.DataFrame) -> pd.DataFrame:
+    if pd.__version__ < "2" or not any(
+        isinstance(x.dataType, (pt.TimestampType, pt.TimestampNTZType))
+        for x in df.schema.fields
+    ):
+        return df.toPandas()
+
+    def serialize(dfs):  # pragma: no cover
+        for df in dfs:
+            data = cloudpickle.dumps(df)
+            yield pd.DataFrame([[data]], columns=["data"])
+
+    sdf = df.mapInPandas(serialize, schema="data binary")
+    return pd.concat(cloudpickle.loads(x.data) for x in sdf.collect())
 
 
 # TODO: the following function always set nullable to true,

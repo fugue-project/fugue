@@ -26,6 +26,7 @@ from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.extensions.transformer import Transformer, transformer
 from fugue.plugins import infer_execution_engine
 from fugue.workflow.workflow import FugueWorkflow
+from fugue_spark._utils.convert import to_pandas
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 from fugue_test.builtin_suite import BuiltInTests
@@ -311,7 +312,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
 
         result = transform(sdf, f1, partition=dict(by=["a"]), engine=self.engine)
         assert isinstance(result, SDataFrame)
-        assert result.toPandas().sort_values(["a"]).values.tolist() == [[0, 0], [1, 1]]
+        assert to_pandas(result).sort_values(["a"]).values.tolist() == [[0, 0], [1, 1]]
 
     def test_annotation_1(self):
         def m_c(engine: SparkExecutionEngine) -> ps.DataFrame:
@@ -321,7 +322,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             return df
 
         def m_o(engine: SparkExecutionEngine, df: ps.DataFrame) -> None:
-            assert 1 == df.toPandas().shape[0]
+            assert 1 == to_pandas(df).shape[0]
 
         with FugueWorkflow() as dag:
             df = dag.create(m_c).process(m_p)
@@ -339,7 +340,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
 
         def m_o(session: SparkSession, df: ps.DataFrame) -> None:
             assert isinstance(session, SparkSession)
-            assert 1 == df.toPandas().shape[0]
+            assert 1 == to_pandas(df).shape[0]
 
         with FugueWorkflow() as dag:
             df = dag.create(m_c).process(m_p)

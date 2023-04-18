@@ -12,12 +12,12 @@ import fugue.api as fa
 
 def test_transform_common():
     def tr1(df: pl.DataFrame) -> pl.DataFrame:
-        tdf = df.with_column(pl.lit(1, pl.Int32()).alias("b"))
+        tdf = df.with_columns(pl.lit(1, pl.Int32()).alias("b"))
         return tdf
 
     def tr2(dfs: Iterable[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         for df in dfs:
-            tdf = df.with_column(pl.lit(1, pl.Int32()).alias("b"))
+            tdf = df.with_columns(pl.lit(1, pl.Int32()).alias("b"))
             yield tdf
 
     for tr in [tr1, tr2]:
@@ -50,7 +50,7 @@ def test_transform_common():
 
 def test_transform_empty_result():
     def tr1(df: pl.DataFrame) -> pl.DataFrame:
-        tdf = df.with_column(pl.lit(1, pl.Int32()).alias("b"))
+        tdf = df.with_columns(pl.lit(1, pl.Int32()).alias("b"))
         return tdf.head(0)
 
     def tr2(dfs: Iterable[pl.DataFrame]) -> Iterator[pl.DataFrame]:
@@ -69,12 +69,12 @@ def test_transform_empty_result():
 
 def test_polars_on_engines():
     def tr1(df: pl.DataFrame) -> pl.DataFrame:
-        tdf = df.with_column(pl.lit(1, pl.Int32()).alias("c"))
+        tdf = df.with_columns(pl.lit(1, pl.Int32()).alias("c"))
         return tdf
 
     def tr2(dfs: Iterable[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         for df in dfs:
-            tdf = df.with_column(pl.lit(1, pl.Int32()).alias("c"))
+            tdf = df.with_columns(pl.lit(1, pl.Int32()).alias("c"))
             yield tdf
 
     def test(engine):
