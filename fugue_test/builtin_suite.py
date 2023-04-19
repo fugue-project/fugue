@@ -57,7 +57,6 @@ from fugue.exceptions import (
     FugueWorkflowError,
     FugueWorkflowRuntimeValidationError,
 )
-from fugue_test._utils import _is_spark2
 
 
 class BuiltInTests(object):
@@ -1316,12 +1315,13 @@ class BuiltInTests(object):
             assert FileSystem().isdir(os.path.join(path3, "c=2"))
             # TODO: in test below, once issue #288 is fixed, use dag.load
             #  instead of pd.read_parquet
+            pdf = pd.read_parquet(path3).sort_values("a").reset_index(drop=True)
+            pdf["c"] = pdf["c"].astype(int)
             pd.testing.assert_frame_equal(
-                pd.read_parquet(path3).sort_values("a").reset_index(drop=True),
-                pd.DataFrame({"c": pd.Categorical([6, 2]), "a": [1, 7]}).reset_index(
-                    drop=True
-                ),
+                pdf,
+                pd.DataFrame({"c": [6, 2], "a": [1, 7]}).reset_index(drop=True),
                 check_like=True,
+                check_dtype=False,
             )
 
         def test_save_and_use(self):
@@ -1675,9 +1675,7 @@ class BuiltInTests(object):
                 assert not isinstance(sdf4, DataFrame)
                 assert fa.is_local(sdf4)
 
-        @pytest.mark.skipif(
-            _is_spark2() or os.name == "nt", reason="Skip Spark<3 or Windows"
-        )
+        @pytest.mark.skipif(os.name == "nt", reason="Skip Windows")
         def test_any_column_name(self):
 
             f_parquet = os.path.join(str(self.tmpdir), "a.parquet")

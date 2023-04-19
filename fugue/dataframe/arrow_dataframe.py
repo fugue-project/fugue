@@ -141,7 +141,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
         return self.native.shape[0]
 
     def as_pandas(self) -> pd.DataFrame:
-        return self.native.to_pandas()
+        return self.native.to_pandas(use_threads=False, date_as_object=False)
 
     def head(
         self, n: int, columns: Optional[List[str]] = None

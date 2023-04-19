@@ -1,4 +1,3 @@
-import pyspark
 from fugue_spark._utils.convert import (
     to_cast_expression,
     to_schema,
@@ -53,13 +52,12 @@ def test_schema_conversion(spark_session):
     assert to_schema(df) == "name:[{nest_name:str,nest_value:int}]"
     assert to_spark_schema("name:[{nest_name:str,nest_value:int}]") == schema
 
-    if pyspark.__version__ >= "3":
-        schema = StructType(
-            [StructField("a", MapType(StringType(), IntegerType(), True), True)],
-        )
-        df = spark_session.createDataFrame([[{"x": 1}], [{"y": 2}]], schema)
-        assert to_schema(df) == "a:<str,int>"
-        assert to_spark_schema("a:<str,int>") == schema
+    schema = StructType(
+        [StructField("a", MapType(StringType(), IntegerType(), True), True)],
+    )
+    df = spark_session.createDataFrame([[{"x": 1}], [{"y": 2}]], schema)
+    assert to_schema(df) == "a:<str,int>"
+    assert to_spark_schema("a:<str,int>") == schema
 
 
 def test_to_cast_expression():

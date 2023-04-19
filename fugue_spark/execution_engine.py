@@ -4,7 +4,6 @@ from uuid import uuid4
 
 import pandas as pd
 import pyarrow as pa
-import pyspark
 import pyspark.sql as ps
 from pyspark import StorageLevel
 from pyspark.rdd import RDD
@@ -43,11 +42,7 @@ from fugue.dataframe.utils import get_join_schemas
 from fugue.exceptions import FugueDataFrameInitError
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 
-from ._constants import (
-    FUGUE_SPARK_CONF_USE_PANDAS_UDF,
-    FUGUE_SPARK_DEFAULT_CONF,
-    _IS_SPARK_2,
-)
+from ._constants import FUGUE_SPARK_CONF_USE_PANDAS_UDF, FUGUE_SPARK_DEFAULT_CONF
 from ._utils.convert import to_schema, to_spark_schema, to_type_safe_input
 from ._utils.io import SparkIO
 from ._utils.partition import even_repartition, hash_repartition, rand_repartition
@@ -103,10 +98,6 @@ class SparkMapEngine(MapEngine):
 
     def _should_use_pandas_udf(self, schema: Schema) -> bool:
         possible = hasattr(ps.DataFrame, "mapInPandas")  # must be new version of Spark
-        if pyspark.__version__ < "3":  # pragma: no cover
-            possible &= self.execution_engine.conf.get(
-                "spark.sql.execution.arrow.enabled", False
-            )
         # else:  # this condition seems to be unnecessary
         #    possible &= self.execution_engine.conf.get(
         #        "spark.sql.execution.arrow.pyspark.enabled", False
@@ -723,14 +714,14 @@ class SparkExecutionEngine(ExecutionEngine):
                 if isinstance(df, SparkDataFrame):
                     return df
                 if isinstance(df, ArrowDataFrame):
-                    raw_df: Any = df.as_array() if _IS_SPARK_2 else df.as_pandas()
+                    raw_df: Any = df.as_pandas()
                     sdf = self.spark_session.createDataFrame(
                         raw_df, to_spark_schema(df.schema)
                     )
                     return SparkDataFrame(sdf, df.schema)
                 if isinstance(df, (ArrayDataFrame, IterableDataFrame)):
                     adf = ArrowDataFrame(df.as_array(type_safe=False), df.schema)
-                    raw_df = adf.as_array() if _IS_SPARK_2 else adf.as_pandas()
+                    raw_df = adf.as_pandas()
                     sdf = self.spark_session.createDataFrame(
                         raw_df, to_spark_schema(df.schema)
                     )

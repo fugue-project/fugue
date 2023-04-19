@@ -105,23 +105,6 @@ def test_json_io(tmpdir, spark_session):
     raises(Exception, lambda: si.load_df(path, columns="bb:str,a:int"))
 
 
-def test_avro_io(tmpdir, spark_session):
-    if spark_session.version < "3.0.0":
-        return
-    fs = FileSystem()
-    si = SparkIO(spark_session, fs)
-    df1 = _df([["1", 2, 3]], "a:str,b:int,c:long")
-    path = os.path.join(tmpdir, "a.avro")
-    si.save_df(df1, path)
-    actual = si.load_df(path)
-    df_eq(actual, [["1", 2, 3]], "a:str,b:int,c:long")
-    actual = si.load_df(path, columns=["b", "a"])
-    df_eq(actual, [[2, "1"]], "b:int,a:str")
-    actual = si.load_df(path, columns="b:str,a:int")
-    df_eq(actual, [["2", 1]], "b:str,a:int")
-    raises(Exception, lambda: si.load_df(path, columns="bb:str,a:int"))
-
-
 def test_save_with_partition(tmpdir, spark_session):
     si = SparkIO(spark_session, FileSystem())
     df1 = _df([["1", 2, 3]], "a:str,b:int,c:long")

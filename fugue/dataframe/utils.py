@@ -100,7 +100,7 @@ def _df_eq(
         d1 = d1.reset_index(drop=True)
         d2 = d2.reset_index(drop=True)
         pd.testing.assert_frame_equal(
-            d1, d2, check_less_precise=digits, check_dtype=False
+            d1, d2, rtol=0, atol=10 ** (-digits), check_dtype=False, check_exact=False
         )
         return True
     except AssertionError:
