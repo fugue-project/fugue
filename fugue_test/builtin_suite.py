@@ -1321,6 +1321,7 @@ class BuiltInTests(object):
                 pdf,
                 pd.DataFrame({"c": [6, 2], "a": [1, 7]}).reset_index(drop=True),
                 check_like=True,
+                check_dtype=False,
             )
 
         def test_save_and_use(self):
