@@ -1316,7 +1316,7 @@ class BuiltInTests(object):
             # TODO: in test below, once issue #288 is fixed, use dag.load
             #  instead of pd.read_parquet
             pdf = pd.read_parquet(path3).sort_values("a").reset_index(drop=True)
-            pdf["c"] = pdf["c"].astype("int")
+            pdf["c"] = pdf["c"].astype(int)
             pd.testing.assert_frame_equal(
                 pdf,
                 pd.DataFrame({"c": [6, 2], "a": [1, 7]}).reset_index(drop=True),
