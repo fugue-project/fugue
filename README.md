@@ -155,7 +155,7 @@ It also has the following installation extras:
 For example a common use case is:
 
 ```bash
-pip install fugue[duckdb,spark]
+pip install "fugue[duckdb,spark]"
 ```
 
 Note if you already installed Spark or DuckDB independently, Fugue is able to automatically use them without installing the extras.
