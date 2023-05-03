@@ -22,7 +22,7 @@ from fugue_duckdb.execution_engine import DuckExecutionEngine
 
 from ._constants import FUGUE_RAY_DEFAULT_BATCH_SIZE, FUGUE_RAY_ZERO_COPY
 from ._utils.cluster import get_default_partitions, get_default_shuffle_partitions
-from ._utils.dataframe import add_partition_key, add_coarse_partition_key
+from ._utils.dataframe import add_coarse_partition_key, add_partition_key
 from ._utils.io import RayIO
 from .dataframe import RayDataFrame
 
@@ -215,6 +215,7 @@ class RayExecutionEngine(DuckExecutionEngine):
     ):
         if not ray.is_initialized():  # pragma: no cover
             ray.init()
+
         super().__init__(conf, connection)
         self._io = RayIO(self)
 

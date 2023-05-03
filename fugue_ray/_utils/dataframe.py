@@ -19,6 +19,8 @@ def get_dataset_format(df: rd.Dataset) -> Optional[str]:
         return None
     if hasattr(df, "_dataset_format"):  # pragma: no cover
         return df._dataset_format()  # ray<2.2
+    ctx = rd.context.DatasetContext.get_current()
+    ctx.use_streaming_executor = False
     return df.dataset_format()  # ray>=2.2
 
 
