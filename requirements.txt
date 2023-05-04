@@ -23,6 +23,7 @@ matplotlib
 seaborn
 
 duckdb-engine>=0.6.4
+sqlalchemy==2.0.10  # 2.0.11 has a bug
 
 # publish to pypi
 wheel
