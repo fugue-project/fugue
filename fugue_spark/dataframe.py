@@ -152,7 +152,7 @@ class SparkDataFrame(DataFrame):
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
-        if is_spark_connect(self.native):
+        if is_spark_connect(self.native):  # pragma: no cover
             yield from self.as_array(columns, type_safe=type_safe)
             return
         sdf = self._select_columns(columns)

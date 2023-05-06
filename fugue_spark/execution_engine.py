@@ -103,7 +103,7 @@ class SparkMapEngine(MapEngine):
         return self.execution_engine.is_spark_connect  # type:ignore
 
     def _should_use_pandas_udf(self, schema: Schema) -> bool:
-        if self.is_spark_connect:
+        if self.is_spark_connect:  # pragma: no cover
             return True
         possible = hasattr(ps.DataFrame, "mapInPandas")  # must be new version of Spark
         # else:  # this condition seems to be unnecessary
@@ -377,7 +377,7 @@ class SparkExecutionEngine(ExecutionEngine):
 
     def get_current_parallelism(self) -> int:
         spark = self.spark_session
-        if self.is_spark_connect:
+        if self.is_spark_connect:  # pragma: no cover
             num = spark.conf.get("spark.default.parallelism", "")
             if num != "":
                 return int(num)
