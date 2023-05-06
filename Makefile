@@ -89,6 +89,9 @@ testcore:
 testspark:
 	python3 -b -m pytest --reruns 2 --only-rerun 'Table or view not found' tests/fugue_spark
 
+testsparkconnect:
+	python3 -b -m pytest --reruns 2 --only-rerun 'Table or view not found' -k SparkConnect tests/fugue_spark/test_spark_connect.py
+
 testdask:
 	python3 -b -m pytest tests/fugue_dask
 
@@ -109,3 +112,9 @@ testnotebook:
 	jupyter nbextension install --user --py fugue_notebook
 	jupyter nbextension enable fugue_notebook --py
 	jupyter nbconvert --execute --clear-output tests/fugue_notebook/test_notebook.ipynb
+
+dockerspark:
+	docker run -p 15002:15002 -p 4040:4040 -e SPARK_NO_DAEMONIZE=1 apache/spark-py /opt/spark/sbin/start-connect-server.sh --jars https://repo1.maven.org/maven2/org/apache/spark/spark-connect_2.12/3.4.0/spark-connect_2.12-3.4.0.jar
+
+sparkconnect:
+	bash scripts/setupsparkconnect.sh

@@ -18,18 +18,22 @@ from fugue.plugins import as_fugue_dataset, infer_execution_engine, parse_creato
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
+from ._utils.misc import SparkConnectDataFrame, SparkConnectSession, is_spark_dataframe
+
 _is_sparksql = namespace_candidate("sparksql", lambda x: isinstance(x, str))
 
 
 @infer_execution_engine.candidate(
-    lambda objs: is_pandas_or(objs, (ps.DataFrame, SparkDataFrame))
+    lambda objs: is_pandas_or(
+        objs, (ps.DataFrame, SparkConnectDataFrame, SparkDataFrame)
+    )
     or any(_is_sparksql(obj) for obj in objs)
 )
 def _infer_spark_client(obj: Any) -> Any:
     return SparkSession.builder.getOrCreate()
 
 
-@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, ps.DataFrame))
+@as_fugue_dataset.candidate(lambda df, **kwargs: is_spark_dataframe(df))
 def _spark_as_fugue_df(df: ps.DataFrame, **kwargs: Any) -> SparkDataFrame:
     return SparkDataFrame(df, **kwargs)
 
@@ -53,6 +57,12 @@ def _register_engines() -> None:
         lambda session, conf, **kwargs: SparkExecutionEngine(session, conf=conf),
         on_dup="ignore",
     )
+    if SparkConnectSession is not None:
+        register_execution_engine(
+            SparkConnectSession,
+            lambda session, conf, **kwargs: SparkExecutionEngine(session, conf=conf),
+            on_dup="ignore",
+        )
 
 
 @fugue_annotated_param(SparkExecutionEngine)
@@ -81,7 +91,7 @@ class _SparkDataFrameParam(DataFrameParam):
         return ctx.to_df(df).native
 
     def to_output_df(self, output: Any, schema: Any, ctx: Any) -> DataFrame:
-        assert isinstance(output, ps.DataFrame)
+        assert is_spark_dataframe(output)
         assert isinstance(ctx, SparkExecutionEngine)
         return ctx.to_df(output, schema=schema)
 

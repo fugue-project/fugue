@@ -30,12 +30,9 @@ from fugue.plugins import (
     rename,
     select_columns,
 )
-from fugue_spark._utils.convert import (
-    to_cast_expression,
-    to_pandas,
-    to_schema,
-    to_type_safe_input,
-)
+
+from ._utils.convert import to_cast_expression, to_pandas, to_schema, to_type_safe_input
+from ._utils.misc import is_spark_connect, is_spark_dataframe
 
 
 class SparkDataFrame(DataFrame):
@@ -56,12 +53,12 @@ class SparkDataFrame(DataFrame):
 
     def __init__(self, df: Any = None, schema: Any = None):  # noqa: C901
         self._lock = SerializableRLock()
-        if isinstance(df, ps.DataFrame):
+        if is_spark_dataframe(df):
             if schema is not None:
                 schema = to_schema(schema).assert_not_empty()
                 has_cast, expr = to_cast_expression(df, schema, True)
                 if has_cast:
-                    df = df.selectExpr(*expr)
+                    df = df.selectExpr(*expr)  # type: ignore
             else:
                 schema = to_schema(df).assert_not_empty()
             self._native = df
@@ -155,6 +152,9 @@ class SparkDataFrame(DataFrame):
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
+        if is_spark_connect(self.native):
+            yield from self.as_array(columns, type_safe=type_safe)
+            return
         sdf = self._select_columns(columns)
         if not type_safe:
             for row in to_type_safe_input(sdf.native.rdd.toLocalIterator(), sdf.schema):
@@ -187,47 +187,47 @@ class SparkDataFrame(DataFrame):
         return SparkDataFrame(self.native.select(*columns))
 
 
-@is_df.candidate(lambda df: isinstance(df, ps.DataFrame))
+@is_df.candidate(lambda df: is_spark_dataframe(df))
 def _spark_is_df(df: ps.DataFrame) -> bool:
     return True
 
 
-@get_num_partitions.candidate(lambda df: isinstance(df, ps.DataFrame))
+@get_num_partitions.candidate(lambda df: is_spark_dataframe(df))
 def _spark_num_partitions(df: ps.DataFrame) -> int:
     return df.rdd.getNumPartitions()
 
 
-@count.candidate(lambda df: isinstance(df, ps.DataFrame))
+@count.candidate(lambda df: is_spark_dataframe(df))
 def _spark_df_count(df: ps.DataFrame) -> int:
     return df.count()
 
 
-@is_bounded.candidate(lambda df: isinstance(df, ps.DataFrame))
+@is_bounded.candidate(lambda df: is_spark_dataframe(df))
 def _spark_df_is_bounded(df: ps.DataFrame) -> bool:
     return True
 
 
-@is_empty.candidate(lambda df: isinstance(df, ps.DataFrame))
+@is_empty.candidate(lambda df: is_spark_dataframe(df))
 def _spark_df_is_empty(df: ps.DataFrame) -> bool:
     return df.first() is None
 
 
-@is_local.candidate(lambda df: isinstance(df, ps.DataFrame))
+@is_local.candidate(lambda df: is_spark_dataframe(df))
 def _spark_df_is_local(df: ps.DataFrame) -> bool:
     return False
 
 
-@as_local_bounded.candidate(lambda df: isinstance(df, ps.DataFrame))
+@as_local_bounded.candidate(lambda df: is_spark_dataframe(df))
 def _spark_df_as_local(df: ps.DataFrame) -> pd.DataFrame:
     return to_pandas(df)
 
 
-@get_column_names.candidate(lambda df: isinstance(df, ps.DataFrame))
+@get_column_names.candidate(lambda df: is_spark_dataframe(df))
 def _get_spark_df_columns(df: ps.DataFrame) -> List[Any]:
     return df.columns
 
 
-@rename.candidate(lambda df, *args, **kwargs: isinstance(df, ps.DataFrame))
+@rename.candidate(lambda df, *args, **kwargs: is_spark_dataframe(df))
 def _rename_spark_df(
     df: ps.DataFrame, columns: Dict[str, Any], as_fugue: bool = False
 ) -> ps.DataFrame:
@@ -237,7 +237,7 @@ def _rename_spark_df(
     return _adjust_df(_rename_spark_dataframe(df, columns), as_fugue=as_fugue)
 
 
-@drop_columns.candidate(lambda df, *args, **kwargs: isinstance(df, ps.DataFrame))
+@drop_columns.candidate(lambda df, *args, **kwargs: is_spark_dataframe(df))
 def _drop_spark_df_columns(
     df: ps.DataFrame, columns: List[str], as_fugue: bool = False
 ) -> Any:
@@ -249,7 +249,7 @@ def _drop_spark_df_columns(
     return _adjust_df(df[cols], as_fugue=as_fugue)
 
 
-@select_columns.candidate(lambda df, *args, **kwargs: isinstance(df, ps.DataFrame))
+@select_columns.candidate(lambda df, *args, **kwargs: is_spark_dataframe(df))
 def _select_spark_df_columns(
     df: ps.DataFrame, columns: List[Any], as_fugue: bool = False
 ) -> Any:
@@ -259,7 +259,7 @@ def _select_spark_df_columns(
     return _adjust_df(df[columns], as_fugue=as_fugue)
 
 
-@head.candidate(lambda df, *args, **kwargs: isinstance(df, ps.DataFrame))
+@head.candidate(lambda df, *args, **kwargs: is_spark_dataframe(df))
 def _spark_df_head(
     df: ps.DataFrame,
     n: int,

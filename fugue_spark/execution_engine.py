@@ -45,6 +45,7 @@ from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngi
 from ._constants import FUGUE_SPARK_CONF_USE_PANDAS_UDF, FUGUE_SPARK_DEFAULT_CONF
 from ._utils.convert import to_schema, to_spark_schema, to_type_safe_input
 from ._utils.io import SparkIO
+from ._utils.misc import is_spark_connect as _is_spark_connect, is_spark_dataframe
 from ._utils.partition import even_repartition, hash_repartition, rand_repartition
 from .dataframe import SparkDataFrame
 
@@ -96,7 +97,14 @@ class SparkMapEngine(MapEngine):
     def is_distributed(self) -> bool:
         return True
 
+    @property
+    def is_spark_connect(self) -> bool:
+        """Whether the spark session is created by spark connect"""
+        return self.execution_engine.is_spark_connect  # type:ignore
+
     def _should_use_pandas_udf(self, schema: Schema) -> bool:
+        if self.is_spark_connect:
+            return True
         possible = hasattr(ps.DataFrame, "mapInPandas")  # must be new version of Spark
         # else:  # this condition seems to be unnecessary
         #    possible &= self.execution_engine.conf.get(
@@ -137,7 +145,7 @@ class SparkMapEngine(MapEngine):
                         on_init=on_init,
                         map_func_format_hint=map_func_format_hint,
                     )
-                elif partition_spec.algo != "even":
+                elif partition_spec.algo != "even" or self.is_spark_connect:
                     return self._group_map_by_pandas_udf(
                         df,
                         map_func=map_func,
@@ -315,7 +323,10 @@ class SparkExecutionEngine(ExecutionEngine):
             spark_session = SparkSession.builder.getOrCreate()
         self._spark_session = spark_session
         cf = dict(FUGUE_SPARK_DEFAULT_CONF)
-        cf.update({x[0]: x[1] for x in spark_session.sparkContext.getConf().getAll()})
+        if not self.is_spark_connect:
+            cf.update(
+                {x[0]: x[1] for x in spark_session.sparkContext.getConf().getAll()}
+            )
         cf.update(ParamDict(conf))
         super().__init__(cf)
         self._lock = SerializableRLock()
@@ -343,6 +354,10 @@ class SparkExecutionEngine(ExecutionEngine):
         return self._spark_session
 
     @property
+    def is_spark_connect(self) -> bool:
+        return _is_spark_connect(self.spark_session)
+
+    @property
     def is_distributed(self) -> bool:
         return True
 
@@ -362,6 +377,11 @@ class SparkExecutionEngine(ExecutionEngine):
 
     def get_current_parallelism(self) -> int:
         spark = self.spark_session
+        if self.is_spark_connect:
+            num = spark.conf.get("spark.default.parallelism", "")
+            if num != "":
+                return int(num)
+            return int(spark.conf.get("spark.sql.shuffle.partitions", "200"))
         e_cores = int(spark.conf.get("spark.executor.cores", "1"))
         tc = int(spark.conf.get("spark.task.cpus", "1"))
         sc = spark._jsc.sc()
@@ -735,7 +755,7 @@ class SparkExecutionEngine(ExecutionEngine):
                         df.as_pandas(), to_spark_schema(df.schema)
                     )
                 return SparkDataFrame(sdf, df.schema)
-            if isinstance(df, ps.DataFrame):
+            if is_spark_dataframe(df):
                 return SparkDataFrame(df, None if schema is None else to_schema(schema))
             if isinstance(df, RDD):
                 assert_arg_not_none(schema, "schema")
