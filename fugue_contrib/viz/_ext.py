@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 import pandas as pd
 from triad import assert_or_throw
@@ -25,7 +26,12 @@ class Visualize(Outputter, ABC):
         if len(self.partition_spec.partition_by) == 0:
             self._plot(df)
         else:
-            for _, gp in df.groupby(self.partition_spec.partition_by, dropna=False):
+            keys: Any = (  # avoid pandas warning
+                self.partition_spec.partition_by
+                if len(self.partition_spec.partition_by) > 1
+                else self.partition_spec.partition_by[0]
+            )
+            for _, gp in df.groupby(keys, dropna=False):
                 self._plot(gp.reset_index(drop=True))
 
     @abstractmethod
