@@ -281,6 +281,16 @@ class RayExecutionEngine(DuckExecutionEngine):
             return df if not as_local else df.as_local()
         return super().convert_yield_dataframe(df, as_local)
 
+    def union(self, df1: DataFrame, df2: DataFrame, distinct: bool = True) -> DataFrame:
+        if distinct:
+            return super().union(df1, df2, distinct)
+        assert_or_throw(
+            df1.schema == df2.schema, ValueError(f"{df1.schema} != {df2.schema}")
+        )
+        tdf1 = self._to_ray_df(df1)
+        tdf2 = self._to_ray_df(df2)
+        return RayDataFrame(tdf1.native.union(tdf2.native), df1.schema)
+
     def load_df(  # type:ignore
         self,
         path: Union[str, List[str]],
