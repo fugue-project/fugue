@@ -86,10 +86,14 @@ class DaskUtils(DaskUtilsBase):
             return df.astype(dtype=to_pandas_dtype(schema))
         for v in schema:
             s = df[v.name]
-            if pa.types.is_string(v.type):
+            if pa.types.is_string(v.type) and not pandas.api.types.is_string_dtype(
+                s.dtype
+            ):
                 ns = s.isnull()
                 s = s.astype(str).mask(ns, None)
-            elif pa.types.is_boolean(v.type):
+            elif pa.types.is_boolean(v.type) and not pandas.api.types.is_bool_dtype(
+                s.dtype
+            ):
                 ns = s.isnull()
                 if pandas.api.types.is_string_dtype(s.dtype):
                     try:
@@ -98,8 +102,10 @@ class DaskUtils(DaskUtilsBase):
                         s = s.fillna(0).astype(bool)
                 else:
                     s = s.fillna(0).astype(bool)
-                s = s.mask(ns, None)
-            elif pa.types.is_integer(v.type):
+                s = s.mask(ns, None).astype("boolean")
+            elif pa.types.is_integer(v.type) and not pandas.api.types.is_integer_dtype(
+                s.dtype
+            ):
                 ns = s.isnull()
                 s = s.fillna(0).astype(v.type.to_pandas_dtype()).mask(ns, None)
             elif not pa.types.is_struct(v.type) and not pa.types.is_list(v.type):

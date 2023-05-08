@@ -24,8 +24,10 @@ _is_sparksql = namespace_candidate("sparksql", lambda x: isinstance(x, str))
 
 
 @infer_execution_engine.candidate(
-    lambda objs: is_pandas_or(
-        objs, (ps.DataFrame, SparkConnectDataFrame, SparkDataFrame)
+    lambda objs: (
+        is_pandas_or(objs, (ps.DataFrame, SparkConnectDataFrame, SparkDataFrame))
+        if SparkConnectDataFrame is not None
+        else is_pandas_or(objs, (ps.DataFrame, SparkDataFrame))
     )
     or any(_is_sparksql(obj) for obj in objs)
 )
