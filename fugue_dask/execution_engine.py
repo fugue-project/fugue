@@ -279,7 +279,7 @@ class DaskExecutionEngine(ExecutionEngine):
             join_type=how,
             on=key_schema.names,
         )
-        return DaskDataFrame(d, output_schema)
+        return DaskDataFrame(d, output_schema, type_safe=False)
 
     def union(
         self,
@@ -294,7 +294,7 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.pl_utils.union(
             self.to_df(df1).native, self.to_df(df2).native, unique=distinct
         )
-        return DaskDataFrame(d, df1.schema)
+        return DaskDataFrame(d, df1.schema, type_safe=False)
 
     def subtract(
         self,
@@ -312,7 +312,7 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.pl_utils.except_df(
             self.to_df(df1).native, self.to_df(df2).native, unique=distinct
         )
-        return DaskDataFrame(d, df1.schema)
+        return DaskDataFrame(d, df1.schema, type_safe=False)
 
     def intersect(
         self,
@@ -330,11 +330,11 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.pl_utils.intersect(
             self.to_df(df1).native, self.to_df(df2).native, unique=distinct
         )
-        return DaskDataFrame(d, df1.schema)
+        return DaskDataFrame(d, df1.schema, type_safe=False)
 
     def distinct(self, df: DataFrame) -> DataFrame:
         d = self.pl_utils.drop_duplicates(self.to_df(df).native)
-        return DaskDataFrame(d, df.schema)
+        return DaskDataFrame(d, df.schema, type_safe=False)
 
     def dropna(
         self,
@@ -351,7 +351,7 @@ class DaskExecutionEngine(ExecutionEngine):
         if how == "any" and thresh is not None:
             del kw["how"]  # to deal with a dask logic flaw
         d = self.to_df(df).native.dropna(**kw)
-        return DaskDataFrame(d, df.schema)
+        return DaskDataFrame(d, df.schema, type_safe=False)
 
     def fillna(self, df: DataFrame, value: Any, subset: List[str] = None) -> DataFrame:
         assert_or_throw(
@@ -371,7 +371,7 @@ class DaskExecutionEngine(ExecutionEngine):
             subset = subset or df.columns
             mapping = {col: value for col in subset}
         d = self.to_df(df).native.fillna(mapping)
-        return DaskDataFrame(d, df.schema)
+        return DaskDataFrame(d, df.schema, type_safe=False)
 
     def sample(
         self,
@@ -389,7 +389,7 @@ class DaskExecutionEngine(ExecutionEngine):
         d = self.to_df(df).native.sample(
             n=n, frac=frac, replace=replace, random_state=seed
         )
-        return DaskDataFrame(d, df.schema)
+        return DaskDataFrame(d, df.schema, type_safe=False)
 
     def take(
         self,
@@ -445,7 +445,7 @@ class DaskExecutionEngine(ExecutionEngine):
                 .reset_index(drop=True)
             )
 
-        return DaskDataFrame(d, df.schema)
+        return DaskDataFrame(d, df.schema, type_safe=False)
 
     def load_df(
         self,

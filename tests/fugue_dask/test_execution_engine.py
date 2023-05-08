@@ -121,9 +121,11 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
     @classmethod
     def setUpClass(cls):
         cls._engine = cls.make_engine(cls)
+        fa.set_global_engine(cls._engine)
 
     @classmethod
     def tearDownClass(cls):
+        fa.clear_global_engine()
         cls._engine.dask_client.close()
 
     def make_engine(self):
@@ -152,6 +154,18 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
             df.assert_eq(dag.df([[0]], "a:long"))
             df.output(m_o)
         dag.run(self.engine)
+
+    def test_bool_bytes_union(self):
+        # this is to verify a bug in enforce type is fixed
+        def tr(df: pd.DataFrame) -> pd.DataFrame:
+            return df.assign(data=b"asdf")
+
+        df = pd.DataFrame(dict(a=[True, False], b=[1, 2]))
+
+        r1 = fa.transform(df, tr, schema="*,data:bytes", as_fugue=True)
+        r2 = fa.transform(df, tr, schema="*,data:bytes", as_fugue=True)
+        r3 = fa.union(r1, r2, distinct=False)
+        r3.show()
 
     def test_coarse_partition(self):
         def verify_coarse_partition(df: pd.DataFrame) -> List[List[Any]]:
