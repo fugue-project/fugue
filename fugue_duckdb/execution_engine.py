@@ -28,7 +28,7 @@ from ._utils import (
     encode_schema_names,
     encode_value_to_expr,
 )
-from .dataframe import DuckDataFrame
+from .dataframe import DuckDataFrame, _duck_as_arrow
 
 _FUGUE_DUCKDB_PRAGMA_CONFIG_PREFIX = "fugue.duckdb.pragma."
 _FUGUE_DUCKDB_EXTENSIONS = "fugue.duckdb.extensions"
@@ -109,7 +109,7 @@ class DuckDBEngine(SQLEngine):
         try:
             for k, v in dfs.items():
                 duckdb.from_arrow(v.as_arrow(), connection=conn).create_view(k)
-            return ArrowDataFrame(conn.execute(statement).arrow())
+            return ArrowDataFrame(_duck_as_arrow(conn.execute(statement)))
         finally:
             conn.close()
 
