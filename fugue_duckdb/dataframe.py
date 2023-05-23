@@ -4,14 +4,17 @@ import pandas as pd
 import pyarrow as pa
 from duckdb import DuckDBPyRelation
 from triad import Schema
+from triad.utils.pyarrow import LARGE_TYPES_REPLACEMENT, replace_types_in_table
 
 from fugue import ArrayDataFrame, ArrowDataFrame, DataFrame, LocalBoundedDataFrame
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from fugue.plugins import (
+    as_arrow,
     as_fugue_dataset,
     as_local_bounded,
     get_column_names,
     get_num_partitions,
+    get_schema,
     is_df,
 )
 
@@ -26,15 +29,7 @@ class DuckDataFrame(LocalBoundedDataFrame):
 
     def __init__(self, rel: DuckDBPyRelation):
         self._rel = rel
-        super().__init__(schema=self._get_schema)
-
-    def _get_schema(self) -> Schema:
-        return Schema(
-            [
-                pa.field(x, to_pa_type(y))
-                for x, y in zip(self._rel.columns, self._rel.types)
-            ]
-        )
+        super().__init__(schema=lambda: _duck_get_schema(self._rel))
 
     @property
     def alias(self) -> str:
@@ -98,7 +93,7 @@ class DuckDataFrame(LocalBoundedDataFrame):
         return DuckDataFrame(self._rel.project(", ".join(fields)))
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
-        return self._rel.arrow()
+        return _duck_as_arrow(self._rel)
 
     def as_pandas(self) -> pd.DataFrame:
         if any(pa.types.is_nested(f.type) for f in self.schema.fields):
@@ -167,6 +162,18 @@ def _duckdb_num_partitions(df: DuckDBPyRelation) -> int:
 @as_local_bounded.candidate(lambda df: isinstance(df, DuckDBPyRelation))
 def _duck_as_local(df: DuckDBPyRelation) -> DuckDBPyRelation:
     return df
+
+
+@as_arrow.candidate(lambda df: isinstance(df, DuckDBPyRelation))
+def _duck_as_arrow(df: DuckDBPyRelation) -> pa.Table:
+    _df = df.arrow()
+    _df = replace_types_in_table(_df, LARGE_TYPES_REPLACEMENT, recursive=True)
+    return _df
+
+
+@get_schema.candidate(lambda df: isinstance(df, DuckDBPyRelation))
+def _duck_get_schema(df: DuckDBPyRelation) -> Schema:
+    return Schema([pa.field(x, to_pa_type(y)) for x, y in zip(df.columns, df.types)])
 
 
 @get_column_names.candidate(lambda df: isinstance(df, DuckDBPyRelation))

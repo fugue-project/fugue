@@ -17,7 +17,7 @@ class DuckDataFrameTests(DataFrameTests.Tests):
 
     def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
         df = ArrowDataFrame(data, schema)
-        return DuckDataFrame(duckdb.arrow(df.native, self._con))
+        return DuckDataFrame(duckdb.from_arrow(df.native, self._con))
 
     def test_as_array_special_values(self):
         for func in [
@@ -74,7 +74,7 @@ class NativeDuckDataFrameTests(DataFrameTests.NativeTests):
 
     def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
         df = ArrowDataFrame(data, schema)
-        return DuckDataFrame(duckdb.arrow(df.native, self._con)).native
+        return DuckDataFrame(duckdb.from_arrow(df.native, self._con)).native
 
     def to_native_df(self, pdf: pd.DataFrame) -> Any:
         return duckdb.from_df(pdf)
