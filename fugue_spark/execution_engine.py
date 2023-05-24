@@ -246,6 +246,7 @@ class SparkMapEngine(MapEngine):
                         )
                         if not cursor_set:
                             cursor.set(lambda: pdf.peek_array(), 0, 0)
+                            cursor_set = True
                         yield pdf
 
             input_df = IterablePandasDataFrame(get_dfs(), input_schema)
@@ -280,6 +281,7 @@ class SparkMapEngine(MapEngine):
                         pdf = ArrowDataFrame(func(adf))
                         if not cursor_set:
                             cursor.set(lambda: pdf.peek_array(), 0, 0)
+                            cursor_set = True
                         yield pdf
 
             input_df = IterableArrowDataFrame(get_dfs(), input_schema)

@@ -28,7 +28,7 @@ from ._utils import (
     encode_schema_names,
     encode_value_to_expr,
 )
-from .dataframe import DuckDataFrame
+from .dataframe import DuckDataFrame, _duck_as_arrow
 
 _FUGUE_DUCKDB_PRAGMA_CONFIG_PREFIX = "fugue.duckdb.pragma."
 _FUGUE_DUCKDB_EXTENSIONS = "fugue.duckdb.extensions"
@@ -108,8 +108,8 @@ class DuckDBEngine(SQLEngine):
         conn = duckdb.connect()
         try:
             for k, v in dfs.items():
-                duckdb.arrow(v.as_arrow(), connection=conn).create_view(k)
-            return ArrowDataFrame(conn.execute(statement).arrow())
+                duckdb.from_arrow(v.as_arrow(), connection=conn).create_view(k)
+            return ArrowDataFrame(_duck_as_arrow(conn.execute(statement)))
         finally:
             conn.close()
 
@@ -229,7 +229,7 @@ class DuckExecutionEngine(ExecutionEngine):
         # TODO: we should create DuckDB table, but it has bugs, so can't use by 0.3.1
         if isinstance(df, DuckDataFrame):
             # materialize
-            res: DataFrame = ArrowDataFrame(df.native.arrow())
+            res: DataFrame = ArrowDataFrame(df.as_arrow())
         else:
             res = self.to_df(df)
         res.reset_metadata(df.metadata)
@@ -540,12 +540,14 @@ def _to_duck_df(
             if isinstance(df, DuckDataFrame):
                 return df
             rdf = DuckDataFrame(
-                duckdb.arrow(df.as_arrow(), connection=engine.connection)
+                duckdb.from_arrow(df.as_arrow(), connection=engine.connection)
             )
             rdf.reset_metadata(df.metadata if df.has_metadata else None)
             return rdf
         tdf = ArrowDataFrame(df, schema)
-        return DuckDataFrame(duckdb.arrow(tdf.native, connection=engine.connection))
+        return DuckDataFrame(
+            duckdb.from_arrow(tdf.native, connection=engine.connection)
+        )
 
     res = _gen_duck()
     if create_view:

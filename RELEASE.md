@@ -2,6 +2,10 @@
 
 ## 0.8.4
 
+-   [471](https://github.com/fugue-project/fugue/issues/471) Fix compatibility issues for duckdb 0.8.0+
+-   [466](https://github.com/fugue-project/fugue/issues/466) Fix Ray 2.4.0 compatibility issue
+-   [464](https://github.com/fugue-project/fugue/issues/464) Support for spark/databricks connect
+-   [459](https://github.com/fugue-project/fugue/issues/459) DEPRECATION: Avro support
 -   [455](https://github.com/fugue-project/fugue/issues/455) Make Fugue pandas 2 compatible
 
 ## 0.8.3

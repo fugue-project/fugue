@@ -27,7 +27,11 @@ _DUCK_TYPES_TO_PA: Dict[str, pa.DataType] = {
     "TIME": pa.time32("ms"),
 }
 
-_PA_TYPES_TO_DUCK: Dict[pa.DataType, str] = {v: k for k, v in _DUCK_TYPES_TO_PA.items()}
+_PA_TYPES_TO_DUCK: Dict[pa.DataType, str] = {
+    v: k
+    for k, v in list(_DUCK_TYPES_TO_PA.items())
+    + [("VARCHAR", pa.large_string()), ("BLOB", pa.large_binary())]
+}
 
 
 def encode_column_name(name: str) -> str:
@@ -94,8 +98,9 @@ def to_duck_type(tp: pa.DataType) -> str:
         raise ValueError(f"can't convert {tp} to DuckDB data type")
 
 
-def to_pa_type(duck_type: str) -> pa.DataType:
+def to_pa_type(duck_type_raw: Any) -> pa.DataType:
     try:
+        duck_type = str(duck_type_raw)  # for duckdb >= 0.8.0
         if duck_type.endswith("[]"):
             return pa.list_(to_pa_type(duck_type[:-2]))
         p = duck_type.find("(")

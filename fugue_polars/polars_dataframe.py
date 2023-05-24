@@ -6,9 +6,15 @@ import pyarrow as pa
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
+from triad.utils.pyarrow import (
+    LARGE_TYPES_REPLACEMENT,
+    replace_types_in_schema,
+    replace_types_in_table,
+)
 
 from fugue import ArrowDataFrame
 from fugue.api import (
+    as_arrow,
     drop_columns,
     get_column_names,
     get_schema,
@@ -28,7 +34,7 @@ from fugue.dataset.api import (
 )
 from fugue.exceptions import FugueDataFrameOperationError
 
-from ._utils import build_empty_pl, pl_as_arrow, to_schema
+from ._utils import build_empty_pl
 
 
 class PolarsDataFrame(LocalBoundedDataFrame):
@@ -55,7 +61,7 @@ class PolarsDataFrame(LocalBoundedDataFrame):
                 InvalidOperationError("can't reset schema for pl.DataFrame"),
             )
             self._native = df
-            super().__init__(to_schema(df))
+            super().__init__(_get_pl_schema(df))
 
     @property
     def native(self) -> pl.DataFrame:
@@ -107,7 +113,7 @@ class PolarsDataFrame(LocalBoundedDataFrame):
         return PolarsDataFrame(pl.from_arrow(adf.native))
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
-        return pl_as_arrow(self.native)
+        return _pl_as_arrow(self.native)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
@@ -121,7 +127,7 @@ class PolarsDataFrame(LocalBoundedDataFrame):
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
         if not self.empty:
-            yield from ArrowDataFrame(pl_as_arrow(self.native)).as_array_iterable(
+            yield from ArrowDataFrame(_pl_as_arrow(self.native)).as_array_iterable(
                 columns=columns
             )
 
@@ -129,7 +135,7 @@ class PolarsDataFrame(LocalBoundedDataFrame):
         self, columns: Optional[List[str]] = None
     ) -> Iterable[Dict[str, Any]]:
         if not self.empty:
-            yield from ArrowDataFrame(pl_as_arrow(self.native)).as_dict_iterable(
+            yield from ArrowDataFrame(_pl_as_arrow(self.native)).as_dict_iterable(
                 columns=columns
             )
 
@@ -142,6 +148,13 @@ def _pl_as_local(df: pl.DataFrame) -> pl.DataFrame:
 @as_local_bounded.candidate(lambda df: isinstance(df, pl.DataFrame))
 def _pl_as_local_bounded(df: pl.DataFrame) -> pl.DataFrame:
     return df
+
+
+@as_arrow.candidate(lambda df: isinstance(df, pl.DataFrame))
+def _pl_as_arrow(df: pl.DataFrame) -> pa.Table:
+    adf = df.to_arrow()
+    adf = replace_types_in_table(adf, LARGE_TYPES_REPLACEMENT)
+    return adf
 
 
 @is_df.candidate(lambda df: isinstance(df, pl.DataFrame))
@@ -181,7 +194,9 @@ def _get_pl_columns(df: pl.DataFrame) -> List[Any]:
 
 @get_schema.candidate(lambda df: isinstance(df, pl.DataFrame))
 def _get_pl_schema(df: pl.DataFrame) -> Schema:
-    return to_schema(df)
+    adf = df.to_arrow()
+    schema = replace_types_in_schema(adf.schema, LARGE_TYPES_REPLACEMENT)
+    return Schema(schema)
 
 
 @rename.candidate(lambda df, *args, **kwargs: isinstance(df, pl.DataFrame))
