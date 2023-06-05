@@ -19,11 +19,9 @@ Fugue is most commonly used for:
 *   **Parallelizing or scaling existing Python and Pandas code** by bringing it to Spark, Dask, or Ray with minimal rewrites.
 *   Using [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes_sql.html) to **define end-to-end workflows** on top of Pandas, Spark, and Dask DataFrames. FugueSQL is an enhanced SQL interface that can invoke Python code.
 
-<<<<<<< HEAD
-To see how Fugue compares to other frameworks like Arrow, Ibis, PySpark Pandas, see the [comparisons](https://fugue-tutorials.readthedocs.io/#how-does-fugue-compare-to)
-=======
+To see how Fugue compares to other frameworks like dbt, Arrow, Ibis, PySpark Pandas, see the [comparisons](https://fugue-tutorials.readthedocs.io/#how-does-fugue-compare-to)
+
 ## [Fugue API](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes.html)
->>>>>>> c44afe9e3eede3d6d9f0a0e1e4749005637561d7
 
 The Fugue API is a collection of functions that are capable of running on Pandas, Spark, Dask, and Ray. The simplest way to use Fugue is the [`transform()` function](https://fugue-tutorials.readthedocs.io/tutorials/beginner/transform.html). This lets users parallelize the execution of a single function by bringing it to Spark, Dask, or Ray. In the example below, the `map_letter_to_food()` function takes in a mapping and applies it on a column. This is just Pandas and Python so far (without Fugue).
 
