@@ -1,0 +1,44 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Spark Tests
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  pull_request:
+    branches: [ master ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+        spark-version: ["3.1.1","3.4.0"]
+        pandas-version: ["1.5.3","2.0.1"]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: make devenv
+    - name: Install Spark ${{ matrix.spark-version }}
+      run: pip install "pyspark==${{ matrix.spark-version }}"
+    - name: Install Pandas ${{ matrix.pandas-version }}
+      run: pip install "pandas==${{ matrix.pandas-version }}"
+    - name: Test
+      run: make testspark

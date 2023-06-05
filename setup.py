@@ -42,7 +42,7 @@ setup(
     ],
     extras_require={
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.6"],
-        "spark": ["pyspark"],
+        "spark": ["pyspark>=3.1.1"],
         "dask": [
             "dask[distributed,dataframe]; python_version < '3.8'",
             "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
