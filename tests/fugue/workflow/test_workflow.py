@@ -1,18 +1,24 @@
 import copy
+import os
 from random import randint
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 from adagio.instances import WorkflowResultCache
+from pytest import raises
+from triad.exceptions import InvalidOperationError
+
 from fugue import (
     ArrayDataFrame,
     DataFrame,
-    ExecutionEngine,
     FugueWorkflow,
+    NativeExecutionEngine,
+    QPDPandasEngine,
+    PandasDataFrame,
     WorkflowDataFrames,
 )
 from fugue.collections.partition import PartitionSpec
-from fugue.collections.yielded import YieldedFile
+from fugue.collections.yielded import PhysicalYielded
 from fugue.constants import (
     FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH,
     FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
@@ -21,9 +27,6 @@ from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import FuguePluginsRegistrationError, FugueWorkflowCompileError
 from fugue.execution import NativeExecutionEngine
 from fugue.extensions.transformer.convert import transformer
-from fugue.workflow._workflow_context import FugueWorkflowContext
-from pytest import raises
-from triad.exceptions import InvalidOperationError
 
 
 def test_worflow_dataframes():
@@ -67,6 +70,7 @@ def test_workflow():
     builder = FugueWorkflow()
 
     a = builder.create_data([[0], [0], [1]], "a:int")
+    assert builder.last_df is a
     raises(InvalidOperationError, lambda: a._task.copy())
     raises(InvalidOperationError, lambda: copy.copy(a._task))
     raises(InvalidOperationError, lambda: copy.deepcopy(a._task))
@@ -77,11 +81,16 @@ def test_workflow():
 
     b = a.transform(mock_tf1, "*,b:int", pre_partition=dict(by=["a"]))
     b.show()
+    assert builder.last_df is b
     builder.create_data([[0], [1]], "b:int").show()
+    assert builder.last_df is not b
     c = ArrayDataFrame([[100]], "a:int")
     builder.show(a, b, c)
     b = a.partition(by=["a"]).transform(mock_tf2).persist().broadcast()
     b.show()
+    assert builder.last_df is b
+    c = builder.df(a)
+    assert builder.last_df is a
 
     builder.run()
     df_eq(a.result, [[0], [0], [1]], "a:int")
@@ -108,7 +117,8 @@ def test_yield(tmpdir):
     dag1 = FugueWorkflow()
     dag1.df(df).transform(t).yield_file_as("x")
     res = dag1.run("", {FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)})
-    assert isinstance(res.yields["x"], YieldedFile)
+    assert isinstance(res.yields["x"], PhysicalYielded)
+    assert res.yields["x"].storage_type == "file"
 
     dag2 = FugueWorkflow()
     dag2.df(dag1.yields["x"]).transform(t).yield_dataframe_as("y")
@@ -120,6 +130,19 @@ def test_yield(tmpdir):
     result = dag3.run()["z"]
     assert [[0, 3]] == result.as_array()
 
+    dag4 = FugueWorkflow()
+    dag4.df(df).transform(t).yield_table_as("x")
+    res = dag4.run(MockEngine, {FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)})
+    assert isinstance(res.yields["x"], PhysicalYielded)
+    assert res.yields["x"].storage_type == "table"
+
+    dag5 = FugueWorkflow()
+    dag5.df(dag4.yields["x"]).transform(t).yield_dataframe_as("y")
+    result = dag5.run(MockEngine, {FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH: str(tmpdir)})[
+        "y"
+    ]
+    assert [[0, 2]] == result.as_array()
+
 
 def test_compile_conf():
     dag = FugueWorkflow(compile_conf={"a": 1})
@@ -127,6 +150,38 @@ def test_compile_conf():
 
     dag = FugueWorkflow()  # default conf test
     assert dag.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str) != ""
+
+
+class MockSQLEngine(QPDPandasEngine):
+    def table_exists(self, table: str) -> bool:
+        path = os.path.join(
+            self.conf[FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH], table + ".parquet"
+        )
+        return os.path.exists(path)
+
+    def save_table(
+        self,
+        df: DataFrame,
+        table: str,
+        mode: str = "overwrite",
+        partition_spec: Optional[PartitionSpec] = None,
+        **kwargs: Any
+    ) -> None:
+        path = os.path.join(
+            self.conf[FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH], table + ".parquet"
+        )
+        df.as_pandas().to_parquet(path)
+
+    def load_table(self, table: str, **kwargs: Any) -> DataFrame:
+        path = os.path.join(
+            self.conf[FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH], table + ".parquet"
+        )
+        return PandasDataFrame(pd.read_parquet(path))
+
+
+class MockEngine(NativeExecutionEngine):
+    def create_default_sql_engine(self):
+        return MockSQLEngine(self)
 
 
 class MockCache(WorkflowResultCache):

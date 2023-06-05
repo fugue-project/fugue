@@ -1,6 +1,10 @@
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 import pyarrow as pa
+from triad import Schema, assert_or_throw, to_uuid
+from triad.utils.pyarrow import _type_to_expression
+from triad.utils.schema import quote_name
+
 from fugue.column.expressions import (
     ColumnExpr,
     _BinaryOpExpr,
@@ -8,13 +12,12 @@ from fugue.column.expressions import (
     _LiteralColumnExpr,
     _NamedColumnExpr,
     _UnaryOpExpr,
+    _WildcardExpr,
     col,
     lit,
 )
 from fugue.column.functions import is_agg
 from fugue.exceptions import FugueBug
-from triad import Schema, assert_or_throw, to_uuid
-from triad.utils.pyarrow import _type_to_expression
 
 _SUPPORTED_OPERATORS: Dict[str, str] = {
     "+": "+",
@@ -65,10 +68,11 @@ class SelectColumns:
             else:
                 if isinstance(c, _NamedColumnExpr):
                     self._cols.append(c)
-                    if c.wildcard:
-                        if self._has_wildcard:
-                            raise ValueError("'*' can be used at most once")
-                        self._has_wildcard = True
+                elif isinstance(c, _WildcardExpr):
+                    if self._has_wildcard:
+                        raise ValueError("'*' can be used at most once")
+                    self._has_wildcard = True
+                    self._cols.append(c)
                 elif isinstance(c, _FuncExpr):
                     if is_agg(c):
                         _is_agg = True
@@ -76,7 +80,10 @@ class SelectColumns:
                     else:
                         self._non_agg_funcs.append(c)
                 if not _is_agg:
-                    _g_keys.append(c.alias("").cast(None))
+                    if isinstance(c, _WildcardExpr):
+                        _g_keys.append(c)
+                    else:
+                        _g_keys.append(c.alias("").cast(None))
 
         if self.has_agg:
             self._group_keys += _g_keys
@@ -107,13 +114,13 @@ class SelectColumns:
         .. note::
 
             It only replaces the top level ``*``. For example
-            ``count_distinct(col("*"))`` will not be transformed because
+            ``count_distinct(all_cols())`` will not be transformed because
             this ``*`` is not first level.
         """
 
         def _get_cols() -> Iterable[ColumnExpr]:
             for c in self.all_cols:
-                if isinstance(c, _NamedColumnExpr) and c.wildcard:
+                if isinstance(c, _WildcardExpr):
                     yield from [col(n) for n in schema.names]
                 else:
                     yield c
@@ -132,9 +139,9 @@ class SelectColumns:
 
         names: Set[str] = set()
         for x in self.all_cols:
+            if isinstance(x, _WildcardExpr):
+                continue
             if isinstance(x, _NamedColumnExpr):
-                if x.wildcard:
-                    continue
                 if self._has_wildcard:
                     if x.as_name == "":
                         raise ValueError(
@@ -151,7 +158,7 @@ class SelectColumns:
     def assert_no_wildcard(self) -> "SelectColumns":
         """Assert there is no ``*`` on first level columns
 
-        :raises AssertionError: if ``col("*")`` exists
+        :raises AssertionError: if ``all_cols()`` exists
         :return: the instance itself
         """
         assert not self._has_wildcard
@@ -238,7 +245,7 @@ class SQLExpressionGenerator:
         self._enable_cast = enable_cast
         self._func_handler: Dict[str, Callable[[_FuncExpr], Iterable[str]]] = {}
 
-    def where(self, condition: ColumnExpr, table: str) -> str:
+    def where(self, condition: ColumnExpr, table: str) -> Iterable[Tuple[bool, str]]:
         """Generate a ``SELECT *`` statement with the given where clause
 
         :param condition: column expression for ``WHERE``
@@ -261,7 +268,9 @@ class SQLExpressionGenerator:
             lambda: ValueError(f"{condition} has aggregation functions"),
         )
         cond = self.generate(condition.alias(""))
-        return f"SELECT * FROM {table} WHERE {cond}"
+        yield (False, "SELECT * FROM")
+        yield (True, table)
+        yield (False, f"WHERE {cond}")
 
     def select(
         self,
@@ -269,7 +278,7 @@ class SQLExpressionGenerator:
         table: str,
         where: Optional[ColumnExpr] = None,
         having: Optional[ColumnExpr] = None,
-    ) -> str:
+    ) -> Iterable[Tuple[bool, str]]:
         """Construct the full ``SELECT`` statement on a single table
 
         :param columns: columns to select, it may contain aggregations, if
@@ -290,30 +299,39 @@ class SQLExpressionGenerator:
                 not is_agg(where),
                 lambda: ValueError(f"{where} has aggregation functions"),
             )
-            return " WHERE " + self.generate(where.alias(""))
+            return "WHERE " + self.generate(where.alias(""))
 
         def _having(as_where: bool = False) -> str:
             if having is None:
                 return ""
-            pre = " WHERE " if as_where else " HAVING "
+            pre = "WHERE " if as_where else "HAVING "
             return pre + self.generate(having.alias(""))
 
         distinct = "" if not columns.is_distinct else "DISTINCT "
 
         if not columns.has_agg:
             expr = ", ".join(self.generate(x) for x in columns.all_cols)
-            return f"SELECT {distinct}{expr} FROM {table}{_where()}"
+            yield (False, f"SELECT {distinct}{expr} FROM")
+            yield (True, table)
+            yield (False, _where())
+            return
         columns.assert_no_wildcard()
         if len(columns.literals) == 0:
             expr = ", ".join(self.generate(x) for x in columns.all_cols)
             if len(columns.group_keys) == 0:
-                return f"SELECT {distinct}{expr} FROM {table}{_where()}{_having()}"
+                yield (False, f"SELECT {distinct}{expr} FROM")
+                yield (True, table)
+                yield (False, _where())
+                yield (False, _having())
+                return
             else:
                 keys = ", ".join(self.generate(x) for x in columns.group_keys)
-                return (
-                    f"SELECT {distinct}{expr} FROM "
-                    f"{table}{_where()} GROUP BY {keys}{_having()}"
-                )
+                yield (False, f"SELECT {distinct}{expr} FROM")
+                yield (True, table)
+                yield (False, _where())
+                yield (False, f"GROUP BY {keys}")
+                yield (False, _having())
+                return
         else:
             no_lit = [
                 x for x in columns.all_cols if not isinstance(x, _LiteralColumnExpr)
@@ -324,7 +342,9 @@ class SQLExpressionGenerator:
                 for x in columns.all_cols
             ]
             expr = ", ".join(names)
-            return f"SELECT {expr} FROM ({sub})"
+            yield (False, f"SELECT {expr} FROM (")
+            yield from sub
+            yield (False, ")")
 
     def generate(self, expr: ColumnExpr) -> str:
         """Convert :class:`~fugue.column.expressions.ColumnExpr` to
@@ -392,6 +412,8 @@ class SQLExpressionGenerator:
             yield from self._on_lit(expr)
         elif isinstance(expr, _NamedColumnExpr):
             yield from self._on_named(expr)
+        elif isinstance(expr, _WildcardExpr):
+            yield "*"
         elif isinstance(expr, _FuncExpr):
             if expr.func in self._func_handler:
                 yield from self._func_handler[expr.func](expr)
@@ -406,15 +428,15 @@ class SQLExpressionGenerator:
             yield self.type_to_expr(expr.as_type)
             yield ")"
         if expr.as_name != "":
-            yield " AS " + expr.as_name
+            yield " AS " + quote_name(expr.as_name)
         elif expr.as_type is not None and expr.name != "":
-            yield " AS " + expr.name
+            yield " AS " + quote_name(expr.name)
 
     def type_to_expr(self, data_type: pa.DataType):
         return _type_to_expression(data_type)
 
     def _on_named(self, expr: _NamedColumnExpr) -> Iterable[str]:
-        yield expr.name
+        yield quote_name(expr.name)
 
     def _on_lit(self, expr: _LiteralColumnExpr) -> Iterable[str]:
         yield expr.body_str

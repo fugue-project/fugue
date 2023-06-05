@@ -551,6 +551,11 @@ def col(obj: Union[str, ColumnExpr], alias: str = "") -> ColumnExpr:
     raise NotImplementedError(obj)
 
 
+def all_cols() -> ColumnExpr:
+    """The ``*`` expression in SQL"""
+    return _WildcardExpr()
+
+
 def function(name: str, *args: Any, arg_distinct: bool = False, **kwargs) -> ColumnExpr:
     """Construct a function expression
 
@@ -598,30 +603,22 @@ class _NamedColumnExpr(ColumnExpr):
 
     @property
     def output_name(self) -> str:
-        return "" if self.wildcard else super().output_name
-
-    @property
-    def wildcard(self) -> bool:
-        return self.name == "*"
+        return super().output_name
 
     def alias(self, as_name: str) -> ColumnExpr:
-        if self.wildcard and as_name != "":
-            raise ValueError("'*' can't have alias")
         other = _NamedColumnExpr(self.name)
         other._as_name = as_name
         other._as_type = self.as_type
         return other
 
     def cast(self, data_type: Any) -> "ColumnExpr":
-        if self.wildcard and data_type is not None:
-            raise ValueError("'*' can't cast")
         other = _NamedColumnExpr(self.name)
         other._as_name = self.as_name
         other._as_type = None if data_type is None else to_pa_datatype(data_type)
         return other
 
     def infer_alias(self) -> ColumnExpr:
-        if not self.wildcard and self.as_name == "" and self.as_type is not None:
+        if self.as_name == "" and self.as_type is not None:
             return self.alias(self.output_name)
         return self
 
@@ -632,6 +629,27 @@ class _NamedColumnExpr(ColumnExpr):
 
     def _uuid_keys(self) -> List[Any]:
         return [self.name]
+
+
+class _WildcardExpr(ColumnExpr):
+    @property
+    def body_str(self) -> str:
+        return "*"
+
+    @property
+    def name(self) -> str:  # pragma: no cover
+        raise NotImplementedError("wildcard column doesn't have a name")
+
+    @property
+    def output_name(self) -> str:  # pragma: no cover
+        raise NotImplementedError("wildcard column doesn't have an output_name")
+
+    def __uuid__(self) -> str:
+        """The unique id of this instance
+
+        :return: the unique id
+        """
+        return to_uuid(str(type(self)))
 
 
 class _LiteralColumnExpr(ColumnExpr):

@@ -5,12 +5,12 @@ from urllib.parse import urlparse
 
 import fs as pfs
 import pandas as pd
-from fs.errors import FileExpected
-from fugue.dataframe import LocalBoundedDataFrame, LocalDataFrame, PandasDataFrame
 from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
+
+from fugue.dataframe import LocalBoundedDataFrame, LocalDataFrame, PandasDataFrame
 
 
 class FileParser(object):
@@ -271,111 +271,22 @@ def _load_json(
     return pdf[schema.names], schema
 
 
-def _save_avro(df: LocalDataFrame, p: FileParser, **kwargs: Any):
-    """Save pandas dataframe as avro.
-    If providing your own schema, the usage of schema argument is preferred
-
-    :param schema: Avro Schema determines dtypes saved
-    """
-    import pandavro as pdx
-
-    kw = ParamDict(kwargs)
-
-    # pandavro defaults
-    schema = None
-    append = False
-    times_as_micros = True
-
-    if "schema" in kw:
-        schema = kw["schema"]
-        del kw["schema"]
-
-    if "append" in kw:
-        append = kw["append"]  # default is overwrite (False) instead of append (True)
-        del kw["append"]
-
-    if "times_as_micros" in kw:
-        times_as_micros = kw["times_as_micros"]
-        del kw["times_as_micros"]
-
-    pdf = df.as_pandas()
-    pdx.to_avro(
-        p.uri, pdf, schema=schema, append=append, times_as_micros=times_as_micros, **kw
-    )
-
-
-def _load_avro(
-    p: FileParser, columns: Any = None, **kwargs: Any
-) -> Tuple[pd.DataFrame, Any]:
-    path = p.uri
-    try:
-        pdf = _load_single_avro(path, **kwargs)
-    except (IsADirectoryError, PermissionError, FileExpected):
-        fs = FileSystem()
-        pdf = pd.concat(
-            [
-                _load_single_avro(
-                    pfs.path.combine(path, pfs.path.basename(x.path)), **kwargs
-                )
-                for x in fs.opendir(path).glob("*.avro")
-            ]
-        )
-
-    if columns is None:
-        return pdf, None
-    if isinstance(columns, list):  # column names
-        return pdf[columns], None
-
-    schema = Schema(columns)
-
-    # Return created DataFrame
-    return pdf[schema.names], schema
-
-
-def _load_single_avro(path: str, **kwargs: Any) -> pd.DataFrame:
-    from fastavro import reader
-
-    kw = ParamDict(kwargs)
-    process_record = None
-    if "process_record" in kw:
-        process_record = kw["process_record"]
-        del kw["process_record"]
-
-    fs = FileSystem()
-    with fs.openbin(path) as fp:
-        # Configure Avro reader
-        avro_reader = reader(fp)
-        # Load records in memory
-        if process_record:
-            records = [process_record(r) for r in avro_reader]
-
-        else:
-            records = list(avro_reader)
-
-        # Populate pandas.DataFrame with records
-        return pd.DataFrame.from_records(records)
-
-
 _FORMAT_MAP: Dict[str, str] = {
     ".csv": "csv",
     ".csv.gz": "csv",
     ".parquet": "parquet",
     ".json": "json",
     ".json.gz": "json",
-    ".avro": "avro",
-    ".avro.gz": "avro",
 }
 
 _FORMAT_LOAD: Dict[str, Callable[..., Tuple[pd.DataFrame, Any]]] = {
     "csv": _load_csv,
     "parquet": _load_parquet,
     "json": _load_json,
-    "avro": _load_avro,
 }
 
 _FORMAT_SAVE: Dict[str, Callable] = {
     "csv": _save_csv,
     "parquet": _save_parquet,
     "json": _save_json,
-    "avro": _save_avro,
 }

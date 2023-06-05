@@ -1,4 +1,3 @@
-qpd[dask]>=0.3.1
 .[all]
 
 furo
@@ -9,21 +8,24 @@ black>=22.3.0
 mypy
 flake8
 autopep8
-pylint
+pylint==2.16.2
 pytest
 pytest-cov
 pytest-mock
 pytest-spark
-pytest-rerunfailures
+pytest-rerunfailures==10.2
 sphinx>=2.4.0
 sphinx-rtd-theme
 sphinx-autodoc-typehints
 flask
-pandavro
-fastavro
 psutil
+matplotlib
+seaborn
 
+pyspark[connect]
 duckdb-engine>=0.6.4
+sqlalchemy==2.0.10  # 2.0.11 has a bug
+# pyarrow==7.0.0
 
 # publish to pypi
 wheel

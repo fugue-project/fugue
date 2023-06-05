@@ -1,7 +1,10 @@
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import ibis
 import pandas as pd
+from ibis.backends.pandas import Backend
+from triad.utils.assertion import assert_or_throw
+
 from fugue import (
     DataFrame,
     DataFrames,
@@ -10,11 +13,9 @@ from fugue import (
     PandasDataFrame,
 )
 from fugue_ibis._utils import to_ibis_schema, to_schema
-from fugue_ibis.execution.ibis_engine import IbisEngine
-from ibis.backends.pandas import Backend
-from triad.utils.assertion import assert_or_throw
 
 from .._compat import IbisTable
+from .ibis_engine import IbisEngine, parse_ibis_engine
 
 
 class PandasIbisEngine(IbisEngine):
@@ -33,13 +34,11 @@ class PandasIbisEngine(IbisEngine):
         return PandasDataFrame(result, schema=schema)
 
 
-def _to_pandas_ibis_engine(
-    engine: ExecutionEngine, ibis_engine: Any
-) -> Optional[IbisEngine]:
-    if isinstance(engine, NativeExecutionEngine):
-        if ibis_engine is None:
-            return PandasIbisEngine(engine)
-    return None  # pragma: no cover
+@parse_ibis_engine.candidate(
+    lambda obj, *args, **kwargs: isinstance(obj, NativeExecutionEngine)
+)
+def _pd_to_ibis_engine(obj: Any, engine: ExecutionEngine) -> IbisEngine:
+    return PandasIbisEngine(engine)
 
 
 class _BackendWrapper(Backend):

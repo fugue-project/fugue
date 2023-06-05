@@ -1,4 +1,3 @@
-import json
 from typing import Any, Iterable, List
 
 from fugue_sql_antlr import FugueSQLParser
@@ -8,21 +7,20 @@ from triad.collections.schema import Schema
 from triad.utils.convert import get_caller_global_local_vars
 
 from fugue import (
-    DataFrame,
     DataFrames,
     FugueWorkflow,
     LocalDataFrame,
     OutputTransformer,
     PartitionSpec,
-    SqliteEngine,
     WorkflowDataFrame,
     WorkflowDataFrames,
     module,
     register_sql_engine,
 )
 from fugue.extensions.transformer.convert import _to_output_transformer
-from fugue.sql._visitors import FugueSQLHooks, _Extensions, _VisitorBase
+from fugue.sql._visitors import FugueSQLHooks, _Extensions
 from fugue.exceptions import FugueSQLError
+from fugue.execution.native_execution_engine import QPDPandasEngine
 
 
 def test_create_data():
@@ -310,6 +308,7 @@ def test_yield():
     dag.create(mock_create1).yield_dataframe_as("a", as_local=False)
     dag.create(mock_create1).yield_dataframe_as("aaa", as_local=True)
     dag.create(mock_create1).yield_file_as("aa")
+    dag.create(mock_create1).yield_table_as("aaaa")
     dag.create(mock_create1).deterministic_checkpoint().yield_dataframe_as("c")
     dag.create(mock_create1).deterministic_checkpoint().yield_file_as("bb")
     dag.create(mock_create1).deterministic_checkpoint().yield_file_as("cc")
@@ -319,6 +318,7 @@ def test_yield():
     a=create using mock_create1 yield dataframe
     create using mock_create1 yield local dataframe as aaa
     create using mock_create1 yield file as aa
+    create using mock_create1 yield table as aaaa
     c=create using mock_create1 deterministic checkpoint yield dataframe
     d=create using mock_create1 deterministic checkpoint yield file as bb
     create using mock_create1 deterministic checkpoint yield file as cc
@@ -419,7 +419,7 @@ def test_select_with():
 
 
 def test_select_plus_engine():
-    class MockEngine(SqliteEngine):
+    class MockEngine(QPDPandasEngine):
         def __init__(self, execution_engine, p: int = 0):
             super().__init__(execution_engine)
             self.p = p
@@ -758,7 +758,12 @@ def assert_eq(expr, expected: FugueWorkflow):
     sql = FugueSQLParser(expr, "fugueLanguage", ignore_case=True, parse_mode="auto")
     wf = FugueWorkflow()
     v = _Extensions(
-        sql, FugueSQLHooks(), wf, global_vars=global_vars, local_vars=local_vars
+        sql,
+        FugueSQLHooks(),
+        wf,
+        dialect="spark",
+        global_vars=global_vars,
+        local_vars=local_vars,
     )
     obj = v.visit(sql.tree)
     assert expected.spec_uuid() == v.workflow.spec_uuid()

@@ -27,6 +27,14 @@ fugue.dataframe
 .. |FugueDataTypes| replace:: :doc:`Fugue Data Types <tutorial:tutorials/appendix/generate_types>`
 
 
+fugue.dataframe.api
+-------------------
+
+.. automodule:: fugue.dataframe.api
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.dataframe.array\_dataframe
 --------------------------------
 
@@ -63,6 +71,14 @@ fugue.dataframe.dataframes
 --------------------------
 
 .. automodule:: fugue.dataframe.dataframes
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+fugue.dataframe.function\_wrapper
+---------------------------------
+
+.. automodule:: fugue.dataframe.function_wrapper
    :members:
    :undoc-members:
    :show-inheritance:

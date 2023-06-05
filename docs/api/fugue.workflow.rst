@@ -27,6 +27,14 @@ fugue.workflow
 .. |FugueDataTypes| replace:: :doc:`Fugue Data Types <tutorial:tutorials/appendix/generate_types>`
 
 
+fugue.workflow.api
+------------------
+
+.. automodule:: fugue.workflow.api
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.workflow.input
 --------------------
 

@@ -1,24 +1,24 @@
 import copy
 from typing import Any, Callable, Dict, List, Optional, Type, Union, no_type_check
 
-from fugue._utils.interfaceless import (
-    FunctionWrapper,
-    is_class_method,
-    parse_output_schema_from_comment,
-)
-from fugue._utils.registry import fugue_plugin
-from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames, LocalDataFrame
-from fugue.exceptions import FugueInterfacelessError
-from fugue.extensions._utils import (
-    parse_validation_rules_from_comment,
-    to_validation_rules,
-)
-from fugue.extensions.transformer.constants import OUTPUT_TRANSFORMER_DUMMY_SCHEMA
-from fugue.extensions.transformer.transformer import CoTransformer, Transformer
 from triad import ParamDict, Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars, to_function, to_instance
 from triad.utils.hash import to_uuid
+
+from fugue._utils.interfaceless import is_class_method, parse_output_schema_from_comment
+from fugue._utils.registry import fugue_plugin
+from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames, LocalDataFrame
+from fugue.dataframe.function_wrapper import DataFrameFunctionWrapper
+from fugue.exceptions import FugueInterfacelessError
+from fugue.extensions.transformer.constants import OUTPUT_TRANSFORMER_DUMMY_SCHEMA
+from fugue.extensions.transformer.transformer import CoTransformer, Transformer
+
+from .._utils import (
+    load_namespace_extensions,
+    parse_validation_rules_from_comment,
+    to_validation_rules,
+)
 
 _TRANSFORMER_REGISTRY = ParamDict()
 _OUT_TRANSFORMER_REGISTRY = ParamDict()
@@ -333,6 +333,9 @@ class _FuncAsTransformer(Transformer):
     def get_output_schema(self, df: DataFrame) -> Any:
         return self._parse_schema(self._output_schema_arg, df)  # type: ignore
 
+    def get_format_hint(self) -> Optional[str]:
+        return self._format_hint  # type: ignore
+
     @property
     def validation_rules(self) -> Dict[str, Any]:
         return self._validation_rules  # type: ignore
@@ -371,13 +374,14 @@ class _FuncAsTransformer(Transformer):
         validation_rules.update(parse_validation_rules_from_comment(func))
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsTransformer()
-        tr._wrapper = FunctionWrapper(  # type: ignore
+        tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
             func, "^[lspq][fF]?x*z?$", "^[lspq]$"
         )
         tr._output_schema_arg = schema  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
         tr._uses_callback = "f" in tr._wrapper.input_code.lower()  # type: ignore
         tr._requires_callback = "F" in tr._wrapper.input_code  # type: ignore
+        tr._format_hint = tr._wrapper.get_format_hint()  # type: ignore
         return tr
 
 
@@ -388,6 +392,9 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
 
     def get_output_schema(self, df: DataFrame) -> Any:
         return OUTPUT_TRANSFORMER_DUMMY_SCHEMA
+
+    def get_format_hint(self) -> Optional[str]:
+        return self._format_hint  # type: ignore
 
     @no_type_check
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:
@@ -402,13 +409,14 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
         assert_or_throw(schema is None, "schema must be None for output transformers")
         validation_rules.update(parse_validation_rules_from_comment(func))
         tr = _FuncAsOutputTransformer()
-        tr._wrapper = FunctionWrapper(  # type: ignore
+        tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
             func, "^[lspq][fF]?x*z?$", "^[lspnq]$"
         )
         tr._output_schema_arg = None  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
         tr._uses_callback = "f" in tr._wrapper.input_code.lower()  # type: ignore
         tr._requires_callback = "F" in tr._wrapper.input_code  # type: ignore
+        tr._format_hint = tr._wrapper.get_format_hint()  # type: ignore
         return tr
 
 
@@ -419,6 +427,9 @@ class _FuncAsCoTransformer(CoTransformer):
 
     def get_output_schema(self, dfs: DataFrames) -> Any:
         return self._parse_schema(self._output_schema_arg, dfs)  # type: ignore
+
+    def get_format_hint(self) -> Optional[str]:
+        return self._format_hint  # type: ignore
 
     @property
     def validation_rules(self) -> ParamDict:
@@ -491,7 +502,7 @@ class _FuncAsCoTransformer(CoTransformer):
             )
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsCoTransformer()
-        tr._wrapper = FunctionWrapper(  # type: ignore
+        tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
             func, "^(c|[lspq]+)[fF]?x*z?$", "^[lspq]$"
         )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
@@ -499,6 +510,7 @@ class _FuncAsCoTransformer(CoTransformer):
         tr._validation_rules = {}  # type: ignore
         tr._uses_callback = "f" in tr._wrapper.input_code.lower()  # type: ignore
         tr._requires_callback = "F" in tr._wrapper.input_code  # type: ignore
+        tr._format_hint = tr._wrapper.get_format_hint()  # type: ignore
         return tr
 
 
@@ -509,6 +521,9 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
 
     def get_output_schema(self, dfs: DataFrames) -> Any:
         return OUTPUT_TRANSFORMER_DUMMY_SCHEMA
+
+    def get_format_hint(self) -> Optional[str]:
+        return self._format_hint  # type: ignore
 
     @no_type_check
     def transform(self, dfs: DataFrames) -> LocalDataFrame:
@@ -546,7 +561,7 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
         )
 
         tr = _FuncAsOutputCoTransformer()
-        tr._wrapper = FunctionWrapper(  # type: ignore
+        tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
             func, "^(c|[lspq]+)[fF]?x*z?$", "^[lspnq]$"
         )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
@@ -554,6 +569,7 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
         tr._validation_rules = {}  # type: ignore
         tr._uses_callback = "f" in tr._wrapper.input_code.lower()  # type: ignore
         tr._requires_callback = "F" in tr._wrapper.input_code  # type: ignore
+        tr._format_hint = tr._wrapper.get_format_hint()  # type: ignore
         return tr
 
 
@@ -565,6 +581,7 @@ def _to_transformer(
     validation_rules: Optional[Dict[str, Any]] = None,
 ) -> Union[Transformer, CoTransformer]:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
+    load_namespace_extensions(obj)
     return _to_general_transformer(
         obj=parse_transformer(obj),
         schema=schema,
@@ -583,6 +600,7 @@ def _to_output_transformer(
     validation_rules: Optional[Dict[str, Any]] = None,
 ) -> Union[Transformer, CoTransformer]:
     global_vars, local_vars = get_caller_global_local_vars(global_vars, local_vars)
+    load_namespace_extensions(obj)
     return _to_general_transformer(
         obj=parse_output_transformer(obj),
         schema=None,

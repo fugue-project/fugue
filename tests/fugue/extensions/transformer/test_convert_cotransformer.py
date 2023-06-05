@@ -51,6 +51,7 @@ def test__to_transformer():
     raises(FugueInterfacelessError, lambda: _to_transformer("t4", None))
     e = _to_transformer("t4", "a:int,b:int")
     assert isinstance(e, CoTransformer)
+    assert e.get_format_hint() == "pandas"
     f = _to_transformer("t5", "a:int,b:int")
     assert isinstance(f, CoTransformer)
     g = _to_transformer("t6", "a:int,b:int")

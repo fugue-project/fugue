@@ -1,16 +1,16 @@
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import dask.dataframe as dd
 import ibis
-from fugue import DataFrame, DataFrames, ExecutionEngine
-from fugue_ibis import IbisTable
-from fugue_ibis._utils import to_ibis_schema, to_schema
-from fugue_ibis.execution.ibis_engine import IbisEngine, register_ibis_engine
 from ibis.backends.dask import Backend
 from triad.utils.assertion import assert_or_throw
 
+from fugue import DataFrame, DataFrames, ExecutionEngine
 from fugue_dask.dataframe import DaskDataFrame
 from fugue_dask.execution_engine import DaskExecutionEngine
+from fugue_ibis import IbisTable
+from fugue_ibis._utils import to_ibis_schema, to_schema
+from fugue_ibis.execution.ibis_engine import IbisEngine, parse_ibis_engine
 
 
 class DaskIbisEngine(IbisEngine):
@@ -42,13 +42,11 @@ class DaskIbisEngine(IbisEngine):
         return DaskDataFrame(result, schema=schema)
 
 
-def _to_dask_ibis_engine(
-    engine: ExecutionEngine, ibis_engine: Any
-) -> Optional[IbisEngine]:
-    if isinstance(engine, DaskExecutionEngine):
-        if ibis_engine is None:
-            return DaskIbisEngine(engine)
-    return None  # pragma: no cover
+@parse_ibis_engine.candidate(
+    lambda obj, *args, **kwargs: isinstance(obj, DaskExecutionEngine)
+)
+def _to_dask_ibis_engine(obj: Any, engine: ExecutionEngine) -> IbisEngine:
+    return DaskIbisEngine(engine)
 
 
 class _BackendWrapper(Backend):
@@ -62,6 +60,3 @@ class _BackendWrapper(Backend):
             if schema is None and name in self._schemas
             else schema,
         )
-
-
-register_ibis_engine(0, _to_dask_ibis_engine)

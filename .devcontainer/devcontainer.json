@@ -1,6 +1,6 @@
 {
 	"name": "Fugue Development Environment",
-	"image": "fugueproject/devenv:0.4.4",
+	"image": "fugueproject/devenv:0.7.7",
 	"settings": {
 		"terminal.integrated.shell.linux": "/bin/bash",
 		"python.pythonPath": "/usr/local/bin/python",
@@ -17,13 +17,16 @@
 		"python.linting.pylintPath": "/usr/local/py-utils/bin/pylint"
 	},
 	"extensions": [
-		"ms-python.python"
+		"ms-python.python",
+		"ms-python.isort",
+		"GitHub.copilot",
+		"njpwerner.autodocstring"
 	],
 	"forwardPorts": [
 		8888
 	],
 	"postCreateCommand": "make devenv",
-	"mounts": [
-		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-	]
+	"features": {
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
+	}
 }

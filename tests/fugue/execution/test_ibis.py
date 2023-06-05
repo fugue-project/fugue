@@ -14,4 +14,4 @@ class PandasIbisTests(IbisTests.Tests):
         return e
 
     def make_ibis_engine(self) -> IbisEngine:
-        return PandasIbisEngine(self.engine)
+        return PandasIbisEngine(self._engine)

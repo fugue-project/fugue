@@ -2,7 +2,11 @@ from typing import Any, Dict
 from triad import ParamDict
 
 KEYWORD_ROWCOUNT = "ROWCOUNT"
-KEYWORD_CORECOUNT = "CORECOUNT"
+KEYWORD_PARALLELISM = "CONCURRENCY"
+
+FUGUE_ENTRYPOINT = "fugue.plugins"
+
+FUGUE_SQL_DEFAULT_DIALECT = "spark"
 
 FUGUE_CONF_WORKFLOW_CONCURRENCY = "fugue.workflow.concurrency"
 FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH = "fugue.workflow.checkpoint.path"
@@ -13,6 +17,8 @@ FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE = "fugue.workflow.exception.hide"
 FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT = "fugue.workflow.exception.inject"
 FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE = "fugue.workflow.exception.optimize"
 FUGUE_CONF_SQL_IGNORE_CASE = "fugue.sql.compile.ignore_case"
+FUGUE_CONF_SQL_DIALECT = "fugue.sql.compile.dialect"
+FUGUE_CONF_DEFAULT_PARTITIONS = "fugue.default.partitions"
 
 FUGUE_COMPILE_TIME_CONFIGS = set(
     [
@@ -22,6 +28,7 @@ FUGUE_COMPILE_TIME_CONFIGS = set(
         FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT,
         FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE,
         FUGUE_CONF_SQL_IGNORE_CASE,
+        FUGUE_CONF_SQL_DIALECT,
     ]
 )
 
@@ -35,6 +42,8 @@ _FUGUE_GLOBAL_CONF = ParamDict(
         FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT: 3,
         FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE: True,
         FUGUE_CONF_SQL_IGNORE_CASE: False,
+        FUGUE_CONF_SQL_DIALECT: FUGUE_SQL_DEFAULT_DIALECT,
+        FUGUE_CONF_DEFAULT_PARTITIONS: -1,
     }
 )
 

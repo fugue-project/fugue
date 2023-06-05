@@ -1,11 +1,12 @@
-import random
 from typing import Any, Iterable, List
 
 import pyspark.sql as ps
-from fugue_spark._utils.convert import to_schema, to_spark_schema
+import pyspark.sql.functions as psf
 from pyspark import RDD
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import lit
+import warnings
+from .convert import to_schema, to_spark_schema
+from .misc import is_spark_connect
 
 _PARTITION_DUMMY_KEY = "__partition_dummy_key__"
 
@@ -28,16 +29,10 @@ def rand_repartition(
     if len(cols) > 0 or num <= 1:
         return hash_repartition(session, df, num, cols)
 
-    def _rand(rows: Iterable[Any], n: int) -> Iterable[Any]:  # pragma: no cover
-        for row in rows:
-            yield (random.randint(0, n - 1), row)
-
-    rdd = (
-        df.rdd.mapPartitions(lambda r: _rand(r, num))
-        .partitionBy(num, lambda k: k)
-        .mapPartitions(_to_rows)
+    tdf = df.withColumn(
+        _PARTITION_DUMMY_KEY, (psf.rand(0) * psf.lit(2**15 - 1)).cast("long")
     )
-    return session.createDataFrame(rdd, df.schema)
+    return tdf.repartition(num, _PARTITION_DUMMY_KEY)[df.schema.names]
 
 
 def even_repartition(
@@ -45,6 +40,9 @@ def even_repartition(
 ) -> ps.DataFrame:
     if num == 1:
         return _single_repartition(df)
+    if is_spark_connect(session):  # pragma: no cover
+        warnings.warn("Even repartitioning is not supported by Spark Connect")
+        return hash_repartition(session, df, num, cols)
     if len(cols) == 0:
         if num == 0:
             return df
@@ -82,7 +80,7 @@ def even_repartition(
 
 def _single_repartition(df: ps.DataFrame) -> ps.DataFrame:
     return (
-        df.withColumn(_PARTITION_DUMMY_KEY, lit(0))
+        df.withColumn(_PARTITION_DUMMY_KEY, psf.lit(0))
         .repartition(_PARTITION_DUMMY_KEY)
         .drop(_PARTITION_DUMMY_KEY)
     )
@@ -91,11 +89,6 @@ def _single_repartition(df: ps.DataFrame) -> ps.DataFrame:
 def _to_rows(rdd: Iterable[Any]) -> Iterable[Any]:  # pragma: no cover
     for item in rdd:
         yield item[1]
-
-
-def _to_rows_with_key(rdd: Iterable[Any]) -> Iterable[Any]:  # pragma: no cover
-    for item in rdd:
-        yield list(item[1]) + [item[0]]
 
 
 def _zipWithIndex(rdd: RDD, to_rows: bool = False) -> RDD:

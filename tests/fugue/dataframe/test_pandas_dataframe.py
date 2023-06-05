@@ -5,18 +5,39 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from fugue.dataframe import PandasDataFrame
+from pytest import raises
+from triad.collections.schema import Schema
+
+import fugue.api as fa
+from fugue.dataframe import ArrowDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_test.dataframe_suite import DataFrameTests
-from pytest import raises
-from triad.collections.schema import Schema, SchemaError
-from triad.exceptions import InvalidOperationError
 
 
 class PandasDataFrameTests(DataFrameTests.Tests):
     def df(self, data: Any = None, schema: Any = None) -> PandasDataFrame:
         return PandasDataFrame(data, schema)
+
+    def test_num_partitions(self):
+        assert fa.get_num_partitions(self.df([[0, 1]], "a:int,b:int")) == 1
+
+    def test_api_as_local(self):
+        assert fa.is_local(self.df([[0, 1]], "a:int,b:int"))
+
+
+class NativePandasDataFrameTests(DataFrameTests.NativeTests):
+    def df(self, data: Any = None, schema: Any = None) -> pd.DataFrame:
+        return ArrowDataFrame(data, schema).as_pandas()
+
+    def to_native_df(self, pdf: pd.DataFrame) -> Any:  # pragma: no cover
+        return pdf
+
+    def test_num_partitions(self):
+        assert fa.get_num_partitions(self.df([[0, 1]], "a:int,b:int")) == 1
+
+    def test_map_type(self):
+        pass
 
 
 def test_init():
@@ -76,10 +97,10 @@ def test_simple_methods():
 
 
 def test_nested():
-    #data = [[dict(a=1, b=[3, 4], d=1.0)], [json.dumps(dict(b=[30, "40"]))]]
-    #df = PandasDataFrame(data, "a:{a:str,b:[int]}")
-    #a = df.as_array(type_safe=True)
-    #assert [[dict(a="1", b=[3, 4])], [dict(a=None, b=[30, 40])]] == a
+    # data = [[dict(a=1, b=[3, 4], d=1.0)], [json.dumps(dict(b=[30, "40"]))]]
+    # df = PandasDataFrame(data, "a:{a:str,b:[int]}")
+    # a = df.as_array(type_safe=True)
+    # assert [[dict(a="1", b=[3, 4])], [dict(a=None, b=[30, 40])]] == a
 
     data = [[[json.dumps(dict(b=[30, "40"]))]]]
     df = PandasDataFrame(data, "a:[{a:str,b:[int]}]")

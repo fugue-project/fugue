@@ -8,6 +8,20 @@ from dask.distributed import Client, get_client
 from qpd_dask.engine import DaskUtils as DaskUtilsBase
 from triad.utils.pyarrow import to_pandas_dtype, to_single_pandas_dtype
 
+import fugue.api as fa
+from fugue.constants import FUGUE_CONF_DEFAULT_PARTITIONS
+
+from ._constants import FUGUE_DASK_CONF_DEFAULT_PARTITIONS
+
+
+def get_default_partitions() -> int:
+    conf = fa.get_current_conf()
+    n = conf.get(
+        FUGUE_DASK_CONF_DEFAULT_PARTITIONS,
+        conf.get(FUGUE_CONF_DEFAULT_PARTITIONS, -1),
+    )
+    return n if n > 0 else fa.get_current_parallelism() * 2
+
 
 class DaskUtils(DaskUtilsBase):
     def get_or_create_client(self, client: Optional[Client] = None):
@@ -72,10 +86,14 @@ class DaskUtils(DaskUtilsBase):
             return df.astype(dtype=to_pandas_dtype(schema))
         for v in schema:
             s = df[v.name]
-            if pa.types.is_string(v.type):
+            if pa.types.is_string(v.type) and not pandas.api.types.is_string_dtype(
+                s.dtype
+            ):
                 ns = s.isnull()
                 s = s.astype(str).mask(ns, None)
-            elif pa.types.is_boolean(v.type):
+            elif pa.types.is_boolean(v.type) and not pandas.api.types.is_bool_dtype(
+                s.dtype
+            ):
                 ns = s.isnull()
                 if pandas.api.types.is_string_dtype(s.dtype):
                     try:
@@ -84,8 +102,10 @@ class DaskUtils(DaskUtilsBase):
                         s = s.fillna(0).astype(bool)
                 else:
                     s = s.fillna(0).astype(bool)
-                s = s.mask(ns, None)
-            elif pa.types.is_integer(v.type):
+                s = s.mask(ns, None).astype("boolean")
+            elif pa.types.is_integer(v.type) and not pandas.api.types.is_integer_dtype(
+                s.dtype
+            ):
                 ns = s.isnull()
                 s = s.fillna(0).astype(v.type.to_pandas_dtype()).mask(ns, None)
             elif not pa.types.is_struct(v.type) and not pa.types.is_list(v.type):

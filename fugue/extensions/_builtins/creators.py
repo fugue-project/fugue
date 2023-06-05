@@ -1,10 +1,12 @@
 from typing import Any, Callable, Optional
 
-from fugue.collections.yielded import Yielded, YieldedFile
+from triad import Schema, assert_or_throw, to_uuid
+
+from fugue.collections.yielded import Yielded
 from fugue.dataframe import DataFrame
 from fugue.exceptions import FugueWorkflowCompileError
+from fugue.execution.api import as_fugue_engine_df
 from fugue.extensions.creator import Creator
-from triad import Schema, assert_or_throw, to_uuid
 
 
 class Load(Creator):
@@ -38,11 +40,8 @@ class CreateData(Creator):
 
     def create(self) -> DataFrame:
         if isinstance(self._df, Yielded):
-            if isinstance(self._df, YieldedFile):
-                return self.execution_engine.load_df(path=self._df.path)
-            else:
-                return self.execution_engine.to_df(self._df.result)  # type: ignore
-        return self.execution_engine.to_df(self._df, schema=self._schema)
+            return self.execution_engine.load_yielded(self._df)
+        return as_fugue_engine_df(self.execution_engine, self._df, schema=self._schema)
 
     def _df_uid(self):
         if self._data_determiner is not None:

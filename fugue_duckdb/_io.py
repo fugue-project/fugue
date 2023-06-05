@@ -2,21 +2,33 @@ import os
 from typing import Any, Iterable, List, Optional, Union
 
 from duckdb import DuckDBPyConnection
-from fugue._utils.io import FileParser, load_df, save_df
-from fugue.dataframe import ArrowDataFrame, LocalBoundedDataFrame
 from triad import ParamDict, Schema
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 
-from fugue_duckdb._utils import encode_value_to_expr, get_temp_df_name, to_duck_type
+from fugue._utils.io import FileParser, load_df, save_df
+from fugue.collections.sql import TempTableName
+from fugue.dataframe import ArrowDataFrame, LocalBoundedDataFrame
+from fugue_duckdb._utils import (
+    encode_value_to_expr,
+    to_duck_type,
+    encode_column_name,
+    encode_column_names,
+)
 from fugue_duckdb.dataframe import DuckDataFrame
 
 
 def _get_single_files(
     fp: Iterable[FileParser], fs: FileSystem, fmt: str
 ) -> Iterable[FileParser]:
+    def _isdir(d: str) -> bool:
+        try:
+            return fs.isdir(d)
+        except Exception:  # pragma: no cover
+            return False
+
     for f in fp:
-        if f.glob_pattern == "" and fs.isdir(f.uri):
+        if f.glob_pattern == "" and _isdir(f.uri):
             yield f.with_glob("*." + fmt, fmt)
         else:
             yield f
@@ -91,15 +103,15 @@ class DuckDBIO:
         self._format_save[p.file_format](df, p, **kwargs)
 
     def _save_csv(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
-        dn = get_temp_df_name()
-        df.native.create_view(dn)
+        dn = TempTableName()
+        df.native.create_view(dn.key)
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
         kw["header"] = 1 if kw.pop("header", False) else 0
         params: List[str] = []
         for k, v in kw.items():
             params.append(f"{k.upper()} " + encode_value_to_expr(v))
         pm = ", ".join(params)
-        query = f"COPY {dn} TO {encode_value_to_expr(p.uri)} WITH ({pm})"
+        query = f"COPY {dn.key} TO {encode_value_to_expr(p.uri)} WITH ({pm})"
         self._con.execute(query)
 
     def _load_csv(  # noqa: C901
@@ -124,7 +136,7 @@ class DuckDBIO:
                 if columns is None:
                     cols = "*"
                 elif isinstance(columns, list):
-                    cols = ", ".join(columns)
+                    cols = ", ".join(encode_column_names(columns))
                 else:
                     raise ValueError(
                         "columns can't be schema when infer_schema is true"
@@ -140,7 +152,7 @@ class DuckDBIO:
                     )
                 query = f"SELECT * FROM read_csv_auto({pm})"
                 tdf = DuckDataFrame(self._con.from_query(query))
-                rn = dict(zip(tdf.schema.names, columns))
+                rn = dict(zip(tdf.columns, columns))
                 return tdf.rename(rn)  # type: ignore
         else:
             if header:
@@ -148,7 +160,7 @@ class DuckDBIO:
                 if columns is None:
                     cols = "*"
                 elif isinstance(columns, list):
-                    cols = ", ".join(columns)
+                    cols = ", ".join(encode_column_names(columns))
                 else:
                     cols = "*"
                 for k, v in kw.items():
@@ -170,21 +182,21 @@ class DuckDBIO:
                     schema = Schema(columns)
                 kw["columns"] = {f.name: to_duck_type(f.type) for f in schema.fields}
                 for k, v in kw.items():
-                    params.append(f"{k}=" + encode_value_to_expr(v))
+                    params.append(encode_column_name(k) + "=" + encode_value_to_expr(v))
                 pm = ", ".join(params)
                 query = f"SELECT * FROM read_csv({pm})"
                 return DuckDataFrame(self._con.from_query(query))
 
     def _save_parquet(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
-        dn = get_temp_df_name()
-        df.native.create_view(dn)
+        dn = TempTableName()
+        df.native.create_view(dn.key)
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
         kw["format"] = "parquet"
         params: List[str] = []
         for k, v in kw.items():
             params.append(f"{k.upper()} " + encode_value_to_expr(v))
         pm = ", ".join(params)
-        query = f"COPY {dn} TO {encode_value_to_expr(p.uri)}"
+        query = f"COPY {dn.key} TO {encode_value_to_expr(p.uri)}"
         if len(params) > 0:
             query += f" WITH ({pm})"
         self._con.execute(query)
@@ -195,7 +207,7 @@ class DuckDBIO:
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
         params: List[str] = [encode_value_to_expr(p.uri_with_glob)]
         if isinstance(columns, list):
-            cols = ", ".join(columns)
+            cols = ", ".join(encode_column_names(columns))
         else:
             cols = "*"
         assert_or_throw(
@@ -205,7 +217,7 @@ class DuckDBIO:
         # for k, v in kw.items():
         #    params.append(f"{k}=" + encode_value_to_expr(v))
         pm = ", ".join(params)
-        query = f"SELECT {cols} FROM parquet_scan({pm})"
+        query = f"SELECT {cols} FROM parquet_scan([{pm}])"
         res = DuckDataFrame(self._con.from_query(query))
         return (
             res  # type: ignore

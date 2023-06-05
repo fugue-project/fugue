@@ -27,6 +27,14 @@ fugue.sql
 .. |FugueDataTypes| replace:: :doc:`Fugue Data Types <tutorial:tutorials/appendix/generate_types>`
 
 
+fugue.sql.api
+-------------
+
+.. automodule:: fugue.sql.api
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.sql.workflow
 ------------------
 

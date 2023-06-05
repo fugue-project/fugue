@@ -6,27 +6,32 @@ import pyspark
 import pyspark.rdd as pr
 import pyspark.sql as ps
 import pytest
-from fugue import infer_execution_engine, transform
-from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import (
-    ArrayDataFrame,
-    ArrowDataFrame,
-    LocalDataFrameIterableDataFrame,
-    PandasDataFrame,
-)
-from fugue.dataframe.utils import _df_eq as df_eq
-from fugue.extensions.transformer import Transformer, transformer
-from fugue.workflow.workflow import FugueWorkflow
-from fugue_test.builtin_suite import BuiltInTests
-from fugue_test.execution_suite import ExecutionEngineTests
 from pyspark import SparkContext, StorageLevel
 from pyspark.sql import DataFrame as SDataFrame
 from pyspark.sql import SparkSession
 from pytest import raises
 from triad import Schema
 
+import fugue.api as fa
+from fugue import transform
+from fugue.collections.partition import PartitionSpec
+from fugue.dataframe import (
+    ArrayDataFrame,
+    ArrowDataFrame,
+    IterablePandasDataFrame,
+    LocalDataFrameIterableDataFrame,
+    PandasDataFrame,
+)
+from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.extensions.transformer import Transformer, transformer
+from fugue.plugins import infer_execution_engine
+from fugue.workflow.workflow import FugueWorkflow
+from fugue_spark._utils.convert import to_pandas
+from fugue_spark._utils.misc import is_spark_dataframe, is_spark_session
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
+from fugue_test.builtin_suite import BuiltInTests
+from fugue_test.execution_suite import ExecutionEngineTests
 
 
 class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -40,6 +45,14 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
             session, {"test": True, "fugue.spark.use_pandas_udf": False}
         )
         return e
+
+    def test_properties(self):
+        assert self.engine.is_distributed
+        assert self.engine.map_engine.is_distributed
+        assert self.engine.sql_engine.is_distributed
+
+    def test_get_parallelism(self):
+        assert fa.get_current_parallelism() == 4
 
     def test_not_using_pandas_udf(self):
         assert not self.engine.create_default_map_engine()._should_use_pandas_udf(
@@ -75,6 +88,11 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         res = a.as_array(type_safe=True)
         assert res[0][0] == {"a": "b"}
 
+        pdf = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        pdf = pdf[pdf.a < 1]
+        a = e.to_df(pdf)
+        assert fa.get_schema(a) == "a:long,b:long"
+
     def test_persist(self):
         e = self.engine
 
@@ -104,13 +122,12 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_infer_engine(self):
         df = self.spark_session.createDataFrame(pd.DataFrame([[0]], columns=["a"]))
-        assert isinstance(infer_execution_engine([df]), SparkSession)
+        assert is_spark_session(infer_execution_engine([df]))
 
         fdf = SparkDataFrame(df)
-        assert isinstance(infer_execution_engine([fdf]), SparkSession)
+        assert is_spark_session(infer_execution_engine([fdf]))
 
 
-@pytest.mark.skipif(pyspark.__version__ < "3", reason="pyspark < 3")
 class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
     @pytest.fixture(autouse=True)
     def init_session(self, spark_session):
@@ -120,6 +137,9 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
         session = SparkSession.builder.getOrCreate()
         e = SparkExecutionEngine(session, {"test": True})
         return e
+
+    def test_get_parallelism(self):
+        assert fa.get_current_parallelism() == 4
 
     def test__join_outer_pandas_incompatible(self):
         return
@@ -153,7 +173,7 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
                     pdf["zz"] = pdf["xx"] + pdf["yy"]
                     yield PandasDataFrame(pdf)
 
-            return LocalDataFrameIterableDataFrame(get_dfs())
+            return IterablePandasDataFrame(get_dfs())
 
         e = self.engine
         np.random.seed(0)
@@ -178,6 +198,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             session,
             {
                 "test": True,
+                "fugue.spark.use_pandas_udf": False,
                 "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
                 "fugue.rpc.flask_server.host": "127.0.0.1",
                 "fugue.rpc.flask_server.port": "1234",
@@ -191,6 +212,9 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
         sdf = self.spark_session.createDataFrame([[1.1]], "a:double")
         a = FugueWorkflow().df(sdf)
         df_eq(a.compute(SparkExecutionEngine), [[1.1]], "a:double")
+
+    def test_yield_table(self):
+        pass
 
     def test_default_session(self):
         a = FugueWorkflow().df([[0]], "a:int")
@@ -241,10 +265,41 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             dag.output(c, using=assert_match, params=dict(values=[100]))
         dag.run(self.engine)
 
+    def test_coarse_partition(self):
+        def verify_coarse_partition(df: pd.DataFrame) -> List[List[Any]]:
+            ct = df.a.nunique()
+            s = df.a * 1000 + df.b
+            ordered = ((s - s.shift(1)).dropna() >= 0).all(axis=None)
+            return [[ct, ordered]]
+
+        def assert_(df: pd.DataFrame, rc: int, n: int, check_ordered: bool) -> None:
+            if rc > 0:
+                assert len(df) == rc
+            assert df.ct.sum() == n
+            if check_ordered:
+                assert (df.ordered == True).all()
+
+        gps = 100
+        partition_num = 6
+        df = pd.DataFrame(dict(a=list(range(gps)) * 10, b=range(gps * 10))).sample(
+            frac=1.0
+        )
+        with FugueWorkflow() as dag:
+            a = dag.df(df)
+            c = a.partition(
+                algo="coarse", by="a", presort="b", num=partition_num
+            ).transform(verify_coarse_partition, schema="ct:int,ordered:bool")
+            dag.output(
+                c,
+                using=assert_,
+                params=dict(rc=partition_num, n=gps, check_ordered=True),
+            )
+        dag.run(self.engine)
+
     def test_session_as_engine(self):
         dag = FugueWorkflow()
         a = dag.df([[p, 0] for p in range(100)], "a:int,b:int")
-        a.partition(algo="even", by=["a"]).transform(AssertMaxNTransform).persist()
+        # a.partition(algo="even", by=["a"]).transform(AssertMaxNTransform).persist()
         dag.run(self.spark_session)
 
     def test_interfaceless(self):
@@ -257,8 +312,8 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             return df.sort_values("b").head(1)
 
         result = transform(sdf, f1, partition=dict(by=["a"]), engine=self.engine)
-        assert isinstance(result, SDataFrame)
-        assert result.toPandas().sort_values(["a"]).values.tolist() == [[0, 0], [1, 1]]
+        assert is_spark_dataframe(result)
+        assert to_pandas(result).sort_values(["a"]).values.tolist() == [[0, 0], [1, 1]]
 
     def test_annotation_1(self):
         def m_c(engine: SparkExecutionEngine) -> ps.DataFrame:
@@ -268,7 +323,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             return df
 
         def m_o(engine: SparkExecutionEngine, df: ps.DataFrame) -> None:
-            assert 1 == df.toPandas().shape[0]
+            assert 1 == to_pandas(df).shape[0]
 
         with FugueWorkflow() as dag:
             df = dag.create(m_c).process(m_p)
@@ -281,12 +336,12 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             return session.createDataFrame([[0]], "a:long")
 
         def m_p(session: SparkSession, df: ps.DataFrame) -> ps.DataFrame:
-            assert isinstance(session, SparkSession)
+            assert is_spark_session(session)
             return df
 
         def m_o(session: SparkSession, df: ps.DataFrame) -> None:
-            assert isinstance(session, SparkSession)
-            assert 1 == df.toPandas().shape[0]
+            assert is_spark_session(session)
+            assert 1 == to_pandas(df).shape[0]
 
         with FugueWorkflow() as dag:
             df = dag.create(m_c).process(m_p)

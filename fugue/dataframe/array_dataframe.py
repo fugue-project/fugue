@@ -4,6 +4,7 @@ from fugue.dataframe.dataframe import (
     DataFrame,
     LocalBoundedDataFrame,
     _get_schema_change,
+    as_fugue_dataset,
 )
 from fugue.exceptions import FugueDataFrameOperationError
 from triad.utils.assertion import assert_or_throw
@@ -51,7 +52,7 @@ class ArrayDataFrame(LocalBoundedDataFrame):
     def empty(self) -> bool:
         return self.count() == 0
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         self.assert_not_empty()
         return list(self.native[0])
 
@@ -120,3 +121,8 @@ class ArrayDataFrame(LocalBoundedDataFrame):
         else:
             for row in self.native:
                 yield [row[p] for p in pos]
+
+
+@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, list), priority=0.9)
+def _arr_to_fugue(df: List[Any], **kwargs: Any) -> ArrayDataFrame:
+    return ArrayDataFrame(df, **kwargs)

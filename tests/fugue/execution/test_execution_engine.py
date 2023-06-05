@@ -1,9 +1,19 @@
+from typing import Type
+
+from pytest import raises
 from triad.collections.dict import ParamDict
-from fugue import NativeExecutionEngine, register_global_conf
+from triad.utils.convert import get_full_type_path
+
+from fugue import ExecutionEngine, NativeExecutionEngine, register_global_conf
 from fugue.constants import FUGUE_CONF_SQL_IGNORE_CASE
 from fugue.rpc.base import NativeRPCServer
-from pytest import raises
-from triad.utils.convert import get_full_type_path
+from fugue_duckdb import DuckDBEngine
+
+
+class _MockSQLEngine(DuckDBEngine):
+    @property
+    def execution_engine_constraint(self) -> Type[ExecutionEngine]:
+        return _MockExecutionEngine
 
 
 class _MockExecutionEngine(NativeExecutionEngine):
@@ -13,6 +23,9 @@ class _MockExecutionEngine(NativeExecutionEngine):
 
     def stop_engine(self):
         self._stop += 1
+
+    def create_default_sql_engine(self):
+        return _MockSQLEngine(self)
 
 
 class _MockRPC(NativeRPCServer):
@@ -31,10 +44,20 @@ class _MockRPC(NativeRPCServer):
         _MockRPC._stop += 1
 
 
+def test_sql_engine_init():
+    engine = _MockExecutionEngine()
+    assert isinstance(engine.sql_engine, _MockSQLEngine)
+
+    with raises(TypeError):
+        _MockSQLEngine(NativeExecutionEngine())
+
+
 def test_start_stop():
     conf = {"fugue.rpc.server": get_full_type_path(_MockRPC)}
     engine = _MockExecutionEngine(conf=conf)
     engine.stop()
+    assert 1 == engine._stop
+    engine.stop()  # stop will be called only once
     assert 1 == engine._stop
 
 

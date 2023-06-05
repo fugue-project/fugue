@@ -1,60 +1,53 @@
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
 from uuid import uuid4
 
 import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
-import pyspark
 from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import broadcast, col, lit, row_number
 from pyspark.sql.window import Window
-from triad import FileSystem, IndexedOrderedDict, ParamDict, Schema
+from triad import FileSystem, IndexedOrderedDict, ParamDict, Schema, SerializableRLock
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.iter import EmptyAwareIterable
 from triad.utils.pandas_like import PD_UTILS
+from triad.utils.pyarrow import get_alter_func
 from triad.utils.threading import RunOnce
 
+from fugue import StructuredRawSQL
 from fugue.collections.partition import (
-    EMPTY_PARTITION_SPEC,
     PartitionCursor,
     PartitionSpec,
     parse_presort_exp,
 )
-from fugue.constants import KEYWORD_ROWCOUNT
+from fugue.constants import KEYWORD_PARALLELISM, KEYWORD_ROWCOUNT
 from fugue.dataframe import (
     ArrayDataFrame,
     ArrowDataFrame,
     DataFrame,
     DataFrames,
+    IterableArrowDataFrame,
     IterableDataFrame,
+    IterablePandasDataFrame,
     LocalDataFrame,
     LocalDataFrameIterableDataFrame,
     PandasDataFrame,
 )
+from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue.dataframe.utils import get_join_schemas
 from fugue.exceptions import FugueDataFrameInitError
-from fugue.execution.execution_engine import (
-    _DEFAULT_JOIN_KEYS,
-    ExecutionEngine,
-    MapEngine,
-    SQLEngine,
-)
-from fugue_spark._constants import (
-    FUGUE_SPARK_CONF_USE_PANDAS_UDF,
-    FUGUE_SPARK_DEFAULT_CONF,
-)
-from fugue_spark._utils.convert import to_schema, to_spark_schema, to_type_safe_input
-from fugue_spark._utils.io import SparkIO
-from fugue_spark._utils.partition import (
-    even_repartition,
-    hash_repartition,
-    rand_repartition,
-)
-from fugue_spark.dataframe import SparkDataFrame
+from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
+
+from ._constants import FUGUE_SPARK_CONF_USE_PANDAS_UDF, FUGUE_SPARK_DEFAULT_CONF
+from ._utils.convert import to_schema, to_spark_schema, to_type_safe_input
+from ._utils.io import SparkIO
+from ._utils.misc import is_spark_connect as _is_spark_connect, is_spark_dataframe
+from ._utils.partition import even_repartition, hash_repartition, rand_repartition
+from .dataframe import SparkDataFrame
 
 _TO_SPARK_JOIN_MAP: Dict[str, str] = {
     "inner": "inner",
@@ -76,38 +69,53 @@ class SparkSQLEngine(SQLEngine):
     :raises ValueError: if the engine is not :class:`~.SparkExecutionEngine`
     """
 
-    def __init__(self, execution_engine: ExecutionEngine):
-        assert_or_throw(
-            isinstance(execution_engine, SparkExecutionEngine),
-            ValueError("SparkSQLEngine must use SparkExecutionEngine"),
-        )
-        super().__init__(execution_engine)
+    @property
+    def dialect(self) -> Optional[str]:
+        return "spark"
 
-    def select(self, dfs: DataFrames, statement: str) -> DataFrame:
+    @property
+    def execution_engine_constraint(self) -> Type[ExecutionEngine]:
+        return SparkExecutionEngine
+
+    @property
+    def is_distributed(self) -> bool:
+        return True
+
+    def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
+        _map: Dict[str, str] = {}
         for k, v in dfs.items():
-            self.execution_engine.register(v, k)  # type: ignore
+            df = self.execution_engine._to_spark_df(v, create_view=True)  # type: ignore
+            _map[k] = df.alias
+        _sql = statement.construct(_map, dialect=self.dialect, log=self.log)
         return SparkDataFrame(
-            self.execution_engine.spark_session.sql(statement)  # type: ignore
+            self.execution_engine.spark_session.sql(_sql)  # type: ignore
         )
 
 
 class SparkMapEngine(MapEngine):
+    @property
+    def is_distributed(self) -> bool:
+        return True
+
+    @property
+    def is_spark_connect(self) -> bool:
+        """Whether the spark session is created by spark connect"""
+        return self.execution_engine.is_spark_connect  # type:ignore
+
     def _should_use_pandas_udf(self, schema: Schema) -> bool:
+        if self.is_spark_connect:  # pragma: no cover
+            return True
         possible = hasattr(ps.DataFrame, "mapInPandas")  # must be new version of Spark
-        if pyspark.__version__ < "3":  # pragma: no cover
-            possible &= self.execution_engine.conf.get(
-                "spark.sql.execution.arrow.enabled", False
-            )
-        else:
-            possible &= self.execution_engine.conf.get(
-                "spark.sql.execution.arrow.pyspark.enabled", False
-            )
+        # else:  # this condition seems to be unnecessary
+        #    possible &= self.execution_engine.conf.get(
+        #        "spark.sql.execution.arrow.pyspark.enabled", False
+        #    )
         enabled = self.execution_engine.conf.get_or_throw(
             FUGUE_SPARK_CONF_USE_PANDAS_UDF, bool
         )
         if not possible or any(pa.types.is_nested(t) for t in schema.types):
             if enabled and not possible:  # pragma: no cover
-                self.execution_engine.log.warning(
+                self.log.warning(
                     f"{FUGUE_SPARK_CONF_USE_PANDAS_UDF}"
                     " is enabled but the current PySpark session"
                     "did not enable Pandas UDF support"
@@ -122,18 +130,30 @@ class SparkMapEngine(MapEngine):
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
         output_schema = Schema(output_schema)
         if self._should_use_pandas_udf(output_schema):
             # pandas udf can only be used for pyspark > 3
-            if len(partition_spec.partition_by) > 0 and partition_spec.algo != "even":
-                return self._group_map_by_pandas_udf(
-                    df,
-                    map_func=map_func,
-                    output_schema=output_schema,
-                    partition_spec=partition_spec,
-                    on_init=on_init,
-                )
+            if len(partition_spec.partition_by) > 0:
+                if partition_spec.algo == "coarse":
+                    return self._map_by_pandas_udf(
+                        df,
+                        map_func=map_func,
+                        output_schema=output_schema,
+                        partition_spec=partition_spec,
+                        on_init=on_init,
+                        map_func_format_hint=map_func_format_hint,
+                    )
+                elif partition_spec.algo != "even" or self.is_spark_connect:
+                    return self._group_map_by_pandas_udf(
+                        df,
+                        map_func=map_func,
+                        output_schema=output_schema,
+                        partition_spec=partition_spec,
+                        on_init=on_init,
+                        map_func_format_hint=map_func_format_hint,
+                    )
             elif len(partition_spec.partition_by) == 0:
                 return self._map_by_pandas_udf(
                     df,
@@ -141,13 +161,12 @@ class SparkMapEngine(MapEngine):
                     output_schema=output_schema,
                     partition_spec=partition_spec,
                     on_init=on_init,
+                    map_func_format_hint=map_func_format_hint,
                 )
-        df = self.execution_engine.to_df(
-            self.execution_engine.repartition(df, partition_spec)
-        )
+        df = self.to_df(self.execution_engine.repartition(df, partition_spec))
         mapper = _Mapper(df, map_func, output_schema, partition_spec, on_init)
         sdf = df.native.rdd.mapPartitionsWithIndex(mapper.run, True)  # type: ignore
-        return self.execution_engine.to_df(sdf, output_schema)
+        return self.to_df(sdf, output_schema)
 
     def _group_map_by_pandas_udf(
         self,
@@ -156,12 +175,14 @@ class SparkMapEngine(MapEngine):
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
         presort = partition_spec.presort
         presort_keys = list(presort.keys())
         presort_asc = list(presort.values())
         output_schema = Schema(output_schema)
         input_schema = df.schema
+        cursor = partition_spec.get_cursor(input_schema, 0)
         on_init_once: Any = (
             None
             if on_init is None
@@ -170,40 +191,39 @@ class SparkMapEngine(MapEngine):
             )
         )
 
-        def _udf(pdf: Any) -> pd.DataFrame:  # pragma: no cover
+        def _udf_pandas(pdf: Any) -> pd.DataFrame:  # pragma: no cover
             if pdf.shape[0] == 0:
                 return PandasDataFrame([], output_schema).as_pandas()
-            if len(presort_keys) > 0:
+            if len(partition_spec.presort) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             input_df = PandasDataFrame(
                 pdf.reset_index(drop=True), input_schema, pandas_df_wrapper=True
             )
             if on_init_once is not None:
                 on_init_once(0, input_df)
-            cursor = partition_spec.get_cursor(input_schema, 0)
-            cursor.set(input_df.peek_array(), 0, 0)
+            cursor.set(lambda: input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()
 
-        df = self.execution_engine.to_df(df)
+        df = self.to_df(df)
 
         gdf = df.native.groupBy(*partition_spec.partition_by)  # type: ignore
-        sdf = gdf.applyInPandas(_udf, schema=to_spark_schema(output_schema))
+        sdf = gdf.applyInPandas(_udf_pandas, schema=to_spark_schema(output_schema))
         return SparkDataFrame(sdf)
 
-    def _map_by_pandas_udf(
+    def _map_by_pandas_udf(  # noqa: C901
         self,
         df: DataFrame,
         map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
         output_schema: Any,
         partition_spec: PartitionSpec,
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
+        map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
-        df = self.execution_engine.to_df(
-            self.execution_engine.repartition(df, partition_spec)
-        )
+        df = self.to_df(self.execution_engine.repartition(df, partition_spec))
         output_schema = Schema(output_schema)
         input_schema = df.schema
+        cursor = partition_spec.get_cursor(input_schema, 0)
         on_init_once: Any = (
             None
             if on_init is None
@@ -212,25 +232,29 @@ class SparkMapEngine(MapEngine):
             )
         )
 
-        def _udf(
+        def _udf_pandas(
             dfs: Iterable[pd.DataFrame],
         ) -> Iterable[pd.DataFrame]:  # pragma: no cover
             def get_dfs() -> Iterable[LocalDataFrame]:
+                cursor_set = False
                 for df in dfs:
                     if df.shape[0] > 0:
-                        yield PandasDataFrame(
+                        pdf = PandasDataFrame(
                             df.reset_index(drop=True),
                             input_schema,
                             pandas_df_wrapper=True,
                         )
+                        if not cursor_set:
+                            cursor.set(lambda: pdf.peek_array(), 0, 0)
+                            cursor_set = True
+                        yield pdf
 
-            input_df = LocalDataFrameIterableDataFrame(get_dfs(), input_schema)
+            input_df = IterablePandasDataFrame(get_dfs(), input_schema)
             if input_df.empty:
-                return PandasDataFrame([], output_schema).as_pandas()
+                yield PandasDataFrame([], output_schema).as_pandas()
+                return
             if on_init_once is not None:
                 on_init_once(0, input_df)
-            cursor = partition_spec.get_cursor(input_schema, 0)
-            cursor.set(input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
             if isinstance(output_df, LocalDataFrameIterableDataFrame):
                 for res in output_df.native:
@@ -238,10 +262,50 @@ class SparkMapEngine(MapEngine):
             else:
                 yield output_df.as_pandas()
 
-        df = self.execution_engine.to_df(df)
-        sdf = df.native.mapInPandas(  # type: ignore
-            _udf, schema=to_spark_schema(output_schema)
-        )
+        def _udf_arrow(
+            dfs: Iterable[pa.RecordBatch],
+        ) -> Iterable[pa.RecordBatch]:  # pragma: no cover
+            def get_dfs() -> Iterable[LocalDataFrame]:
+                cursor_set = False
+                func: Any = None
+                for df in dfs:
+                    if df.num_rows > 0:
+                        # TODO: need coalesce based on byte size
+                        adf = pa.Table.from_batches([df])
+                        if func is None:
+                            # mapInArrow has bugs, the input timestamp will
+                            # be added with a timezong, this is to fix the issue
+                            func = get_alter_func(
+                                adf.schema, input_schema.pa_schema, safe=False
+                            )
+                        pdf = ArrowDataFrame(func(adf))
+                        if not cursor_set:
+                            cursor.set(lambda: pdf.peek_array(), 0, 0)
+                            cursor_set = True
+                        yield pdf
+
+            input_df = IterableArrowDataFrame(get_dfs(), input_schema)
+            if input_df.empty:
+                yield from _build_empty_arrow(output_schema).to_batches()
+                return
+            if on_init_once is not None:
+                on_init_once(0, input_df)
+            output_df = map_func(cursor, input_df)
+            if isinstance(output_df, LocalDataFrameIterableDataFrame):
+                for res in output_df.native:
+                    yield from res.as_arrow().to_batches()
+            else:
+                yield from output_df.as_arrow().to_batches()
+
+        df = self.to_df(df)
+        if map_func_format_hint == "pyarrow" and hasattr(df.native, "mapInArrow"):
+            sdf = df.native.mapInArrow(  # type: ignore
+                _udf_arrow, schema=to_spark_schema(output_schema)
+            )
+        else:
+            sdf = df.native.mapInPandas(  # type: ignore
+                _udf_pandas, schema=to_spark_schema(output_schema)
+            )
         return SparkDataFrame(sdf)
 
 
@@ -261,19 +325,21 @@ class SparkExecutionEngine(ExecutionEngine):
             spark_session = SparkSession.builder.getOrCreate()
         self._spark_session = spark_session
         cf = dict(FUGUE_SPARK_DEFAULT_CONF)
-        cf.update({x[0]: x[1] for x in spark_session.sparkContext.getConf().getAll()})
+        if not self.is_spark_connect:
+            cf.update(
+                {x[0]: x[1] for x in spark_session.sparkContext.getConf().getAll()}
+            )
         cf.update(ParamDict(conf))
         super().__init__(cf)
+        self._lock = SerializableRLock()
         self._fs = FileSystem()
         self._log = logging.getLogger()
         self._broadcast_func = RunOnce(
             self._broadcast, lambda *args, **kwargs: id(args[0])
         )
         self._persist_func = RunOnce(self._persist, lambda *args, **kwargs: id(args[0]))
-        self._register_func = RunOnce(
-            self._register, lambda *args, **kwargs: (id(args[0]), id(args[1]))
-        )
         self._io = SparkIO(self.spark_session, self.fs)
+        self._registered_dfs: Dict[str, SparkDataFrame] = {}
 
     def __repr__(self) -> str:
         return "SparkExecutionEngine"
@@ -290,6 +356,14 @@ class SparkExecutionEngine(ExecutionEngine):
         return self._spark_session
 
     @property
+    def is_spark_connect(self) -> bool:
+        return _is_spark_connect(self.spark_session)
+
+    @property
+    def is_distributed(self) -> bool:
+        return True
+
+    @property
     def log(self) -> logging.Logger:
         return self._log
 
@@ -302,6 +376,24 @@ class SparkExecutionEngine(ExecutionEngine):
 
     def create_default_map_engine(self) -> MapEngine:
         return SparkMapEngine(self)
+
+    def get_current_parallelism(self) -> int:
+        spark = self.spark_session
+        if self.is_spark_connect:  # pragma: no cover
+            num = spark.conf.get("spark.default.parallelism", "")
+            if num != "":
+                return int(num)
+            return int(spark.conf.get("spark.sql.shuffle.partitions", "200"))
+        e_cores = int(spark.conf.get("spark.executor.cores", "1"))
+        tc = int(spark.conf.get("spark.task.cpus", "1"))
+        sc = spark._jsc.sc()
+        try:
+            return spark.sparkContext.defaultParallelism // tc
+        except Exception:  # pragma: no cover
+            # for pyspark < 3.1.1
+            nodes = len(list(sc.statusTracker().getExecutorInfos()))
+            workers = 1 if nodes <= 1 else nodes - 1
+            return max(workers * (e_cores // tc), 1)
 
     def to_df(self, df: Any, schema: Any = None) -> SparkDataFrame:  # noqa: C901
         """Convert a data structure to :class:`~fugue_spark.dataframe.SparkDataFrame`
@@ -324,80 +416,21 @@ class SparkExecutionEngine(ExecutionEngine):
             * all other methods in the engine can take arbitrary dataframes and
               call this method to convert before doing anything
         """
-        if isinstance(df, DataFrame):
-            assert_or_throw(
-                schema is None,
-                ValueError("schema must be None when df is a DataFrame"),
-            )
-            if isinstance(df, SparkDataFrame):
-                return df
-            if isinstance(df, ArrowDataFrame):
-                sdf = self.spark_session.createDataFrame(
-                    df.as_array(), to_spark_schema(df.schema)
-                )
-                return SparkDataFrame(sdf, df.schema)
-            if isinstance(df, (ArrayDataFrame, IterableDataFrame)):
-                adf = ArrowDataFrame(df.as_array(type_safe=False), df.schema)
-                sdf = self.spark_session.createDataFrame(
-                    adf.as_array(), to_spark_schema(df.schema)
-                )
-                return SparkDataFrame(sdf, df.schema)
-            if any(pa.types.is_struct(t) for t in df.schema.types):
-                sdf = self.spark_session.createDataFrame(
-                    df.as_array(type_safe=True), to_spark_schema(df.schema)
-                )
-            else:
-                sdf = self.spark_session.createDataFrame(
-                    df.as_pandas(), to_spark_schema(df.schema)
-                )
-            return SparkDataFrame(sdf, df.schema)
-        if isinstance(df, ps.DataFrame):
-            return SparkDataFrame(df, None if schema is None else to_schema(schema))
-        if isinstance(df, RDD):
-            assert_arg_not_none(schema, "schema")
-            sdf = self.spark_session.createDataFrame(df, to_spark_schema(schema))
-            return SparkDataFrame(sdf, to_schema(schema))
-        if isinstance(df, pd.DataFrame):
-            if PD_UTILS.empty(df):
-                temp_schema = to_spark_schema(PD_UTILS.to_schema(df))
-                sdf = self.spark_session.createDataFrame([], temp_schema)
-            else:
-                sdf = self.spark_session.createDataFrame(df)
-            return SparkDataFrame(sdf, schema)
-
-        # use arrow dataframe here to handle nulls in int cols
-        assert_or_throw(
-            schema is not None, FugueDataFrameInitError("schema can't be None")
-        )
-        adf = ArrowDataFrame(df, to_schema(schema))
-        map_pos = [i for i, t in enumerate(adf.schema.types) if pa.types.is_map(t)]
-        if len(map_pos) == 0:
-            sdf = self.spark_session.createDataFrame(
-                adf.as_array(), to_spark_schema(adf.schema)
-            )
-        else:
-
-            def to_dict(rows: Iterable[List[Any]]) -> Iterable[List[Any]]:
-                for row in rows:
-                    for p in map_pos:
-                        row[p] = dict(row[p])
-                    yield row
-
-            sdf = self.spark_session.createDataFrame(
-                to_dict(adf.as_array_iterable()), to_spark_schema(adf.schema)
-            )
-        return SparkDataFrame(sdf, adf.schema)
+        return self._to_spark_df(df, schema=schema)
 
     def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
         def _persist_and_count(df: DataFrame) -> int:
             df = self.persist(df)
             return df.count()
 
-        df = self.to_df(df)
-        num_funcs = {KEYWORD_ROWCOUNT: lambda: _persist_and_count(df)}
+        df = self._to_spark_df(df)
+        num_funcs = {
+            KEYWORD_ROWCOUNT: lambda: _persist_and_count(df),
+            KEYWORD_PARALLELISM: lambda: self.get_current_parallelism(),
+        }
         num = partition_spec.get_num_partitions(**num_funcs)
 
-        if partition_spec.algo == "hash":
+        if partition_spec.algo in ["hash", "coarse"]:
             sdf = hash_repartition(
                 self.spark_session, df.native, num, partition_spec.partition_by
             )
@@ -417,10 +450,10 @@ class SparkExecutionEngine(ExecutionEngine):
             sdf = sdf.sortWithinPartitions(
                 *sorts.keys(), ascending=list(sorts.values())
             )
-        return self.to_df(sdf, df.schema)
+        return self._to_spark_df(sdf, df.schema)
 
     def broadcast(self, df: DataFrame) -> SparkDataFrame:
-        res = self._broadcast_func(self.to_df(df))
+        res = self._broadcast_func(self._to_spark_df(df))
         res.reset_metadata(df.metadata)
         return res
 
@@ -431,20 +464,22 @@ class SparkExecutionEngine(ExecutionEngine):
         **kwargs: Any,
     ) -> SparkDataFrame:
         res = self._persist_func(
-            self.to_df(df), lazy=lazy, level=kwargs.get("level", None)
+            self._to_spark_df(df), lazy=lazy, level=kwargs.get("level", None)
         )
         res.reset_metadata(df.metadata)
         return res
 
     def register(self, df: DataFrame, name: str) -> SparkDataFrame:
-        return self._register_func(self.to_df(df), name)
+        sdf = self._to_spark_df(df)
+        sdf.native.createOrReplaceTempView(name)
+        return sdf
 
     def join(
         self,
         df1: DataFrame,
         df2: DataFrame,
         how: str,
-        on: List[str] = _DEFAULT_JOIN_KEYS,
+        on: Optional[List[str]] = None,
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
         how = how.lower().replace("_", "").replace(" ", "")
@@ -453,14 +488,14 @@ class SparkExecutionEngine(ExecutionEngine):
             ValueError(f"{how} is not supported as a join type"),
         )
         how = _TO_SPARK_JOIN_MAP[how]
-        d1 = self.to_df(df1).native
-        d2 = self.to_df(df2).native
+        d1 = self._to_spark_df(df1).native
+        d2 = self._to_spark_df(df2).native
         cols = [col(n) for n in output_schema.names]
         if how == "cross":
             res = d1.crossJoin(d2).select(*cols)
         else:
             res = d1.join(d2, on=key_schema.names, how=how).select(*cols)
-        return self.to_df(res, output_schema)
+        return self._to_spark_df(res, output_schema)
 
     def union(
         self,
@@ -472,12 +507,12 @@ class SparkExecutionEngine(ExecutionEngine):
             df1.schema == df2.schema,
             lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
-        d1 = self.to_df(df1).native
-        d2 = self.to_df(df2).native
+        d1 = self._to_spark_df(df1).native
+        d2 = self._to_spark_df(df2).native
         d = d1.union(d2)
         if distinct:
             d = d.distinct()
-        return self.to_df(d, df1.schema)
+        return self._to_spark_df(d, df1.schema)
 
     def subtract(
         self, df1: DataFrame, df2: DataFrame, distinct: bool = True
@@ -486,13 +521,13 @@ class SparkExecutionEngine(ExecutionEngine):
             df1.schema == df2.schema,
             lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
-        d1 = self.to_df(df1).native
-        d2 = self.to_df(df2).native
+        d1 = self._to_spark_df(df1).native
+        d2 = self._to_spark_df(df2).native
         if distinct:
             d: Any = d1.subtract(d2)
         else:  # pragma: no cover
             d = d1.exceptAll(d2)
-        return self.to_df(d, df1.schema)
+        return self._to_spark_df(d, df1.schema)
 
     def intersect(
         self, df1: DataFrame, df2: DataFrame, distinct: bool = True
@@ -501,17 +536,17 @@ class SparkExecutionEngine(ExecutionEngine):
             df1.schema == df2.schema,
             lambda: ValueError(f"{df1.schema} != {df2.schema}"),
         )
-        d1 = self.to_df(df1).native
-        d2 = self.to_df(df2).native
+        d1 = self._to_spark_df(df1).native
+        d2 = self._to_spark_df(df2).native
         if distinct:
             d: Any = d1.intersect(d2)
         else:  # pragma: no cover
             d = d1.intersectAll(d2)
-        return self.to_df(d, df1.schema)
+        return self._to_spark_df(d, df1.schema)
 
     def distinct(self, df: DataFrame) -> DataFrame:
-        d = self.to_df(df).native.distinct()
-        return self.to_df(d, df.schema)
+        d = self._to_spark_df(df).native.distinct()
+        return self._to_spark_df(d, df.schema)
 
     def dropna(
         self,
@@ -520,8 +555,8 @@ class SparkExecutionEngine(ExecutionEngine):
         thresh: int = None,
         subset: List[str] = None,
     ) -> DataFrame:
-        d = self.to_df(df).native.dropna(how=how, thresh=thresh, subset=subset)
-        return self.to_df(d, df.schema)
+        d = self._to_spark_df(df).native.dropna(how=how, thresh=thresh, subset=subset)
+        return self._to_spark_df(d, df.schema)
 
     def fillna(self, df: DataFrame, value: Any, subset: List[str] = None) -> DataFrame:
         assert_or_throw(
@@ -538,10 +573,10 @@ class SparkExecutionEngine(ExecutionEngine):
             mapping = value
         else:
             # If subset is none, apply to all columns
-            subset = subset or df.schema.names
+            subset = subset or df.columns
             mapping = {col: value for col in subset}
-        d = self.to_df(df).native.fillna(mapping)
-        return self.to_df(d, df.schema)
+        d = self._to_spark_df(df).native.fillna(mapping)
+        return self._to_spark_df(d, df.schema)
 
     def sample(
         self,
@@ -556,10 +591,10 @@ class SparkExecutionEngine(ExecutionEngine):
             ValueError("one and only one of n and frac should be set"),
         )
         if frac is not None:
-            d = self.to_df(df).native.sample(
+            d = self._to_spark_df(df).native.sample(
                 fraction=frac, withReplacement=replace, seed=seed
             )
-            return self.to_df(d, df.schema)
+            return self._to_spark_df(d, df.schema)
         else:
             assert_or_throw(
                 seed is None,
@@ -572,11 +607,11 @@ class SparkExecutionEngine(ExecutionEngine):
                 ),
             )
             temp_name = "__temp_" + str(uuid4()).split("-")[-1]
-            self.to_df(df).native.createOrReplaceTempView(temp_name)
+            self._to_spark_df(df).native.createOrReplaceTempView(temp_name)
             d = self.spark_session.sql(
                 f"SELECT * FROM {temp_name} TABLESAMPLE({n} ROWS)"
             )
-            return self.to_df(d, df.schema)
+            return self._to_spark_df(d, df.schema)
 
     def take(
         self,
@@ -584,13 +619,14 @@ class SparkExecutionEngine(ExecutionEngine):
         n: int,
         presort: str,
         na_position: str = "last",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
     ) -> DataFrame:
+        partition_spec = partition_spec or PartitionSpec()
         assert_or_throw(
             isinstance(n, int),
             ValueError("n needs to be an integer"),
         )
-        d = self.to_df(df).native
+        d = self._to_spark_df(df).native
         nulls_last = bool(na_position == "last")
 
         if presort:
@@ -636,7 +672,7 @@ class SparkExecutionEngine(ExecutionEngine):
                 .drop("__row_number__")
             )
 
-        return self.to_df(d, df.schema)
+        return self._to_spark_df(d, df.schema)
 
     def load_df(
         self,
@@ -655,11 +691,12 @@ class SparkExecutionEngine(ExecutionEngine):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
-        df = self.to_df(df)
+        partition_spec = partition_spec or PartitionSpec()
+        df = self._to_spark_df(df)
         self._io.save_df(
             df,
             uri=path,
@@ -687,9 +724,87 @@ class SparkExecutionEngine(ExecutionEngine):
             return df
         raise ValueError(f"{level} is not supported persist type")  # pragma: no cover
 
-    def _register(self, df: SparkDataFrame, name: str) -> SparkDataFrame:
-        df.native.createOrReplaceTempView(name)
-        return df
+    def _to_spark_df(  # noqa: C901
+        self, df: Any, schema: Any = None, create_view: bool = False
+    ) -> SparkDataFrame:
+        def _to_df() -> SparkDataFrame:
+            if isinstance(df, DataFrame):
+                assert_or_throw(
+                    schema is None,
+                    ValueError("schema must be None when df is a DataFrame"),
+                )
+                if isinstance(df, SparkDataFrame):
+                    return df
+                if isinstance(df, ArrowDataFrame):
+                    raw_df: Any = df.as_pandas()
+                    sdf = self.spark_session.createDataFrame(
+                        raw_df, to_spark_schema(df.schema)
+                    )
+                    return SparkDataFrame(sdf, df.schema)
+                if isinstance(df, (ArrayDataFrame, IterableDataFrame)):
+                    adf = ArrowDataFrame(df.as_array(type_safe=False), df.schema)
+                    raw_df = adf.as_pandas()
+                    sdf = self.spark_session.createDataFrame(
+                        raw_df, to_spark_schema(df.schema)
+                    )
+                    return SparkDataFrame(sdf, df.schema)
+                if any(pa.types.is_struct(t) for t in df.schema.types):
+                    sdf = self.spark_session.createDataFrame(
+                        df.as_array(type_safe=True), to_spark_schema(df.schema)
+                    )
+                else:
+                    sdf = self.spark_session.createDataFrame(
+                        df.as_pandas(), to_spark_schema(df.schema)
+                    )
+                return SparkDataFrame(sdf, df.schema)
+            if is_spark_dataframe(df):
+                return SparkDataFrame(df, None if schema is None else to_schema(schema))
+            if isinstance(df, RDD):
+                assert_arg_not_none(schema, "schema")
+                sdf = self.spark_session.createDataFrame(df, to_spark_schema(schema))
+                return SparkDataFrame(sdf, to_schema(schema))
+            if isinstance(df, pd.DataFrame):
+                if PD_UTILS.empty(df):
+                    temp_schema = to_spark_schema(PD_UTILS.to_schema(df))
+                    sdf = self.spark_session.createDataFrame([], temp_schema)
+                else:
+                    sdf = self.spark_session.createDataFrame(df)
+                return SparkDataFrame(sdf, schema)
+
+            # use arrow dataframe here to handle nulls in int cols
+            assert_or_throw(
+                schema is not None, FugueDataFrameInitError("schema can't be None")
+            )
+            adf = ArrowDataFrame(df, to_schema(schema))
+            map_pos = [i for i, t in enumerate(adf.schema.types) if pa.types.is_map(t)]
+            if len(map_pos) == 0:
+                sdf = self.spark_session.createDataFrame(
+                    adf.as_array(), to_spark_schema(adf.schema)
+                )
+            else:
+
+                def to_dict(rows: Iterable[List[Any]]) -> Iterable[List[Any]]:
+                    for row in rows:
+                        for p in map_pos:
+                            row[p] = dict(row[p])
+                        yield row
+
+                sdf = self.spark_session.createDataFrame(
+                    to_dict(adf.as_array_iterable()), to_spark_schema(adf.schema)
+                )
+            return SparkDataFrame(sdf, adf.schema)
+
+        res = _to_df()
+        if res is not df and isinstance(df, DataFrame) and df.has_metadata:
+            res.reset_metadata(df.metadata)
+
+        if create_view:
+            with self._lock:
+                if res.alias not in self._registered_dfs:
+                    res.native.createOrReplaceTempView(res.alias)
+                    self._registered_dfs[res.alias] = res
+
+        return res
 
 
 class _Mapper(object):  # pragma: no cover
@@ -708,15 +823,15 @@ class _Mapper(object):  # pragma: no cover
         self.partition_spec = partition_spec
         self.map_func = map_func
         self.on_init = on_init
+        self.cursor = self.partition_spec.get_cursor(self.schema, 0)
 
     def run(self, no: int, rows: Iterable[ps.Row]) -> Iterable[Any]:
         df = IterableDataFrame(to_type_safe_input(rows, self.schema), self.schema)
         if df.empty:  # pragma: no cover
             return
-        cursor = self.partition_spec.get_cursor(self.schema, no)
         if self.on_init is not None:
             self.on_init(no, df)
-        if self.partition_spec.empty:
+        if self.partition_spec.empty or self.partition_spec.algo == "coarse":
             partitions: Iterable[Tuple[int, int, EmptyAwareIterable]] = [
                 (0, 0, df.native)
             ]
@@ -724,8 +839,8 @@ class _Mapper(object):  # pragma: no cover
             partitioner = self.partition_spec.get_partitioner(self.schema)
             partitions = partitioner.partition(df.native)
         for pn, sn, sub in partitions:
-            cursor.set(sub.peek(), pn, sn)
+            self.cursor.set(sub.peek(), pn, sn)
             sub_df = IterableDataFrame(sub, self.schema)
-            res = self.map_func(cursor, sub_df)
+            res = self.map_func(self.cursor, sub_df)
             for r in res.as_array_iterable(type_safe=True):
                 yield r

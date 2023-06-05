@@ -3,13 +3,18 @@
 import datetime
 import os
 import pickle
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional
 from unittest import TestCase
 from uuid import uuid4
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pytest
+from pytest import raises
+from triad import SerializableRLock
+
+import fugue.api as fa
 from fugue import (
     ArrayDataFrame,
     CoTransformer,
@@ -25,8 +30,8 @@ from fugue import (
     PandasDataFrame,
     PartitionSpec,
     Processor,
+    QPDPandasEngine,
     Schema,
-    SqliteEngine,
     Transformer,
     cotransformer,
     output_cotransformer,
@@ -52,8 +57,6 @@ from fugue.exceptions import (
     FugueWorkflowError,
     FugueWorkflowRuntimeValidationError,
 )
-from pytest import raises
-from triad import SerializableRLock
 
 
 class BuiltInTests(object):
@@ -94,7 +97,7 @@ class BuiltInTests(object):
             dag.run(self.engine)
 
         def test_create_df_equivalence(self):
-            ndf = self.engine.to_df(pd.DataFrame([[0]], columns=["a"]))
+            ndf = fa.as_fugue_engine_df(self.engine, pd.DataFrame([[0]], columns=["a"]))
             dag1 = FugueWorkflow()
             dag1.df(ndf).show()
             dag2 = FugueWorkflow()
@@ -268,15 +271,46 @@ class BuiltInTests(object):
             with raises(FugueWorkflowCompileError):
                 FugueWorkflow().df([[0]], "a:int").checkpoint().yield_file_as("x")
 
-            with raises(FugueWorkflowCompileError):
+            with raises(ValueError):
                 FugueWorkflow().df([[0]], "a:int").persist().yield_file_as("x")
 
             def run_test(deterministic):
                 dag1 = FugueWorkflow()
                 df = dag1.df([[0]], "a:int")
                 if deterministic:
-                    df = df.deterministic_checkpoint()
+                    df = df.deterministic_checkpoint(storage_type="file")
                 df.yield_file_as("x")
+                id1 = dag1.spec_uuid()
+                dag2 = FugueWorkflow()
+                dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))
+                id2 = dag2.spec_uuid()
+                dag1.run(self.engine)
+                dag2.run(self.engine)
+                return id1, id2
+
+            id1, id2 = run_test(False)
+            id3, id4 = run_test(False)
+            assert id1 == id3
+            assert id2 != id4  # non deterministic yield (direct yield)
+
+            id1, id2 = run_test(True)
+            id3, id4 = run_test(True)
+            assert id1 == id3
+            assert id2 == id4  # deterministic yield (yield deterministic checkpoint)
+
+        def test_yield_table(self):
+            with raises(FugueWorkflowCompileError):
+                FugueWorkflow().df([[0]], "a:int").checkpoint().yield_table_as("x")
+
+            with raises(ValueError):
+                FugueWorkflow().df([[0]], "a:int").persist().yield_table_as("x")
+
+            def run_test(deterministic):
+                dag1 = FugueWorkflow()
+                df = dag1.df([[0]], "a:int")
+                if deterministic:
+                    df = df.deterministic_checkpoint(storage_type="table")
+                df.yield_table_as("x")
                 id1 = dag1.spec_uuid()
                 dag2 = FugueWorkflow()
                 dag2.df([[0]], "a:int").assert_eq(dag2.df(dag1.yields["x"]))
@@ -391,18 +425,36 @@ class BuiltInTests(object):
                 b.assert_eq(a)
             dag.run(self.engine)
 
-        def test_transform_iterable_pd(self):
+        def test_transform_iterable_dfs(self):
             # this test is important for using mapInPandas in spark
 
             # schema: *,c:int
-            def mt(dfs: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+            def mt_pandas(dfs: Iterable[pd.DataFrame]) -> Iterator[pd.DataFrame]:
                 for df in dfs:
                     yield df.assign(c=2)
 
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
-                b = a.transform(mt)
+                b = a.transform(mt_pandas)
                 dag.df([[1, 2, 2], [3, 4, 2]], "a:int,b:int,c:int").assert_eq(b)
+            dag.run(self.engine)
+
+            # schema: *
+            def mt_arrow(dfs: Iterable[pa.Table]) -> Iterator[pa.Table]:
+                for df in dfs:
+                    yield df
+
+            # schema: a:long
+            def mt_arrow_2(dfs: Iterable[pa.Table]) -> Iterator[pa.Table]:
+                for df in dfs:
+                    yield df.drop(["b"])
+
+            with FugueWorkflow() as dag:
+                a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
+                b = a.transform(mt_arrow)
+                dag.df([[1, 2], [3, 4]], "a:int,b:int").assert_eq(b)
+                b = a.transform(mt_arrow_2)
+                dag.df([[1], [3]], "a:long").assert_eq(b)
             dag.run(self.engine)
 
         def test_transform_binary(self):
@@ -592,6 +644,10 @@ class BuiltInTests(object):
                 incr()
                 yield df
 
+            def t10(df: pd.DataFrame) -> Iterable[pa.Table]:
+                incr()
+                yield pa.Table.from_pandas(df)
+
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:double,b:int")
                 a.out_transform(t1)  # +2
@@ -603,6 +659,7 @@ class BuiltInTests(object):
                 a.partition_by("b").out_transform(T7)  # +1
                 a.out_transform(t8, ignore_errors=[NotImplementedError])  # +1
                 a.out_transform(t9)  # +1
+                a.out_transform(t10)  # +1
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t2))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t3))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t4))
@@ -610,7 +667,7 @@ class BuiltInTests(object):
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(T7))
             dag.run(self.engine)
 
-            assert 12 <= incr()
+            assert 13 <= incr()
 
         def test_out_cotransform(self):  # noqa: C901
             tmpdir = str(self.tmpdir)
@@ -830,7 +887,7 @@ class BuiltInTests(object):
             dag.run(self.engine)
 
         def test_select(self):
-            class MockEngine(SqliteEngine):
+            class MockEngine(QPDPandasEngine):
                 def __init__(self, execution_engine, p: int = 0):
                     super().__init__(execution_engine)
                     self.p = p
@@ -843,6 +900,7 @@ class BuiltInTests(object):
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:long,y:long")
                 b = dag.df([[2, 20, 40], [3, 30, 90]], "x:long,y:long,z:long")
                 dag.select("* FROM", a).assert_eq(a)
+                dag.select(a, ".* FROM", a).assert_eq(a)
                 dag.select("SELECT *,x*y AS z FROM", a, "WHERE x>=2").assert_eq(b)
 
                 c = dag.df([[2, 20, 40], [3, 30, 90]], "x:long,y:long,zb:long")
@@ -866,7 +924,7 @@ class BuiltInTests(object):
                     "AS t1 INNER JOIN",
                     b,
                     "AS t2 ON t1.x=t2.x",
-                    sql_engine="sqlite",
+                    sql_engine="qpdpandas",
                 ).assert_eq(c)
 
                 # specify sql engine and params
@@ -1257,12 +1315,13 @@ class BuiltInTests(object):
             assert FileSystem().isdir(os.path.join(path3, "c=2"))
             # TODO: in test below, once issue #288 is fixed, use dag.load
             #  instead of pd.read_parquet
+            pdf = pd.read_parquet(path3).sort_values("a").reset_index(drop=True)
+            pdf["c"] = pdf["c"].astype(int)
             pd.testing.assert_frame_equal(
-                pd.read_parquet(path3).sort_values("a").reset_index(drop=True),
-                pd.DataFrame({"c": pd.Categorical([6, 2]), "a": [1, 7]}).reset_index(
-                    drop=True
-                ),
+                pdf,
+                pd.DataFrame({"c": [6, 2], "a": [1, 7]}).reset_index(drop=True),
                 check_like=True,
+                check_dtype=False,
             )
 
         def test_save_and_use(self):
@@ -1570,6 +1629,187 @@ class BuiltInTests(object):
             assert dag.yields["x"].result.is_local
 
             assert 4 == cb3.n
+
+        def test_sql_api(self):
+            def tr(df: pd.DataFrame, n=1) -> pd.DataFrame:
+                return df + n
+
+            with fa.engine_context(self.engine):
+                df1 = fa.as_fugue_df([[0, 1], [2, 3], [4, 5]], schema="a:long,b:int")
+                df2 = pd.DataFrame([[0, 10], [1, 100]], columns=["a", "c"])
+                sdf1 = fa.raw_sql(  # noqa
+                    "SELECT ", df1, ".a, b FROM ", df1, " WHERE a<4"
+                )
+                sdf2 = fa.raw_sql("SELECT * FROM ", df2, " WHERE a<1")  # noqa
+
+                sdf3 = fa.fugue_sql(
+                    """
+                SELECT sdf1.a,sdf1.b,c FROM sdf1 INNER JOIN sdf2 ON sdf1.a=sdf2.a
+                TRANSFORM USING tr SCHEMA *
+                """
+                )
+                res = fa.fugue_sql_flow(
+                    """
+                TRANSFORM x USING tr(n=2) SCHEMA *
+                YIELD LOCAL DATAFRAME AS res
+                PRINT sdf1
+                """,
+                    x=sdf3,
+                ).run()
+                df_eq(
+                    res["res"],
+                    [[3, 4, 13]],
+                    schema="a:long,b:int,c:long",
+                    check_schema=False,
+                    throw=True,
+                )
+
+                sdf4 = fa.fugue_sql(
+                    """
+                SELECT sdf1.a,b,c FROM sdf1 INNER JOIN sdf2 ON sdf1.a=sdf2.a
+                TRANSFORM USING tr SCHEMA *
+                """,
+                    as_fugue=False,
+                    as_local=True,
+                )
+                assert not isinstance(sdf4, DataFrame)
+                assert fa.is_local(sdf4)
+
+        @pytest.mark.skipif(os.name == "nt", reason="Skip Windows")
+        def test_any_column_name(self):
+
+            f_parquet = os.path.join(str(self.tmpdir), "a.parquet")
+            f_csv = os.path.join(str(self.tmpdir), "a.csv")
+
+            # schema: *,`c *`:long
+            def tr(df: pd.DataFrame) -> pd.DataFrame:
+                return df.assign(**{"c *": 2})
+
+            with fa.engine_context(self.engine):
+                df1 = pd.DataFrame([[0, 1], [2, 3]], columns=["a b", " "])
+                df2 = pd.DataFrame([[0, 10], [20, 3]], columns=["a b", "d"])
+                r = fa.inner_join(df1, df2, as_fugue=True)
+                df_eq(r, [[0, 1, 10]], "`a b`:long,` `:long,d:long", throw=True)
+                r = fa.transform(r, tr)
+                df_eq(
+                    r,
+                    [[0, 1, 10, 2]],
+                    "`a b`:long,` `:long,d:long,`c *`:long",
+                    throw=True,
+                )
+                r = fa.alter_columns(r, "`c *`:str")
+                r = fa.select(
+                    r,
+                    col("a b").alias("a b "),
+                    col(" ").alias("x y"),
+                    col("d"),
+                    col("c *").cast(int),
+                )
+                df_eq(
+                    r,
+                    [[0, 1, 10, 2]],
+                    "`a b `:long,`x y`:long,d:long,`c *`:long",
+                    throw=True,
+                )
+                r = fa.rename(r, {"a b ": "a b"})
+                fa.save(r, f_csv, header=True, force_single=True)
+                fa.save(r, f_parquet)
+                df_eq(
+                    fa.load(f_parquet, columns=["x y", "d", "c *"], as_fugue=True),
+                    [[1, 10, 2]],
+                    "`x y`:long,d:long,`c *`:long",
+                    throw=True,
+                )
+                df_eq(
+                    fa.load(
+                        f_csv,
+                        header=True,
+                        infer_schema=False,
+                        columns=["d", "c *"],
+                        as_fugue=True,
+                    ),
+                    [["10", "2"]],
+                    "d:str,`c *`:str",
+                    throw=True,
+                )
+                df_eq(
+                    fa.load(
+                        f_csv,
+                        header=True,
+                        columns="`a b`:long,`x y`:long,d:long,`c *`:long",
+                        as_fugue=True,
+                    ),
+                    [[0, 1, 10, 2]],
+                    "`a b`:long,`x y`:long,d:long,`c *`:long",
+                    throw=True,
+                )
+
+                r = fa.fugue_sql(
+                    """
+                df1 = CREATE [[0, 1], [2, 3]] SCHEMA `a b`:long,` `:long
+                df2 = CREATE [[0, 10], [20, 3]] SCHEMA `a b`:long,d:long
+                SELECT df1.*,d FROM df1 INNER JOIN df2 ON df1.`a b`=df2.`a b`
+                """,
+                    as_fugue=True,
+                )
+                df_eq(r, [[0, 1, 10]], "`a b`:long,` `:long,d:long", throw=True)
+                r = fa.fugue_sql(
+                    """
+                TRANSFORM r USING tr SCHEMA *,`c *`:long
+                """,
+                    as_fugue=True,
+                )
+                df_eq(
+                    r,
+                    [[0, 1, 10, 2]],
+                    "`a b`:long,` `:long,d:long,`c *`:long",
+                    throw=True,
+                )
+                r = fa.fugue_sql(
+                    """
+                ALTER COLUMNS `c *`:long FROM r
+                """,
+                    as_fugue=True,
+                )
+                df_eq(
+                    r,
+                    [[0, 1, 10, 2]],
+                    "`a b`:long,` `:long,d:long,`c *`:long",
+                    throw=True,
+                )
+                res = fa.fugue_sql_flow(
+                    """
+                LOAD "{{f_parquet}}" COLUMNS `x y`,d,`c *`
+                YIELD LOCAL DATAFRAME AS r1
+
+                LOAD "{{f_csv}}"(header=TRUE,infer_schema=FALSE) COLUMNS `x y`,d,`c *`
+                YIELD LOCAL DATAFRAME AS r2
+
+                LOAD "{{f_csv}}"(header=TRUE,infer_schema=FALSE)
+                COLUMNS `a b`:long,`x y`:long,d:long,`c *`:long
+                YIELD LOCAL DATAFRAME AS r3
+                """,
+                    f_parquet=f_parquet,
+                    f_csv=f_csv,
+                ).run()
+                df_eq(
+                    res["r1"],
+                    [[1, 10, 2]],
+                    "`x y`:long,d:long,`c *`:long",
+                    throw=True,
+                )
+                df_eq(
+                    res["r2"],
+                    [["1", "10", "2"]],
+                    "`x y`:str,d:str,`c *`:str",
+                    throw=True,
+                )
+                df_eq(
+                    res["r3"],
+                    [[0, 1, 10, 2]],
+                    "`a b`:long,`x y`:long,d:long,`c *`:long",
+                    throw=True,
+                )
 
 
 def mock_creator(p: int) -> DataFrame:

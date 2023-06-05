@@ -1,7 +1,9 @@
-import fugue.column.functions as f
 import pyarrow as pa
-from fugue.column import col, lit, null
+from pytest import raises
 from triad import Schema
+
+import fugue.column.functions as f
+from fugue.column import all_cols, col, lit, null
 
 
 def test_is_agg():
@@ -79,7 +81,7 @@ def test_functions():
     assert expr.infer_type(schema) is None
     assert "COUNT(DISTINCT a) AS a" == str(expr.infer_alias())
 
-    expr = f.count_distinct(col("*"))
+    expr = f.count_distinct(all_cols())
     assert "COUNT(DISTINCT *)" == str(expr)
     assert expr.infer_type(schema) is None
-    assert "COUNT(DISTINCT *)" == str(expr.infer_alias())
+    raises(NotImplementedError, lambda: expr.infer_alias())

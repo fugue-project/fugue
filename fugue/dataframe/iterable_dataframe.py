@@ -61,7 +61,7 @@ class IterableDataFrame(LocalUnboundedDataFrame):
     def empty(self) -> bool:
         return self.native.empty
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         self.assert_not_empty()
         return list(self.native.peek())
 
@@ -96,6 +96,9 @@ class IterableDataFrame(LocalUnboundedDataFrame):
         if new_schema == self.schema:
             return self
         return IterableDataFrame(self.native, new_schema)
+
+    def as_local_bounded(self) -> LocalBoundedDataFrame:
+        return ArrayDataFrame(self.as_array(), schema=self.schema)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False

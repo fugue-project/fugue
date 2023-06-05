@@ -27,6 +27,14 @@ fugue.execution
 .. |FugueDataTypes| replace:: :doc:`Fugue Data Types <tutorial:tutorials/appendix/generate_types>`
 
 
+fugue.execution.api
+-------------------
+
+.. automodule:: fugue.execution.api
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fugue.execution.execution\_engine
 ---------------------------------
 

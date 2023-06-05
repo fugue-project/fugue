@@ -3,15 +3,16 @@ import pickle
 import duckdb
 import pandas as pd
 import pyarrow as pa
-from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, infer_execution_engine
-from fugue.dataframe.utils import _df_eq as df_eq
-from fugue import fsql
-from fugue_test.builtin_suite import BuiltInTests
-from fugue_test.execution_suite import ExecutionEngineTests
 from pytest import raises
 
+import fugue.api as fa
+from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, fsql
+from fugue.api import engine_context
+from fugue.plugins import infer_execution_engine
 from fugue_duckdb import DuckExecutionEngine
 from fugue_duckdb.dataframe import DuckDataFrame
+from fugue_test.builtin_suite import BuiltInTests
+from fugue_test.execution_suite import ExecutionEngineTests
 
 
 class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
@@ -19,16 +20,60 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
     def setUpClass(cls):
         cls._con = duckdb.connect()
         cls._engine = cls.make_engine(cls)
+        fa.set_global_engine(cls._engine)
 
     @classmethod
     def tearDownClass(cls):
+        fa.clear_global_engine()
         cls._con.close()
 
     def make_engine(self):
         e = DuckExecutionEngine(
-            {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
+            {
+                "test": True,
+                "fugue.duckdb.pragma.threads": 2,
+                "fugue.duckdb.extensions": ", json , , httpfs",
+            },
+            self._con,
         )
         return e
+
+    def test_properties(self):
+        assert not self.engine.is_distributed
+        assert not self.engine.map_engine.is_distributed
+        assert not self.engine.sql_engine.is_distributed
+
+    def test_duckdb_extensions(self):
+        df = fa.fugue_sql(
+            """
+        SELECT COUNT(*) AS ct FROM duckdb_extensions()
+        WHERE loaded AND extension_name IN ('httpfs', 'json')
+        """,
+            as_fugue=True,
+        )
+        assert 2 == df.as_array()[0][0]
+
+    def test_duck_to_df(self):
+        e = self.engine
+        a = e.to_df([[1, 2, 3]], "a:double,b:double,c:int")
+        assert isinstance(a, DuckDataFrame)
+        b = e.to_df(a.native_as_df())
+        assert isinstance(b, DuckDataFrame)
+
+    def test_table_operations(self):
+        se = self.engine.sql_engine
+        df = fa.as_fugue_df([[0, 1]], schema="a:int,b:long")
+        assert se._get_table("_t_x") is None
+        se.save_table(df, "_t_x")
+        assert se._get_table("_t_x") is not None
+        res = se.load_table("_t_x").as_array()
+        assert [[0, 1]] == res
+        df = fa.as_fugue_df([[1, 2]], schema="a:int,b:long")
+        se.save_table(df, "_t_x")
+        res = se.load_table("_t_x").as_array()
+        assert [[1, 2]] == res
+        with raises(Exception):
+            se.save_table(df, "_t_x", mode="error")
 
     def test_intersect_all(self):
         e = self.engine
@@ -144,7 +189,8 @@ def test_annotations():
     dag.run(con)
 
 
-def test_sql_yield():
+def test_output_types():
+    pdf = pd.DataFrame([[0]], columns=["a"])
     con = duckdb.connect()
 
     res = fsql(
@@ -158,6 +204,9 @@ def test_sql_yield():
 
     assert isinstance(res["a"], DuckDataFrame)
     assert isinstance(res["b"], ArrowDataFrame)
+
+    x = fa.union(pdf, pdf, engine=con)
+    assert isinstance(x, duckdb.DuckDBPyRelation)
 
     con.close()
 
@@ -174,13 +223,33 @@ def test_sql_yield():
     assert isinstance(res["a"], ArrowDataFrame)
     assert isinstance(res["b"], ArrowDataFrame)
 
+    x = fa.union(pdf, pdf, engine="duckdb")
+    assert isinstance(x, pa.Table)
+
+    # in context
+    with engine_context("duck"):
+        res = fsql(
+            """
+        CREATE [[0]] SCHEMA a:int
+        YIELD DATAFRAME AS a
+        CREATE [[0]] SCHEMA b:int
+        YIELD LOCAL DATAFRAME AS b
+        """
+        ).run()
+
+        assert isinstance(res["a"], DuckDataFrame)
+        assert isinstance(res["b"], ArrowDataFrame)
+
+        x = fa.union(pdf, pdf)
+        assert isinstance(x, duckdb.DuckDBPyRelation)
+
 
 def test_infer_engine():
     con = duckdb.connect()
     df = con.from_df(pd.DataFrame([[0]], columns=["a"]))
-    assert infer_execution_engine([df])=="duckdb"
+    assert infer_execution_engine([df]) == "duckdb"
 
     fdf = DuckDataFrame(df)
-    assert infer_execution_engine([fdf])=="duckdb"
+    assert infer_execution_engine([fdf]) == "duckdb"
 
     con.close()

@@ -1,23 +1,17 @@
-import inspect
-from typing import Any, Optional
+from typing import Any
 
 import dask.dataframe as dd
 from dask.distributed import Client
 from triad import run_at_def
 
-from fugue import (
-    DataFrame,
-    infer_execution_engine,
-    is_pandas_or,
-    register_execution_engine,
-)
-from fugue._utils.interfaceless import (
+from fugue import DataFrame, register_execution_engine
+from fugue.dev import (
     DataFrameParam,
     ExecutionEngineParam,
-    SimpleAnnotationConverter,
-    register_annotation_converter,
+    fugue_annotated_param,
+    is_pandas_or,
 )
-from fugue.workflow import register_raw_df_type
+from fugue.plugins import as_fugue_dataset, infer_execution_engine
 from fugue_dask._utils import DASK_UTILS
 from fugue_dask.dataframe import DaskDataFrame
 from fugue_dask.execution_engine import DaskExecutionEngine
@@ -30,8 +24,9 @@ def _infer_dask_client(objs: Any) -> Any:
     return DASK_UTILS.get_or_create_client()
 
 
-def _register_raw_dataframes() -> None:
-    register_raw_df_type(dd.DataFrame)
+@as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, dd.DataFrame))
+def _dask_as_fugue_df(df: dd.DataFrame, **kwargs: Any) -> DaskDataFrame:
+    return DaskDataFrame(df, **kwargs)
 
 
 def _register_engines() -> None:
@@ -49,36 +44,13 @@ def _register_engines() -> None:
     )
 
 
-def _register_annotation_converters() -> None:
-    register_annotation_converter(
-        0.8,
-        SimpleAnnotationConverter(
-            DaskExecutionEngine,
-            lambda param: _DaskExecutionEngineParam(param),
-        ),
-    )
-    register_annotation_converter(
-        0.8,
-        SimpleAnnotationConverter(
-            dd.DataFrame, lambda param: _DaskDataFrameParam(param)
-        ),
-    )
-
-
+@fugue_annotated_param(DaskExecutionEngine)
 class _DaskExecutionEngineParam(ExecutionEngineParam):
-    def __init__(
-        self,
-        param: Optional[inspect.Parameter],
-    ):
-        super().__init__(
-            param, annotation="DaskExecutionEngine", engine_type=DaskExecutionEngine
-        )
+    pass
 
 
+@fugue_annotated_param(dd.DataFrame)
 class _DaskDataFrameParam(DataFrameParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, annotation="dask.dataframe.DataFrame")
-
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         assert isinstance(ctx, DaskExecutionEngine)
         return ctx.to_df(df).native
@@ -102,6 +74,4 @@ def _register() -> None:
 
         >>> import fugue_dask
     """
-    _register_raw_dataframes()
     _register_engines()
-    _register_annotation_converters()

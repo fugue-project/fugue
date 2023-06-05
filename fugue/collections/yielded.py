@@ -1,6 +1,7 @@
-from triad.utils.assertion import assert_or_throw
-from triad.utils.hash import to_uuid
 from typing import Any
+
+from triad import assert_or_throw
+from triad.utils.hash import to_uuid
 
 
 class Yielded(object):
@@ -33,30 +34,41 @@ class Yielded(object):
         return self
 
 
-class YieldedFile(Yielded):
-    """Yielded file from :class:`~fugue.workflow.workflow.FugueWorkflow`.
+class PhysicalYielded(Yielded):
+    """Physical yielded object from :class:`~fugue.workflow.workflow.FugueWorkflow`.
     Users shouldn't create this object directly.
 
     :param yid: unique id for determinism
+    :param storage_type: ``file`` or ``table``
     """
 
-    def __init__(self, yid: str):
+    def __init__(self, yid: str, storage_type: str):
         super().__init__(yid)
-        self._path = ""
+        self._name = ""
+        assert_or_throw(
+            storage_type in ["file", "table"],
+            ValueError(f"{storage_type} not in (file, table) "),
+        )
+        self._storage_type = storage_type
 
     @property
     def is_set(self) -> bool:
-        return self._path != ""
+        return self._name != ""
 
-    def set_value(self, path: str) -> None:
-        """Set the yielded path after compute
+    def set_value(self, name: str) -> None:
+        """Set the storage name after compute
 
-        :param path: file path
+        :param name: name reference of the storage
         """
-        self._path = path
+        self._name = name
 
     @property
-    def path(self) -> str:
-        """File path of the yield"""
+    def name(self) -> str:
+        """The name reference of the yield"""
         assert_or_throw(self.is_set, "value is not set")
-        return self._path
+        return self._name
+
+    @property
+    def storage_type(self) -> str:
+        """The storage type of this yield"""
+        return self._storage_type

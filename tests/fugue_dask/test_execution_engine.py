@@ -5,16 +5,19 @@ from typing import Any, List, Optional
 import dask.dataframe as dd
 import pandas as pd
 from dask.distributed import Client
-from fugue import infer_execution_engine, transform
+import dask
+
+import fugue.api as fa
+from fugue import transform
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.plugins import infer_execution_engine
 from fugue.workflow.workflow import FugueWorkflow
-from fugue_test.builtin_suite import BuiltInTests
-from fugue_test.execution_suite import ExecutionEngineTests
-
 from fugue_dask.dataframe import DaskDataFrame
 from fugue_dask.execution_engine import DaskExecutionEngine
+from fugue_test.builtin_suite import BuiltInTests
+from fugue_test.execution_suite import ExecutionEngineTests
 
 _CONF = {
     "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
@@ -28,14 +31,27 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
     @classmethod
     def setUpClass(cls):
         cls._engine = cls.make_engine(cls)
+        fa.set_global_engine(cls._engine)
 
     @classmethod
     def tearDownClass(cls):
+        fa.clear_global_engine()
         cls._engine.dask_client.close()
 
     def make_engine(self):
-        e = DaskExecutionEngine(conf=dict(test=True, **_CONF))
+        client = Client(processes=True, n_workers=3, threads_per_worker=1)
+        # p2p (new default algo has bugs)
+        dask.config.set({"dataframe.shuffle.method": "tasks"})
+        e = DaskExecutionEngine(client, conf=dict(test=True, **_CONF))
         return e
+
+    def test_properties(self):
+        assert self.engine.is_distributed
+        assert self.engine.map_engine.is_distributed
+        assert self.engine.sql_engine.is_distributed
+
+    def test_get_parallelism(self):
+        assert fa.get_current_parallelism() == 3
 
     def test__join_outer_pandas_incompatible(self):
         return
@@ -105,14 +121,19 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
     @classmethod
     def setUpClass(cls):
         cls._engine = cls.make_engine(cls)
+        fa.set_global_engine(cls._engine)
 
     @classmethod
     def tearDownClass(cls):
+        fa.clear_global_engine()
         cls._engine.dask_client.close()
 
     def make_engine(self):
         e = DaskExecutionEngine(conf=dict(test=True, **_CONF))
         return e
+
+    def test_yield_table(self):
+        pass
 
     def test_default_init(self):
         a = FugueWorkflow().df([[0]], "a:int")
@@ -132,6 +153,49 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
             df = dag.create(m_c).process(m_p)
             df.assert_eq(dag.df([[0]], "a:long"))
             df.output(m_o)
+        dag.run(self.engine)
+
+    def test_bool_bytes_union(self):
+        # this is to verify a bug in enforce type is fixed
+        def tr(df: pd.DataFrame) -> pd.DataFrame:
+            return df.assign(data=b"asdf")
+
+        df = pd.DataFrame(dict(a=[True, False], b=[1, 2]))
+
+        r1 = fa.transform(df, tr, schema="*,data:bytes", as_fugue=True)
+        r2 = fa.transform(df, tr, schema="*,data:bytes", as_fugue=True)
+        r3 = fa.union(r1, r2, distinct=False)
+        r3.show()
+
+    def test_coarse_partition(self):
+        def verify_coarse_partition(df: pd.DataFrame) -> List[List[Any]]:
+            ct = df.a.nunique()
+            s = df.a * 1000 + df.b
+            ordered = ((s - s.shift(1)).dropna() >= 0).all(axis=None)
+            return [[ct, ordered]]
+
+        def assert_(df: pd.DataFrame, rc: int, n: int, check_ordered: bool) -> None:
+            if rc > 0:
+                assert len(df) == rc
+            assert df.ct.sum() == n
+            if check_ordered:
+                assert (df.ordered == True).all()
+
+        gps = 100
+        partition_num = 6
+        df = pd.DataFrame(dict(a=list(range(gps)) * 10, b=range(gps * 10))).sample(
+            frac=1.0
+        )
+        with FugueWorkflow() as dag:
+            a = dag.df(df)
+            c = a.partition(
+                algo="coarse", by="a", presort="b", num=partition_num
+            ).transform(verify_coarse_partition, schema="ct:int,ordered:bool")
+            dag.output(
+                c,
+                using=assert_,
+                params=dict(rc=partition_num, n=gps, check_ordered=True),
+            )
         dag.run(self.engine)
 
 
@@ -159,7 +223,7 @@ def test_transform():
         schema="b:binary",
         callback=cb.add,
         as_local=True,
-        force_output_fugue_dataframe=True,
+        as_fugue=True,
         engine="dask",
         engine_conf=_CONF,
     )
@@ -171,7 +235,7 @@ def test_transform():
         pdf,
         tr,
         schema="b:binary",
-        force_output_fugue_dataframe=True,
+        as_fugue=True,
         engine="dask",
     )
     assert not res.is_local
@@ -184,7 +248,7 @@ def test_transform():
         tr,
         schema="b:binary",
         callback=cb.add,
-        force_output_fugue_dataframe=True,
+        as_fugue=True,
         engine="dask",
         engine_conf=_CONF,
         persist=True,  # when you have a persist, you can use callback
@@ -192,6 +256,3 @@ def test_transform():
     assert not res.is_local
     assert 5 == res.count()
     assert 5 == cb.n
-
-
-

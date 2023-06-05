@@ -1,15 +1,35 @@
 import sys
 from collections import defaultdict
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
 from uuid import uuid4
 
 from adagio.specs import WorkflowSpec
+from triad import (
+    ParamDict,
+    Schema,
+    SerializableRLock,
+    assert_or_throw,
+    extensible_class,
+)
+
 from fugue._utils.exception import modify_traceback
 from fugue.collections.partition import PartitionSpec
+from fugue.collections.sql import StructuredRawSQL
 from fugue.collections.yielded import Yielded
 from fugue.column import ColumnExpr
 from fugue.column import SelectColumns as ColumnsSelect
-from fugue.column import col, lit
+from fugue.column import all_cols, col, lit
 from fugue.constants import (
     _FUGUE_GLOBAL_CONF,
     FUGUE_CONF_WORKFLOW_AUTO_PERSIST,
@@ -17,11 +37,13 @@ from fugue.constants import (
     FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE,
     FUGUE_CONF_WORKFLOW_EXCEPTION_INJECT,
     FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE,
+    FUGUE_SQL_DEFAULT_DIALECT,
 )
 from fugue.dataframe import DataFrame, LocalBoundedDataFrame, YieldedDataFrame
+from fugue.dataframe.api import is_df
 from fugue.dataframe.dataframes import DataFrames
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowError
-from fugue.execution.factory import make_execution_engine
+from fugue.execution.api import engine_context
 from fugue.extensions._builtins import (
     Aggregate,
     AlterColumns,
@@ -53,17 +75,9 @@ from fugue.extensions._builtins import (
 from fugue.extensions.transformer.convert import _to_output_transformer, _to_transformer
 from fugue.rpc import to_rpc_handler
 from fugue.rpc.base import EmptyRPCHandler
-from fugue.workflow._checkpoint import FileCheckpoint, WeakCheckpoint
+from fugue.workflow._checkpoint import StrongCheckpoint, WeakCheckpoint
 from fugue.workflow._tasks import Create, FugueTask, Output, Process
 from fugue.workflow._workflow_context import FugueWorkflowContext
-from fugue.workflow.input import is_acceptable_raw_df
-from triad import (
-    ParamDict,
-    Schema,
-    SerializableRLock,
-    assert_or_throw,
-    extensible_class,
-)
 
 _DEFAULT_IGNORE_ERRORS: List[Any] = []
 
@@ -95,6 +109,13 @@ class WorkflowDataFrame(DataFrame):
     def spec_uuid(self) -> str:
         """UUID of its task spec"""
         return self._task.__uuid__()
+
+    @property
+    def native(self) -> Any:  # pragma: no cover
+        raise NotImplementedError
+
+    def native_as_df(self) -> Any:  # pragma: no cover
+        raise NotImplementedError
 
     @property
     def name(self) -> str:
@@ -337,7 +358,7 @@ class WorkflowDataFrame(DataFrame):
 
                 # aggregation
                 # SELECT COUNT(DISTINCT *) AS x FROM df
-                df.select(f.count_distinct(col("*")).alias("x"))
+                df.select(f.count_distinct(all_cols()).alias("x"))
 
                 # SELECT a, MAX(b+1) AS x FROM df GROUP BY a
                 df.select("a",f.max(col("b")+lit(1)).alias("x"))
@@ -352,8 +373,12 @@ class WorkflowDataFrame(DataFrame):
                     having=f.max(col("b")+lit(1))>0
                 )
         """
+
+        def _to_col(s: str) -> ColumnExpr:
+            return col(s) if s != "*" else all_cols()
+
         sc = ColumnsSelect(
-            *[col(x) if isinstance(x, str) else x for x in columns],
+            *[_to_col(x) if isinstance(x, str) else x for x in columns],
             arg_distinct=distinct,
         )
         df = self.workflow.process(
@@ -819,7 +844,9 @@ class WorkflowDataFrame(DataFrame):
 
         :return: sampled dataframe
         """
-        params: Dict[str, Any] = dict(replace=replace, seed=seed)
+        params: Dict[str, Any] = dict(replace=replace)
+        if seed is not None:
+            params["seed"] = seed
         if n is not None:
             params["n"] = n
         if frac is not None:
@@ -880,6 +907,7 @@ class WorkflowDataFrame(DataFrame):
 
     def strong_checkpoint(
         self: TDF,
+        storage_type: str = "file",
         lazy: bool = False,
         partition: Any = None,
         single: bool = False,
@@ -887,6 +915,7 @@ class WorkflowDataFrame(DataFrame):
     ) -> TDF:
         """Cache the dataframe as a temporary file
 
+        :param storage_type: can be either ``file`` or ``table``, defaults to ``file``
         :param lazy: whether it is a lazy checkpoint, defaults to False (eager)
         :param partition: |PartitionLikeObject|, defaults to None.
         :param single: force the output as a single file, defaults to False
@@ -902,8 +931,9 @@ class WorkflowDataFrame(DataFrame):
             Strong checkpoint file will be removed after the execution of the workflow.
         """
         self._task.set_checkpoint(
-            FileCheckpoint(
-                file_id=str(uuid4()),
+            StrongCheckpoint(
+                storage_type=storage_type,
+                obj_id=str(uuid4()),
                 deterministic=False,
                 permanent=False,
                 lazy=lazy,
@@ -916,6 +946,7 @@ class WorkflowDataFrame(DataFrame):
 
     def deterministic_checkpoint(
         self: TDF,
+        storage_type: str = "file",
         lazy: bool = False,
         partition: Any = None,
         single: bool = False,
@@ -924,6 +955,7 @@ class WorkflowDataFrame(DataFrame):
     ) -> TDF:
         """Cache the dataframe as a temporary file
 
+        :param storage_type: can be either ``file`` or ``table``, defaults to ``file``
         :param lazy: whether it is a lazy checkpoint, defaults to False (eager)
         :param partition: |PartitionLikeObject|, defaults to None.
         :param single: force the output as a single file, defaults to False
@@ -938,8 +970,9 @@ class WorkflowDataFrame(DataFrame):
             dependent compute logic is not changed.
         """
         self._task.set_checkpoint(
-            FileCheckpoint(
-                file_id=self._task.__uuid__(),
+            StrongCheckpoint(
+                storage_type=storage_type,
+                obj_id=self._task.__uuid__(),
                 deterministic=True,
                 permanent=True,
                 lazy=lazy,
@@ -958,7 +991,7 @@ class WorkflowDataFrame(DataFrame):
 
         .. note::
 
-            In only the following cases you can yield file:
+            In only the following cases you can yield file/table:
 
             * you have not checkpointed (persisted) the dataframe, for example
               ``df.yield_file_as("a")``
@@ -972,8 +1005,32 @@ class WorkflowDataFrame(DataFrame):
         """
         if not self._task.has_checkpoint:
             # the following == a non determinitic, but permanent checkpoint
-            self.deterministic_checkpoint(namespace=str(uuid4()))
-        self.workflow._yields[name] = self._task.yielded_file
+            self.deterministic_checkpoint(storage_type="file", namespace=str(uuid4()))
+        self.workflow._yields[name] = self._task.yielded
+
+    def yield_table_as(self: TDF, name: str) -> None:
+        """Cache the dataframe as a table
+
+        :param name: the name of the yielded dataframe
+
+        .. note::
+
+            In only the following cases you can yield file/table:
+
+            * you have not checkpointed (persisted) the dataframe, for example
+              ``df.yield_file_as("a")``
+            * you have used :meth:`~.deterministic_checkpoint`, for example
+              ``df.deterministic_checkpoint().yield_file_as("a")``
+            * yield is workflow, compile level logic
+
+            For the first case, the yield will also be a strong checkpoint so
+            whenever you yield a dataframe as a file, the dataframe has been saved as a
+            file and loaded back as a new dataframe.
+        """
+        if not self._task.has_checkpoint:
+            # the following == a non determinitic, but permanent checkpoint
+            self.deterministic_checkpoint(storage_type="table", namespace=str(uuid4()))
+        self.workflow._yields[name] = self._task.yielded
 
     def yield_dataframe_as(self: TDF, name: str, as_local: bool = False) -> None:
         """Yield a dataframe that can be accessed without
@@ -1013,8 +1070,8 @@ class WorkflowDataFrame(DataFrame):
         """
         return self.weak_checkpoint(lazy=False)
 
-    def checkpoint(self: TDF) -> TDF:
-        return self.strong_checkpoint(lazy=False)
+    def checkpoint(self: TDF, storage_type: str = "file") -> TDF:
+        return self.strong_checkpoint(storage_type=storage_type, lazy=False)
 
     def broadcast(self: TDF) -> TDF:
         """Broadcast the current dataframe
@@ -1291,6 +1348,12 @@ class WorkflowDataFrame(DataFrame):
         """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
+    def as_local_bounded(self) -> DataFrame:  # type: ignore  # pragma: no cover
+        """
+        :raises NotImplementedError: don't call this method
+        """
+        raise NotImplementedError("WorkflowDataFrame does not support this method")
+
     @property
     def is_bounded(self) -> bool:  # pragma: no cover
         """
@@ -1312,7 +1375,7 @@ class WorkflowDataFrame(DataFrame):
         """
         raise NotImplementedError("WorkflowDataFrame does not support this method")
 
-    def peek_array(self) -> Any:  # pragma: no cover
+    def peek_array(self) -> List[Any]:  # pragma: no cover
         """
         :raises NotImplementedError: don't call this method
         """
@@ -1462,6 +1525,7 @@ class FugueWorkflow:
         self._compile_conf = ParamDict(
             {**_FUGUE_GLOBAL_CONF, **ParamDict(compile_conf)}
         )
+        self._last_df: Optional[WorkflowDataFrame] = None
 
     @property
     def conf(self) -> ParamDict:
@@ -1480,7 +1544,7 @@ class FugueWorkflow:
         .. note::
 
             For inputs, please read
-            :func:`~.fugue.execution.factory.make_execution_engine`
+            :func:`~.fugue.api.engine_context`
 
         :param engine: object that can be recognized as an engine, defaults to None
         :param conf: engine config, defaults to None
@@ -1511,35 +1575,43 @@ class FugueWorkflow:
         to learn how to run in different ways and pros and cons.
         """
         with self._lock:
-            e = make_execution_engine(engine=engine, conf=conf, **kwargs)
-            self._computed = False
-            self._workflow_ctx = FugueWorkflowContext(engine=e, compile_conf=self.conf)
-            try:
-                self._workflow_ctx.run(self._spec, {})
-            except Exception as ex:
-                if not self.conf.get_or_throw(
-                    FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE, bool
-                ) or sys.version_info < (3, 7):
-                    raise
-                conf = self.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str)
-                pre = [p for p in conf.split(",") if p != ""]
-                if len(pre) == 0:
-                    raise
-
-                # prune by prefix
-                ctb = modify_traceback(
-                    sys.exc_info()[2],
-                    lambda x: any(x.lower().startswith(xx) for xx in pre),
+            with engine_context(engine, engine_conf=conf) as e:
+                self._computed = False
+                self._workflow_ctx = FugueWorkflowContext(
+                    engine=e, compile_conf=self.conf
                 )
-                if ctb is None:  # pragma: no cover
-                    raise
-                raise ex.with_traceback(ctb)
-            self._computed = True
+                try:
+                    self._workflow_ctx.run(self._spec, {})
+                except Exception as ex:
+                    if not self.conf.get_or_throw(
+                        FUGUE_CONF_WORKFLOW_EXCEPTION_OPTIMIZE, bool
+                    ) or sys.version_info < (3, 7):
+                        raise
+                    conf = self.conf.get_or_throw(
+                        FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str
+                    )
+                    pre = [p for p in conf.split(",") if p != ""]
+                    if len(pre) == 0:
+                        raise
+
+                    # prune by prefix
+                    ctb = modify_traceback(
+                        sys.exc_info()[2],
+                        lambda x: any(x.lower().startswith(xx) for xx in pre),
+                    )
+                    if ctb is None:  # pragma: no cover
+                        raise
+                    raise ex.with_traceback(ctb)
+                self._computed = True
         return FugueWorkflowResult(self.yields)
 
     @property
     def yields(self) -> Dict[str, Yielded]:
         return self._yields
+
+    @property
+    def last_df(self) -> Optional[WorkflowDataFrame]:
+        return self._last_df
 
     def __enter__(self):
         return self
@@ -1585,8 +1657,16 @@ class FugueWorkflow:
           :meth:`~fugue.extensions.context.ExtensionContext.partition_spec`
         :return: result dataframe
         """
-        task = Create(creator=using, schema=schema, params=params)
-        return self.add(task)
+        task = Create(
+            creator=CreateData(using)
+            if is_df(using) or isinstance(using, Yielded)
+            else using,
+            schema=schema,
+            params=params,
+        )
+        res = self.add(task)
+        self._last_df = res
+        return res
 
     def process(
         self,
@@ -1626,9 +1706,11 @@ class FugueWorkflow:
             input_names=None if not _dfs.has_key else list(_dfs.keys()),
         )
         if _dfs.has_key:
-            return self.add(task, **_dfs)
+            res = self.add(task, **_dfs)
         else:
-            return self.add(task, *_dfs.values())
+            res = self.add(task, *_dfs.values())
+        self._last_df = res
+        return res
 
     def output(
         self, *dfs: Any, using: Any, params: Any = None, pre_partition: Any = None
@@ -1694,11 +1776,12 @@ class FugueWorkflow:
                     "schema must be None when data is WorkflowDataFrame"
                 ),
             )
+            self._last_df = data
             return data
         if (
             (isinstance(data, (List, Iterable)) and not isinstance(data, str))
             or isinstance(data, Yielded)
-            or is_acceptable_raw_df(data)
+            or is_df(data)
         ):
             return self.create(
                 using=CreateData(
@@ -2028,6 +2111,7 @@ class FugueWorkflow:
         *statements: Any,
         sql_engine: Any = None,
         sql_engine_params: Any = None,
+        dialect: Optional[str] = FUGUE_SQL_DEFAULT_DIALECT,
     ) -> WorkflowDataFrame:
         """Execute ``SELECT`` statement using
         :class:`~fugue.execution.execution_engine.SQLEngine`
@@ -2054,25 +2138,28 @@ class FugueWorkflow:
         Please read :ref:`this <tutorial:tutorials/advanced/dag:select query>`
         for more examples
         """
-        s_str: List[str] = []
+        sql: List[Tuple[bool, str]] = []
         dfs: Dict[str, DataFrame] = {}
         for s in statements:
             if isinstance(s, str):
-                s_str.append(s)
-            if isinstance(s, DataFrame):
+                sql.append((False, s))
+            else:
                 ws = self.df(s)
                 dfs[ws.name] = ws
-                s_str.append(ws.name)
-        sql = " ".join(s_str).strip()
-        if not sql[:10].upper().startswith("SELECT") and not sql[
-            :10
-        ].upper().startswith("WITH"):
-            sql = "SELECT " + sql
+                sql.append((True, ws.name))
+        if sql[0][0]:  # starts with reference
+            sql.insert(0, (False, "SELECT"))
+        else:  # start with string but without select
+            start = sql[0][1].strip()
+            if not start[:10].upper().startswith("SELECT") and not start[
+                :10
+            ].upper().startswith("WITH"):
+                sql[0] = (False, "SELECT " + start)
         return self.process(
             dfs,
             using=RunSQLSelect,
             params=dict(
-                statement=sql,
+                statement=StructuredRawSQL(sql, dialect=dialect),
                 sql_engine=sql_engine,
                 sql_engine_params=ParamDict(sql_engine_params),
             ),

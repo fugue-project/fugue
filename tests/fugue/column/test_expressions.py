@@ -1,5 +1,5 @@
 import pyarrow as pa
-from fugue.column import col, function, lit, null
+from fugue.column import col, function, lit, null, all_cols
 from fugue.column.expressions import _get_column_mentions
 from fugue.column.functions import coalesce
 from pytest import raises
@@ -7,14 +7,12 @@ from triad import Schema, to_uuid
 
 
 def test_named_col():
-    assert "*" == str(col("*"))
-    assert col("*").wildcard
-    assert "" == col("*").infer_alias().output_name
-    raises(ValueError, lambda: col("*").alias("x"))
-    raises(ValueError, lambda: col("*").cast("long"))
+    assert "*" == str(all_cols())
+    raises(NotImplementedError, lambda: all_cols().output_name)
+    raises(NotImplementedError, lambda: all_cols().alias("x"))
+    raises(NotImplementedError, lambda: all_cols().cast("long"))
 
     assert "a" == str(col("a"))
-    assert not col("a").wildcard
     assert "a" == str(col(col("a")))
     assert "ab AS xx" == str(col("ab").alias("xx"))
     assert "ab AS xx" == str(col("ab", "xx").cast(None))
@@ -179,7 +177,7 @@ def test_schema_inference():
     assert pa.float64() == (-col("d").alias("x")).infer_type(schema)
     assert col("x").infer_type(schema) is None
     assert pa.string() == col("x").cast(str).infer_type(schema)
-    assert col("*").infer_type(schema) is None
+    assert all_cols().infer_type(schema) is None
 
     assert pa.bool_() == (col("a") < col("d")).infer_type(schema)
     assert pa.bool_() == (col("a") > col("d")).infer_type(schema)

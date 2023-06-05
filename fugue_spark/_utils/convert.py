@@ -1,27 +1,24 @@
 from typing import Any, Iterable, List, Tuple
 
+import cloudpickle
+import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
 import pyspark.sql.types as pt
-
-try:  # pyspark < 3
-    from pyspark.sql.types import from_arrow_type, to_arrow_type  # type: ignore
-
-    # https://issues.apache.org/jira/browse/SPARK-29041
-    pt._acceptable_types[pt.BinaryType] = (bytearray, bytes)  # type: ignore  # pragma: no cover  # noqa: E501  # pylint: disable=line-too-long
-except ImportError:  # pyspark >=3
-    from pyspark.sql.pandas.types import from_arrow_type, to_arrow_type
 from pyarrow.types import is_list, is_struct, is_timestamp
+from pyspark.sql.pandas.types import from_arrow_type, to_arrow_type
 from triad.collections import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
+from triad.utils.schema import quote_name
+from .misc import is_spark_dataframe
 
 
 def to_spark_schema(obj: Any) -> pt.StructType:
     assert_arg_not_none(obj, "schema")
     if isinstance(obj, pt.StructType):
         return obj
-    if isinstance(obj, ps.DataFrame):
+    if is_spark_dataframe(obj):
         return obj.schema
     return _from_arrow_schema(Schema(obj).pa_schema)
 
@@ -30,7 +27,7 @@ def to_schema(obj: Any) -> Schema:
     assert_arg_not_none(obj, "obj")
     if isinstance(obj, pt.StructType):
         return Schema(_to_arrow_schema(obj))
-    if isinstance(obj, ps.DataFrame):
+    if is_spark_dataframe(obj):
         return to_schema(obj.schema)
     return Schema(obj)
 
@@ -52,25 +49,28 @@ def to_cast_expression(
             name_match or allow_name_mismatch,
             lambda: ValueError(f"schema name mismatch: {schema1}, {schema2}"),
         )
+        n1, n2 = quote_name(schema1[i].name, quote="`"), quote_name(
+            schema2[i].name, quote="`"
+        )
         if schema1[i].dataType != schema2[i].dataType:
             type2 = schema2[i].dataType.simpleString()
             if isinstance(schema1[i].dataType, pt.FractionalType) and isinstance(
                 schema2[i].dataType, (pt.StringType, pt.IntegralType)
             ):
                 expr.append(
-                    f"CAST(IF(isnan({schema1[i].name}) OR {schema1[i].name} IS NULL"
-                    f", NULL, {schema1[i].name})"
-                    f" AS {type2}) {schema2[i].name}"
+                    f"CAST(IF(isnan({n1}) OR {n1} IS NULL"
+                    f", NULL, {n1})"
+                    f" AS {type2}) {n2}"
                 )
             else:
-                expr.append(f"CAST({schema1[i].name} AS {type2}) {schema2[i].name}")
+                expr.append(f"CAST({n1} AS {type2}) {n2}")
             has_cast = True
         else:
             if schema1[i].name != schema2[i].name:
-                expr.append(f"{schema1[i].name} AS {schema2[i].name}")
+                expr.append(f"{n1} AS {n2}")
                 has_cast = True
             else:
-                expr.append(schema1[i].name)
+                expr.append(n1)
     return has_cast, expr
 
 
@@ -106,6 +106,22 @@ def to_type_safe_input(rows: Iterable[ps.Row], schema: Schema) -> Iterable[List[
             data = row.asDict(recursive=True)
             r = [data[n] for n in schema.names]
             yield r
+
+
+def to_pandas(df: ps.DataFrame) -> pd.DataFrame:
+    if pd.__version__ < "2" or not any(
+        isinstance(x.dataType, (pt.TimestampType, pt.TimestampNTZType))
+        for x in df.schema.fields
+    ):
+        return df.toPandas()
+
+    def serialize(dfs):  # pragma: no cover
+        for df in dfs:
+            data = cloudpickle.dumps(df)
+            yield pd.DataFrame([[data]], columns=["data"])
+
+    sdf = df.mapInPandas(serialize, schema="data binary")
+    return pd.concat(cloudpickle.loads(x.data) for x in sdf.collect())
 
 
 # TODO: the following function always set nullable to true,

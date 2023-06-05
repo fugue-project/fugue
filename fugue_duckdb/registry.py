@@ -1,5 +1,4 @@
-import inspect
-from typing import Any, Optional
+from typing import Any
 
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from triad import run_at_def
@@ -7,18 +6,16 @@ from triad import run_at_def
 from fugue import (
     DataFrame,
     ExecutionEngine,
-    infer_execution_engine,
-    is_pandas_or,
     register_execution_engine,
     register_sql_engine,
 )
-from fugue._utils.interfaceless import (
+from fugue.dev import (
     DataFrameParam,
     ExecutionEngineParam,
-    SimpleAnnotationConverter,
-    register_annotation_converter,
+    fugue_annotated_param,
+    is_pandas_or,
 )
-from fugue.workflow import register_raw_df_type
+from fugue.plugins import infer_execution_engine
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
 
@@ -28,10 +25,6 @@ from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
 )
 def _infer_duckdb_client(objs: Any) -> Any:
     return "duckdb"
-
-
-def _register_raw_dataframes() -> None:
-    register_raw_df_type(DuckDBPyRelation)
 
 
 def _register_engines() -> None:
@@ -74,40 +67,20 @@ def _register_engines() -> None:
     register_sql_engine("duckdb", lambda engine: DuckDBEngine(engine))
 
 
-def _register_annotation_converters() -> None:
-    register_annotation_converter(
-        0.8,
-        SimpleAnnotationConverter(
-            DuckDBPyConnection,
-            lambda param: _DuckDBPyConnectionParam(param),
-        ),
-    )
-    register_annotation_converter(
-        0.8,
-        SimpleAnnotationConverter(
-            DuckDBPyRelation,
-            lambda param: _DuckDBPyRelationParam(param),
-        ),
-    )
+@fugue_annotated_param(DuckExecutionEngine)
+class _DuckExecutionEngineParam(ExecutionEngineParam):
+    pass
 
 
+@fugue_annotated_param(DuckDBPyConnection)
 class _DuckDBPyConnectionParam(ExecutionEngineParam):
-    def __init__(
-        self,
-        param: Optional[inspect.Parameter],
-    ):
-        super().__init__(
-            param, annotation="DuckDBPyConnection", engine_type=DuckExecutionEngine
-        )
-
     def to_input(self, engine: ExecutionEngine) -> Any:
-        return super().to_input(engine).connection  # type:ignore
+        assert isinstance(engine, DuckExecutionEngine)
+        return engine.connection  # type:ignore
 
 
+@fugue_annotated_param(DuckDBPyRelation)
 class _DuckDBPyRelationParam(DataFrameParam):
-    def __init__(self, param: Optional[inspect.Parameter]):
-        super().__init__(param, annotation="DuckDBPyRelation")
-
     def to_input_data(self, df: DataFrame, ctx: Any) -> Any:
         assert isinstance(ctx, DuckExecutionEngine)
         return ctx.to_df(df).native  # type: ignore
@@ -131,6 +104,4 @@ def _register() -> None:
 
         >>> import fugue_duckdb
     """
-    _register_raw_dataframes()
     _register_engines()
-    _register_annotation_converters()

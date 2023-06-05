@@ -1,6 +1,7 @@
 # flake8: noqa
-from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
-from fugue.execution.factory import (
+from .api import *
+from .execution_engine import AnyExecutionEngine, ExecutionEngine, MapEngine, SQLEngine
+from .factory import (
     infer_execution_engine,
     make_execution_engine,
     make_sql_engine,
@@ -9,8 +10,4 @@ from fugue.execution.factory import (
     register_execution_engine,
     register_sql_engine,
 )
-from fugue.execution.native_execution_engine import (
-    NativeExecutionEngine,
-    QPDPandasEngine,
-    SqliteEngine,
-)
+from .native_execution_engine import NativeExecutionEngine, QPDPandasEngine

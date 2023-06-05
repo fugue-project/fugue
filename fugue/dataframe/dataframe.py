@@ -1,6 +1,6 @@
 import json
 from abc import abstractmethod
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import pandas as pd
 import pyarrow as pa
@@ -12,8 +12,17 @@ from triad.utils.pandas_like import PD_UTILS
 
 from .._utils.display import PrettyTable
 from ..collections.yielded import Yielded
-from ..dataset import Dataset, DatasetDisplay, get_dataset_display
+from ..dataset import (
+    Dataset,
+    DatasetDisplay,
+    as_local,
+    as_local_bounded,
+    get_dataset_display,
+    as_fugue_dataset,
+)
 from ..exceptions import FugueDataFrameOperationError
+
+AnyDataFrame = TypeVar("AnyDataFrame", "DataFrame", object)
 
 
 class DataFrame(Dataset):
@@ -43,8 +52,8 @@ class DataFrame(Dataset):
 
     @property
     def schema(self) -> Schema:
-        """Schema of the dataframe"""
-        if self._schema_discovered:
+        """The schema of the dataframe"""
+        if self.schema_discovered:
             # we must keep it simple because it could be called on every row by a user
             assert isinstance(self._schema, Schema)
             return self._schema  # type: ignore
@@ -56,13 +65,37 @@ class DataFrame(Dataset):
             self._schema_discovered = True
             return self._schema
 
+    @property
+    def schema_discovered(self) -> Schema:
+        """Whether the schema has been discovered or still a lambda"""
+        return self._schema_discovered
+
+    @property
+    def columns(self) -> List[str]:
+        """The column names of the dataframe"""
+        return self.schema.names
+
     @abstractmethod
+    def native_as_df(self) -> AnyDataFrame:  # pragma: no cover
+        """The dataframe form of the native object this Dataset class wraps.
+        Dataframe form means the object contains schema information. For example
+        the native an ArrayDataFrame is a python array, it doesn't contain schema
+        information, and its ``native_as_df`` should be either a pandas dataframe
+        or an arrow dataframe.
+        """
+        raise NotImplementedError
+
     def as_local(self) -> "LocalDataFrame":  # pragma: no cover
         """Convert this dataframe to a :class:`.LocalDataFrame`"""
+        return self.as_local_bounded()
+
+    @abstractmethod
+    def as_local_bounded(self) -> "LocalBoundedDataFrame":  # pragma: no cover
+        """Convert this dataframe to a :class:`.LocalBoundedDataFrame`"""
         raise NotImplementedError
 
     @abstractmethod
-    def peek_array(self) -> Any:  # pragma: no cover
+    def peek_array(self) -> List[Any]:  # pragma: no cover
         """Peek the first row of the dataframe as array
 
         :raises FugueDatasetEmptyError: if it is empty
@@ -75,11 +108,11 @@ class DataFrame(Dataset):
         :raises FugueDatasetEmptyError: if it is empty
         """
         arr = self.peek_array()
-        return {self.schema.names[i]: arr[i] for i in range(len(self.schema))}
+        return {self.columns[i]: arr[i] for i in range(len(self.columns))}
 
     def as_pandas(self) -> pd.DataFrame:
         """Convert to pandas DataFrame"""
-        pdf = pd.DataFrame(self.as_array(), columns=self.schema.names)
+        pdf = pd.DataFrame(self.as_array(), columns=self.columns)
         return PD_UTILS.enforce_type(pdf, self.schema.pa_schema, null_safe=True)
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
@@ -213,7 +246,7 @@ class DataFrame(Dataset):
             The default implementation enforces ``type_safe`` True
         """
         if columns is None:
-            columns = self.schema.names
+            columns = self.columns
         idx = range(len(columns))
         for x in self.as_array_iterable(columns, type_safe=True):
             yield {columns[i]: x[i] for i in idx}
@@ -280,14 +313,13 @@ class LocalDataFrame(DataFrame):
         implementing a new :class:`~fugue.execution.execution_engine.ExecutionEngine`
     """
 
+    def native_as_df(self) -> AnyDataFrame:
+        return self.as_pandas()
+
     @property
     def is_local(self) -> bool:
         """Always True because it's a LocalDataFrame"""
         return True
-
-    def as_local(self) -> "LocalDataFrame":
-        """Always return self, because it's a LocalDataFrame"""
-        return self
 
     @property
     def num_partitions(self) -> int:  # pragma: no cover
@@ -314,6 +346,10 @@ class LocalBoundedDataFrame(LocalDataFrame):
         """Always True because it's a bounded dataframe"""
         return True
 
+    def as_local_bounded(self) -> "LocalBoundedDataFrame":
+        """Always True because it's a bounded dataframe"""
+        return self
+
 
 class LocalUnboundedDataFrame(LocalDataFrame):
     """Base class of all local unbounded dataframes. Read
@@ -334,6 +370,9 @@ class LocalUnboundedDataFrame(LocalDataFrame):
     def is_bounded(self):
         """Always False because it's an unbounded dataframe"""
         return False
+
+    def as_local(self) -> "LocalDataFrame":
+        return self
 
     def count(self) -> int:
         """
@@ -410,9 +449,30 @@ class DataFrameDisplay(DatasetDisplay):
                 print("")
 
 
+def as_fugue_df(df: AnyDataFrame, **kwargs: Any) -> DataFrame:
+    """Wrap the object as a Fugue DataFrame.
+
+    :param df: the object to wrap
+    """
+    ds = as_fugue_dataset(df, **kwargs)
+    if isinstance(ds, DataFrame):
+        return ds
+    raise TypeError(f"{type(df)} {kwargs} is not recognized as a Fugue DataFrame: {ds}")
+
+
 @get_dataset_display.candidate(lambda ds: isinstance(ds, DataFrame), priority=0.1)
 def _get_dataframe_display(ds: DataFrame):
     return DataFrameDisplay(ds)
+
+
+@as_local.candidate(lambda df: isinstance(df, DataFrame))
+def _df_to_local(df: DataFrame) -> LocalDataFrame:
+    return df.as_local()
+
+
+@as_local_bounded.candidate(lambda df: isinstance(df, DataFrame))
+def _df_to_local_bounded(df: DataFrame) -> LocalBoundedDataFrame:
+    return df.as_local_bounded()
 
 
 def _get_schema_change(

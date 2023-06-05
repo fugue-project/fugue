@@ -7,6 +7,7 @@ from triad.utils.assertion import assert_or_throw as aot
 from triad.utils.convert import to_size
 from triad.utils.hash import to_uuid
 from triad.utils.pyarrow import SchemaedDataPartitioner
+from triad.utils.schema import safe_split_out_of_quote, unquote_name
 
 
 def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C901]
@@ -39,9 +40,9 @@ def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C
         presort = presort.strip()
         if presort == "":
             return res
-        for p in presort.split(","):
-            pp = p.strip().split()
-            key = pp[0].strip()
+        for p in safe_split_out_of_quote(presort, ","):
+            pp = safe_split_out_of_quote(p.strip(), " ", max_split=1)
+            key = unquote_name(pp[0].strip())
             if len(pp) == 1:
                 presort_list.append((key, True))
             elif len(pp) == 2:
@@ -51,17 +52,14 @@ def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C
                     presort_list.append((key, False))
                 else:
                     raise SyntaxError(f"Invalid expression {presort}")
-            else:
+            else:  # pragma: no cover
+                # impossible
                 raise SyntaxError(f"Invalid expression {presort}")
 
     elif isinstance(presort, list):
         for p in presort:
             if isinstance(p, str):
-                aot(
-                    len(p.strip().split()) == 1,
-                    SyntaxError(f"Invalid expression {presort}"),
-                )
-                presort_list.append((p.strip(), True))
+                presort_list.append((p, True))
             else:
                 aot(len(p) == 2, SyntaxError(f"Invalid expression {presort}"))
                 aot(
@@ -69,7 +67,7 @@ def parse_presort_exp(presort: Any) -> IndexedOrderedDict[str, bool]:  # noqa [C
                     & (isinstance(p[0], str) & (isinstance(p[1], bool))),
                     SyntaxError(f"Invalid expression {presort}"),
                 )
-                presort_list.append((p[0].strip(), p[1]))
+                presort_list.append((p[0], p[1]))
 
     for key, value in presort_list:
         if key in res:
@@ -84,20 +82,23 @@ class PartitionSpec(object):
     .. admonition:: Examples
 
         >>> PartitionSepc(num=4)
+        >>> PartitionSepc(4)  # == PartitionSepc(num=4)
         >>> PartitionSepc(num="ROWCOUNT/4 + 3")  # It can be an expression
         >>> PartitionSepc(by=["a","b"])
+        >>> PartitionSepc(["a","b"])  # == PartitionSepc(by=["a","b"])
         >>> PartitionSpec(by=["a"], presort="b DESC, c ASC")
         >>> PartitionSpec(algo="even", num=4)
         >>> p = PartitionSpec(num=4, by=["a"])
         >>> p_override = PartitionSpec(p, by=["a","b"], algo="even")
         >>> PartitionSpec(by="a")  # == PartitionSpec(by=["a"])
+        >>> PartitionSpec("a")  # == PartitionSpec(by=["a"])
         >>> PartitionSpec("per_row")  # == PartitionSpec(num="ROWCOUNT", algo="even")
 
     It's important to understand this concept, please read |PartitionTutorial|
 
     Partition consists for these specs:
 
-    * **algo**: can be one of ``hash`` (default), ``rand`` and ``even``
+    * **algo**: can be one of ``hash`` (default), ``rand``, ``even`` or ``coarse``
     * **num** or **num_partitions**: number of physical partitions, it can be an
       expression or integer numbers, e.g ``(ROWCOUNT+4) / 3``
     * **by** or **partition_by**: keys to partition on
@@ -109,15 +110,18 @@ class PartitionSpec(object):
 
     def __init__(self, *args: Any, **kwargs: Any):  # noqa: C901
         p = ParamDict()
-        if (
-            len(args) == 1
-            and len(kwargs) == 0
-            and isinstance(args[0], str)
-            and args[0].lower() == "per_row"
-        ):
-            p["algo"] = "even"
-            p["num_partitions"] = "ROWCOUNT"
-        else:
+        if len(args) == 1 and len(kwargs) == 0:
+            if isinstance(args[0], str):
+                if args[0].lower() == "per_row":
+                    p["algo"] = "even"
+                    p["num_partitions"] = "ROWCOUNT"
+                elif not args[0].startswith("{"):
+                    p["partition_by"] = [args[0]]
+            elif isinstance(args[0], int):
+                p["num_partitions"] = str(args[0])
+            elif isinstance(args[0], (list, tuple)):
+                p["partition_by"] = args[0]
+        if len(p) == 0:  # the first condition had no match
             for a in args:
                 if a is None:
                     continue
@@ -204,7 +208,9 @@ class PartitionSpec(object):
 
     @property
     def algo(self) -> str:
-        """Get algo of the spec, one of ``hash`` (default), ``rand`` and ``even``"""
+        """Get algo of the spec, one of ``hash`` (default),
+        ``rand`` ``even`` or ``coarse``
+        """
         return self._algo if self._algo != "" else "hash"
 
     @property
@@ -254,11 +260,14 @@ class PartitionSpec(object):
         """Get deterministic unique id of this object"""
         return to_uuid(self.jsondict)
 
-    def get_sorts(self, schema: Schema) -> IndexedOrderedDict[str, bool]:
+    def get_sorts(
+        self, schema: Schema, with_partition_keys: bool = True
+    ) -> IndexedOrderedDict[str, bool]:
         """Get keys for sorting in a partition, it's the combination of partition
         keys plus the presort keys
 
         :param schema: the dataframe schema this partition spec to operate on
+        :param with_partition_keys: whether to include partition keys
         :return: an ordered dictionary of key, order pairs
 
         .. admonition:: Examples
@@ -268,9 +277,10 @@ class PartitionSpec(object):
             >>> assert p.get_sorts(schema) == {"a":True, "b":True, "c": False}
         """
         d: IndexedOrderedDict[str, bool] = IndexedOrderedDict()
-        for p in self.partition_by:
-            aot(p in schema, lambda: KeyError(f"{p} not in {schema}"))
-            d[p] = True
+        if with_partition_keys:
+            for p in self.partition_by:
+                aot(p in schema, lambda: KeyError(f"{p} not in {schema}"))
+                d[p] = True
         for p, v in self.presort.items():
             aot(p in schema, lambda: KeyError(f"{p} not in {schema}"))
             d[p] = v
@@ -323,9 +333,6 @@ class PartitionSpec(object):
             d[k] = v
 
 
-EMPTY_PARTITION_SPEC = PartitionSpec()
-
-
 class DatasetPartitionCursor:
     """The cursor pointing at the first item of each logical partition inside
     a physical partition.
@@ -347,7 +354,7 @@ class DatasetPartitionCursor:
         """reset the cursor to a row (which should be the first row of a
         new logical partition)
 
-        :param item: an item of the dataset
+        :param item: an item of the dataset, or an function generating the item
         :param partition_no: logical partition number
         :param slice_no: slice number inside the logical partition (to be deprecated)
         """
@@ -358,6 +365,8 @@ class DatasetPartitionCursor:
     @property
     def item(self) -> Any:
         """Get current item"""
+        if callable(self._item):
+            self._item = self._item()
         return self._item
 
     @property
@@ -416,11 +425,15 @@ class PartitionCursor(DatasetPartitionCursor):
         """reset the cursor to a row (which should be the first row of a
         new logical partition)
 
-        :param row: list-like row data
+        :param row: list-like row data or a function generating a list-like row
         :param partition_no: logical partition number
         :param slice_no: slice number inside the logical partition (to be deprecated)
         """
-        super().set(list(row), partition_no=partition_no, slice_no=slice_no)
+        super().set(
+            list(row) if not callable(row) else lambda: list(row()),
+            partition_no=partition_no,
+            slice_no=slice_no,
+        )
 
     @property
     def row(self) -> List[Any]:

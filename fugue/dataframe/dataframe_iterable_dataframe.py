@@ -2,16 +2,20 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 import pyarrow as pa
-from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.dataframe import (
-    DataFrame,
-    LocalDataFrame,
-    LocalUnboundedDataFrame,
-    LocalBoundedDataFrame,
-)
-from fugue.exceptions import FugueDataFrameInitError
 from triad import Schema, assert_or_throw
 from triad.utils.iter import EmptyAwareIterable, make_empty_aware
+
+from fugue.exceptions import FugueDataFrameInitError
+
+from .array_dataframe import ArrayDataFrame
+from .arrow_dataframe import ArrowDataFrame
+from .dataframe import (
+    DataFrame,
+    LocalBoundedDataFrame,
+    LocalDataFrame,
+    LocalUnboundedDataFrame,
+)
+from .pandas_dataframe import PandasDataFrame
 
 
 class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
@@ -108,7 +112,7 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
     def empty(self) -> bool:
         return self.native.empty or self.native.peek().empty
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         self.assert_not_empty()
         return self.native.peek().peek_array()
 
@@ -141,6 +145,9 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
                 yield df.alter_columns(columns)
 
         return LocalDataFrameIterableDataFrame(_transform())
+
+    def as_local_bounded(self) -> "LocalBoundedDataFrame":
+        return ArrowDataFrame(self.as_arrow())
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
@@ -190,3 +197,12 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
                 yield df._drop_cols(cols)
 
         return LocalDataFrameIterableDataFrame(_transform())
+
+
+class IterablePandasDataFrame(LocalDataFrameIterableDataFrame):
+    def as_local_bounded(self) -> "LocalBoundedDataFrame":
+        return PandasDataFrame(self.as_pandas(), schema=self.schema)
+
+
+class IterableArrowDataFrame(LocalDataFrameIterableDataFrame):
+    pass

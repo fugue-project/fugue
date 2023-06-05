@@ -1,11 +1,16 @@
-from fugue.collections import PartitionSpec
-from fugue.exceptions import (FugueWorkflowCompileValidationError,
-                              FugueWorkflowRuntimeValidationError)
-from fugue.extensions._utils import (parse_validation_rules_from_comment,
-                                     to_validation_rules,
-                                     validate_input_schema,
-                                     validate_partition_spec)
 from pytest import raises
+
+from fugue.collections.partition import PartitionSpec
+from fugue.exceptions import (
+    FugueWorkflowCompileValidationError,
+    FugueWorkflowRuntimeValidationError,
+)
+from fugue.extensions._utils import (
+    parse_validation_rules_from_comment,
+    to_validation_rules,
+    validate_input_schema,
+    validate_partition_spec,
+)
 
 
 def test_parse_output_schema_from_comment():

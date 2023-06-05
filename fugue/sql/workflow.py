@@ -6,14 +6,10 @@ from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars
 
 from ..collections.yielded import Yielded
-from ..constants import FUGUE_CONF_SQL_IGNORE_CASE
+from ..constants import FUGUE_CONF_SQL_DIALECT, FUGUE_CONF_SQL_IGNORE_CASE
+from ..dataframe.api import is_df
 from ..dataframe.dataframe import DataFrame
-from ..workflow.workflow import (
-    FugueWorkflow,
-    WorkflowDataFrame,
-    WorkflowDataFrames,
-    is_acceptable_raw_df,
-)
+from ..workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 from ._utils import LazyWorkflowDataFrame, fill_sql_template
 from ._visitors import FugueSQLHooks, _Extensions
 
@@ -58,7 +54,12 @@ class FugueSQLWorkflow(FugueWorkflow):
             parse_mode="auto",
         )
         v = _Extensions(
-            sql, FugueSQLHooks(), self, dfs, local_vars=params  # type: ignore
+            sql,
+            FugueSQLHooks(),
+            self,
+            dialect=self.conf.get_or_throw(FUGUE_CONF_SQL_DIALECT, str),
+            variables=dfs,  # type: ignore
+            local_vars=params,
         )
         v.visit(sql.tree)
         return v.variables
@@ -71,118 +72,8 @@ class FugueSQLWorkflow(FugueWorkflow):
         for k, v in params.items():
             if isinstance(v, (int, str, float, bool)):
                 p[k] = v
-            elif isinstance(v, (DataFrame, Yielded)) or is_acceptable_raw_df(v):
+            elif isinstance(v, (DataFrame, Yielded)) or is_df(v):
                 dfs[k] = LazyWorkflowDataFrame(k, v, self)
             else:
                 p[k] = v
         return p, dfs
-
-
-def fsql(
-    sql: str, *args: Any, fsql_ignore_case: bool = False, **kwargs: Any
-) -> FugueSQLWorkflow:
-    """Fugue SQL functional interface
-
-    :param sql: the Fugue SQL string (can be a jinja template)
-    :param args: variables related to the SQL string
-    :param fsql_ignore_case: whether to ignore case when parsing the SQL string
-        defaults to False.
-    :param kwargs: variables related to the SQL string
-    :return: the translated Fugue workflow
-
-    .. code-block:: python
-
-        # Basic case
-        fsql('''
-        CREATE [[0]] SCHEMA a:int
-        PRINT
-        ''').run()
-
-        # With external data sources
-        df = pd.DataFrame([[0],[1]], columns=["a"])
-        fsql('''
-        SELECT * FROM df WHERE a=0
-        PRINT
-        ''').run()
-
-        # With external variables
-        df = pd.DataFrame([[0],[1]], columns=["a"])
-        t = 1
-        fsql('''
-        SELECT * FROM df WHERE a={{t}}
-        PRINT
-        ''').run()
-
-        # The following is the explicit way to specify variables and datafrems
-        # (recommended)
-        df = pd.DataFrame([[0],[1]], columns=["a"])
-        t = 1
-        fsql('''
-        SELECT * FROM df WHERE a={{t}}
-        PRINT
-        ''', df=df, t=t).run()
-
-        # Using extensions
-        def dummy(df:pd.DataFrame) -> pd.DataFrame:
-            return df
-
-        fsql('''
-        CREATE [[0]] SCHEMA a:int
-        TRANSFORM USING dummy SCHEMA *
-        PRINT
-        ''').run()
-
-        # It's recommended to provide full path of the extension inside
-        # Fugue SQL, so the SQL definition and exeuction can be more
-        # independent from the extension definition.
-
-        # Run with different execution engines
-        sql = '''
-        CREATE [[0]] SCHEMA a:int
-        TRANSFORM USING dummy SCHEMA *
-        PRINT
-        '''
-
-        fsql(sql).run(user_defined_spark_session())
-        fsql(sql).run(SparkExecutionEngine, {"spark.executor.instances":10})
-        fsql(sql).run(DaskExecutionEngine)
-
-        # Passing dataframes between fsql calls
-        result = fsql('''
-        CREATE [[0]] SCHEMA a:int
-        YIELD DATAFRAME AS x
-
-        CREATE [[1]] SCHEMA a:int
-        YIELD DATAFRAME AS y
-        ''').run(DaskExecutionEngine)
-
-        fsql('''
-        SELECT * FROM x
-        UNION
-        SELECT * FROM y
-        UNION
-        SELECT * FROM z
-
-        PRINT
-        ''', result, z=pd.DataFrame([[2]], columns=["z"])).run()
-
-        # Get framework native dataframes
-        result["x"].native  # Dask dataframe
-        result["y"].native  # Dask dataframe
-        result["x"].as_pandas()  # Pandas dataframe
-
-        # Use lower case fugue sql
-        df = pd.DataFrame([[0],[1]], columns=["a"])
-        t = 1
-        fsql('''
-        select * from df where a={{t}}
-        print
-        ''', df=df, t=t, fsql_ignore_case=True).run()
-    """
-    global_vars, local_vars = get_caller_global_local_vars()
-    dag = FugueSQLWorkflow(compile_conf={FUGUE_CONF_SQL_IGNORE_CASE: fsql_ignore_case})
-    try:
-        dag._sql(sql, global_vars, local_vars, *args, **kwargs)
-    except SyntaxError as ex:
-        raise SyntaxError(str(ex)).with_traceback(None) from None
-    return dag

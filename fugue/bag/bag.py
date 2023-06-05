@@ -9,9 +9,13 @@ class Bag(Dataset):
     unordered objects.
     """
 
-    @abstractmethod
     def as_local(self) -> "LocalBag":  # pragma: no cover
         """Convert this bag to a :class:`.LocalBag`"""
+        return self.as_local_bounded()
+
+    @abstractmethod
+    def as_local_bounded(self) -> "LocalBoundedBag":  # pragma: no cover
+        """Convert this bag to a :class:`.LocalBoundedBag`"""
         raise NotImplementedError
 
     @abstractmethod
@@ -50,9 +54,6 @@ class LocalBag(Bag):
     def is_local(self) -> bool:
         return True
 
-    def as_local(self) -> "LocalBag":
-        return self
-
     @property
     def num_partitions(self) -> int:
         return 1
@@ -62,6 +63,9 @@ class LocalBoundedBag(LocalBag):
     @property
     def is_bounded(self) -> bool:
         return True
+
+    def as_local_bounded(self) -> "LocalBoundedBag":
+        return self
 
 
 class BagDisplay(DatasetDisplay):

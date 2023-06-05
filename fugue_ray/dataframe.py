@@ -4,41 +4,21 @@ import pandas as pd
 import pyarrow as pa
 import ray
 import ray.data as rd
-from fugue.dataframe import (
-    ArrowDataFrame,
-    DataFrame,
-    LocalBoundedDataFrame,
-    LocalDataFrame,
-)
-from fugue.dataframe.dataframe import _input_schema
-from fugue.dataframe.utils import (
-    get_dataframe_column_names,
-    rename_dataframe_column_names,
-)
-from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from triad.collections.schema import Schema
 
-from ._utils.dataframe import _build_empty_arrow, build_empty, get_dataset_format
-
-
-@get_dataframe_column_names.candidate(lambda df: isinstance(df, rd.Dataset))
-def _get_ray_dataframe_columns(df: rd.Dataset) -> List[Any]:
-    fmt = get_dataset_format(df)
-    if fmt == "pandas":
-        return list(df.schema(True).names)
-    elif fmt == "arrow":
-        return [f.name for f in df.schema(True)]
-    raise NotImplementedError(f"{fmt} is not supported")  # pragma: no cover
-
-
-@rename_dataframe_column_names.candidate(
-    lambda df, *args, **kwargs: isinstance(df, rd.Dataset)
+from fugue.dataframe import ArrowDataFrame, DataFrame, LocalBoundedDataFrame
+from fugue.dataframe.dataframe import _input_schema
+from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
+from fugue.plugins import (
+    as_local_bounded,
+    get_column_names,
+    get_num_partitions,
+    is_df,
+    rename,
 )
-def _rename_ray_dataframe(df: rd.Dataset, names: Dict[str, Any]) -> rd.Dataset:
-    if len(names) == 0:
-        return df
-    new_cols = [names.get(name, name) for name in _get_ray_dataframe_columns(df)]
-    return df.map_batches(lambda b: b.rename_columns(new_cols), batch_format="pyarrow")
+
+from ._constants import _ZERO_COPY
+from ._utils.dataframe import build_empty, get_dataset_format
 
 
 class RayDataFrame(DataFrame):
@@ -63,6 +43,7 @@ class RayDataFrame(DataFrame):
         schema: Any = None,
         internal_schema: bool = False,
     ):
+        metadata: Any = None
         if internal_schema:
             schema = _input_schema(schema).assert_not_empty()
         if df is None:
@@ -93,6 +74,7 @@ class RayDataFrame(DataFrame):
             rdf = df._native
             if schema is None:
                 schema = df.schema
+            metadata = None if not df.has_metadata else df.metadata
         elif isinstance(df, (pd.DataFrame, pd.Series)):
             if isinstance(df, pd.Series):
                 df = df.to_frame()
@@ -108,26 +90,36 @@ class RayDataFrame(DataFrame):
             rdf = rd.from_arrow(df.as_arrow(type_safe=True))
             if schema is None:
                 schema = df.schema
+            metadata = None if not df.has_metadata else df.metadata
         else:
-            raise ValueError(f"{df} is incompatible with DaskDataFrame")
+            raise ValueError(f"{df} is incompatible with RayDataFrame")
         rdf, schema = self._apply_schema(rdf, schema, internal_schema)
         super().__init__(schema)
         self._native = rdf
+        if metadata is not None:
+            self.reset_metadata(metadata)
 
     @property
     def native(self) -> rd.Dataset:
         """The wrapped ray Dataset"""
         return self._native
 
+    def native_as_df(self) -> rd.Dataset:
+        return self._native
+
     @property
     def is_local(self) -> bool:
         return False
 
-    def as_local(self) -> LocalDataFrame:
+    def as_local_bounded(self) -> LocalBoundedDataFrame:
         adf = self.as_arrow()
         if adf.shape[0] == 0:
-            return ArrowDataFrame([], self.schema)
-        return ArrowDataFrame(adf)
+            res = ArrowDataFrame([], self.schema)
+        else:
+            res = ArrowDataFrame(adf)
+        if self.has_metadata:
+            res.reset_metadata(self.metadata)
+        return res
 
     @property
     def is_bounded(self) -> bool:
@@ -139,21 +131,24 @@ class RayDataFrame(DataFrame):
 
     @property
     def num_partitions(self) -> int:
-        return self.native.num_blocks()
+        return _rd_num_partitions(self.native)
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         cols = (self.schema - cols).names
         return self._select_cols(cols)
 
     def _select_cols(self, cols: List[Any]) -> DataFrame:
-        if cols == self.schema.names:
+        if cols == self.columns:
             return self
         rdf = self.native.map_batches(
-            lambda b: b.select(cols), batch_format="pyarrow", **self._remote_args()
+            lambda b: b.select(cols),
+            batch_format="pyarrow",
+            **_ZERO_COPY,
+            **self._remote_args(),
         )
         return RayDataFrame(rdf, self.schema.extract(cols), internal_schema=True)
 
-    def peek_array(self) -> Any:
+    def peek_array(self) -> List[Any]:
         data = self.native.limit(1).to_pandas().values.tolist()
         if len(data) == 0:
             raise FugueDatasetEmptyError
@@ -162,24 +157,14 @@ class RayDataFrame(DataFrame):
     def persist(self, **kwargs: Any) -> "RayDataFrame":
         # TODO: it mutates the dataframe, is this a good bahavior
         if not self.native.is_fully_executed():  # pragma: no cover
-            self._native = self.native.fully_executed()
+            self.native.fully_executed()
         return self
 
     def count(self) -> int:
         return self.native.count()
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
-        def get_tables() -> Iterable[pa.Table]:
-            empty = True
-            for block in self.native.get_internal_block_refs():
-                tb = ray.get(block)
-                if tb.shape[0] > 0:
-                    yield tb
-                    empty = False
-            if empty:
-                yield _build_empty_arrow(self.schema)
-
-        return pa.concat_tables(get_tables())
+        return pa.concat_tables(_get_arrow_tables(self.native))
 
     def as_pandas(self) -> pd.DataFrame:
         return self.as_arrow().to_pandas()
@@ -193,6 +178,7 @@ class RayDataFrame(DataFrame):
         rdf = self.native.map_batches(
             lambda b: b.rename_columns(new_cols),
             batch_format="pyarrow",
+            **_ZERO_COPY,
             **self._remote_args(),
         )
         return RayDataFrame(rdf, schema=new_schema, internal_schema=True)
@@ -207,7 +193,7 @@ class RayDataFrame(DataFrame):
         if self.schema == new_schema:
             return self
         rdf = self.native.map_batches(
-            _alter, batch_format="pyarrow", **self._remote_args()
+            _alter, batch_format="pyarrow", **_ZERO_COPY, **self._remote_args()
         )
         return RayDataFrame(rdf, schema=new_schema, internal_schema=True)
 
@@ -250,9 +236,64 @@ class RayDataFrame(DataFrame):
             return ArrowDataFrame(table).alter_columns(schema).native  # type: ignore
 
         return (
-            rdf.map_batches(_alter, batch_format="pyarrow", **self._remote_args()),
+            rdf.map_batches(
+                _alter, batch_format="pyarrow", **_ZERO_COPY, **self._remote_args()
+            ),
             schema,
         )
 
     def _remote_args(self) -> Dict[str, Any]:
         return {"num_cpus": 1}
+
+
+@is_df.candidate(lambda df: isinstance(df, rd.Dataset))
+def _rd_is_df(df: rd.Dataset) -> bool:
+    return True
+
+
+@get_num_partitions.candidate(lambda df: isinstance(df, rd.Dataset))
+def _rd_num_partitions(df: rd.Dataset) -> int:
+    return df.num_blocks()
+
+
+@as_local_bounded.candidate(lambda df: isinstance(df, rd.Dataset))
+def _rd_as_local(df: rd.Dataset) -> bool:
+    return pa.concat_tables(_get_arrow_tables(df))
+
+
+@get_column_names.candidate(lambda df: isinstance(df, rd.Dataset))
+def _get_ray_dataframe_columns(df: rd.Dataset) -> List[Any]:
+    fmt = get_dataset_format(df)
+    if fmt == "pandas":
+        return list(df.schema(True).names)
+    elif fmt == "arrow":
+        return [f.name for f in df.schema(True)]
+    raise NotImplementedError(f"{fmt} is not supported")  # pragma: no cover
+
+
+@rename.candidate(lambda df, *args, **kwargs: isinstance(df, rd.Dataset))
+def _rename_ray_dataframe(df: rd.Dataset, columns: Dict[str, Any]) -> rd.Dataset:
+    if len(columns) == 0:
+        return df
+    cols = _get_ray_dataframe_columns(df)
+    missing = set(columns.keys()) - set(cols)
+    if len(missing) > 0:
+        raise FugueDataFrameOperationError("found nonexistent columns: {missing}")
+    new_cols = [columns.get(name, name) for name in cols]
+    return df.map_batches(
+        lambda b: b.rename_columns(new_cols), batch_format="pyarrow", **_ZERO_COPY
+    )
+
+
+def _get_arrow_tables(df: rd.Dataset) -> Iterable[pa.Table]:
+    last_empty: Any = None
+    empty = True
+    for block in df.get_internal_block_refs():
+        tb = ray.get(block)
+        if tb.shape[0] > 0:
+            yield tb
+            empty = False
+        else:
+            last_empty = tb
+    if empty:
+        yield last_empty

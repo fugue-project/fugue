@@ -1,8 +1,50 @@
 # Release Notes
 
-## 0.7.4
+## 0.8.4
 
--   [340](https://github.com/fugue-project/fugue/issues/340) Migrate to plugin mode (DataFrames & Extensions)
+-   [471](https://github.com/fugue-project/fugue/issues/471) Fix compatibility issues for duckdb 0.8.0+
+-   [466](https://github.com/fugue-project/fugue/issues/466) Fix Ray 2.4.0 compatibility issue
+-   [464](https://github.com/fugue-project/fugue/issues/464) Support for spark/databricks connect
+-   [459](https://github.com/fugue-project/fugue/issues/459) DEPRECATION: Avro support
+-   [455](https://github.com/fugue-project/fugue/issues/455) Make Fugue pandas 2 compatible
+
+## 0.8.3
+
+-   [449](https://github.com/fugue-project/fugue/issues/449) Add coarse partitioning concept
+-   [452](https://github.com/fugue-project/fugue/issues/452) Add as_fugue_engine_df
+
+## 0.8.2
+
+-   [430](https://github.com/fugue-project/fugue/issues/430) Support Polars DataFrames
+-   [434](https://github.com/fugue-project/fugue/issues/434) Make Transformations data format aware
+-   [408](https://github.com/fugue-project/fugue/issues/408) Remove SQLite support
+-   [444](https://github.com/fugue-project/fugue/issues/444) Clean up FunctionWrapper
+
+## 0.8.1
+
+-   [423](https://github.com/fugue-project/fugue/issues/423) Add seaborn as a domain level extension for visualization
+-   [422](https://github.com/fugue-project/fugue/issues/422) Add pandas_df.plot as the first namespace extension
+-   [421](https://github.com/fugue-project/fugue/issues/421) Add the namespace concept to Fugue extensions
+-   [420](https://github.com/fugue-project/fugue/issues/420) Add is_distributed to engines
+-   [419](https://github.com/fugue-project/fugue/issues/419) Log transpiled SQL query upon error
+
+## 0.8.0
+
+-   [384](https://github.com/fugue-project/fugue/issues/384) Expanding Fugue API
+-   [410](https://github.com/fugue-project/fugue/issues/410) Unify Fugue SQL dialect (syntax only)
+-   [409](https://github.com/fugue-project/fugue/issues/409) Support arbitrary column names in Fugue
+-   [404](https://github.com/fugue-project/fugue/issues/404) Ray/Dask engines guess optimal default partitions
+-   [403](https://github.com/fugue-project/fugue/issues/403) Deprecate register_raw_df_type
+-   [392](https://github.com/fugue-project/fugue/issues/392) Aggregations on Spark dataframes fail intermittently
+-   [398](https://github.com/fugue-project/fugue/issues/398) Rework API Docs and Favicon
+-   [393](https://github.com/fugue-project/fugue/issues/393) ExecutionEngine as_context
+-   [385](https://github.com/fugue-project/fugue/issues/385) Remove DataFrame metadata
+-   [381](https://github.com/fugue-project/fugue/issues/381) Change SparkExecutionEngine to use pandas udf by default
+-   [380](https://github.com/fugue-project/fugue/issues/380) Refactor ExecutionEngine (Separate out MapEngine)
+-   [378](https://github.com/fugue-project/fugue/issues/378) Refactor DataFrame show
+-   [377](https://github.com/fugue-project/fugue/issues/377) Create bag
+-   [372](https://github.com/fugue-project/fugue/issues/372) Infer execution engine from input
+-   [340](https://github.com/fugue-project/fugue/issues/340) Migrate to plugin mode
 -   [369](https://github.com/fugue-project/fugue/issues/369) Remove execution from FugueWorkflow context manager, remove engine from FugueWorkflow
 -   [373](https://github.com/fugue-project/fugue/issues/373) Fixed Spark engine rename slowness when there are a lot of columns
 

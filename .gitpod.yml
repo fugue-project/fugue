@@ -1,5 +1,4 @@
-
-image: fugueproject/devenv:0.7.0
+image: fugueproject/gitpod:0.7.2
 
 tasks:
   - init: |
@@ -29,3 +28,5 @@ vscode:
     - ms-toolsai.jupyter
     - ms-toolsai.jupyter-keymap
     - ms-toolsai.jupyter-renderers
+    - ms-python.isort
+    - virgilsisoe.python-auto-import

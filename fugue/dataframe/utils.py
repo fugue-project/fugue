@@ -2,158 +2,32 @@ import base64
 import json
 import os
 import pickle
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Tuple
 
 import pandas as pd
 import pyarrow as pa
 from fs import open_fs
-from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, LocalDataFrame
-from fugue.dataframe.iterable_dataframe import IterableDataFrame
-from fugue.dataframe.pandas_dataframe import PandasDataFrame
-from triad.collections import Schema
-from triad.collections.fs import FileSystem
+from triad import FileSystem, Schema
 from triad.collections.schema import SchemaError
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.assertion import assert_or_throw as aot
-from triad.utils.rename import normalize_names
 
-from .._utils.registry import fugue_plugin
+from .api import get_column_names, normalize_column_names, rename, as_fugue_df
+from .array_dataframe import ArrayDataFrame
+from .dataframe import DataFrame, LocalBoundedDataFrame
+from .pandas_dataframe import PandasDataFrame
 
-
-@fugue_plugin
-def get_dataframe_column_names(df: Any) -> List[Any]:  # pragma: no cover
-    """A generic function to get column names of any dataframe
-
-    :param df: the dataframe object
-    :return: the column names
-
-    .. note::
-
-        In order to support a new type of dataframe, an implementation must
-        be registered, for example
-
-        .. code-block::python
-
-            @get_dataframe_column_names.candidate(lambda df: isinstance(df, pa.Table))
-            def _get_pyarrow_dataframe_columns(df: pa.Table) -> List[Any]:
-                return [f.name for f in df.schema]
-    """
-    raise NotImplementedError(f"{type(df)} is not supported")
-
-
-@fugue_plugin
-def rename_dataframe_column_names(df: Any, names: Dict[str, Any]) -> Any:
-    """A generic function to rename column names of any dataframe
-
-    :param df: the dataframe object
-    :param names: the rename operations as a dict: ``old name => new name``
-    :return: the renamed dataframe
-
-    .. note::
-
-        In order to support a new type of dataframe, an implementation must
-        be registered, for example
-
-        .. code-block::python
-
-            @rename_dataframe_column_names.candidate(
-                lambda df, *args, **kwargs: isinstance(df, pd.DataFrame)
-            )
-            def _rename_pandas_dataframe(
-                df: pd.DataFrame, names: Dict[str, Any]
-            ) -> pd.DataFrame:
-                if len(names) == 0:
-                    return df
-                return df.rename(columns=names)
-    """
-    if len(names) == 0:
-        return df
-    else:  # pragma: no cover
-        raise NotImplementedError(f"{type(df)} is not supported")
-
-
-def normalize_dataframe_column_names(df: Any) -> Tuple[Any, Dict[str, Any]]:
-    """A generic function to normalize any dataframe's column names to follow
-    Fugue naming rules
-
-    .. note::
-
-        This is a temporary solution before
-        :class:`~triad:triad.collections.schema.Schema`
-        can take arbitrary names
-
-    .. admonition:: Examples
-
-        * ``[0,1]`` => ``{"_0":0, "_1":1}``
-        * ``["1a","2b"]`` => ``{"_1a":"1a", "_2b":"2b"}``
-        * ``["*a","-a"]`` => ``{"_a":"*a", "_a_1":"-a"}``
-
-    :param df: a dataframe object
-    :return: the renamed dataframe and the rename operations as a dict that
-        can **undo** the change
-
-    .. seealso::
-
-        * :func:`~.get_dataframe_column_names`
-        * :func:`~.rename_dataframe_column_names`
-        * :func:`~triad:triad.utils.rename.normalize_names`
-    """
-    cols = get_dataframe_column_names(df)
-    names = normalize_names(cols)
-    if len(names) == 0:
-        return df, {}
-    undo = {v: k for k, v in names.items()}
-    return (rename_dataframe_column_names(df, names), undo)
-
-
-@get_dataframe_column_names.candidate(lambda df: isinstance(df, pd.DataFrame))
-def _get_pandas_dataframe_columns(df: pd.DataFrame) -> List[Any]:
-    return list(df.columns)
-
-
-@rename_dataframe_column_names.candidate(
-    lambda df, *args, **kwargs: isinstance(df, pd.DataFrame)
-)
-def _rename_pandas_dataframe(df: pd.DataFrame, names: Dict[str, Any]) -> pd.DataFrame:
-    if len(names) == 0:
-        return df
-    return df.rename(columns=names)
-
-
-@get_dataframe_column_names.candidate(lambda df: isinstance(df, pa.Table))
-def _get_pyarrow_dataframe_columns(df: pa.Table) -> List[Any]:
-    return [f.name for f in df.schema]
-
-
-@rename_dataframe_column_names.candidate(
-    lambda df, *args, **kwargs: isinstance(df, pa.Table)
-)
-def _rename_pyarrow_dataframe(df: pa.Table, names: Dict[str, Any]) -> pa.Table:
-    if len(names) == 0:
-        return df
-    return df.rename_columns([names.get(f.name, f.name) for f in df.schema])
-
-
-@get_dataframe_column_names.candidate(lambda df: isinstance(df, DataFrame))
-def _get_fugue_dataframe_columns(df: "DataFrame") -> List[Any]:
-    return df.schema.names
-
-
-@rename_dataframe_column_names.candidate(
-    lambda df, *args, **kwargs: isinstance(df, DataFrame)
-)
-def _rename_fugue_dataframe(df: "DataFrame", names: Dict[str, Any]) -> "DataFrame":
-    if len(names) == 0:
-        return df
-    return df.rename(columns=names)
+# For backward compatibility, TODO: remove!
+get_dataframe_column_names = get_column_names
+normalize_dataframe_column_names = normalize_column_names
+rename_dataframe_column_names = rename
 
 
 def _pa_type_eq(t1: pa.DataType, t2: pa.DataType) -> bool:
     # should ignore the name difference of list
     # e.g. list<item: string> == list<l: string>
-    if pa.types.is_list(t1) and pa.types.is_list(t2):
+    if pa.types.is_list(t1) and pa.types.is_list(t2):  # pragma: no cover
         return _pa_type_eq(t1.value_type, t2.value_type)
     return t1 == t2
 
@@ -198,8 +72,11 @@ def _df_eq(
     :param throw: if to throw error if not equal, defaults to False
     :return: if they equal
     """
-    df1 = to_local_bounded_df(df)
-    df2 = to_local_bounded_df(data, schema)
+    df1 = as_fugue_df(df).as_local_bounded()
+    if schema is not None:
+        df2 = as_fugue_df(data, schema=schema).as_local_bounded()
+    else:
+        df2 = as_fugue_df(data).as_local_bounded()
     try:
         assert (
             df1.count() == df2.count()
@@ -218,12 +95,12 @@ def _df_eq(
             d1 = df1.as_pandas()
             d2 = df2.as_pandas()
         if not check_order:
-            d1 = d1.sort_values(df1.schema.names)
-            d2 = d2.sort_values(df1.schema.names)
+            d1 = d1.sort_values(df1.columns)
+            d2 = d2.sort_values(df1.columns)
         d1 = d1.reset_index(drop=True)
         d2 = d2.reset_index(drop=True)
         pd.testing.assert_frame_equal(
-            d1, d2, check_less_precise=digits, check_dtype=False
+            d1, d2, rtol=0, atol=10 ** (-digits), check_dtype=False, check_exact=False
         )
         return True
     except AssertionError:
@@ -232,76 +109,9 @@ def _df_eq(
         return False
 
 
-def to_local_df(df: Any, schema: Any = None) -> LocalDataFrame:
-    """Convert a data structure to :class:`~fugue.dataframe.dataframe.LocalDataFrame`
-
-    :param df: :class:`~fugue.dataframe.dataframe.DataFrame`, pandas DataFramme and
-      list or iterable of arrays
-    :param schema: |SchemaLikeObject|, defaults to None, it should not be set for
-      :class:`~fugue.dataframe.dataframe.DataFrame` type
-    :raises ValueError: if ``df`` is :class:`~fugue.dataframe.dataframe.DataFrame`
-      but you set ``schema``
-    :raises TypeError: if ``df`` is not compatible
-    :return: the dataframe itself if it's
-      :class:`~fugue.dataframe.dataframe.LocalDataFrame` else a converted one
-
-    .. admonition:: Examples
-
-        >>> a = to_local_df([[0,'a'],[1,'b']],"a:int,b:str")
-        >>> assert to_local_df(a) is a
-        >>> to_local_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
-    """
-    assert_arg_not_none(df, "df")
-    if isinstance(df, DataFrame):
-        aot(
-            schema is None,
-            ValueError("schema and metadata must be None when df is a DataFrame"),
-        )
-        return df.as_local()
-    if isinstance(df, pd.DataFrame):
-        return PandasDataFrame(df, schema)
-    if isinstance(df, List):
-        return ArrayDataFrame(df, schema)
-    if isinstance(df, Iterable):
-        return IterableDataFrame(df, schema)
-    raise TypeError(f"{df} cannot convert to a LocalDataFrame")
-
-
-def to_local_bounded_df(df: Any, schema: Any = None) -> LocalBoundedDataFrame:
-    """Convert a data structure to
-    :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`
-
-    :param df: :class:`~fugue.dataframe.dataframe.DataFrame`, pandas DataFramme and
-      list or iterable of arrays
-    :param schema: |SchemaLikeObject|, defaults to None, it should not be set for
-      :class:`~fugue.dataframe.dataframe.DataFrame` type
-    :raises ValueError: if ``df`` is :class:`~fugue.dataframe.dataframe.DataFrame`
-      but you set ``schema``
-    :raises TypeError: if ``df`` is not compatible
-    :return: the dataframe itself if it's
-      :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame` else a converted one
-
-    .. admonition:: Examples
-
-        >>> a = IterableDataFrame([[0,'a'],[1,'b']],"a:int,b:str")
-        >>> assert isinstance(to_local_bounded_df(a), LocalBoundedDataFrame)
-        >>> to_local_bounded_df(SparkDataFrame([[0,'a'],[1,'b']],"a:int,b:str"))
-
-    .. note::
-
-        Compared to :func:`.to_local_df`, this function makes sure the dataframe is also
-        bounded, so :class:`~fugue.dataframe.iterable_dataframe.IterableDataFrame` will
-        be converted although it's local.
-    """
-    df = to_local_df(df, schema)
-    if isinstance(df, LocalBoundedDataFrame):
-        return df
-    return ArrayDataFrame(df.as_array(), df.schema)
-
-
 def pickle_df(df: DataFrame) -> bytes:
     """Pickles a dataframe to bytes array. It firstly converts the dataframe
-    using :func:`.to_local_bounded_df`, and then serialize the underlying data.
+    local bounded, and then serialize the underlying data.
 
     :param df: input DataFrame
     :return: pickled binary data
@@ -311,7 +121,7 @@ def pickle_df(df: DataFrame) -> bytes:
         Be careful to use on large dataframes or non-local, un-materialized dataframes,
         it can be slow. You should always use :func:`.unpickle_df` to deserialize.
     """
-    df = to_local_bounded_df(df)
+    df = df.as_local_bounded()
     o: List[Any] = [df.schema]
     if isinstance(df, PandasDataFrame):
         o.append("p")
@@ -413,7 +223,7 @@ def deserialize_df(
 
 
 def get_join_schemas(
-    df1: DataFrame, df2: DataFrame, how: str, on: Iterable[str]
+    df1: DataFrame, df2: DataFrame, how: str, on: Optional[Iterable[str]]
 ) -> Tuple[Schema, Schema]:
     """Get :class:`~triad:triad.collections.schema.Schema` object after
     joining ``df1`` and ``df2``. If ``on`` is not empty, it's mainly for
@@ -451,14 +261,15 @@ def get_join_schemas(
         ],
         ValueError(f"{how} is not a valid join type"),
     )
-    on = list(on)
+    on = list(on) if on is not None else []
     aot(len(on) == len(set(on)), f"{on} has duplication")
     if how != "cross" and len(on) == 0:
-        on = list(df1.schema.intersect(df2.schema.names).names)
+        other = set(df2.columns)
+        on = [c for c in df1.columns if c in other]
         aot(
             len(on) > 0,
             lambda: SchemaError(
-                f"no common columns between {df1.schema} and {df2.schema}"
+                f"no common columns between {df1.columns} and {df2.columns}"
             ),
         )
     schema2 = df2.schema

@@ -5,18 +5,16 @@ import pandas as pd
 import pyspark
 import pyspark.sql as ps
 import pytest
-from fugue.dataframe.pandas_dataframe import PandasDataFrame
-from fugue.dataframe.utils import (
-    get_dataframe_column_names,
-    rename_dataframe_column_names,
-)
-from fugue_test.dataframe_suite import DataFrameTests
 from pyspark.sql import SparkSession
 from triad.collections.schema import Schema
 
+import fugue.api as fi
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
+from fugue.plugins import get_column_names, rename
 from fugue_spark import SparkExecutionEngine
 from fugue_spark._utils.convert import to_schema, to_spark_schema
 from fugue_spark.dataframe import SparkDataFrame
+from fugue_test.dataframe_suite import DataFrameTests
 
 
 class SparkDataFrameTests(DataFrameTests.Tests):
@@ -33,9 +31,25 @@ class SparkDataFrameTests(DataFrameTests.Tests):
         # TODO: Spark will silently cast invalid data to nulls without exceptions
         pass
 
-    def test_map_type(self):
-        if pyspark.__version__ >= "3":
-            return super().test_map_type()
+
+class NativeSparkDataFrameTests(DataFrameTests.NativeTests):
+    @pytest.fixture(autouse=True)
+    def init_session(self, spark_session):
+        self.spark_session = spark_session
+
+    def df(self, data: Any = None, schema: Any = None):
+        engine = SparkExecutionEngine(self.spark_session)
+        return engine.to_df(data, schema=schema).native
+
+    def to_native_df(self, pdf: pd.DataFrame) -> Any:
+        return self.spark_session.createDataFrame(pdf)
+
+    def test_not_local(self):
+        assert not fi.is_local(self.df([], "a:int,b:str"))
+
+    def test_alter_columns_invalid(self):
+        # TODO: Spark will silently cast invalid data to nulls without exceptions
+        pass
 
 
 def test_init(spark_session):
@@ -123,24 +137,24 @@ def _df(data, schema=None):
     return SparkDataFrame(df, schema)
 
 
-def test_get_dataframe_column_names(spark_session):
+def _test_get_column_names(spark_session):
     df = spark_session.createDataFrame(
         pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"])
     )
-    assert get_dataframe_column_names(df) == ["0", "1", "2"]
+    assert get_column_names(df) == ["0", "1", "2"]
 
 
-def test_rename_dataframe_column_names(spark_session):
+def _test_rename(spark_session):
     pdf = spark_session.createDataFrame(
         pd.DataFrame([[0, 1, 2]], columns=["a", "b", "c"])
     )
-    df = rename_dataframe_column_names(pdf, {})
+    df = rename(pdf, {})
     assert isinstance(df, ps.DataFrame)
-    assert get_dataframe_column_names(df) == ["a", "b", "c"]
+    assert get_column_names(df) == ["a", "b", "c"]
 
     pdf = spark_session.createDataFrame(
         pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"])
     )
-    df = rename_dataframe_column_names(pdf, {"0": "_0", "1": "_1", "2": "_2"})
+    df = rename(pdf, {"0": "_0", "1": "_1", "2": "_2"})
     assert isinstance(df, ps.DataFrame)
-    assert get_dataframe_column_names(df) == ["_0", "_1", "_2"]
+    assert get_column_names(df) == ["_0", "_1", "_2"]

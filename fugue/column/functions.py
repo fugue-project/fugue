@@ -132,7 +132,7 @@ def count(col: ColumnExpr) -> ColumnExpr:
 
             import fugue.column.functions as f
 
-            f.count(col("*"))  # COUNT(*)
+            f.count(all_cols())  # COUNT(*)
             f.count(col("a"))  # COUNT(a) AS a
 
             # you can specify explicitly
@@ -164,7 +164,7 @@ def count_distinct(col: ColumnExpr) -> ColumnExpr:
 
             import fugue.column.functions as f
 
-            f.count_distinct(col("*"))  # COUNT(DISTINCT *)
+            f.count_distinct(all_cols())  # COUNT(DISTINCT *)
             f.count_distinct(col("a"))  # COUNT(DISTINCT a) AS a
 
             # you can specify explicitly

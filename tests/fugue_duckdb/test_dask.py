@@ -4,17 +4,17 @@ import dask.dataframe as dd
 import duckdb
 import pandas as pd
 import pyarrow as pa
-from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, PartitionSpec
+from dask.distributed import Client
+from pytest import raises
+
+import fugue.api as fa
+from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, PartitionSpec, fsql
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_dask import DaskDataFrame
-from fugue import fsql
-from fugue_test.builtin_suite import BuiltInTests
-from fugue_test.execution_suite import ExecutionEngineTests
-from pytest import raises
-from dask.distributed import Client
 from fugue_duckdb import DuckDaskExecutionEngine
 from fugue_duckdb.dataframe import DuckDataFrame
-
+from fugue_test.builtin_suite import BuiltInTests
+from fugue_test.execution_suite import ExecutionEngineTests
 
 _CONF = {
     "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
@@ -29,19 +29,30 @@ class DuckDaskExecutionEngineTests(ExecutionEngineTests.Tests):
     def setUpClass(cls):
         cls._con = duckdb.connect()
         cls._engine = cls.make_engine(cls)
+        fa.set_global_engine(cls._engine)
 
     @classmethod
     def tearDownClass(cls):
+        fa.clear_global_engine()
         cls._con.close()
         cls._engine.dask_client.close()
 
     def make_engine(self):
+        client = Client(processes=True, n_workers=2, threads_per_worker=1)
         e = DuckDaskExecutionEngine(
             conf={"test": True, "fugue.duckdb.pragma.threads": 2},
             connection=self._con,
-            dask_client=Client(),
+            dask_client=client,
         )
         return e
+    
+    def test_properties(self):
+        assert not self.engine.is_distributed
+        assert self.engine.map_engine.is_distributed
+        assert not self.engine.sql_engine.is_distributed
+
+    def test_get_parallelism(self):
+        assert fa.get_current_parallelism() == 2
 
     def test_to_df_dask(self):
         pdf = pd.DataFrame([[1.1]], columns=["a"])
@@ -118,13 +129,11 @@ class DuckDaskBuiltInTests(BuiltInTests.Tests):
         def assert_data(df: DataFrame) -> None:
             assert df.schema == "a:datetime,b:bytes,c:[long]"
 
-        df = pd.DataFrame(
-            [[1,2,3]], columns=list("abc")
-        )
+        df = pd.DataFrame([[1, 2, 3]], columns=list("abc"))
 
         with FugueWorkflow() as dag:
             x = dag.df(df)
             result = dag.select("SELECT * FROM ", x)
             result.yield_dataframe_as("x")
         res = dag.run(self.engine)
-        assert res["x"].as_array() == [[1,2,3]]
+        assert res["x"].as_array() == [[1, 2, 3]]

@@ -1,24 +1,19 @@
 import os
+from typing import Any, List
 
 import duckdb
 import pandas as pd
 import ray
 import ray.data as rd
-from fugue import (
-    ArrayDataFrame,
-    FugueWorkflow,
-    transform,
-    DataFrame,
-    infer_execution_engine,
-)
-from fugue.dataframe.utils import _df_eq as df_eq
-from fugue import fsql
-from fugue_test.builtin_suite import BuiltInTests
-from fugue_test.execution_suite import ExecutionEngineTests
-from pytest import raises
 from triad import FileSystem
 
-from fugue_ray import RayExecutionEngine, RayDataFrame
+import fugue.api as fa
+from fugue import ArrayDataFrame, DataFrame, FugueWorkflow, fsql, transform
+from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.plugins import infer_execution_engine
+from fugue_ray import RayDataFrame, RayExecutionEngine
+from fugue_test.builtin_suite import BuiltInTests
+from fugue_test.execution_suite import ExecutionEngineTests
 
 _CONF = {
     "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
@@ -34,18 +29,33 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
         ray.init(num_cpus=2)
         cls._con = duckdb.connect()
         cls._engine = cls.make_engine(cls)
+        fa.set_global_engine(cls._engine)
 
     @classmethod
     def tearDownClass(cls):
+        fa.clear_global_engine()
         cls._con.close()
         ray.shutdown()
 
     def make_engine(self):
         e = RayExecutionEngine(
-            conf={"test": True, "fugue.duckdb.pragma.threads": 2},
+            conf={
+                "test": True,
+                "fugue.duckdb.pragma.threads": 2,
+                "fugue.ray.zero_copy": True,
+                "fugue.ray.default.batch_size": 10000,
+            },
             connection=self._con,
         )
         return e
+
+    def test_properties(self):
+        assert self.engine.is_distributed
+        assert self.engine.map_engine.is_distributed
+        assert not self.engine.sql_engine.is_distributed
+
+    def test_get_parallelism(self):
+        assert fa.get_current_parallelism() == 2
 
     def test_repartitioning(self):
         # schema: *
@@ -61,7 +71,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             partition="per_row",
             engine="ray",
             as_local=True,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
         )
         df_eq(
             res,
@@ -77,7 +87,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             partition=dict(num=3, algo="rand"),
             engine="ray",
             as_local=True,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
         )
         df_eq(
             res,
@@ -93,7 +103,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
             partition=dict(num=40),
             engine="ray",
             as_local=True,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
         )
         df_eq(
             res,
@@ -119,7 +129,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
                 "fugue.ray.remote.num_cpus": 1,
             },
             as_local=True,
-            force_output_fugue_dataframe=True,
+            as_fugue=True,
         )
         df_eq(
             res,
@@ -177,6 +187,9 @@ class RayBuiltInTests(BuiltInTests.Tests):
         )
         return e
 
+    def test_yield_table(self):
+        pass
+
     def test_yield_2(self):
         def assert_data(df: DataFrame) -> None:
             assert df.schema == "a:datetime,b:bytes,c:[long]"
@@ -224,3 +237,34 @@ class RayBuiltInTests(BuiltInTests.Tests):
         #     ),
         #     check_like=True,
         # )
+
+    def test_coarse_partition(self):
+        def verify_coarse_partition(df: pd.DataFrame) -> List[List[Any]]:
+            ct = df.a.nunique()
+            s = df.a * 1000 + df.b
+            ordered = ((s - s.shift(1)).dropna() >= 0).all(axis=None)
+            return [[ct, ordered]]
+
+        def assert_(df: pd.DataFrame, rc: int, n: int, check_ordered: bool) -> None:
+            if rc > 0:
+                assert len(df) == rc
+            assert df.ct.sum() == n
+            if check_ordered:
+                assert (df.ordered == True).all()
+
+        gps = 100
+        partition_num = 6
+        df = pd.DataFrame(dict(a=list(range(gps)) * 10, b=range(gps * 10))).sample(
+            frac=1.0
+        )
+        with FugueWorkflow() as dag:
+            a = dag.df(df)
+            c = a.partition(
+                algo="coarse", by="a", presort="b", num=partition_num
+            ).transform(verify_coarse_partition, schema="ct:int,ordered:bool")
+            dag.output(
+                c,
+                using=assert_,
+                params=dict(rc=partition_num, n=gps, check_ordered=True),
+            )
+        dag.run(self.engine)

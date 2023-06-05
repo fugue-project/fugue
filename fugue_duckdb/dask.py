@@ -8,11 +8,10 @@ from duckdb import DuckDBPyConnection
 from triad import assert_or_throw
 
 from fugue import DataFrame, MapEngine, PartitionSpec
-from fugue.collections.partition import EMPTY_PARTITION_SPEC
 from fugue_dask import DaskDataFrame, DaskExecutionEngine
 from fugue_dask.execution_engine import DaskMapEngine
-from fugue_duckdb.dataframe import DuckDataFrame
-from fugue_duckdb.execution_engine import DuckExecutionEngine
+from .dataframe import DuckDataFrame
+from .execution_engine import DuckExecutionEngine, _to_duck_df
 
 
 class DuckDaskExecutionEngine(DuckExecutionEngine):
@@ -37,6 +36,9 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
     def create_default_map_engine(self) -> MapEngine:
         return DaskMapEngine(self._dask_engine)
 
+    def get_current_parallelism(self) -> int:
+        return self._dask_engine.get_current_parallelism()
+
     @property
     def dask_client(self) -> Client:
         return self._dask_engine.dask_client
@@ -45,11 +47,14 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
         if isinstance(df, (dd.DataFrame, DaskDataFrame)):
             ddf = self._to_dask_df(df, schema)
             if all(not pa.types.is_nested(f.type) for f in ddf.schema.fields):
-                return DuckDataFrame(self.connection.from_df(ddf.as_pandas()))
+                res = DuckDataFrame(self.connection.from_df(ddf.as_pandas()))
             else:
-                return DuckDataFrame(
-                    duckdb.arrow(ddf.as_arrow(), connection=self.connection)
+                res = DuckDataFrame(
+                    duckdb.from_arrow(ddf.as_arrow(), connection=self.connection)
                 )
+            if ddf.has_metadata:  # pragma: no cover
+                res.reset_metadata(ddf.metadata)
+            return res
         return super().to_df(df, schema)
 
     def repartition(self, df: DataFrame, partition_spec: PartitionSpec) -> DataFrame:
@@ -79,10 +84,11 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
         path: str,
         format_hint: Any = None,
         mode: str = "overwrite",
-        partition_spec: PartitionSpec = EMPTY_PARTITION_SPEC,
+        partition_spec: Optional[PartitionSpec] = None,
         force_single: bool = False,
         **kwargs: Any,
     ) -> None:
+        partition_spec = partition_spec or PartitionSpec()
         if isinstance(df, DaskDataFrame) or not partition_spec.empty:
             return self._dask_engine.save_df(
                 self._to_dask_df(df),
@@ -119,9 +125,11 @@ class DuckDaskExecutionEngine(DuckExecutionEngine):
             return df
         if isinstance(df, dd.DataFrame):
             return self._dask_engine.to_df(df, schema)
-        return self._to_duck_df(df, schema)
+        return _to_duck_df(self, df, schema)
 
     def _to_dask_df(self, df: Any, schema: Any = None) -> DaskDataFrame:
         if isinstance(df, DuckDataFrame):
-            return self._dask_engine.to_df(df.as_pandas(), df.schema)
+            res = self._dask_engine.to_df(df.as_pandas(), df.schema)
+            res.reset_metadata(df.metadata if df.has_metadata else None)
+            return res
         return self._dask_engine.to_df(df, schema)

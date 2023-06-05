@@ -1,37 +1,60 @@
 import json
 
 from fugue.collections.partition import parse_presort_exp, PartitionSpec
-from fugue.constants import KEYWORD_CORECOUNT, KEYWORD_ROWCOUNT
+from fugue.constants import KEYWORD_PARALLELISM, KEYWORD_ROWCOUNT
 from pytest import raises
 from triad.collections.schema import Schema
 from triad.utils.hash import to_uuid
 from triad.collections.dict import IndexedOrderedDict
 
+
 def test_parse_presort_exp():
 
     assert parse_presort_exp(None) == IndexedOrderedDict()
-    assert parse_presort_exp(IndexedOrderedDict([('c', True)])) == IndexedOrderedDict([('c', True)])
-    assert parse_presort_exp("c") == IndexedOrderedDict([('c', True)])
-    assert parse_presort_exp("         c") == IndexedOrderedDict([('c', True)])
-    assert parse_presort_exp("c           desc")  == IndexedOrderedDict([('c', False)])
-    assert parse_presort_exp("b desc, c asc")  == IndexedOrderedDict([('b', False), ('c', True)])
-    assert parse_presort_exp("DESC DESC, ASC ASC") == IndexedOrderedDict([('DESC', False), ('ASC', True)])
-    assert parse_presort_exp([("b", False),("c", True)]) == IndexedOrderedDict([('b', False), ('c', True)])
-    assert parse_presort_exp("B DESC, C ASC")  == IndexedOrderedDict([('B', False), ('C', True)])
-    assert parse_presort_exp("b desc, c asc") == IndexedOrderedDict([('b', False), ('c', True)])
-    
+    assert parse_presort_exp(IndexedOrderedDict([("c", True)])) == IndexedOrderedDict(
+        [("c", True)]
+    )
+    assert parse_presort_exp("c") == IndexedOrderedDict([("c", True)])
+    assert parse_presort_exp("         c") == IndexedOrderedDict([("c", True)])
+    assert parse_presort_exp("c           desc") == IndexedOrderedDict([("c", False)])
+    assert parse_presort_exp("b desc, c asc") == IndexedOrderedDict(
+        [("b", False), ("c", True)]
+    )
+    assert parse_presort_exp("DESC DESC, ASC ASC") == IndexedOrderedDict(
+        [("DESC", False), ("ASC", True)]
+    )
+    assert parse_presort_exp([("b", False), ("c", True)]) == IndexedOrderedDict(
+        [("b", False), ("c", True)]
+    )
+    assert parse_presort_exp("B DESC, C ASC") == IndexedOrderedDict(
+        [("B", False), ("C", True)]
+    )
+    assert parse_presort_exp("b desc, c asc") == IndexedOrderedDict(
+        [("b", False), ("c", True)]
+    )
+    assert parse_presort_exp("`` desc, `a b` asc, ````, `中国`") == IndexedOrderedDict(
+        [("", False), ("a b", True), ("`", True), ("中国", True)]
+    )
+    assert parse_presort_exp([("", False), ("a b", True), "中国"]) == IndexedOrderedDict(
+        [("", False), ("a b", True), ("中国", True)]
+    )
 
     with raises(SyntaxError):
-        parse_presort_exp("b dsc, c asc") # mispelling of desc
+        parse_presort_exp("b dsc, c asc")  # mispelling of desc
 
     with raises(SyntaxError):
-        parse_presort_exp("c true") # string format needs desc/asc
+        parse_presort_exp("c true")  # string format needs desc/asc
 
     with raises(SyntaxError):
-        parse_presort_exp("c true, c true") # cannot contain duplicates
+        parse_presort_exp("c true, c true")  # cannot contain duplicates
 
     with raises(SyntaxError):
-        parse_presort_exp([("b", "desc"),("c", "asc")]) # instead of desc and asc, needs to be bool
+        parse_presort_exp("a b dsc, c asc")  # no quote
+
+    with raises(SyntaxError):
+        parse_presort_exp(
+            [("b", "desc"), ("c", "asc")]
+        )  # instead of desc and asc, needs to be bool
 
 
 def test_partition_spec():
@@ -61,10 +84,10 @@ def test_partition_spec():
     assert "hash" == p.algo
     assert not p.empty
 
-    p = PartitionSpec(by=["a", "b", "c"], num=5, presort="d,e desc", algo="EvEN")
-    assert ["a", "b", "c"] == p.partition_by
+    p = PartitionSpec(by=["a ", "b", "c"], num=5, presort="d,`e ` desc", algo="EvEN")
+    assert ["a ", "b", "c"] == p.partition_by
     assert "5" == p.num_partitions
-    assert dict(d=True, e=False) == p.presort
+    assert {"d": True, "e ": False} == p.presort
     assert "even" == p.algo
     assert not p.empty
 
@@ -86,6 +109,12 @@ def test_partition_spec():
 
     assert PartitionSpec("per_row") == PartitionSpec(num="ROWCOUNT", algo="even")
     assert PartitionSpec(by="abc") == PartitionSpec(by=["abc"])
+    assert PartitionSpec("abc") == PartitionSpec(by=["abc"])
+    assert PartitionSpec(["abc"]) == PartitionSpec(by=["abc"])
+    assert PartitionSpec(["abc", "def"]) == PartitionSpec(by=["abc", "def"])
+    assert PartitionSpec(("abc", "def")) == PartitionSpec(by=["abc", "def"])
+
+    assert PartitionSpec(4) == PartitionSpec(num=4)
 
     # partition by overlaps with presort
     raises(
@@ -105,13 +134,12 @@ def test_partition_spec():
     raises(SyntaxError, lambda: PartitionSpec(partition_by=123))
 
     # bad input
-    raises(TypeError, lambda: PartitionSpec(1))
+    raises(TypeError, lambda: PartitionSpec(1.1))
 
     # bad presort
     raises(SyntaxError, lambda: PartitionSpec(presort="a xsc,e desc"))
     raises(SyntaxError, lambda: PartitionSpec(presort="a asc,a desc"))
     raises(SyntaxError, lambda: PartitionSpec(presort="a b asc,a desc"))
-    raises(SyntaxError, lambda: PartitionSpec(presort=["a asc", ("b", True)]))
     raises(SyntaxError, lambda: PartitionSpec(presort=[("a", "asc"), "b"]))
     raises(SyntaxError, lambda: PartitionSpec(presort=[("a",), ("b")]))
     raises(SyntaxError, lambda: PartitionSpec(presort=["a", ["b", True]]))
@@ -119,6 +147,9 @@ def test_partition_spec():
     p = PartitionSpec(dict(partition_by=["a"], presort="d asc,e desc"))
     assert dict(a=True, d=True, e=False) == p.get_sorts(
         Schema("a:int,b:int,d:int,e:int")
+    )
+    assert dict(d=True, e=False) == p.get_sorts(
+        Schema("a:int,b:int,d:int,e:int"), with_partition_keys=False
     )
     p = PartitionSpec(dict(partition_by=["e", "a"], presort="d asc"))
     assert p.get_key_schema(Schema("a:int,b:int,d:int,e:int")) == "e:int,a:int"
@@ -184,6 +215,10 @@ def test_partition_cursor():
     assert 2 == c.physical_partition_no
     assert 6 == c.slice_no
 
+    c.set(lambda: [1, 2, 2, 2], 5, 6)
+    assert [2, 1] == c.key_value_array
+    assert dict(a=1, b=2) == c.key_value_dict
+
 
 def test_get_num_partitions():
     p = PartitionSpec(dict(partition_by=["b", "a"]))
@@ -196,9 +231,9 @@ def test_get_num_partitions():
     assert 6 == p.get_num_partitions(x=lambda: 1, Y=lambda: 2)
     raises(Exception, lambda: p.get_num_partitions(x=lambda: 1))
 
-    p = PartitionSpec(dict(partition_by=["b", "a"], num="min(ROWCOUNT,CORECOUNT)"))
+    p = PartitionSpec(dict(partition_by=["b", "a"], num="min(ROWCOUNT,CONCURRENCY)"))
     assert 90 == p.get_num_partitions(
-        **{KEYWORD_ROWCOUNT: lambda: 100, KEYWORD_CORECOUNT: lambda: 90}
+        **{KEYWORD_ROWCOUNT: lambda: 100, KEYWORD_PARALLELISM: lambda: 90}
     )
 
 
