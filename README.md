@@ -191,6 +191,8 @@ FugueSQL backends:
 *   [Duckdb](https://github.com/duckdb/duckdb) - in-process SQL OLAP database management
 *   [dask-sql](https://github.com/dask-contrib/dask-sql) - SQL interface for Dask
 *   SparkSQL
+*   [BigQuery](https://fugue-tutorials.readthedocs.io/tutorials/integrations/warehouses/bigquery.html)
+*   Trino
 
 
 Fugue is available as a backend or can integrate with the following projects:
@@ -200,6 +202,7 @@ Fugue is available as a backend or can integrate with the following projects:
 *   [Nixtla](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ecosystem/nixtla.html) - timeseries modelling
 *   [Prefect](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ecosystem/prefect.html) - workflow orchestration
 *   [Pandera](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ecosystem/pandera.html) - data validation
+*   [Datacompy](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ecosystem/datacompy.html) - comparing DataFrames
 
 
 ## Further Resources
