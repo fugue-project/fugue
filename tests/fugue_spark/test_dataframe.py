@@ -12,7 +12,7 @@ import fugue.api as fi
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.plugins import get_column_names, rename
 from fugue_spark import SparkExecutionEngine
-from fugue_spark._utils.convert import to_schema, to_spark_schema
+from fugue_spark._utils.convert import to_schema, to_spark_schema, to_spark_df
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
 
@@ -42,7 +42,7 @@ class NativeSparkDataFrameTests(DataFrameTests.NativeTests):
         return engine.to_df(data, schema=schema).native
 
     def to_native_df(self, pdf: pd.DataFrame) -> Any:
-        return self.spark_session.createDataFrame(pdf)
+        return to_spark_df(self.spark_session, pdf)
 
     def test_not_local(self):
         assert not fi.is_local(self.df([], "a:int,b:str"))
@@ -131,30 +131,24 @@ def _df(data, schema=None):
     session = SparkSession.builder.getOrCreate()
     if schema is not None:
         pdf = PandasDataFrame(data, to_schema(schema))
-        df = session.createDataFrame(pdf.native, to_spark_schema(schema))
+        df = to_spark_df(session, pdf.native, schema)
     else:
-        df = session.createDataFrame(data)
+        df = to_spark_df(session, data)
     return SparkDataFrame(df, schema)
 
 
 def _test_get_column_names(spark_session):
-    df = spark_session.createDataFrame(
-        pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"])
-    )
+    df = to_spark_df(spark_session, pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"]))
     assert get_column_names(df) == ["0", "1", "2"]
 
 
 def _test_rename(spark_session):
-    pdf = spark_session.createDataFrame(
-        pd.DataFrame([[0, 1, 2]], columns=["a", "b", "c"])
-    )
+    pdf = to_spark_df(spark_session, pd.DataFrame([[0, 1, 2]], columns=["a", "b", "c"]))
     df = rename(pdf, {})
     assert isinstance(df, ps.DataFrame)
     assert get_column_names(df) == ["a", "b", "c"]
 
-    pdf = spark_session.createDataFrame(
-        pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"])
-    )
+    pdf = to_spark_df(spark_session, pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"]))
     df = rename(pdf, {"0": "_0", "1": "_1", "2": "_2"})
     assert isinstance(df, ps.DataFrame)
     assert get_column_names(df) == ["_0", "_1", "_2"]

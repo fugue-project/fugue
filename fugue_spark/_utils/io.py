@@ -1,16 +1,18 @@
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import pyspark.sql as ps
-from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import DataFrame
-from fugue._utils.io import FileParser, save_df
-from fugue_spark.dataframe import SparkDataFrame
-from fugue_spark._utils.convert import to_schema, to_spark_schema
 from pyspark.sql import SparkSession
 from triad.collections import Schema
+from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
-from triad.collections.dict import ParamDict
+
+from fugue._utils.io import FileParser, save_df
+from fugue.collections.partition import PartitionSpec
+from fugue.dataframe import DataFrame
+from fugue_spark.dataframe import SparkDataFrame
+
+from .convert import to_schema, to_spark_schema
 
 
 class SparkIO(object):
