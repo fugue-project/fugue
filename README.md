@@ -19,6 +19,8 @@ Fugue is most commonly used for:
 *   **Parallelizing or scaling existing Python and Pandas code** by bringing it to Spark, Dask, or Ray with minimal rewrites.
 *   Using [FugueSQL](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes_sql.html) to **define end-to-end workflows** on top of Pandas, Spark, and Dask DataFrames. FugueSQL is an enhanced SQL interface that can invoke Python code.
 
+To see how Fugue compares to other frameworks like dbt, Arrow, Ibis, PySpark Pandas, see the [comparisons](https://fugue-tutorials.readthedocs.io/#how-does-fugue-compare-to)
+
 ## [Fugue API](https://fugue-tutorials.readthedocs.io/tutorials/quick_look/ten_minutes.html)
 
 The Fugue API is a collection of functions that are capable of running on Pandas, Spark, Dask, and Ray. The simplest way to use Fugue is the [`transform()` function](https://fugue-tutorials.readthedocs.io/tutorials/beginner/transform.html). This lets users parallelize the execution of a single function by bringing it to Spark, Dask, or Ray. In the example below, the `map_letter_to_food()` function takes in a mapping and applies it on a column. This is just Pandas and Python so far (without Fugue).
@@ -225,7 +227,7 @@ Fugue is available as a backend or can integrate with the following projects:
 *   [Nixtla](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ecosystem/nixtla.html) - timeseries modelling
 *   [Prefect](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ecosystem/prefect.html) - workflow orchestration
 *   [Pandera](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ecosystem/pandera.html) - data validation
-*   [Datacompy](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ecosystem/datacompy.html) - comparing DataFrames
+*   [Datacompy (by Capital One)](https://fugue-tutorials.readthedocs.io/tutorials/integrations/ecosystem/datacompy.html) - comparing DataFrames
 
 Registered 3rd party extensions (majorly for Fugue SQL) include:
 
@@ -246,8 +248,7 @@ Feel free to message us on [Slack](http://slack.fugue.ai). We also have [contrib
 ### Mentioned Uses
 
 *   [Productionizing Data Science at Interos, Inc. (LinkedIn post by Anthony Holten)](https://www.linkedin.com/posts/anthony-holten_pandas-spark-dask-activity-7022628193983459328-QvcF)
-
-*   [Multiple Time Series Forecasting with Fugue & Nixtla at Bain & Company(LinkedIn post by Fahad Akbar)](https://www.linkedin.com/posts/fahadakbar_fugue-datascience-forecasting-activity-7041119034813124608-u08q?utm_source=share&utm_medium=member_desktop)
+*   [Multiple Time Series Forecasting with Fugue & Nixtla at Bain & Company (LinkedIn post by Fahad Akbar)](https://www.linkedin.com/posts/fahadakbar_fugue-datascience-forecasting-activity-7041119034813124608-u08q?utm_source=share&utm_medium=member_desktop)
 
 ## Further Resources
 
