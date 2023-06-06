@@ -1,3 +1,4 @@
+import pickle
 from typing import Any, Iterable, List, Tuple
 
 import pandas as pd
@@ -147,15 +148,14 @@ def to_pandas(df: ps.DataFrame) -> pd.DataFrame:
     ):
         return df.toPandas()
     else:
-        import cloudpickle
 
         def serialize(dfs):  # pragma: no cover
             for df in dfs:
-                data = cloudpickle.dumps(df)
+                data = pickle.dumps(df)
                 yield pd.DataFrame([[data]], columns=["data"])
 
         sdf = df.mapInPandas(serialize, schema="data binary")
-        return pd.concat(cloudpickle.loads(x.data) for x in sdf.collect())
+        return pd.concat(pickle.loads(x.data) for x in sdf.collect())
 
 
 # TODO: the following function always set nullable to true,
