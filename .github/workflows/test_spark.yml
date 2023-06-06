@@ -41,7 +41,7 @@ jobs:
     - name: Install Pandas ${{ matrix.pandas-version }}
       run: pip install "pandas==${{ matrix.pandas-version }}"
     - name: Downgrade Ibis
-      if: matrix.spark-version == "3.1.1"
+      if: matrix.spark-version < '3.4.0'
       run: pip install "ibis-framework<5"
     - name: Test
       run: make testspark
