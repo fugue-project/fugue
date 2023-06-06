@@ -21,7 +21,7 @@ def get_version() -> str:
 setup(
     name="fugue",
     version=get_version(),
-    packages=find_packages(),
+    packages=find_packages(include=["fugue*"]),
     description="An abstraction layer for distributed computation",
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
@@ -42,7 +42,7 @@ setup(
     ],
     extras_require={
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.6"],
-        "spark": ["pyspark"],
+        "spark": ["pyspark>=3.1.1"],
         "dask": [
             "dask[distributed,dataframe]; python_version < '3.8'",
             "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
@@ -62,7 +62,7 @@ setup(
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
         "all": [
             "fugue-sql-antlr[cpp]>=0.1.6",
-            "pyspark",
+            "pyspark>=3.1.1",
             "dask[distributed,dataframe]; python_version < '3.8'",
             "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
             "ray[data]>=2.0.0",

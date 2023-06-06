@@ -1,6 +1,6 @@
+import pickle
 from typing import Any, Iterable, List, Tuple
 
-import cloudpickle
 import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
@@ -11,7 +11,17 @@ from triad.collections import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
 from triad.utils.schema import quote_name
+
+import fugue.api as fa
+from fugue import DataFrame
+
 from .misc import is_spark_dataframe
+
+try:
+    from pyspark.sql.types import TimestampNTZType  # pylint: disable-all
+except ImportError:  # pragma: no cover
+    # pyspark < 3.2
+    from pyspark.sql.types import TimestampType as TimestampNTZType
 
 
 def to_spark_schema(obj: Any) -> pt.StructType:
@@ -108,20 +118,44 @@ def to_type_safe_input(rows: Iterable[ps.Row], schema: Schema) -> Iterable[List[
             yield r
 
 
+def to_spark_df(session: ps.SparkSession, df: Any, schema: Any = None) -> ps.DataFrame:
+    if schema is not None and not isinstance(schema, pt.StructType):
+        schema = to_spark_schema(schema)
+    if isinstance(df, pd.DataFrame):
+        if pd.__version__ >= "2" and session.version < "3.4":  # pragma: no cover
+            # pyspark < 3.4 does not support pandas 2 when doing
+            # createDataFrame, see this issue:
+            # https://stackoverflow.com/a/75926954/12309438
+            # this is a workaround with the cost of memory and speed.
+            if schema is None:
+                schema = to_spark_schema(fa.get_schema(df))
+            df = fa.as_fugue_df(df).as_array(type_safe=True)
+        return session.createDataFrame(df, schema=schema)
+    if isinstance(df, DataFrame):
+        if pd.__version__ >= "2" and session.version < "3.4":  # pragma: no cover
+            if schema is None:
+                schema = to_spark_schema(df.schema)
+            return session.createDataFrame(df.as_array(type_safe=True), schema=schema)
+        return session.createDataFrame(df.as_pandas(), schema=schema)
+    else:
+        return session.createDataFrame(df, schema=schema)
+
+
 def to_pandas(df: ps.DataFrame) -> pd.DataFrame:
     if pd.__version__ < "2" or not any(
-        isinstance(x.dataType, (pt.TimestampType, pt.TimestampNTZType))
+        isinstance(x.dataType, (pt.TimestampType, TimestampNTZType))
         for x in df.schema.fields
     ):
         return df.toPandas()
+    else:
 
-    def serialize(dfs):  # pragma: no cover
-        for df in dfs:
-            data = cloudpickle.dumps(df)
-            yield pd.DataFrame([[data]], columns=["data"])
+        def serialize(dfs):  # pragma: no cover
+            for df in dfs:
+                data = pickle.dumps(df)
+                yield pd.DataFrame([[data]], columns=["data"])
 
-    sdf = df.mapInPandas(serialize, schema="data binary")
-    return pd.concat(cloudpickle.loads(x.data) for x in sdf.collect())
+        sdf = df.mapInPandas(serialize, schema="data binary")
+        return pd.concat(pickle.loads(x.data) for x in sdf.collect())
 
 
 # TODO: the following function always set nullable to true,

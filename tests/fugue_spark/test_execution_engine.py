@@ -2,12 +2,10 @@ from typing import Any, List
 
 import numpy as np
 import pandas as pd
-import pyspark
 import pyspark.rdd as pr
 import pyspark.sql as ps
 import pytest
 from pyspark import SparkContext, StorageLevel
-from pyspark.sql import DataFrame as SDataFrame
 from pyspark.sql import SparkSession
 from pytest import raises
 from triad import Schema
@@ -26,7 +24,7 @@ from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.extensions.transformer import Transformer, transformer
 from fugue.plugins import infer_execution_engine
 from fugue.workflow.workflow import FugueWorkflow
-from fugue_spark._utils.convert import to_pandas
+from fugue_spark._utils.convert import to_pandas, to_spark_df
 from fugue_spark._utils.misc import is_spark_dataframe, is_spark_session
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
@@ -121,7 +119,7 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         assert abs(len(b.as_array()) - 90) < 2
 
     def test_infer_engine(self):
-        df = self.spark_session.createDataFrame(pd.DataFrame([[0]], columns=["a"]))
+        df = to_spark_df(self.spark_session, pd.DataFrame([[0]], columns=["a"]))
         assert is_spark_session(infer_execution_engine([df]))
 
         fdf = SparkDataFrame(df)
@@ -215,6 +213,10 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
 
     def test_yield_table(self):
         pass
+
+    def test_any_column_name(self):
+        if self.spark_session.version >= "3.3.1":
+            return super().test_any_column_name()
 
     def test_default_session(self):
         a = FugueWorkflow().df([[0]], "a:int")
