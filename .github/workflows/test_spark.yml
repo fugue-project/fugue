@@ -40,10 +40,14 @@ jobs:
       run: pip install "pyspark==${{ matrix.spark-version }}"
     - name: Install Pandas ${{ matrix.pandas-version }}
       run: pip install "pandas==${{ matrix.pandas-version }}"
+    - name: Downgrade Ibis
+      if: matrix.spark-version <= "3.2.1"
+      run: pip install "ibis-framework<5"
     - name: Test
       run: make testspark
 
   test_connect:
+    name: Spark Connect
     runs-on: ubuntu-latest
 
     steps:
