@@ -3,7 +3,7 @@ try:
     import qpd_pandas  # noqa: F401
 
     HAS_QPD = True
-except ImportError:
+except ImportError:  # pragma: no cover
     HAS_QPD = False
 
 import copy

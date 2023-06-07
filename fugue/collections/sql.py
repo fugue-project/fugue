@@ -5,6 +5,7 @@ from uuid import uuid4
 from triad import to_uuid
 
 from fugue._utils.registry import fugue_plugin
+from fugue._utils.misc import import_fsql_dependency
 
 _TEMP_TABLE_EXPR_PREFIX = "<tmpdf:"
 _TEMP_TABLE_EXPR_SUFFIX = ">"
@@ -37,7 +38,7 @@ def transpile_sql(
         and to_dialect is not None
         and from_dialect != to_dialect
     ):
-        import sqlglot
+        sqlglot = import_fsql_dependency("sqlglot")
 
         return " ".join(sqlglot.transpile(raw, read=from_dialect, write=to_dialect))
     else:

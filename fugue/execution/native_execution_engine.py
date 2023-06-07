@@ -10,6 +10,7 @@ from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PandasUtils
 
 from fugue._utils.io import load_df, save_df
+from fugue._utils.misc import import_fsql_dependency
 from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
@@ -54,12 +55,12 @@ class QPDPandasEngine(SQLEngine):
         return False
 
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
-        from qpd_pandas import run_sql_on_pandas
+        qpd_pandas = import_fsql_dependency("qpd_pandas")
 
         _dfs, _sql = self.encode(dfs, statement)
         _dd = {k: self.to_df(v).as_pandas() for k, v in _dfs.items()}  # type: ignore
 
-        df = run_sql_on_pandas(_sql, _dd, ignore_case=True)
+        df = qpd_pandas.run_sql_on_pandas(_sql, _dd, ignore_case=True)
         return self.to_df(df)
 
 

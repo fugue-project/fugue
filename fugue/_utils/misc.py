@@ -1,4 +1,4 @@
-from typing import Type, TypeVar
+from typing import Any, Type, TypeVar
 
 from triad.utils.assertion import assert_or_throw
 
@@ -13,3 +13,16 @@ def get_attribute(obj: object, attr_name: str, data_type: Type[T]) -> T:
         lambda: TypeError(f"{obj.__dict__[attr_name]} is not type {data_type}"),
     )
     return obj.__dict__[attr_name]
+
+
+def import_or_throw(package_name: str, message: str) -> Any:
+    try:
+        return __import__(package_name)
+    except Exception as e:  # pragma: no cover
+        raise ImportError(str(e) + ". " + message)
+
+
+def import_fsql_dependency(package_name: str) -> Any:
+    return import_or_throw(
+        package_name, "Please try to install the package by `pip install fugue[sql]`."
+    )
