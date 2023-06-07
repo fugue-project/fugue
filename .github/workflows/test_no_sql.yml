@@ -20,12 +20,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  core-tests:
-    name: Core Tests
+  tests-no-sql:
+    name: Tests Without SQL Dependencies
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, "3.10"]
+        python-version: [3.7, 3.8, 3.9, "3.10"]
 
     steps:
     - uses: actions/checkout@v2
@@ -43,5 +43,7 @@ jobs:
     - name: Install pandas 2
       if: matrix.python-version == '3.10'
       run: pip install "pandas>=2"
+    - name: Remove SQL dependencies
+      run: pip uninstall -y qpd fugue-sql-antlr sqlglot
     - name: Test
-      run: make testcore
+      run: make testnosql

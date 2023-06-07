@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("fugue_sql_antlr")
+
 import os
 
 import pandas as pd

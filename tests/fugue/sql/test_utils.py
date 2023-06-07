@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("jinja2")
+
 from fugue.sql._utils import fill_sql_template
 
 

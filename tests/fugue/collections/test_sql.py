@@ -1,3 +1,6 @@
+import pytest
+
+pytest.importorskip("sqlglot")
 from triad import to_uuid
 
 from fugue.collections.sql import StructuredRawSQL, TempTableName, transpile_sql

@@ -3,12 +3,11 @@ import os
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 import pandas as pd
-from qpd_pandas import run_sql_on_pandas
-from qpd_pandas.engine import PandasUtils
 from triad import Schema
 from triad.collections.dict import IndexedOrderedDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
+from triad.utils.pandas_like import PandasUtils
 
 from fugue._utils.io import load_df, save_df
 from fugue.collections.partition import (
@@ -55,6 +54,8 @@ class QPDPandasEngine(SQLEngine):
         return False
 
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
+        from qpd_pandas import run_sql_on_pandas
+
         _dfs, _sql = self.encode(dfs, statement)
         _dd = {k: self.to_df(v).as_pandas() for k, v in _dfs.items()}  # type: ignore
 

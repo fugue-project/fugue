@@ -5,7 +5,7 @@ import numpy as np
 import pandas
 import pyarrow as pa
 from dask.distributed import Client, get_client
-from qpd_dask.engine import DaskUtils as DaskUtilsBase
+from triad.utils.pandas_like import PandasLikeUtils
 from triad.utils.pyarrow import to_pandas_dtype, to_single_pandas_dtype
 
 import fugue.api as fa
@@ -23,7 +23,10 @@ def get_default_partitions() -> int:
     return n if n > 0 else fa.get_current_parallelism() * 2
 
 
-class DaskUtils(DaskUtilsBase):
+class DaskUtils(PandasLikeUtils[pd.DataFrame, pd.Series]):
+    def concat_dfs(self, *dfs: pd.DataFrame) -> pd.DataFrame:
+        return pd.concat(list(dfs))
+
     def get_or_create_client(self, client: Optional[Client] = None):
         if client is not None:
             return client

@@ -5,7 +5,6 @@ from typing import Any, Callable, Dict, List, Optional, Type, Union
 import dask.dataframe as dd
 import pandas as pd
 from distributed import Client
-from qpd_dask import run_sql_on_dask
 from triad.collections import Schema
 from triad.collections.dict import IndexedOrderedDict, ParamDict
 from triad.collections.fs import FileSystem
@@ -53,6 +52,8 @@ class QPDDaskEngine(SQLEngine):
         return True
 
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
+        from qpd_dask import run_sql_on_dask
+
         _dfs, _sql = self.encode(dfs, statement)
         dask_dfs = {k: self.to_df(v).native for k, v in _dfs.items()}  # type: ignore
         df = run_sql_on_dask(_sql, dask_dfs, ignore_case=True)

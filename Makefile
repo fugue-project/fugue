@@ -98,6 +98,9 @@ testdask:
 testray:
 	python3 -b -m pytest tests/fugue_ray
 
+testnosql:
+	python3 -b -m pytest --reruns 2 --only-rerun 'Table or view not found' tests/fugue tests/fugue_spark tests/fugue_dask tests/fugue_ray
+
 testduck:
 	python3 -b -m pytest --reruns 2 --only-rerun 'Overflow in cast' tests/fugue_duckdb
 
