@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 from pyspark.sql import DataFrame, SparkSession
 
 from fugue import FugueWorkflow, fsql, transform
@@ -7,6 +8,8 @@ from fugue_spark.registry import _is_sparksql
 
 
 def test_importless(spark_session):
+    pytest.importorskip("fugue_sql_antlr")
+
     for engine in [spark_session, "spark"]:
         dag = FugueWorkflow()
         dag.df([[0]], "a:int").show()

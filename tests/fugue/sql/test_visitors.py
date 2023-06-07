@@ -1,3 +1,6 @@
+import pytest
+
+pytest.importorskip("fugue.sql._visitors")
 import json
 
 from fugue_sql_antlr import FugueSQLParser

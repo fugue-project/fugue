@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("fugue_sql_antlr")
+
 from typing import Any, Iterable, List
 
 from fugue_sql_antlr import FugueSQLParser
@@ -17,10 +21,10 @@ from fugue import (
     module,
     register_sql_engine,
 )
-from fugue.extensions.transformer.convert import _to_output_transformer
-from fugue.sql._visitors import FugueSQLHooks, _Extensions
 from fugue.exceptions import FugueSQLError
 from fugue.execution.native_execution_engine import QPDPandasEngine
+from fugue.extensions.transformer.convert import _to_output_transformer
+from fugue.sql._visitors import FugueSQLHooks, _Extensions
 
 
 def test_create_data():

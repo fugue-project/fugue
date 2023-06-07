@@ -215,6 +215,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
         pass
 
     def test_any_column_name(self):
+        pytest.importorskip("fugue_sql_antlr")
         if self.spark_session.version >= "3.3.1":
             return super().test_any_column_name()
 

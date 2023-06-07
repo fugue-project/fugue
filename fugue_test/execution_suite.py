@@ -1,4 +1,10 @@
 # pylint: disable-all
+try:
+    import qpd_pandas  # noqa: F401
+
+    HAS_QPD = True
+except ImportError:  # pragma: no cover
+    HAS_QPD = False
 
 import copy
 import os
@@ -96,6 +102,7 @@ class ExecutionEngineTests(object):
             pdf = pdf[pdf.a < 0]
             df_eq(o, fa.as_fugue_engine_df(e, pdf), throw=True)
 
+        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
         def test_filter(self):
             a = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
@@ -108,6 +115,7 @@ class ExecutionEngineTests(object):
             c = fa.filter(a, col("a") + col("b") == 3)
             df_eq(c, [[1, 2]], "a:double,b:int", throw=True)
 
+        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
         def test_select(self):
             a = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
@@ -166,6 +174,7 @@ class ExecutionEngineTests(object):
                 b, [[1, "1", 2], [None, "1", 7]], "a:double,o:str,c:double", throw=True
             )
 
+        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
         def test_assign(self):
             a = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
@@ -185,6 +194,7 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
 
+        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
         def test_aggregate(self):
             a = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"

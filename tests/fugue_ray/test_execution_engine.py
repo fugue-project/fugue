@@ -191,6 +191,11 @@ class RayBuiltInTests(BuiltInTests.Tests):
         pass
 
     def test_yield_2(self):
+        try:
+            import sqlglot
+        except ImportError:
+            return
+
         def assert_data(df: DataFrame) -> None:
             assert df.schema == "a:datetime,b:bytes,c:[long]"
 

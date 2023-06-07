@@ -1,9 +1,9 @@
-from builtins import isinstance
 from typing import Any, Dict, Tuple
 
-from fugue_sql_antlr import FugueSQLParser
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import get_caller_global_local_vars
+
+from fugue._utils.misc import import_fsql_dependency
 
 from ..collections.yielded import Yielded
 from ..constants import FUGUE_CONF_SQL_DIALECT, FUGUE_CONF_SQL_IGNORE_CASE
@@ -11,7 +11,6 @@ from ..dataframe.api import is_df
 from ..dataframe.dataframe import DataFrame
 from ..workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
 from ._utils import LazyWorkflowDataFrame, fill_sql_template
-from ._visitors import FugueSQLHooks, _Extensions
 
 
 class FugueSQLWorkflow(FugueWorkflow):
@@ -37,6 +36,10 @@ class FugueSQLWorkflow(FugueWorkflow):
     def _sql(
         self, code: str, *args: Any, **kwargs: Any
     ) -> Dict[str, Tuple[WorkflowDataFrame, WorkflowDataFrames, LazyWorkflowDataFrame]]:
+        FugueSQLParser = import_fsql_dependency("fugue_sql_antlr").FugueSQLParser
+
+        from ._visitors import FugueSQLHooks, _Extensions
+
         # TODO: move dict construction to triad
         params: Dict[str, Any] = {}
         for a in args:

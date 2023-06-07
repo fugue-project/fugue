@@ -1,8 +1,6 @@
 import re
 from typing import Any, Dict, Optional
 
-import jinja2
-from jinja2 import Template
 from triad import assert_or_throw
 
 from ..collections.yielded import Yielded
@@ -18,6 +16,9 @@ def fill_sql_template(sql: str, params: Dict[str, Any]):
     :param sql: jinja compatible template
     :param params: params to be inserted into template
     """
+    import jinja2
+    from jinja2 import Template
+
     try:
         if "self" in params:
             params = {k: v for k, v in params.items() if k != "self"}

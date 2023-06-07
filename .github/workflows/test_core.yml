@@ -20,7 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  core-tests:
+    name: Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:

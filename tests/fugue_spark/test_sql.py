@@ -1,12 +1,13 @@
 import pandas as pd
-from fugue import register_execution_engine
-from fugue import FugueSQLWorkflow
+import pytest
 from pyspark.sql import SparkSession
 
+from fugue import FugueSQLWorkflow, register_execution_engine
 from fugue_spark import SparkExecutionEngine
 
 
 def test_sql(spark_session):
+    pytest.importorskip("fugue_sql_antlr")
     register_execution_engine(
         "_spark",
         lambda conf, **kwargs: SparkExecutionEngine(
