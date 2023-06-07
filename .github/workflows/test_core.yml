@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   core-tests:
-    name: Core Tests
+    name: Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
