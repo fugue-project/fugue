@@ -83,6 +83,9 @@ lab:
 test:
 	python3 -b -m pytest --reruns 2 --only-rerun 'Overflow in cast' --only-rerun 'Table or view not found' tests/
 
+testnospark:
+	python3 -b -m pytest --ignore=tests/fugue_spark tests/
+
 testcore:
 	python3 -b -m pytest tests/fugue
 
