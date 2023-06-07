@@ -45,7 +45,7 @@ jobs:
         fail_ci_if_error: false
 
   no_spark:
-    name: Tests & Lint
+    name: Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
