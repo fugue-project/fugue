@@ -1,5 +1,12 @@
 # Release Notes
 
+## 0.8.5
+
+-   [481](https://github.com/fugue-project/fugue/pull/481) Moved Fugue SQL dependencies into functions as soft dependencies
+-   [478](https://github.com/fugue-project/fugue/issues/478) Removed cloudpickle from the hard dependency of Spark backend
+-   [477](https://github.com/fugue-project/fugue/issues/477) Removed tests folder from Fugue package
+-   [476](https://github.com/fugue-project/fugue/issues/476) Fix compatibility issues for Pandas 2+ and Spark < 3.4
+
 ## 0.8.4
 
 -   [471](https://github.com/fugue-project/fugue/issues/471) Fix compatibility issues for duckdb 0.8.0+

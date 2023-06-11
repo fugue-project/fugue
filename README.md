@@ -144,9 +144,16 @@ Fugue can be installed through pip or conda. For example:
 pip install fugue
 ```
 
+In order to use Fugue SQL, it is strongly recommended to install the `sql` extra:
+
+```bash
+pip install fugue[sql]
+```
+
 It also has the following installation extras:
 
-*   **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/tutorials/advanced/execution_engine.html)
+*   **sql**: to support Fugue SQL. Without this extra, the non-SQL part still works. Before Fugue 0.9.0, this extra is included in Fugue's core dependency so you don't need to install explicitly. **But for 0,9.0+, this becomes required if you want to use Fugue SQL.**
+*   **spark**: to support Spark as the [ExecutionEngine](https://fugue-tutorials.readthedocs.io/tutorials/advanced/execution_engine.html).
 *   **dask**: to support Dask as the ExecutionEngine.
 *   **ray**: to support Ray as the ExecutionEngine.
 *   **duckdb**: to support DuckDB as the ExecutionEngine, read [details](https://fugue-tutorials.readthedocs.io/tutorials/integrations/backends/duckdb.html).
