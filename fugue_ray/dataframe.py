@@ -270,7 +270,7 @@ def _get_ray_dataframe_columns(df: rd.Dataset) -> List[Any]:
         if fmt == "pandas":
             return list(df.schema(True).names)
         elif fmt == "arrow":
-            return [f.name for f in to_schema(df.schema(fetch_if_missing=True))]
+            return df.schema(fetch_if_missing=True).names
         raise NotImplementedError(f"{fmt} is not supported")  # pragma: no cover
 
 
