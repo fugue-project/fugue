@@ -76,8 +76,6 @@ class RayDataFrameTests(DataFrameTests.Tests):
 
         raises(Exception, lambda: RayDataFrame(123))
 
-        raises(NotImplementedError, lambda: RayDataFrame(rd.from_items([1, 2])))
-
     def test_ray_cast(self):
         data = [["a", "1"], ["b", "2"]]
         df = RayDataFrame(data, "a:str,b:str")

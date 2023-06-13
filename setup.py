@@ -100,7 +100,7 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     python_requires=">=3.7",
-    package_data={"fugue_notebook": ["nbextension/*"]},
+    package_data={"fugue": ["py.typed"], "fugue_notebook": ["nbextension/*"]},
     entry_points={
         "fugue.plugins": [
             "ibis = fugue_ibis[ibis]",

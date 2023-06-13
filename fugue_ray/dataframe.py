@@ -18,7 +18,7 @@ from fugue.plugins import (
 )
 
 from ._constants import _ZERO_COPY
-from ._utils.dataframe import build_empty, get_dataset_format
+from ._utils.dataframe import build_empty, get_dataset_format, to_schema
 
 
 class RayDataFrame(DataFrame):
@@ -62,7 +62,7 @@ class RayDataFrame(DataFrame):
                 rdf = rd.from_arrow_refs(df.to_arrow_refs())
             elif fmt == "arrow":
                 rdf = df
-            else:
+            else:  # pragma: no cover
                 raise NotImplementedError(
                     f"Ray Dataset in {fmt} format is not supported"
                 )
@@ -229,8 +229,8 @@ class RayDataFrame(DataFrame):
         if get_dataset_format(rdf) is None:  # empty
             schema = _input_schema(schema).assert_not_empty()
             return build_empty(schema), schema
-        if schema is None or schema == rdf.schema(fetch_if_missing=True):
-            return rdf, rdf.schema(fetch_if_missing=True)
+        if schema is None or schema == to_schema(rdf.schema(fetch_if_missing=True)):
+            return rdf, to_schema(rdf.schema(fetch_if_missing=True))
 
         def _alter(table: pa.Table) -> pa.Table:  # pragma: no cover
             return ArrowDataFrame(table).alter_columns(schema).native  # type: ignore
@@ -263,12 +263,15 @@ def _rd_as_local(df: rd.Dataset) -> bool:
 
 @get_column_names.candidate(lambda df: isinstance(df, rd.Dataset))
 def _get_ray_dataframe_columns(df: rd.Dataset) -> List[Any]:
-    fmt = get_dataset_format(df)
-    if fmt == "pandas":
-        return list(df.schema(True).names)
-    elif fmt == "arrow":
-        return [f.name for f in df.schema(True)]
-    raise NotImplementedError(f"{fmt} is not supported")  # pragma: no cover
+    if hasattr(df, "columns"):  # higher version of ray
+        return df.columns(fetch_if_missing=True)
+    else:  # pragma: no cover
+        fmt = get_dataset_format(df)
+        if fmt == "pandas":
+            return list(df.schema(True).names)
+        elif fmt == "arrow":
+            return [f.name for f in to_schema(df.schema(fetch_if_missing=True))]
+        raise NotImplementedError(f"{fmt} is not supported")  # pragma: no cover
 
 
 @rename.candidate(lambda df, *args, **kwargs: isinstance(df, rd.Dataset))
