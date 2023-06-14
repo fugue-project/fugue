@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   test_ray_lower_bound:
-    name: Ray 2.0.0
+    name: Ray 2.1.0
     runs-on: ubuntu-latest
 
     steps:
@@ -33,7 +33,7 @@ jobs:
     - name: Install dependencies
       run: make devenv
     - name: Setup Ray
-      run: pip install ray[data]==2.0.0 pyarrow==6.0.1 pandas==1.5.3
+      run: pip install ray[data]==2.1.0 pyarrow==6.0.1 pandas==1.5.3
     - name: Test
       run: make testray
 
