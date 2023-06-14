@@ -55,7 +55,7 @@ setup(
             "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
             "qpd[dask]>=0.4.3",
         ],
-        "ray": ["ray[data]>=2.0.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
+        "ray": ["ray[data]>=2.1.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
         "duckdb": [
             "duckdb>=0.5.0",
             "pyarrow>=6.0.1",
@@ -74,7 +74,7 @@ setup(
             "pyspark>=3.1.1",
             "dask[distributed,dataframe]; python_version < '3.8'",
             "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
-            "ray[data]>=2.0.0",
+            "ray[data]>=2.1.0",
             "qpd[dask]>=0.4.3",
             "notebook",
             "jupyterlab",
@@ -100,7 +100,7 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     python_requires=">=3.7",
-    package_data={"fugue_notebook": ["nbextension/*"]},
+    package_data={"fugue": ["py.typed"], "fugue_notebook": ["nbextension/*"]},
     entry_points={
         "fugue.plugins": [
             "ibis = fugue_ibis[ibis]",
