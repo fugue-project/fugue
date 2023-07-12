@@ -18,7 +18,7 @@ from fugue.plugins import (
 )
 
 from ._constants import _ZERO_COPY
-from ._utils.dataframe import build_empty, get_dataset_format, to_schema
+from ._utils.dataframe import build_empty, get_dataset_format, materialize, to_schema
 
 
 class RayDataFrame(DataFrame):
@@ -52,7 +52,7 @@ class RayDataFrame(DataFrame):
             self._native = build_empty(schema)
             return
         if isinstance(df, rd.Dataset):
-            fmt = get_dataset_format(df)
+            fmt, df = get_dataset_format(df)
             if fmt is None:  # empty:
                 schema = _input_schema(schema).assert_not_empty()
                 super().__init__(schema)
@@ -156,8 +156,7 @@ class RayDataFrame(DataFrame):
 
     def persist(self, **kwargs: Any) -> "RayDataFrame":
         # TODO: it mutates the dataframe, is this a good bahavior
-        if not self.native.is_fully_executed():  # pragma: no cover
-            self.native.fully_executed()
+        self._native = materialize(self._native)
         return self
 
     def count(self) -> int:
@@ -226,7 +225,8 @@ class RayDataFrame(DataFrame):
     ) -> Tuple[rd.Dataset, Schema]:
         if internal_schema:
             return rdf, schema
-        if get_dataset_format(rdf) is None:  # empty
+        fmt, rdf = get_dataset_format(rdf)
+        if fmt is None:  # empty
             schema = _input_schema(schema).assert_not_empty()
             return build_empty(schema), schema
         if schema is None or schema == to_schema(rdf.schema(fetch_if_missing=True)):
@@ -266,7 +266,7 @@ def _get_ray_dataframe_columns(df: rd.Dataset) -> List[Any]:
     if hasattr(df, "columns"):  # higher version of ray
         return df.columns(fetch_if_missing=True)
     else:  # pragma: no cover
-        fmt = get_dataset_format(df)
+        fmt, _ = get_dataset_format(df)
         if fmt == "pandas":
             return list(df.schema(True).names)
         elif fmt == "arrow":

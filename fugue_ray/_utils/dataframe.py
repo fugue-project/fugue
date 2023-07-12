@@ -14,23 +14,38 @@ from .._constants import _ZERO_COPY
 _RAY_NULL_REPR = "__RAY_NULL__"
 
 
-def get_dataset_format(df: rd.Dataset) -> Optional[str]:
-    df.fully_executed()
+def is_materialized(df: rd.Dataset) -> bool:
+    if hasattr(rd.dataset, "MaterializedDataset"):
+        return isinstance(df, rd.dataset.MaterializedDataset)
+    return df.is_fully_executed()  # pragma: no cover
+
+
+def materialize(df: rd.Dataset) -> rd.Dataset:
+    if not is_materialized(df):
+        if hasattr(df, "materialize"):
+            df = df.materialize()
+        else:  # pragma: no cover
+            df = df.fully_executed()
+    return df
+
+
+def get_dataset_format(df: rd.Dataset) -> Tuple[Optional[str], rd.Dataset]:
+    df = materialize(df)
     if df.count() == 0:
-        return None
+        return None, df
     if ray.__version__ < "2.5.0":  # pragma: no cover
         if hasattr(df, "_dataset_format"):  # pragma: no cover
-            return df._dataset_format()  # ray<2.2
+            return df._dataset_format(), df  # ray<2.2
         ctx = rd.context.DatasetContext.get_current()
         ctx.use_streaming_executor = False
-        return df.dataset_format()  # ray>=2.2
+        return df.dataset_format(), df  # ray>=2.2
     else:
         schema = df.schema(fetch_if_missing=True)
         if schema is None:  # pragma: no cover
-            return None
+            return None, df
         if isinstance(schema.base_schema, pa.Schema):
-            return "arrow"
-        return "pandas"
+            return "arrow", df
+        return "pandas", df
 
 
 def to_schema(schema: Any) -> Schema:  # pragma: no cover
