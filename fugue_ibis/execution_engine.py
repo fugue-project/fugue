@@ -92,20 +92,19 @@ class IbisSQLEngine(SQLEngine):
         _df2 = self.to_df(df2)
         key_schema, end_schema = get_join_schemas(_df1, _df2, how=how, on=on)
         on_fields = [_df1.native[k] == _df2.native[k] for k in key_schema]
+        if ibis.__version__ < "6":
+            suffixes: Dict[str, Any] = dict(suffixes=("", _JOIN_RIGHT_SUFFIX))
+        else:  # pragma: no cover
+            # breaking change in ibis 6.0
+            suffixes = dict(lname="", rname=_JOIN_RIGHT_SUFFIX)
         if how.lower() == "cross":
-            tb = _df1.native.cross_join(_df2.native, suffixes=("", _JOIN_RIGHT_SUFFIX))
+            tb = _df1.native.cross_join(_df2.native, **suffixes)
         elif how.lower() == "right_outer":
-            tb = _df2.native.left_join(
-                _df1.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
-            )
+            tb = _df2.native.left_join(_df1.native, on_fields, **suffixes)
         elif how.lower() == "left_outer":
-            tb = _df1.native.left_join(
-                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
-            )
+            tb = _df1.native.left_join(_df2.native, on_fields, **suffixes)
         elif how.lower() == "full_outer":
-            tb = _df1.native.outer_join(
-                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
-            )
+            tb = _df1.native.outer_join(_df2.native, on_fields, **suffixes)
             cols: List[Any] = []
             for k in end_schema.names:
                 if k not in key_schema:
@@ -116,17 +115,11 @@ class IbisSQLEngine(SQLEngine):
                     )
             tb = tb[cols]
         elif how.lower() in ["semi", "left_semi"]:
-            tb = _df1.native.semi_join(
-                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
-            )
+            tb = _df1.native.semi_join(_df2.native, on_fields, **suffixes)
         elif how.lower() in ["anti", "left_anti"]:
-            tb = _df1.native.anti_join(
-                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
-            )
+            tb = _df1.native.anti_join(_df2.native, on_fields, **suffixes)
         else:
-            tb = _df1.native.inner_join(
-                _df2.native, on_fields, suffixes=("", _JOIN_RIGHT_SUFFIX)
-            )
+            tb = _df1.native.inner_join(_df2.native, on_fields, **suffixes)
         return self.to_df(tb[end_schema.names], schema=end_schema)
 
     def union(self, df1: DataFrame, df2: DataFrame, distinct: bool = True) -> DataFrame:
