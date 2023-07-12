@@ -64,7 +64,7 @@ setup(
         "polars": ["polars"],
         "ibis": [
             "ibis-framework>=2.1.1; python_version < '3.8'",
-            "ibis-framework>=3.2.0<6; python_version >= '3.8'",
+            "ibis-framework>=3.2.0,<6; python_version >= '3.8'",
         ],
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
         "all": [
@@ -82,7 +82,7 @@ setup(
             "duckdb>=0.5.0",
             "pyarrow>=6.0.1",
             "ibis-framework>=2.1.1; python_version < '3.8'",
-            "ibis-framework>=3.2.0<6; python_version >= '3.8'",
+            "ibis-framework>=3.2.0,<6; python_version >= '3.8'",
             "polars",
         ],
     },
