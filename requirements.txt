@@ -22,6 +22,7 @@ psutil
 matplotlib
 seaborn
 
+notebook<7
 jupyter_contrib_nbextensions
 
 pyspark[connect]

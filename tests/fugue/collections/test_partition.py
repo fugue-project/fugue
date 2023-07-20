@@ -169,6 +169,8 @@ def test_partition_spec():
     assert a.presort == c.presort
     c = PartitionSpec(b, presort=[("b", False), ("c", True)])
     assert a.presort == c.presort
+    d = PartitionSpec(b, presort=[])
+    assert len(d.presort) == 0
 
     a = PartitionSpec(by=["a"], presort="b DESC, c")
     b = PartitionSpec(by=["a"], presort=[("c", True), ("b", False)])
