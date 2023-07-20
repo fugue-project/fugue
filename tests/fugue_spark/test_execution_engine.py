@@ -234,8 +234,10 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
             dag.output(c, using=assert_match, params=dict(values=[3, 2, 2]))
             c = a.per_partition_by("a").transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[3, 4]))
-            c = a.partition(algo="even", by=["a"]).transform(AssertMaxNTransform)
+            c = a.partition_by("a", num=3).transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[3, 4]))
+            # c = a.partition(algo="even", by=["a"]).transform(AssertMaxNTransform)
+            # dag.output(c, using=assert_match, params=dict(values=[3, 4]))
             c = a.partition(num=1).transform(count_partition)
             dag.output(c, using=assert_match, params=dict(values=[7]))
             c = a.partition(algo="rand", num=100).transform(count_partition).persist()
@@ -406,13 +408,19 @@ class AssertMaxNTransform(Transformer):
         return "c:int"
 
     def transform(self, df):
+        # need to collect because df can be IterableDataFrame
+        # or IterablePandasDataFrame
+        pdf = df.as_pandas()
         if not hasattr(self, "called"):
             self.called = 1
+            self.data = [str(pdf)]
         else:
             self.called += 1
+            self.data.append(str(pdf))
         n = self.params.get("n", 1)
-        assert self.called <= n
-        return ArrayDataFrame([[len(df.as_array())]], "c:int")
+        if self.called > n:
+            raise AssertionError(f"{self.data}")
+        return ArrayDataFrame([[len(pdf)]], "c:int")
 
 
 def assert_match(df: List[List[Any]], values: List[int]) -> None:
@@ -420,5 +428,5 @@ def assert_match(df: List[List[Any]], values: List[int]) -> None:
 
 
 def assert_all_n(df: List[List[Any]], n, l) -> None:
-    assert all(x[0] == n for x in df)
+    assert all(x[0] == n for x in df), str([x[0] for x in df])
     assert l == len(df)

@@ -134,9 +134,8 @@ class SparkMapEngine(MapEngine):
     ) -> DataFrame:
         output_schema = Schema(output_schema)
         if self._should_use_pandas_udf(output_schema):
-            # pandas udf can only be used for pyspark > 3
             if len(partition_spec.partition_by) > 0:
-                if partition_spec.algo == "coarse":
+                if partition_spec.algo in ["coarse", "even"]:
                     return self._map_by_pandas_udf(
                         df,
                         map_func=map_func,
