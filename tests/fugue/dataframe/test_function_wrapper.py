@@ -7,16 +7,22 @@ from pytest import raises
 from triad import to_uuid
 from triad.utils.iter import EmptyAwareIterable
 
+import fugue.api as fa
 from fugue import (
     ArrayDataFrame,
     ArrowDataFrame,
     DataFrame,
     IterableDataFrame,
-    LocalDataFrame,
     IterablePandasDataFrame,
+    LocalDataFrame,
     PandasDataFrame,
 )
-from fugue.dataframe.function_wrapper import _IterablePandasParam, _IterableArrowParam
+from fugue.dataframe.function_wrapper import (
+    _IterableArrowParam,
+    _IterablePandasParam,
+    _PandasParam,
+    _PyArrowTableParam,
+)
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dev import DataFrameFunctionWrapper
 
@@ -108,14 +114,30 @@ def test_function_wrapper_copy():
     assert 3 == test.n
 
 
+def test_pandas_dataframe_param():
+    p = _PandasParam(None)
+    pdf = pd.DataFrame([[0, "x"]], columns=["a", "b"])
+    df = PandasDataFrame(pdf)
+    data = p.to_input_data(df, ctx=None)
+    assert data.values.tolist() == [[0, "x"]]
+
+    data = p.to_output_df(pdf, df.schema, ctx=None)
+    assert isinstance(data, DataFrame)
+    assert data.as_array() == [[0, "x"]]
+
+    data = p.to_output_df(pdf, "b:str,a:long", ctx=None)
+    assert isinstance(data, DataFrame)
+    assert data.as_array() == [["x", 0]]
+
+
 def test_iterable_pandas_dataframes():
     p = _IterablePandasParam(None)
-    pdf = pd.DataFrame([[0]], columns=["a"])
+    pdf = pd.DataFrame([[0, "x"]], columns=["a", "b"])
     df = PandasDataFrame(pdf)
     data = list(p.to_input_data(df, ctx=None))
     assert 1 == len(data)
     assert data[0] is pdf  # this is to guarantee no copy in any wrapping logic
-    assert data[0].values.tolist() == [[0]]
+    assert data[0].values.tolist() == [[0, "x"]]
 
     dfs = IterablePandasDataFrame([df, df])
     data = list(p.to_input_data(dfs, ctx=None))
@@ -127,6 +149,13 @@ def test_iterable_pandas_dataframes():
         yield pdf
         yield pdf
 
+    # handle empty
+    odf = p.to_output_df([], df.schema, ctx=None)
+    data = list(odf.native)
+    assert 1 == len(data)
+    assert fa.count(data[0]) == 0
+    assert fa.get_schema(data[0].native) == df.schema
+
     # without schema change, there is no copy
     odf = p.to_output_df(get_pdfs(), df.schema, ctx=None)
     data = list(odf.native)
@@ -135,16 +164,44 @@ def test_iterable_pandas_dataframes():
     assert data[1].native is pdf
 
     # with schema change, there is copy
-    odf = p.to_output_df(get_pdfs(), "a:double", ctx=None)
+    odf = p.to_output_df(get_pdfs(), "a:double,b:str", ctx=None)
     data = list(odf.native)
     assert 2 == len(data)
     assert data[0].native is not pdf
     assert data[1].native is not pdf
 
+    # with column order, there is copy
+    odf = p.to_output_df(get_pdfs(), "b:str,a:long", ctx=None)
+    data = list(odf.native)
+    assert 2 == len(data)
+    assert data[0].native is not pdf
+    assert fa.get_schema(data[0]) == "b:str,a:long"
+    assert data[1].native is not pdf
+    assert fa.get_schema(data[1]) == "b:str,a:long"
+
+
+def test_arrow_dataframe_param():
+    p = _PyArrowTableParam(None)
+    pdf = pd.DataFrame([[0, "x"]], columns=["a", "b"])
+    df = PandasDataFrame(pdf)
+    data = p.to_input_data(df, ctx=None)
+    assert isinstance(data, pa.Table)
+    assert fa.as_array(data) == [[0, "x"]]
+
+    adf = df.as_arrow()
+    data = p.to_output_df(adf, None, ctx=None)
+    assert data.native is adf
+    data = p.to_output_df(adf, df.schema, ctx=None)
+    assert data.native is adf
+
+    data = p.to_output_df(adf, "b:str,a:long", ctx=None)
+    assert isinstance(data, DataFrame)
+    assert data.as_array() == [["x", 0]]
+
 
 def test_iterable_arrow_dataframes():
     p = _IterableArrowParam(None)
-    pdf = pa.Table.from_pandas(pd.DataFrame([[0]], columns=["a"]))
+    pdf = pa.Table.from_pandas(pd.DataFrame([[0, "x"]], columns=["a", "b"]))
     df = ArrowDataFrame(pdf)
     data = list(p.to_input_data(df, ctx=None))
     assert 1 == len(data)
@@ -160,6 +217,13 @@ def test_iterable_arrow_dataframes():
         yield pdf
         yield pdf
 
+    # handle empty
+    odf = p.to_output_df([], df.schema, ctx=None)
+    data = list(odf.native)
+    assert 1 == len(data)
+    assert fa.count(data[0]) == 0
+    assert fa.get_schema(data[0].native) == df.schema
+
     # without schema change, there is no copy
     odf = p.to_output_df(get_pdfs(), df.schema, ctx=None)
     data = list(odf.native)
@@ -168,11 +232,20 @@ def test_iterable_arrow_dataframes():
     assert data[1].native is pdf
 
     # with schema change, there is copy
-    odf = p.to_output_df(get_pdfs(), "a:double", ctx=None)
+    odf = p.to_output_df(get_pdfs(), "a:double,b:str", ctx=None)
     data = list(odf.native)
     assert 2 == len(data)
     assert data[0].native is not pdf
     assert data[1].native is not pdf
+
+    # with column order, there is copy
+    odf = p.to_output_df(get_pdfs(), "b:str,a:long", ctx=None)
+    data = list(odf.native)
+    assert 2 == len(data)
+    assert data[0].native is not pdf
+    assert fa.get_schema(data[0]) == "b:str,a:long"
+    assert data[1].native is not pdf
+    assert fa.get_schema(data[1]) == "b:str,a:long"
 
 
 def f10(x: Any, y: pa.Table) -> None:
