@@ -174,7 +174,7 @@ class DataFrameParam(_DataFrameParamBase):
 
 
 @fugue_annotated_param(AnyDataFrame)
-class AnyDataFrameParam(DataFrameParam):
+class _AnyDataFrameParam(DataFrameParam):
     def to_output_df(self, output: AnyDataFrame, schema: Any, ctx: Any) -> DataFrame:
         return (
             as_fugue_df(output)

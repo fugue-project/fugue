@@ -165,7 +165,7 @@ class LocalDataFrameIterableDataFrame(LocalUnboundedDataFrame):
 
     def as_pandas(self) -> pd.DataFrame:
         if self.empty:
-            return ArrayDataFrame([], self.schema).as_pandas()
+            return PandasDataFrame(schema=self.schema).as_pandas()
 
         return pd.concat(df.as_pandas() for df in self.native)
 

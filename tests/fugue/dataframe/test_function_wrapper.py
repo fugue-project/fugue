@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional
+from typing import Any, Dict, Iterable, Iterator, List
 
 import pandas as pd
 import pyarrow as pa
@@ -18,6 +18,7 @@ from fugue import (
     PandasDataFrame,
 )
 from fugue.dataframe.function_wrapper import (
+    _AnyDataFrameParam,
     _IterableArrowParam,
     _IterablePandasParam,
     _PandasParam,
@@ -112,6 +113,23 @@ def test_function_wrapper_copy():
     w2.run([], {}, output=False)
     w3.run([], {}, output=False)
     assert 3 == test.n
+
+
+def test_any_dataframe_param():
+    p = _AnyDataFrameParam(None)
+    pdf = pd.DataFrame([[0, "x"]], columns=["a", "b"])
+    df = PandasDataFrame(pdf)
+    assert p.to_input_data(pdf, ctx=None) is pdf
+    assert p.to_input_data(df, ctx=None) is df
+
+    data = p.to_output_df(pdf, df.schema, ctx=None)
+    assert isinstance(data, PandasDataFrame)
+    assert data.as_array() == [[0, "x"]]
+
+    assert p.to_output_df(df, schema=None, ctx=None) is df
+    assert p.to_output_df(pdf, schema=df.schema, ctx=None).as_array() == [[0, "x"]]
+
+    assert p.count(pdf) == 1
 
 
 def test_pandas_dataframe_param():

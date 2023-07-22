@@ -113,6 +113,13 @@ class DataFrame(Dataset):
     def as_pandas(self) -> pd.DataFrame:
         """Convert to pandas DataFrame"""
         pdf = pd.DataFrame(self.as_array(), columns=self.columns)
+        if len(pdf) == 0:  # TODO: move to triad
+            return pd.DataFrame(
+                {
+                    k: pd.Series(dtype=v.type.to_pandas_dtype())
+                    for k, v in self.schema.items()
+                }
+            )
         return PD_UTILS.enforce_type(pdf, self.schema.pa_schema, null_safe=True)
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
