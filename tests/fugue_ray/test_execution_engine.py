@@ -142,7 +142,7 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
         pq = os.path.join(str(self.tmpdir), "tmp.parquet")
         pd.DataFrame(dict(a=[1, 2], b=[3, 4], c=["a", "b"])).to_parquet(pq)
         tdf = self.engine.load_df(pq, columns="b:int,a:str").as_array()
-        assert tdf.sort() == [[3, "1"], [4, "2"]]
+        assert sorted(tdf) == [[3, "1"], [4, "2"]]
 
     def test_load_json_more(self):
         js = os.path.join(str(self.tmpdir), "tmp.json")
