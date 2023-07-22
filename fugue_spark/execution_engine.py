@@ -134,9 +134,8 @@ class SparkMapEngine(MapEngine):
     ) -> DataFrame:
         output_schema = Schema(output_schema)
         if self._should_use_pandas_udf(output_schema):
-            # pandas udf can only be used for pyspark > 3
             if len(partition_spec.partition_by) > 0:
-                if partition_spec.algo == "coarse":
+                if partition_spec.algo in ["coarse", "even"]:
                     return self._map_by_pandas_udf(
                         df,
                         map_func=map_func,
@@ -145,7 +144,18 @@ class SparkMapEngine(MapEngine):
                         on_init=on_init,
                         map_func_format_hint=map_func_format_hint,
                     )
-                elif partition_spec.algo != "even" or self.is_spark_connect:
+                else:
+                    if (  # not simple partitioning
+                        partition_spec.algo != "hash"
+                        or partition_spec.num_partitions != "0"
+                    ):
+                        # TODO: not sure if presort should be done
+                        # on physical partition level
+                        df = self.to_df(
+                            self.execution_engine.repartition(
+                                df, PartitionSpec(partition_spec, presort=[])
+                            )
+                        )
                     return self._group_map_by_pandas_udf(
                         df,
                         map_func=map_func,
@@ -154,7 +164,7 @@ class SparkMapEngine(MapEngine):
                         on_init=on_init,
                         map_func_format_hint=map_func_format_hint,
                     )
-            elif len(partition_spec.partition_by) == 0:
+            else:
                 return self._map_by_pandas_udf(
                     df,
                     map_func=map_func,

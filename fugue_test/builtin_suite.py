@@ -22,6 +22,7 @@ from triad import SerializableRLock
 
 import fugue.api as fa
 from fugue import (
+    AnyDataFrame,
     ArrayDataFrame,
     CoTransformer,
     DataFrame,
@@ -365,6 +366,12 @@ class BuiltInTests(object):
                 dag.output(dict(df=a), using=mock_outputter2)
                 a.partition(num=3).output(MockOutputter3)
                 dag.output(dict(aa=a, bb=b), using=MockOutputter4)
+
+                a = dag.create(mock_creator2, params=dict(p=2))
+                b = dag.create(mock_creator2, params=dict(p=2))
+                c = dag.process(a, b, using=mock_processor4)
+                c.assert_eq(ArrayDataFrame([[2]], "a:int"))
+                dag.output(a, b, using=mock_outputter4)
             dag.run(self.engine)
 
         def test_zip(self):
@@ -435,9 +442,14 @@ class BuiltInTests(object):
             # this test is important for using mapInPandas in spark
 
             # schema: *,c:int
-            def mt_pandas(dfs: Iterable[pd.DataFrame]) -> Iterator[pd.DataFrame]:
+            def mt_pandas(
+                dfs: Iterable[pd.DataFrame], empty: bool = False
+            ) -> Iterator[pd.DataFrame]:
                 for df in dfs:
-                    yield df.assign(c=2)
+                    if not empty:
+                        df = df.assign(c=2)
+                        df = df[reversed(list(df.columns))]
+                        yield df
 
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
@@ -445,10 +457,25 @@ class BuiltInTests(object):
                 dag.df([[1, 2, 2], [3, 4, 2]], "a:int,b:int,c:int").assert_eq(b)
             dag.run(self.engine)
 
+            # when iterable returns nothing
+            with FugueWorkflow() as dag:
+                a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
+                # without partitioning
+                b = a.transform(mt_pandas, params=dict(empty=True))
+                dag.df([], "a:int,b:int,c:int").assert_eq(b)
+                # with partitioning
+                b = a.partition_by("a").transform(mt_pandas, params=dict(empty=True))
+                dag.df([], "a:int,b:int,c:int").assert_eq(b)
+            dag.run(self.engine)
+
             # schema: *
-            def mt_arrow(dfs: Iterable[pa.Table]) -> Iterator[pa.Table]:
+            def mt_arrow(
+                dfs: Iterable[pa.Table], empty: bool = False
+            ) -> Iterator[pa.Table]:
                 for df in dfs:
-                    yield df
+                    if not empty:
+                        df = df.select(reversed(df.schema.names))
+                        yield df
 
             # schema: a:long
             def mt_arrow_2(dfs: Iterable[pa.Table]) -> Iterator[pa.Table]:
@@ -461,6 +488,17 @@ class BuiltInTests(object):
                 dag.df([[1, 2], [3, 4]], "a:int,b:int").assert_eq(b)
                 b = a.transform(mt_arrow_2)
                 dag.df([[1], [3]], "a:long").assert_eq(b)
+            dag.run(self.engine)
+
+            # when iterable returns nothing
+            with FugueWorkflow() as dag:
+                a = dag.df([[1, 2], [3, 4]], "a:int,b:int")
+                # without partitioning
+                b = a.transform(mt_arrow, params=dict(empty=True))
+                dag.df([], "a:int,b:int").assert_eq(b)
+                # with partitioning
+                b = a.partition_by("a").transform(mt_arrow, params=dict(empty=True))
+                dag.df([], "a:int,b:int").assert_eq(b)
             dag.run(self.engine)
 
         def test_transform_binary(self):
@@ -1829,6 +1867,10 @@ def mock_creator(p: int) -> DataFrame:
     return ArrayDataFrame([[p]], "a:int")
 
 
+def mock_creator2(p: int) -> AnyDataFrame:
+    return fa.as_fugue_df([[p]], schema="a:int")
+
+
 def mock_processor(df1: List[List[Any]], df2: List[List[Any]]) -> DataFrame:
     return ArrayDataFrame([[len(df1) + len(df2)]], "a:int")
 
@@ -1844,6 +1886,10 @@ class MockProcessor3(Processor):
         return ArrayDataFrame([[sum(s.count() for s in dfs.values())]], "a:int")
 
 
+def mock_processor4(df1: AnyDataFrame, df2: AnyDataFrame) -> AnyDataFrame:
+    return ArrayDataFrame([[fa.count(df1) + fa.count(df2)]], "a:int")
+
+
 def mock_outputter(df1: List[List[Any]], df2: List[List[Any]]) -> None:
     assert len(df1) == len(df2)
 
@@ -1855,6 +1901,10 @@ def mock_outputter2(df: List[List[Any]]) -> None:
 class MockOutputter3(Outputter):
     def process(self, dfs):
         assert "3" == self.partition_spec.num_partitions
+
+
+def mock_outputter4(df1: AnyDataFrame, df2: AnyDataFrame) -> None:
+    assert fa.count(df1) == fa.count(df2)
 
 
 class MockOutputter4(Outputter):
@@ -1895,8 +1945,8 @@ def mock_tf0(df: pd.DataFrame, p=1, col="p") -> pd.DataFrame:
 
 # schema: *,ct:int,p:int
 def mock_tf1(df: pd.DataFrame, p=1) -> pd.DataFrame:
-    df["ct"] = df.shape[0]
     df["p"] = p
+    df["ct"] = df.shape[0]
     return df
 
 

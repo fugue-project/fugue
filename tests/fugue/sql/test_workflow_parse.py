@@ -11,6 +11,7 @@ from triad.collections.schema import Schema
 from triad.utils.convert import get_caller_global_local_vars
 
 from fugue import (
+    AnyDataFrame,
     DataFrames,
     FugueWorkflow,
     LocalDataFrame,
@@ -63,6 +64,7 @@ def test_process():
         using=mock_processor1,
         params=dict(n=7),
     )
+    dag.process(a1, using=mock_processor4)
     assert_eq(
         """
     a=create using mock_create1 params n:1
@@ -73,6 +75,7 @@ def test_process():
         (create using mock_create1(n=5)),
         (create using mock_create1(n=6))
         using mock_processor1(n=7)
+    process a using mock_processor4  # AnyDataFrame
     """,
         dag,
     )
@@ -803,6 +806,10 @@ def mock_processor2(
 
 # schema: a:int
 def mock_processor3(df: List[List[Any]]) -> List[List[Any]]:
+    return df
+
+
+def mock_processor4(df: AnyDataFrame) -> AnyDataFrame:
     return df
 
 

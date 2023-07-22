@@ -1,7 +1,11 @@
 from typing import Any, Dict, Iterable, List
 
 import pandas as pd
-from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames
+from pytest import raises
+from triad.collections.dict import ParamDict
+from triad.utils.hash import to_uuid
+
+from fugue.dataframe import AnyDataFrame, ArrayDataFrame, DataFrame, DataFrames
 from fugue.exceptions import FugueInterfacelessError
 from fugue.execution import ExecutionEngine, NativeExecutionEngine
 from fugue.extensions.processor import (
@@ -11,9 +15,6 @@ from fugue.extensions.processor import (
     processor,
     register_processor,
 )
-from pytest import raises
-from triad.collections.dict import ParamDict
-from triad.utils.hash import to_uuid
 
 
 def test_processor():
@@ -69,6 +70,8 @@ def test__to_processor():
     assert isinstance(_to_processor(t9), Processor)
     assert isinstance(_to_processor(t10), Processor)
     assert isinstance(_to_processor(t11), Processor)
+    assert isinstance(_to_processor(t12), Processor)
+    raises(FugueInterfacelessError, lambda: _to_processor(t13))
 
 
 def test_run_processor():
@@ -226,6 +229,16 @@ def t10(e: ExecutionEngine, df1: DataFrame, df2: DataFrame) -> Iterable[pd.DataF
 def t11(
     e: ExecutionEngine, df1: DataFrame, df2: DataFrame, **kwargs
 ) -> Iterable[pd.DataFrame]:
+    pass
+
+
+def t12(
+    e: ExecutionEngine, df1: AnyDataFrame, df2: DataFrame, **kwargs
+) -> AnyDataFrame:
+    pass
+
+
+def t13(e: ExecutionEngine, df1: Any, df2: DataFrame, **kwargs) -> pd.DataFrame:
     pass
 
 

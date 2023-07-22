@@ -1,8 +1,9 @@
-from typing import Any, List
+from typing import Any, Iterable, List
 
 import pandas as pd
 import pyarrow as pa
 
+import fugue.api as fa
 from fugue import FugueWorkflow, NativeExecutionEngine, QPDPandasEngine
 from fugue.execution.execution_engine import _get_file_threshold
 from fugue_test.builtin_suite import BuiltInTests
@@ -66,6 +67,21 @@ class NativeExecutionEngineBuiltInQPDTests(BuiltInTests.Tests):
                 params=dict(rc=0, n=gps, check_ordered=True),
             )
         dag.run(self.engine)
+
+    def test_empty_partition(self):
+        def tr(df: pd.DataFrame) -> Iterable[pd.DataFrame]:
+            if df.a.iloc[0] == 0:
+                yield df
+
+        pdf = pd.DataFrame(dict(a=range(5)))
+        res = fa.transform(pdf, tr, schema="*", partition="a")
+        assert len(res) == 1
+        assert res.dtypes[0] == "int64"
+
+        pdf = pd.DataFrame(dict(a=[2, 3]))
+        res = fa.transform(pdf, tr, schema="*", partition="a")
+        assert len(res) == 0
+        assert res.dtypes[0] == "int64"
 
 
 def test_get_file_threshold():

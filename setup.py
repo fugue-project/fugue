@@ -52,7 +52,7 @@ setup(
         "spark": ["pyspark>=3.1.1"],
         "dask": [
             "dask[distributed,dataframe]; python_version < '3.8'",
-            "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
+            "dask[distributed,dataframe]>=2022.9.0,<2023.7.1; python_version >= '3.8'",
             "qpd[dask]>=0.4.4",
         ],
         "ray": ["ray[data]>=2.1.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
@@ -73,7 +73,7 @@ setup(
             "fugue-sql-antlr[cpp]>=0.1.6",
             "pyspark>=3.1.1",
             "dask[distributed,dataframe]; python_version < '3.8'",
-            "dask[distributed,dataframe]>=2022.9.0; python_version >= '3.8'",
+            "dask[distributed,dataframe]>=2022.9.0,<2023.7.1; python_version >= '3.8'",
             "ray[data]>=2.1.0",
             "qpd[dask]>=0.4.4",
             "notebook",

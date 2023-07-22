@@ -115,6 +115,7 @@ testpolars:
 
 testnotebook:
 	pip install .
+	jupyter contrib nbextension install --user
 	jupyter nbextension install --user --py fugue_notebook
 	jupyter nbextension enable fugue_notebook --py
 	jupyter nbconvert --execute --clear-output tests/fugue_notebook/test_notebook.ipynb

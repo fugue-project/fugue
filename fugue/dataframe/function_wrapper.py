@@ -23,9 +23,10 @@ from triad.collections.function_wrapper import (
 from triad.utils.iter import EmptyAwareIterable, make_empty_aware
 
 from ..constants import FUGUE_ENTRYPOINT
+from ..dataset.api import count as df_count
 from .array_dataframe import ArrayDataFrame
 from .arrow_dataframe import ArrowDataFrame
-from .dataframe import DataFrame, LocalDataFrame
+from .dataframe import AnyDataFrame, DataFrame, LocalDataFrame, as_fugue_df
 from .dataframe_iterable_dataframe import (
     IterableArrowDataFrame,
     IterablePandasDataFrame,
@@ -170,6 +171,19 @@ class DataFrameParam(_DataFrameParamBase):
             return df.count()
         else:
             return sum(1 for _ in df.as_array_iterable())
+
+
+@fugue_annotated_param(AnyDataFrame)
+class _AnyDataFrameParam(DataFrameParam):
+    def to_output_df(self, output: AnyDataFrame, schema: Any, ctx: Any) -> DataFrame:
+        return (
+            as_fugue_df(output)
+            if schema is None
+            else as_fugue_df(output, schema=schema)
+        )
+
+    def count(self, df: Any) -> int:
+        return df_count(df)
 
 
 @fugue_annotated_param(LocalDataFrame, "l", child_can_reuse_code=True)
@@ -333,6 +347,9 @@ class _PandasParam(LocalDataFrameParam):
 
     @no_type_check
     def to_output_df(self, output: pd.DataFrame, schema: Any, ctx: Any) -> DataFrame:
+        _schema: Optional[Schema] = None if schema is None else Schema(schema)
+        if _schema is not None and _schema.names != list(output.columns):
+            output = output[_schema.names]
         return PandasDataFrame(output, schema)
 
     @no_type_check
@@ -361,8 +378,15 @@ class _IterablePandasParam(LocalDataFrameParam):
         self, output: Iterable[pd.DataFrame], schema: Any, ctx: Any
     ) -> DataFrame:
         def dfs():
+            _schema: Optional[Schema] = None if schema is None else Schema(schema)
+            has_return = False
             for df in output:
-                yield PandasDataFrame(df, schema)
+                if _schema is not None and _schema.names != list(df.columns):
+                    df = df[_schema.names]
+                yield PandasDataFrame(df, _schema)
+                has_return = True
+            if not has_return and _schema is not None:
+                yield PandasDataFrame(schema=_schema)
 
         return IterablePandasDataFrame(dfs())
 
@@ -381,7 +405,12 @@ class _PyArrowTableParam(LocalDataFrameParam):
 
     def to_output_df(self, output: Any, schema: Any, ctx: Any) -> DataFrame:
         assert isinstance(output, pa.Table)
-        return ArrowDataFrame(output, schema=schema)
+        adf: DataFrame = ArrowDataFrame(output)
+        if schema is not None:
+            _schema = Schema(schema)
+            if adf.schema != _schema:
+                adf = adf[_schema.names].alter_columns(_schema)
+        return adf
 
     def count(self, df: Any) -> int:  # pragma: no cover
         return df.count()
@@ -409,13 +438,15 @@ class _IterableArrowParam(LocalDataFrameParam):
     ) -> DataFrame:
         def dfs():
             _schema: Optional[Schema] = None if schema is None else Schema(schema)
+            has_return = False
             for df in output:
-                adf = ArrowDataFrame(df)
-                if _schema is not None and not (  # pylint: disable-all
-                    adf.schema == schema
-                ):
+                adf: DataFrame = ArrowDataFrame(df)
+                if _schema is not None and adf.schema != _schema:
                     adf = adf[_schema.names].alter_columns(_schema)
                 yield adf
+                has_return = True
+            if not has_return and _schema is not None:
+                yield ArrowDataFrame(schema=_schema)
 
         return IterableArrowDataFrame(dfs())
 
