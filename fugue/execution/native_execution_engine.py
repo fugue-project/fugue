@@ -1,7 +1,7 @@
 import logging
 import os
 from typing import Any, Callable, Dict, List, Optional, Type, Union
-
+import numpy as np
 import pandas as pd
 from triad import Schema
 from triad.collections.dict import IndexedOrderedDict
@@ -17,6 +17,7 @@ from fugue.collections.partition import (
     parse_presort_exp,
 )
 from fugue.collections.sql import StructuredRawSQL
+from fugue.constants import KEYWORD_PARALLELISM, KEYWORD_ROWCOUNT
 from fugue.dataframe import (
     AnyDataFrame,
     DataFrame,
@@ -108,13 +109,37 @@ class PandasMapEngine(MapEngine):
                     .sort_values(presort_keys, ascending=presort_asc)
                     .reset_index(drop=True)
                 )
-                input_df = PandasDataFrame(pdf, df.schema, pandas_df_wrapper=True)
-                cursor.set(lambda: input_df.peek_array(), cursor.partition_no + 1, 0)
-                output_df = map_func(cursor, input_df)
+                input_df: LocalDataFrame = PandasDataFrame(
+                    pdf, df.schema, pandas_df_wrapper=True
+                )
             else:
-                df = df.as_local()
-                cursor.set(lambda: df.peek_array(), 0, 0)
-                output_df = map_func(cursor, df)
+                input_df = df.as_local()
+            if (
+                len(partition_spec.partition_by) == 0
+                and partition_spec.num_partitions != "0"
+            ):
+                partitions = partition_spec.get_num_partitions(
+                    **{
+                        KEYWORD_ROWCOUNT: lambda: df.count(),  # type: ignore
+                        KEYWORD_PARALLELISM: lambda: 1,
+                    }
+                )
+                dfs: List[DataFrame] = []
+                for p, subdf in enumerate(
+                    np.array_split(input_df.as_pandas(), partitions)
+                ):
+                    if len(subdf) > 0:
+                        tdf = PandasDataFrame(subdf, df.schema, pandas_df_wrapper=True)
+                        cursor.set(lambda: tdf.peek_array(), p, 0)
+                        dfs.append(map_func(cursor, tdf).as_pandas())
+                output_df: LocalDataFrame = PandasDataFrame(
+                    pd.concat(dfs, ignore_index=True),
+                    schema=output_schema,
+                    pandas_df_wrapper=True,
+                )
+            else:
+                cursor.set(lambda: input_df.peek_array(), 0, 0)
+                output_df = map_func(cursor, input_df)
             if (
                 isinstance(output_df, PandasDataFrame)
                 and output_df.schema != output_schema
