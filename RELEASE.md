@@ -1,5 +1,15 @@
 # Release Notes
 
+## 0.8.6
+
+-   [497](https://github.com/fugue-project/fugue/issues/497) Make LocalExecutionEngine respect partition numbers
+-   [493](https://github.com/fugue-project/fugue/issues/493) Spark Pandas UDF partitioning improvement
+-   [492](https://github.com/fugue-project/fugue/issues/492) Made AnyDataFrame recognized by Creator, Processor and Ouputter
+-   [490](https://github.com/fugue-project/fugue/issues/490) Fixed pa.Table as transformer output bug
+-   [489](https://github.com/fugue-project/fugue/issues/489) Added version cap to Ibis
+-   [485](https://github.com/fugue-project/fugue/issues/485) Made Fugue compatible with Ray 2.5.0
+-   [486](https://github.com/fugue-project/fugue/issues/486) Added py.typed to Fugue
+
 ## 0.8.5
 
 -   [481](https://github.com/fugue-project/fugue/pull/481) Moved Fugue SQL dependencies into functions as soft dependencies
