@@ -83,6 +83,21 @@ class NativeExecutionEngineBuiltInQPDTests(BuiltInTests.Tests):
         assert len(res) == 0
         assert res.dtypes[0] == "int64"
 
+    def test_multiple_partitions(self):
+        def assert_one_item(df: pd.DataFrame) -> pd.DataFrame:
+            assert 1 == len(df)
+            return df
+
+        df = pd.DataFrame(dict(a=[1, 2, 3]))
+        res = fa.transform(df, assert_one_item, schema="*", partition="per_row")
+        assert res.values.tolist() == [[1], [2], [3]]
+
+        def num_part(df: pd.DataFrame) -> pd.DataFrame:
+            return df.assign(b=len(df))
+
+        res = fa.transform(df, num_part, schema="*,b:long", partition=2)
+        assert res.values.tolist() == [[1, 2], [2, 2], [3, 1]]
+
 
 def test_get_file_threshold():
     assert -1 == _get_file_threshold(None)
