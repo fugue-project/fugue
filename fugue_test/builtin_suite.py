@@ -393,8 +393,8 @@ class BuiltInTests(object):
                 a = dag.df([[1, 2, 0], [1, 3, 1]], "a:int,b:int,c:int")
                 b = dag.df([[1, 2, 1], [1, 3, 2]], "a:int,b:int,d:int")
                 c = dag.df([[1, 4]], "a:int,e:int")
-                e = dag.df([[1, 2], [1, 3]], "a:int,b:int")
-                dag.zip(a, b, c)[["a", "b"]].assert_eq(e)
+                e = dag.df([[1]], "a:int")
+                dag.zip(a, b, c)[["a"]].distinct().assert_eq(e)
             dag.run(self.engine)
 
         def test_transform(self):

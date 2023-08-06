@@ -1,8 +1,6 @@
-import base64
-import json
 import os
 import pickle
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, Optional, Tuple
 
 import pandas as pd
 import pyarrow as pa
@@ -13,10 +11,8 @@ from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.assertion import assert_or_throw as aot
 
-from .api import get_column_names, normalize_column_names, rename, as_fugue_df
-from .array_dataframe import ArrayDataFrame
+from .api import as_fugue_df, get_column_names, normalize_column_names, rename
 from .dataframe import DataFrame, LocalBoundedDataFrame
-from .pandas_dataframe import PandasDataFrame
 
 # For backward compatibility, TODO: remove!
 get_dataframe_column_names = get_column_names
@@ -109,35 +105,12 @@ def _df_eq(
         return False
 
 
-def pickle_df(df: DataFrame) -> bytes:
-    """Pickles a dataframe to bytes array. It firstly converts the dataframe
-    local bounded, and then serialize the underlying data.
-
-    :param df: input DataFrame
-    :return: pickled binary data
-
-    .. note::
-
-        Be careful to use on large dataframes or non-local, un-materialized dataframes,
-        it can be slow. You should always use :func:`.unpickle_df` to deserialize.
-    """
-    df = df.as_local_bounded()
-    o: List[Any] = [df.schema]
-    if isinstance(df, PandasDataFrame):
-        o.append("p")
-        o.append(df.native)
-    else:
-        o.append("a")
-        o.append(df.as_array())
-    return pickle.dumps(o)
-
-
 def serialize_df(
     df: Optional[DataFrame],
     threshold: int = -1,
     file_path: Optional[str] = None,
     fs: Optional[FileSystem] = None,
-) -> str:
+) -> Optional[bytes]:
     """Serialize input dataframe to base64 string or to file
     if it's larger than threshold
 
@@ -147,7 +120,7 @@ def serialize_df(
       is larger than ``threshold``), defaults to None
     :param fs: :class:`~triad:triad.collections.fs.FileSystem`, defaults to None
     :raises InvalidOperationError: if file is large but ``file_path`` is not provided
-    :return: a json string either containing the base64 data or the file path
+    :return: a pickled blob either containing the data or the file path
 
     .. note::
 
@@ -156,11 +129,11 @@ def serialize_df(
         write.
     """
     if df is None:
-        return json.dumps(dict())
-    data = pickle_df(df)
+        return None
+    data = pickle.dumps(df.as_local_bounded())
     size = len(data)
     if threshold < 0 or size <= threshold:
-        res = dict(data=base64.b64encode(data).decode())
+        return data
     else:
         if file_path is None:
             raise InvalidOperationError("file_path is not provided")
@@ -171,33 +144,11 @@ def serialize_df(
                 _fs.writebytes(os.path.basename(file_path), data)
         else:
             fs.writebytes(file_path, data)
-        res = dict(path=file_path)
-    return json.dumps(res)
-
-
-def unpickle_df(stream: bytes) -> LocalBoundedDataFrame:
-    """Unpickles a dataframe from bytes array.
-
-    :param stream: binary data
-    :return: unpickled dataframe
-
-    .. note::
-
-        The data must be serialized by :func:`.pickle_df` to deserialize.
-    """
-    o = pickle.loads(stream)
-    schema = o[0]
-    if o[1] == "p":
-        return PandasDataFrame(o[2], schema)
-    if o[1] == "a":
-        return ArrayDataFrame(o[2], schema)
-    raise NotImplementedError(  # pragma: no cover
-        f"{o[1]} is not supported for unpickle"
-    )
+        return pickle.dumps(file_path)
 
 
 def deserialize_df(
-    json_str: str, fs: Optional[FileSystem] = None
+    data: Optional[bytes], fs: Optional[FileSystem] = None
 ) -> Optional[LocalBoundedDataFrame]:
     """Deserialize json string to
     :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`
@@ -209,17 +160,17 @@ def deserialize_df(
     :return: :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame` if ``json_str``
       contains a dataframe or None if its valid but contains no data
     """
-    d = json.loads(json_str)
-    if len(d) == 0:
+    if data is None:
         return None
-    if "data" in d:
-        return unpickle_df(base64.b64decode(d["data"].encode()))
-    elif "path" in d:
+    obj = pickle.loads(data)
+    if isinstance(obj, LocalBoundedDataFrame):
+        return obj
+    elif isinstance(obj, str):
         if fs is None:
-            with open_fs(os.path.dirname(d["path"]), create=False) as _fs:
-                return unpickle_df(_fs.readbytes(os.path.basename(d["path"])))
-        return unpickle_df(fs.readbytes(d["path"]))
-    raise ValueError(f"{json_str} is invalid")
+            with open_fs(os.path.dirname(obj), create=False) as _fs:
+                return pickle.loads(_fs.readbytes(os.path.basename(obj)))
+        return pickle.loads(fs.readbytes(obj))
+    raise ValueError("data is invalid")
 
 
 def get_join_schemas(

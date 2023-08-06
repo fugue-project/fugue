@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -16,10 +17,8 @@ from fugue.dataframe.utils import (
     get_column_names,
     get_join_schemas,
     normalize_dataframe_column_names,
-    pickle_df,
     rename,
     serialize_df,
-    unpickle_df,
 )
 
 
@@ -103,31 +102,6 @@ def test_get_join_schemas():
         assert u == "d:str,a:int"
 
 
-def test_pickle_df():
-    def assert_eq(df, df_expected=None, raw=False):
-        if df_expected is None:
-            df_expected = df
-        df_actual = unpickle_df(pickle_df(df))
-        if raw:
-            assert df_expected.native == df_actual.native
-        else:
-            df_eq(df_expected, df_actual, throw=True)
-
-    assert_eq(ArrayDataFrame([], "a:int,b:int"))
-    assert_eq(ArrayDataFrame([[None, None]], "a:int,b:int"))
-    assert_eq(ArrayDataFrame([[None, "abc"]], "a:int,b:str"))
-    assert_eq(
-        ArrayDataFrame([[None, [1, 2], dict(x=1)]], "a:int,b:[int],c:{x:int}"), raw=True
-    )
-    assert_eq(
-        IterableDataFrame([[None, [1, 2], dict(x=1)]], "a:int,b:[int],c:{x:int}"),
-        ArrayDataFrame([[None, [1, 2], dict(x=1)]], "a:int,b:[int],c:{x:int}"),
-        raw=True,
-    )
-    assert_eq(PandasDataFrame([[None, None]], "a:int,b:int"))
-    assert_eq(PandasDataFrame([[None, "abc"]], "a:int,b:str"))
-
-
 def test_serialize_df(tmpdir):
     def assert_eq(df, df_expected=None, raw=False):
         if df_expected is None:
@@ -169,7 +143,7 @@ def test_serialize_df(tmpdir):
     s = serialize_df(df, 0, path)
     df_eq(df, deserialize_df(s), throw=True)
 
-    raises(ValueError, lambda: deserialize_df('{"x":1}'))
+    raises(ValueError, lambda: deserialize_df(pickle.dumps(1)))
 
 
 def _test_get_column_names():

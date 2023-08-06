@@ -7,7 +7,6 @@ from typing import (
     Any,
     Callable,
     Dict,
-    Iterable,
     Iterator,
     List,
     Optional,
@@ -23,7 +22,6 @@ from triad.collections.fs import FileSystem
 from triad.collections.function_wrapper import AnnotatedParam
 from triad.exceptions import InvalidOperationError
 from triad.utils.convert import to_size
-from triad.utils.string import validate_triad_var_name
 
 from fugue.bag import Bag, LocalBag
 from fugue.collections.partition import (
@@ -46,7 +44,7 @@ from fugue.dataframe import AnyDataFrame, DataFrame, DataFrames, fugue_annotated
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.dataframe import LocalDataFrame
 from fugue.dataframe.utils import deserialize_df, serialize_df
-from fugue.exceptions import FugueBug, FugueWorkflowRuntimeError
+from fugue.exceptions import FugueWorkflowRuntimeError
 
 AnyExecutionEngine = TypeVar("AnyExecutionEngine", object, None)
 
@@ -55,6 +53,20 @@ _FUGUE_EXECUTION_ENGINE_CONTEXT = ContextVar(
 )
 
 _CONTEXT_LOCK = SerializableRLock()
+
+_FUGUE_SERIALIZED_BLOB_COL = "__fugue_serialized_blob__"
+_FUGUE_SERIALIZED_BLOB_NO_COL = "__fugue_serialized_blob_no__"
+_FUGUE_SERIALIZED_BLOB_NAME_COL = "__fugue_serialized_blob_name__"
+_FUGUE_SERIALIZED_BLOB_DUMMY_COL = "__fugue_serialized_blob_dummy__"
+
+_FUGUE_SERIALIZED_BLOB_SCHEMA = Schema(
+    {
+        _FUGUE_SERIALIZED_BLOB_COL: bytes,
+        _FUGUE_SERIALIZED_BLOB_NO_COL: int,
+        _FUGUE_SERIALIZED_BLOB_NAME_COL: str,
+        _FUGUE_SERIALIZED_BLOB_DUMMY_COL: int,
+    }
+)
 
 
 class _GlobalExecutionEngineContext:
@@ -956,102 +968,6 @@ class ExecutionEngine(FugueEngineBase):
 
     def zip(
         self,
-        df1: DataFrame,
-        df2: DataFrame,
-        how: str = "inner",
-        partition_spec: Optional[PartitionSpec] = None,
-        temp_path: Optional[str] = None,
-        to_file_threshold: Any = -1,
-        df1_name: Optional[str] = None,
-        df2_name: Optional[str] = None,
-    ):
-        """Partition the two dataframes in the same way with ``partition_spec`` and
-        zip the partitions together on the partition keys.
-
-        :param df1: the first dataframe
-        :param df2: the second dataframe
-        :param how: can accept ``inner``, ``left_outer``, ``right_outer``,
-          ``full_outer``, ``cross``, defaults to ``inner``
-        :param partition_spec: partition spec to partition each dataframe,
-          defaults to empty.
-        :type partition_spec: PartitionSpec, optional
-        :param temp_path: file path to store the data (used only if the serialized data
-          is larger than ``to_file_threshold``), defaults to None
-        :param to_file_threshold: file byte size threshold, defaults to -1
-        :param df1_name: df1's name in the zipped dataframe, defaults to None
-        :param df2_name: df2's name in the zipped dataframe, defaults to None
-
-        :return: a zipped dataframe, the metadata of the
-          dataframe will indicate it's zipped
-
-        .. note::
-
-            * Different from join, ``df1`` and ``df2`` can have common columns that you
-              will not use as partition keys.
-            * If ``on`` is not specified it will also use the common columns of the two
-              dataframes (if it's not a cross zip)
-            * For non-cross zip, the two dataframes must have common columns, or error
-              will be thrown
-
-        .. seealso::
-
-            For more details and examples, read |ZipComap|.
-        """
-        partition_spec = partition_spec or PartitionSpec()
-        on = list(partition_spec.partition_by)
-        how = how.lower()
-        assert_or_throw(
-            "semi" not in how and "anti" not in how,
-            InvalidOperationError("zip does not support semi or anti joins"),
-        )
-        serialized_cols: Dict[str, Any] = {}
-        schemas: Dict[str, Any] = {}
-        if len(on) == 0:
-            if how != "cross":
-                on = df1.schema.extract(
-                    df2.schema.names, ignore_key_mismatch=True
-                ).names
-        else:
-            assert_or_throw(
-                how != "cross",
-                InvalidOperationError("can't specify keys for cross join"),
-            )
-        partition_spec = PartitionSpec(partition_spec, by=on)
-
-        def update_df(df: DataFrame, name: Optional[str]) -> DataFrame:
-            if name is None:
-                name = f"_{len(serialized_cols)}"
-            if not df.metadata.get("serialized", False):
-                df = self._serialize_by_partition(
-                    df,
-                    partition_spec or PartitionSpec(),
-                    name,
-                    temp_path,
-                    to_file_threshold,
-                    has_name=name is not None,
-                )
-            for k in df.metadata["serialized_cols"].keys():
-                assert_or_throw(
-                    k not in serialized_cols, lambda: ValueError(f"{k} is duplicated")
-                )
-                serialized_cols[k] = df.metadata["serialized_cols"][k]
-                schemas[k] = df.metadata["schemas"][k]
-            return df
-
-        df1 = update_df(df1, df1_name)
-        df2 = update_df(df2, df2_name)
-        metadata = dict(
-            serialized=True,
-            serialized_cols=serialized_cols,
-            schemas=schemas,
-            serialized_has_name=df1_name is not None or df2_name is not None,
-        )
-        res = self.join(df1, df2, how=how, on=on)
-        res.reset_metadata(metadata)
-        return res
-
-    def zip_all(
-        self,
         dfs: DataFrames,
         how: str = "inner",
         partition_spec: Optional[PartitionSpec] = None,
@@ -1074,6 +990,15 @@ class ExecutionEngine(FugueEngineBase):
 
         .. note::
 
+            * Different from join, dataframes can have common columns that you
+              will not use as partition keys.
+            * If ``by`` is not specified it will also use the common columns of all the
+              dataframes (if it's not a cross zip)
+            * For non-cross zip, the dataframes must have common columns, or error
+              will be thrown
+
+        .. note::
+
             * Please also read :meth:`~.zip`
             * If ``dfs`` is dict like, the zipped dataframe will be dict like,
               If ``dfs`` is list like, the zipped dataframe will be list like
@@ -1083,40 +1008,60 @@ class ExecutionEngine(FugueEngineBase):
 
             For more details and examples, read |ZipComap|
         """
-        partition_spec = partition_spec or PartitionSpec()
         assert_or_throw(len(dfs) > 0, "can't zip 0 dataframes")
-        pairs = list(dfs.items())
-        has_name = dfs.has_key
-        if len(dfs) == 1:
-            return self._serialize_by_partition(
-                pairs[0][1],
-                partition_spec,
-                pairs[0][0],
-                temp_path,
-                to_file_threshold,
-                has_name=has_name,
-            )
-        df = self.zip(
-            pairs[0][1],
-            pairs[1][1],
-            how=how,
-            partition_spec=partition_spec,
-            temp_path=temp_path,
-            to_file_threshold=to_file_threshold,
-            df1_name=pairs[0][0] if has_name else None,
-            df2_name=pairs[1][0] if has_name else None,
+        assert_or_throw(
+            how in ["inner", "left_outer", "right_outer", "full_outer", "cross"],
+            NotImplementedError(f"unsupported join type {how}"),
         )
-        for i in range(2, len(dfs)):
-            df = self.zip(
-                df,
-                pairs[i][1],
-                how=how,
-                partition_spec=partition_spec,
-                temp_path=temp_path,
-                to_file_threshold=to_file_threshold,
-                df2_name=pairs[i][0] if has_name else None,
+
+        partition_spec = partition_spec or PartitionSpec()
+        on = list(partition_spec.partition_by)
+        how = how.lower()
+        if len(dfs) > 1:
+            if len(on) == 0:
+                if how != "cross":
+                    on = list(
+                        set.intersection(*[set(x.schema.names) for x in dfs.values()])
+                    )
+                    assert_or_throw(len(on) > 0, "no common columns found")
+            else:
+                assert_or_throw(
+                    how != "cross",
+                    InvalidOperationError("can't specify keys for cross join"),
+                )
+            partition_spec = PartitionSpec(partition_spec, by=list(on))
+        else:
+            if len(on) == 0:
+                partition_spec = PartitionSpec(num=1)
+            else:
+                partition_spec = PartitionSpec(partition_spec, by=list(on))
+
+        pairs = list(dfs.items())
+        schemas: Dict[Any, Schema] = {}
+        ser_dfs: List[DataFrame] = []
+        for i in range(len(dfs)):
+            ser_dfs.append(
+                self._serialize_by_partition(
+                    self.to_df(pairs[i][1]),
+                    partition_spec,
+                    i,
+                    pairs[i][0] if dfs.has_key else None,
+                    temp_path,
+                    to_file_threshold,
+                )
             )
-        return df
+            schemas[pairs[i][0] if dfs.has_key else i] = pairs[i][1].schema
+        res = ser_dfs[0]
+        for i in range(1, len(dfs)):
+            res = self.union(res, ser_dfs[i], distinct=False)
+        metadata = dict(
+            serialized=True,
+            schemas=schemas,
+            serialized_has_name=dfs.has_key,
+            serialized_join_how=how,
+        )
+        res.reset_metadata(metadata)
+        return res
 
     def comap(
         self,
@@ -1161,9 +1106,13 @@ class ExecutionEngine(FugueEngineBase):
             For more details and examples, read |ZipComap|
         """
         assert_or_throw(df.metadata["serialized"], ValueError("df is not serilaized"))
-        cs = _Comap(df, map_func, on_init)
-        key_schema = df.schema - list(df.metadata["serialized_cols"].values())
-        partition_spec = PartitionSpec(partition_spec, by=list(key_schema.keys()))
+        key_schema = df.schema - _FUGUE_SERIALIZED_BLOB_SCHEMA
+        cs = _Comap(df, key_schema, map_func, output_schema, on_init)
+        partition_spec = PartitionSpec(
+            partition_spec,
+            by=key_schema.names + [_FUGUE_SERIALIZED_BLOB_DUMMY_COL],
+            presort=_FUGUE_SERIALIZED_BLOB_NO_COL,
+        )
         return self.map_engine.map_dataframe(
             df, cs.run, output_schema, partition_spec, on_init=cs.on_init
         )
@@ -1273,35 +1222,30 @@ class ExecutionEngine(FugueEngineBase):
         self,
         df: DataFrame,
         partition_spec: PartitionSpec,
-        df_name: str,
-        temp_path: Optional[str] = None,
-        to_file_threshold: Any = -1,
-        has_name: bool = False,
+        df_no: int,
+        df_name: Optional[str],
+        temp_path: Optional[str],
+        to_file_threshold: Any,
     ) -> DataFrame:
         to_file_threshold = _get_file_threshold(to_file_threshold)
         on = list(filter(lambda k: k in df.schema, partition_spec.partition_by))
         presort = list(
             filter(lambda p: p[0] in df.schema, partition_spec.presort.items())
         )
-        col_name = _df_name_to_serialize_col(df_name)
         if len(on) == 0:
-            partition_spec = PartitionSpec(
+            _partition_spec = PartitionSpec(
                 partition_spec, num=1, by=[], presort=presort
             )
-            output_schema = Schema(f"{col_name}:str")
+            output_schema = _FUGUE_SERIALIZED_BLOB_SCHEMA
         else:
-            partition_spec = PartitionSpec(partition_spec, by=on, presort=presort)
-            output_schema = partition_spec.get_key_schema(df.schema) + f"{col_name}:str"
-        s = _PartitionSerializer(output_schema, temp_path, to_file_threshold)
-        metadata = dict(
-            serialized=True,
-            serialized_cols={df_name: col_name},
-            schemas={df_name: str(df.schema)},
-            serialized_has_name=has_name,
+            _partition_spec = PartitionSpec(partition_spec, by=on, presort=presort)
+            output_schema = (
+                partition_spec.get_key_schema(df.schema) + _FUGUE_SERIALIZED_BLOB_SCHEMA
+            )
+        s = _PartitionSerializer(
+            output_schema, df_no, df_name, temp_path, to_file_threshold
         )
-        res = self.map_engine.map_dataframe(df, s.run, output_schema, partition_spec)
-        res.reset_metadata(metadata)
-        return res
+        return self.map_engine.map_dataframe(df, s.run, output_schema, _partition_spec)
 
 
 @fugue_annotated_param(ExecutionEngine, "e", child_can_reuse_code=True)
@@ -1332,41 +1276,43 @@ def _get_file_threshold(size: Any) -> int:
     return to_size(size)
 
 
-def _df_name_to_serialize_col(name: str):
-    assert_or_throw(name is not None, "Dataframe name can't be None")
-    name = "__blob__" + name + "__"
-    assert_or_throw(validate_triad_var_name(name), "Invalid name " + name)
-    return name
-
-
-class _PartitionSerializer(object):
+class _PartitionSerializer:
     def __init__(
-        self, output_schema: Schema, temp_path: Optional[str], to_file_threshold: int
+        self,
+        output_schema: Schema,
+        no: int,
+        name: Optional[str],
+        temp_path: Optional[str],
+        to_file_threshold: int,
     ):
         self.output_schema = output_schema
+        self.no = no
+        self.name = name
         self.temp_path = temp_path
         self.to_file_threshold = to_file_threshold
 
     def run(self, cursor: PartitionCursor, df: LocalDataFrame) -> LocalDataFrame:
         data = serialize_df(df, self.to_file_threshold, self.temp_path)
-        row = cursor.key_value_array + [data]
+        row = cursor.key_value_array + [data, self.no, self.name, 1]
         return ArrayDataFrame([row], self.output_schema)
 
 
-class _Comap(object):
+class _Comap:
     def __init__(
         self,
         df: DataFrame,
+        key_schema: Schema,
         func: Callable,
+        output_schema: Schema,
         on_init: Optional[Callable[[int, DataFrames], Any]],
     ):
         self.schemas = df.metadata["schemas"]
-        self.df_idx = [
-            (df.schema.index_of_key(v), k, self.schemas[k])
-            for k, v in df.metadata["serialized_cols"].items()
-        ]
-        self.named = df.metadata.get("serialized_has_name", False)
+        self.key_schema = key_schema
+        self.output_schema = output_schema
+        self.dfs_count = len(self.schemas)
+        self.named = df.metadata.get_or_throw("serialized_has_name", bool)
         self.func = func
+        self.how = df.metadata.get_or_throw("serialized_join_how", str)
         self._on_init = on_init
 
     def on_init(self, partition_no, df: DataFrame) -> None:
@@ -1377,25 +1323,41 @@ class _Comap(object):
         self._on_init(partition_no, empty_dfs)
 
     def run(self, cursor: PartitionCursor, df: LocalDataFrame) -> LocalDataFrame:
-        data = df.as_array(type_safe=True)
-        assert_or_throw(
-            len(data) == 1,
-            FugueBug("each comap partition can have one and only one row"),
-        )
-        dfs = DataFrames(list(self._get_dfs(data[0])))
-        return self.func(cursor, dfs)
+        data = list(df.as_dict_iterable())
+        if self.how == "inner":
+            if len(data) < self.dfs_count:
+                return ArrayDataFrame([], self.output_schema)
+        elif self.how == "left_outer":
+            if data[0][_FUGUE_SERIALIZED_BLOB_NO_COL] > 0:
+                return ArrayDataFrame([], self.output_schema)
+        elif self.how == "right_outer":
+            if data[-1][_FUGUE_SERIALIZED_BLOB_NO_COL] != self.dfs_count - 1:
+                return ArrayDataFrame([], self.output_schema)
+        dfs = self._get_dfs(data)
 
-    def _get_dfs(self, row: Any) -> Iterable[Any]:
-        for k, name, v in self.df_idx:
-            if row[k] is None:
-                df: DataFrame = ArrayDataFrame([], v)
+        # construct a cursor without dummy col
+        _c = PartitionSpec(by=self.key_schema.names).get_cursor(
+            dfs[0].schema, cursor.physical_partition_no
+        )
+        _c.set(lambda: dfs[0].peek_array(), cursor.partition_no, cursor.slice_no)
+        return self.func(_c, dfs)
+
+    def _get_dfs(self, rows: List[Dict[str, Any]]) -> DataFrames:
+        tdfs: Dict[Any, DataFrame] = {}
+        for row in rows:
+            df = deserialize_df(row[_FUGUE_SERIALIZED_BLOB_COL])  # type: ignore
+            if df is not None:
+                if self.named:
+                    tdfs[row[_FUGUE_SERIALIZED_BLOB_NAME_COL]] = df
+                else:
+                    tdfs[row[_FUGUE_SERIALIZED_BLOB_NO_COL]] = df
+        dfs: Dict[Any, DataFrame] = {}
+        for k, schema in self.schemas.items():
+            if k in tdfs:
+                dfs[k] = tdfs[k]
             else:
-                df = deserialize_df(row[k])  # type: ignore
-                assert df is not None
-            if self.named:
-                yield name, df
-            else:
-                yield df
+                dfs[k] = ArrayDataFrame([], schema)
+        return DataFrames(dfs) if self.named else DataFrames(list(dfs.values()))
 
 
 def _generate_comap_empty_dfs(schemas: Any, named: bool) -> DataFrames:

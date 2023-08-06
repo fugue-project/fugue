@@ -1,23 +1,23 @@
 from typing import Any, List, Type, no_type_check
 
-from fugue.collections.partition import PartitionCursor
-from fugue.dataframe import (
-    ArrayDataFrame,
-    DataFrame,
-    DataFrames,
-    LocalDataFrame,
-)
-from fugue.column import ColumnExpr, SelectColumns as ColumnsSelect
-from fugue.exceptions import FugueWorkflowError
-from fugue.execution import make_sql_engine
-from fugue.execution.execution_engine import _generate_comap_empty_dfs
-from fugue.extensions.processor import Processor
-from fugue.extensions.transformer import CoTransformer, Transformer, _to_transformer
-from fugue.rpc import EmptyRPCHandler, to_rpc_handler
 from triad.collections import ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
 from triad.utils.convert import to_type
+
+from fugue.collections.partition import PartitionCursor
+from fugue.column import ColumnExpr
+from fugue.column import SelectColumns as ColumnsSelect
+from fugue.dataframe import ArrayDataFrame, DataFrame, DataFrames, LocalDataFrame
+from fugue.exceptions import FugueWorkflowError
+from fugue.execution import make_sql_engine
+from fugue.execution.execution_engine import (
+    _FUGUE_SERIALIZED_BLOB_SCHEMA,
+    _generate_comap_empty_dfs,
+)
+from fugue.extensions.processor import Processor
+from fugue.extensions.transformer import CoTransformer, Transformer, _to_transformer
+from fugue.rpc import EmptyRPCHandler, to_rpc_handler
 
 
 class RunTransformer(Processor):
@@ -60,7 +60,7 @@ class RunTransformer(Processor):
         assert_or_throw(
             df.metadata.get("serialized", False), "must use serialized dataframe"
         )
-        tf._key_schema = df.schema - list(df.metadata["serialized_cols"].values())
+        tf._key_schema = df.schema - _FUGUE_SERIALIZED_BLOB_SCHEMA
         # TODO: currently, get_output_schema only gets empty dataframes
         empty_dfs = _generate_comap_empty_dfs(
             df.metadata["schemas"], df.metadata.get("serialized_has_name", False)
@@ -161,7 +161,7 @@ class Zip(Processor):
         # TODO: this should also search on workflow conf
         temp_path = self.params.get_or_none("temp_path", str)
         to_file_threshold = self.params.get_or_none("to_file_threshold", object)
-        return self.execution_engine.zip_all(
+        return self.execution_engine.zip(
             dfs,
             how=how,
             partition_spec=partition_spec,

@@ -8,7 +8,10 @@ from fugue.dataframe import DataFrame, DataFrames, LocalDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq
 from fugue.exceptions import FugueWorkflowError
-from fugue.execution.execution_engine import _generate_comap_empty_dfs
+from fugue.execution.execution_engine import (
+    _FUGUE_SERIALIZED_BLOB_SCHEMA,
+    _generate_comap_empty_dfs,
+)
 from fugue.rpc import EmptyRPCHandler, to_rpc_handler
 
 from ..outputter import Outputter
@@ -108,7 +111,7 @@ class RunOutputTransformer(Outputter):
         assert_or_throw(
             df.metadata.get("serialized", False), "must use serialized dataframe"
         )
-        tf._key_schema = df.schema - list(df.metadata["serialized_cols"].values())
+        tf._key_schema = df.schema - _FUGUE_SERIALIZED_BLOB_SCHEMA
         # TODO: currently, get_output_schema only gets empty dataframes
         empty_dfs = _generate_comap_empty_dfs(
             df.metadata["schemas"], df.metadata.get("serialized_has_name", False)
