@@ -1029,12 +1029,12 @@ class ExecutionEngine(FugueEngineBase):
                     how != "cross",
                     InvalidOperationError("can't specify keys for cross join"),
                 )
-            partition_spec = PartitionSpec(partition_spec, by=list(on))
+            partition_spec = PartitionSpec(partition_spec, by=on)
         else:
             if len(on) == 0:
                 partition_spec = PartitionSpec(num=1)
             else:
-                partition_spec = PartitionSpec(partition_spec, by=list(on))
+                partition_spec = PartitionSpec(partition_spec, by=on)
 
         pairs = list(dfs.items())
         schemas: Dict[Any, Schema] = {}
