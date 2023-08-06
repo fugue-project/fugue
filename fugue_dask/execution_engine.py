@@ -11,7 +11,7 @@ from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.threading import RunOnce
-
+from triad.utils.pandas_like import PandasUtils
 from fugue import StructuredRawSQL
 from fugue._utils.misc import import_fsql_dependency
 from fugue.collections.partition import (
@@ -32,7 +32,13 @@ from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngi
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from fugue_dask._constants import FUGUE_DASK_DEFAULT_CONF
 from fugue_dask._io import load_df, save_df
-from fugue_dask._utils import DASK_UTILS, DaskUtils
+from fugue_dask._utils import (
+    DASK_UTILS,
+    DaskUtils,
+    even_repartition,
+    hash_repartition,
+    rand_repartition,
+)
 from fugue_dask.dataframe import DaskDataFrame
 
 _DASK_PARTITION_KEY = "__dask_partition_key__"
@@ -79,8 +85,9 @@ class DaskMapEngine(MapEngine):
         on_init: Optional[Callable[[int, DataFrame], Any]] = None,
         map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
-        is_coarse = partition_spec.algo == "coarse"
-        presort = partition_spec.get_sorts(df.schema, with_partition_keys=is_coarse)
+        presort = partition_spec.get_sorts(
+            df.schema, with_partition_keys=partition_spec.algo == "coarse"
+        )
         presort_keys = list(presort.keys())
         presort_asc = list(presort.values())
         output_schema = Schema(output_schema)
@@ -94,11 +101,9 @@ class DaskMapEngine(MapEngine):
             )
         )
 
-        def _map(pdf: Any) -> pd.DataFrame:
+        def _map(pdf: pd.DataFrame) -> pd.DataFrame:
             if pdf.shape[0] == 0:
                 return PandasDataFrame([], output_schema).as_pandas()
-            if is_coarse:
-                pdf = pdf.drop(columns=[_DASK_PARTITION_KEY])
             if len(partition_spec.presort) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             input_df = PandasDataFrame(
@@ -110,40 +115,34 @@ class DaskMapEngine(MapEngine):
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()[output_schema.names]
 
+        def _gp_map(pdf: pd.DataFrame) -> pd.DataFrame:
+            if pdf.shape[0] == 0:  # pragma: no cover
+                return PandasDataFrame([], output_schema).as_pandas()
+            pu = PandasUtils()
+            return pu.safe_groupby_apply(
+                pdf.reset_index(drop=True), partition_spec.partition_by, _map
+            )
+
         df = self.to_df(df)
         meta = self.execution_engine.pl_utils.safe_to_pandas_dtype(  # type: ignore
             output_schema.pa_schema
         )
+        pdf = self.execution_engine.repartition(df, partition_spec)
         if len(partition_spec.partition_by) == 0:
-            pdf = self.execution_engine.repartition(df, partition_spec)
             result = pdf.native.map_partitions(_map, meta=meta)  # type: ignore
         else:
-            df = self.execution_engine.repartition(
-                df, PartitionSpec(num=partition_spec.num_partitions)
-            )
-            if is_coarse:
-                input_num_partitions = df.num_partitions
-                _utils = self.execution_engine.pl_utils  # type: ignore
-                input_meta = _utils.safe_to_pandas_dtype(
-                    (input_schema + (_DASK_PARTITION_KEY, "uint64")).pa_schema
+            if partition_spec.algo == "default":
+                engine = self.execution_engine
+                result = engine.pl_utils.safe_groupby_apply(  # type: ignore
+                    df.native,
+                    partition_spec.partition_by,
+                    _map,
+                    meta=meta,
                 )
-                tddf = df.native.map_partitions(
-                    lambda pdf: pdf.assign(
-                        **{
-                            _DASK_PARTITION_KEY: pd.util.hash_pandas_object(
-                                pdf[partition_spec.partition_by], index=False
-                            ).mod(input_num_partitions)
-                        }
-                    ),
-                    meta=input_meta,
-                )
-                keys = [_DASK_PARTITION_KEY]
+            elif partition_spec.algo == "coarse":
+                result = pdf.native.map_partitions(_map, meta=meta)  # type: ignore
             else:
-                tddf = df.native
-                keys = partition_spec.partition_by
-            result = self.execution_engine.pl_utils.safe_groupby_apply(  # type: ignore
-                tddf, keys, _map, meta=meta  # type: ignore
-            )
+                result = pdf.native.map_partitions(_gp_map, meta=meta)  # type: ignore
         return DaskDataFrame(result, output_schema)
 
 
@@ -237,7 +236,7 @@ class DaskExecutionEngine(ExecutionEngine):
         df = self.to_df(df)
         if partition_spec.empty:
             return df
-        if len(partition_spec.partition_by) > 0:
+        if len(partition_spec.partition_by) > 0 and partition_spec.algo == "default":
             return df
         p = partition_spec.get_num_partitions(
             **{
@@ -245,14 +244,32 @@ class DaskExecutionEngine(ExecutionEngine):
                 KEYWORD_PARALLELISM: lambda: self.get_current_parallelism(),
             }
         )
-        if p > 0:
-            if partition_spec.algo == "even":
-                pdf = df.as_pandas()
-                ddf = dd.from_pandas(pdf, npartitions=p, sort=False)
-            else:
-                ddf = df.native.repartition(npartitions=p)
-            return DaskDataFrame(ddf, schema=df.schema, type_safe=False)
-        return df
+        if partition_spec.algo == "default":
+            ddf: dd.DataFrame = (
+                df.native.repartition(npartitions=p) if p > 0 else df.native
+            )
+        elif partition_spec.algo in ["hash", "coarse"]:
+            ddf = hash_repartition(
+                df.native,
+                num=p if p > 0 else self.get_current_parallelism() * 2,
+                cols=partition_spec.partition_by,
+            )
+        elif partition_spec.algo == "even":
+            ddf = even_repartition(df.native, num=p, cols=partition_spec.partition_by)
+        elif partition_spec.algo == "rand":
+            ddf = rand_repartition(
+                df.native,
+                num=p if p > 0 else self.get_current_parallelism() * 2,
+                cols=partition_spec.partition_by,
+                seed=0,
+            )
+        else:  # pragma: no cover
+            raise NotImplementedError(
+                partition_spec.algo + " partitioning is not supported"
+            )
+        if ddf is None or df.native is ddf:
+            return df
+        return DaskDataFrame(ddf, schema=df.schema, type_safe=False)
 
     def broadcast(self, df: DataFrame) -> DataFrame:
         return self.to_df(df)

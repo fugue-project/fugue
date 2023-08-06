@@ -2,18 +2,23 @@ import pickle
 from threading import RLock
 from typing import Any, List, Optional
 
+import dask
 import dask.dataframe as dd
 import pandas as pd
 from dask.distributed import Client
-import dask
 
 import fugue.api as fa
-from fugue import transform
-from fugue.collections.partition import PartitionSpec
-from fugue.dataframe.pandas_dataframe import PandasDataFrame
+from fugue import (
+    ArrayDataFrame,
+    FugueWorkflow,
+    PandasDataFrame,
+    PartitionSpec,
+    Transformer,
+    transform,
+    transformer,
+)
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.plugins import infer_execution_engine
-from fugue.workflow.workflow import FugueWorkflow
 from fugue_dask.dataframe import DaskDataFrame
 from fugue_dask.execution_engine import DaskExecutionEngine
 from fugue_test.builtin_suite import BuiltInTests
@@ -167,6 +172,57 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
         r3 = fa.union(r1, r2, distinct=False)
         r3.show()
 
+    def test_repartition(self):
+        with FugueWorkflow() as dag:
+            a = dag.df(
+                [[0, 1], [0, 2], [0, 3], [0, 4], [1, 1], [1, 2], [1, 3]], "a:int,b:int"
+            )
+            c = a.per_row().transform(count_partition)
+            dag.output(c, using=assert_match, params=dict(values=[1, 1, 1, 1, 1, 1, 1]))
+            c = a.partition(algo="even", num="ROWCOUNT/2").transform(count_partition)
+            dag.output(c, using=assert_match, params=dict(values=[3, 3, 1]))
+            c = a.per_partition_by("a").transform(count_partition)
+            dag.output(c, using=assert_match, params=dict(values=[3, 4]))
+            c = a.partition_by("a", num=3).transform(count_partition)
+            dag.output(c, using=assert_match, params=dict(values=[3, 4]))
+            c = a.partition_by("a", num=100, algo="even").transform(count_partition)
+            dag.output(c, using=assert_match, params=dict(values=[3, 4]))
+            # c = a.partition(algo="even", by=["a"]).transform(AssertMaxNTransform)
+            # dag.output(c, using=assert_match, params=dict(values=[3, 4]))
+            c = a.partition(num=1).transform(count_partition)
+            dag.output(c, using=assert_match, params=dict(values=[7]))
+            c = a.partition(algo="rand", num=100).transform(count_partition).persist()
+            c = a.partition(algo="hash", num=100).transform(count_partition).persist()
+        dag.run(self.engine)
+
+    def test_repartition_large(self):
+        with FugueWorkflow() as dag:
+            a = dag.df([[p, 0] for p in range(100)], "a:int,b:int")
+            c = (
+                a.partition(algo="even", by=["a"])
+                .transform(AssertMaxNTransform)
+                .persist()
+            )
+            c = (
+                a.partition(algo="even", num="ROWCOUNT/2", by=["a"])
+                .transform(AssertMaxNTransform, params=dict(n=2))
+                .persist()
+            )
+            dag.output(c, using=assert_all_n, params=dict(n=1, l=100))
+            c = (
+                a.partition(algo="even", num="ROWCOUNT")
+                .transform(AssertMaxNTransform)
+                .persist()
+            )
+            dag.output(c, using=assert_all_n, params=dict(n=1, l=100))
+            c = a.partition(algo="even", num="ROWCOUNT/2").transform(
+                AssertMaxNTransform, params=dict(n=2)
+            )
+            dag.output(c, using=assert_all_n, params=dict(n=2, l=50))
+            c = a.partition(num=1).transform(count_partition)
+            dag.output(c, using=assert_match, params=dict(values=[100]))
+        dag.run(self.engine)
+
     def test_coarse_partition(self):
         def verify_coarse_partition(df: pd.DataFrame) -> List[List[Any]]:
             ct = df.a.nunique()
@@ -256,3 +312,38 @@ def test_transform():
     assert not res.is_local
     assert 5 == res.count()
     assert 5 == cb.n
+
+
+@transformer("ct:long")
+def count_partition(df: List[List[Any]]) -> List[List[Any]]:
+    return [[len(df)]]
+
+
+class AssertMaxNTransform(Transformer):
+    def get_output_schema(self, df):
+        return "c:int"
+
+    def transform(self, df):
+        # need to collect because df can be IterableDataFrame
+        # or IterablePandasDataFrame
+        pdf = df.as_pandas()
+        if not hasattr(self, "called"):
+            self.called = 1
+            self.data = [str(pdf)]
+        else:
+            self.called += 1
+            self.data.append(str(pdf))
+        n = self.params.get("n", 1)
+        # if self.called > n:
+        #    raise AssertionError(f"{self.data}")
+        assert len(pdf) <= n and len(pdf) > 0, f"{self.data}"
+        return ArrayDataFrame([[len(pdf)]], "c:int")
+
+
+def assert_match(df: List[List[Any]], values: List[int]) -> None:
+    assert set(values) == set(x[0] for x in df)
+
+
+def assert_all_n(df: List[List[Any]], n, l) -> None:
+    assert all(x[0] == n for x in df), str([x[0] for x in df])
+    assert l == len(df)

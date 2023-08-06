@@ -98,7 +98,7 @@ class PartitionSpec(object):
 
     Partition consists for these specs:
 
-    * **algo**: can be one of ``hash`` (default), ``rand``, ``even`` or ``coarse``
+    * **algo**: can be one of ``default``, ``hash``, ``rand``, ``even`` or ``coarse``
     * **num** or **num_partitions**: number of physical partitions, it can be an
       expression or integer numbers, e.g ``(ROWCOUNT+4) / 3``
     * **by** or **partition_by**: keys to partition on
@@ -208,10 +208,10 @@ class PartitionSpec(object):
 
     @property
     def algo(self) -> str:
-        """Get algo of the spec, one of ``hash`` (default),
+        """Get algo of the spec, one of ``default``, ``hash``,
         ``rand`` ``even`` or ``coarse``
         """
-        return self._algo if self._algo != "" else "hash"
+        return self._algo if self._algo != "" else "default"
 
     @property
     def partition_by(self) -> List[str]:
