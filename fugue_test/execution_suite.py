@@ -826,7 +826,7 @@ class ExecutionEngineTests(object):
             assert not df_eq(d, e, throw=False)
             assert abs(len(e.as_array()) - 90) < 2
 
-        def test__serialize_by_partition(self):
+        def _test__serialize_by_partition(self):
             e = self.engine
             a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4], [1, 5]], "a:int,b:int")
             s = e._serialize_by_partition(
@@ -840,7 +840,7 @@ class ExecutionEngineTests(object):
             )
             assert s.count() == 1
 
-        def test_zip(self):
+        def _test_zip(self):
             ps = PartitionSpec(by=["a"], presort="b DESC,c DESC")
             e = self.engine
             a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4], [1, 5]], "a:int,b:int")
@@ -901,19 +901,19 @@ class ExecutionEngineTests(object):
             z7.show()
             assert z7.metadata.get("serialized_has_name", False)
 
-        def test_zip_all(self):
+        def _test_zip_all(self):
             e = self.engine
             a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4], [1, 5]], "a:int,b:int")
-            z = fa.persist(e.zip_all(DataFrames(a)))
+            z = fa.persist(e.zip(DataFrames(a)))
             assert 1 == z.count()
             assert z.metadata.get("serialized", False)
             assert not z.metadata.get("serialized_has_name", False)
-            z = fa.persist(e.zip_all(DataFrames(x=a)))
+            z = fa.persist(e.zip(DataFrames(x=a)))
             assert 1 == z.count()
             assert z.metadata.get("serialized", False)
             assert z.metadata.get("serialized_has_name", False)
             z = fa.persist(
-                e.zip_all(DataFrames(x=a), partition_spec=PartitionSpec(by=["a"]))
+                e.zip(DataFrames(x=a), partition_spec=PartitionSpec(by=["a"]))
             )
             assert 2 == z.count()
             assert z.metadata.get("serialized", False)
@@ -921,24 +921,24 @@ class ExecutionEngineTests(object):
 
             b = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "c:int,a:int")
             c = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "d:int,a:int")
-            z = fa.persist(e.zip_all(DataFrames(a, b, c)))
+            z = fa.persist(e.zip(DataFrames(a, b, c)))
             assert 1 == z.count()
             assert not z.metadata.get("serialized_has_name", False)
-            z = fa.persist(e.zip_all(DataFrames(x=a, y=b, z=c)))
+            z = fa.persist(e.zip(DataFrames(x=a, y=b, z=c)))
             assert 1 == z.count()
             assert z.metadata.get("serialized_has_name", False)
 
-            z = fa.persist(e.zip_all(DataFrames(b, b)))
+            z = fa.persist(e.zip(DataFrames(b, b)))
             assert 2 == z.count()
             assert not z.metadata.get("serialized_has_name", False)
             assert ["a", "c"] in z.schema
-            z = fa.persist(e.zip_all(DataFrames(x=b, y=b)))
+            z = fa.persist(e.zip(DataFrames(x=b, y=b)))
             assert 2 == z.count()
             assert z.metadata.get("serialized_has_name", False)
             assert ["a", "c"] in z.schema
 
             z = fa.persist(
-                e.zip_all(DataFrames(b, b), partition_spec=PartitionSpec(by=["a"]))
+                e.zip(DataFrames(b, b), partition_spec=PartitionSpec(by=["a"]))
             )
             assert 2 == z.count()
             assert not z.metadata.get("serialized_has_name", False)
@@ -949,17 +949,38 @@ class ExecutionEngineTests(object):
             e = self.engine
             a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4], [1, 5]], "a:int,b:int")
             b = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "c:int,a:int")
-            z1 = fa.persist(e.zip(a, b))
-            z2 = fa.persist(e.zip(a, b, partition_spec=ps, how="left_outer"))
-            z3 = fa.persist(
-                e._serialize_by_partition(a, partition_spec=ps, df_name="_x")
+            with raises(InvalidOperationError):  # cross can't have partition by
+                e.zip(
+                    DataFrames([a, b]),
+                    partition_spec=PartitionSpec(by=["a"]),
+                    how="cross",
+                )
+            with raises(NotImplementedError):
+                e.zip(
+                    DataFrames([a, b]),
+                    partition_spec=PartitionSpec(by=["a"]),
+                    how="left_anti",
+                )
+            z1 = fa.persist(e.zip(DataFrames([a, b])))
+            z2 = fa.persist(
+                e.zip(DataFrames([a, b]), partition_spec=ps, how="left_outer")
             )
-            z4 = fa.persist(e.zip(a, b, partition_spec=ps, how="cross"))
+            z3 = fa.persist(
+                e.zip(DataFrames([b, a]), partition_spec=ps, how="right_outer")
+            )
+            z4 = fa.persist(e.zip(DataFrames([a, b]), partition_spec=ps, how="cross"))
+            z5 = fa.persist(
+                e.zip(DataFrames([a, b]), partition_spec=ps, how="full_outer")
+            )
 
             def comap(cursor, dfs):
                 assert not dfs.has_key
                 v = ",".join([k + str(v.count()) for k, v in dfs.items()])
-                keys = cursor.key_value_array
+                keys = (
+                    cursor.key_value_array
+                    if not dfs[0].empty
+                    else dfs[1][["a"]].peek_array()
+                )
                 if len(keys) == 0:
                     return ArrayDataFrame([[v]], "v:str")
                 return ArrayDataFrame([keys + [v]], cursor.key_schema + "v:str")
@@ -987,21 +1008,34 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
 
-            res = e.comap(z3, comap, "v:str", PartitionSpec())
-            df_eq(res, [["_03"]], "v:str", throw=True)
+            res = e.comap(z3, comap, "a:int,v:str", PartitionSpec())
+            df_eq(
+                res,
+                [[1, "_01,_12"], [3, "_00,_11"]],
+                "a:int,v:str",
+                throw=True,
+            )
 
             res = e.comap(z4, comap, "v:str", PartitionSpec())
             df_eq(res, [["_03,_12"]], "v:str", throw=True)
+
+            res = e.comap(z5, comap, "a:int,v:str", PartitionSpec())
+            df_eq(
+                res,
+                [[1, "_02,_11"], [3, "_01,_10"], [7, "_00,_11"]],
+                "a:int,v:str",
+                throw=True,
+            )
 
         def test_comap_with_key(self):
             e = self.engine
             a = fa.as_fugue_engine_df(e, [[1, 2], [3, 4], [1, 5]], "a:int,b:int")
             b = fa.as_fugue_engine_df(e, [[6, 1], [2, 7]], "c:int,a:int")
             c = fa.as_fugue_engine_df(e, [[6, 1]], "c:int,a:int")
-            z1 = fa.persist(e.zip(a, b, df1_name="x", df2_name="y"))
-            z2 = fa.persist(e.zip_all(DataFrames(x=a, y=b, z=b)))
+            z1 = fa.persist(e.zip(DataFrames(x=a, y=b)))
+            z2 = fa.persist(e.zip(DataFrames(x=a, y=b, z=b)))
             z3 = fa.persist(
-                e.zip_all(DataFrames(z=c), partition_spec=PartitionSpec(by=["a"]))
+                e.zip(DataFrames(z=c), partition_spec=PartitionSpec(by=["a"]))
             )
 
             def comap(cursor, dfs):

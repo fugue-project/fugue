@@ -146,7 +146,7 @@ class SparkMapEngine(MapEngine):
                     )
                 else:
                     if (  # not simple partitioning
-                        partition_spec.algo != "hash"
+                        partition_spec.algo not in ["default", "hash"]
                         or partition_spec.num_partitions != "0"
                     ):
                         # TODO: not sure if presort should be done
@@ -440,7 +440,7 @@ class SparkExecutionEngine(ExecutionEngine):
         }
         num = partition_spec.get_num_partitions(**num_funcs)
 
-        if partition_spec.algo in ["hash", "coarse"]:
+        if partition_spec.algo in ["default", "hash", "coarse"]:
             sdf = hash_repartition(
                 self.spark_session, df.native, num, partition_spec.partition_by
             )

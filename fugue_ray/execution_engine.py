@@ -254,7 +254,7 @@ class RayExecutionEngine(DuckExecutionEngine):
         pdf = rdf.native
 
         if num > 0:
-            if partition_spec.algo in ["hash", "even", "coarse"]:
+            if partition_spec.algo in ["default", "hash", "even", "coarse"]:
                 pdf = pdf.repartition(num)
             elif partition_spec.algo == "rand":
                 pdf = pdf.repartition(num, shuffle=True)
