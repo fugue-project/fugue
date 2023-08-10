@@ -81,7 +81,7 @@ setup(
             "ipython>=7.10.0",
             "duckdb>=0.5.0",
             "pyarrow>=11.0.0",
-            "pandas>=2.0.2",
+            "pandas>=2.0.2; python_version >= '3.8'",
             "ibis-framework>=2.1.1; python_version < '3.8'",
             "ibis-framework>=3.2.0,<6; python_version >= '3.8'",
             "polars",
