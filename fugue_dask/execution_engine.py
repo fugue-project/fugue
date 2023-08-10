@@ -476,7 +476,11 @@ class DaskExecutionEngine(ExecutionEngine):
         _presort: IndexedOrderedDict = presort or partition_spec.presort
 
         def _partition_take(partition, n, presort):
-            if len(presort.keys()) > 0:
+            assert_or_throw(
+                partition.shape[1] == len(meta),
+                FugueBug("hitting the dask bug where partition keys are lost"),
+            )
+            if len(presort.keys()) > 0 and len(partition) > 1:
                 partition = partition.sort_values(
                     list(presort.keys()),
                     ascending=list(presort.values()),
