@@ -6,6 +6,7 @@ import pytest
 
 def test_importless():
     pytest.importorskip("fugue_sql_antlr")
+    pytest.importorskip("ibis")
     client = Client()
     for engine in ["dask", client]:
         dag = FugueWorkflow()

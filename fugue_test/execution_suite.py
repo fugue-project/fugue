@@ -286,14 +286,14 @@ class ExecutionEngineTests(object):
             e = self.engine
             # test with multiple key with null values
             o = ArrayDataFrame(
-                [[1, None, 1], [1, None, 0], [None, None, 1]], "a:double,b:double,c:int"
+                [[1, None, 1], [1, None, 0], [None, None, 2]], "a:double,b:double,c:int"
             )
             c = e.map_engine.map_dataframe(
                 o, select_top, o.schema, PartitionSpec(by=["a", "b"], presort="c")
             )
             df_eq(
                 c,
-                [[1, None, 0], [None, None, 1]],
+                [[1, None, 0], [None, None, 2]],
                 "a:double,b:double,c:int",
                 throw=True,
             )

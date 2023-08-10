@@ -141,7 +141,12 @@ class ArrowDataFrame(LocalBoundedDataFrame):
         return self.native.shape[0]
 
     def as_pandas(self) -> pd.DataFrame:
-        return self.native.to_pandas(use_threads=False, date_as_object=False)
+        mapper: Any = None
+        if hasattr(pd, "ArrowDtype"):
+            mapper = pd.ArrowDtype
+        return self.native.to_pandas(
+            use_threads=False, date_as_object=False, types_mapper=mapper
+        )
 
     def head(
         self, n: int, columns: Optional[List[str]] = None

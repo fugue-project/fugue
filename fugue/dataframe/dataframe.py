@@ -8,7 +8,6 @@ from triad import SerializableRLock
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
-from triad.utils.pandas_like import PD_UTILS
 
 from .._utils.display import PrettyTable
 from ..collections.yielded import Yielded
@@ -113,14 +112,17 @@ class DataFrame(Dataset):
     def as_pandas(self) -> pd.DataFrame:
         """Convert to pandas DataFrame"""
         pdf = pd.DataFrame(self.as_array(), columns=self.columns)
-        if len(pdf) == 0:  # TODO: move to triad
-            return pd.DataFrame(
-                {
-                    k: pd.Series(dtype=v.type.to_pandas_dtype())
-                    for k, v in self.schema.items()
-                }
-            )
-        return PD_UTILS.enforce_type(pdf, self.schema.pa_schema, null_safe=True)
+        return pdf.astype(
+            self.schema.to_pandas_dtype(use_extension_types=True, use_arrow_dtype=True)
+        )
+        # if len(pdf) == 0:  # TODO: move to triad
+        #     return pd.DataFrame(
+        #         {
+        #             k: pd.Series(dtype=v.type.to_pandas_dtype())
+        #             for k, v in self.schema.items()
+        #         }
+        #     )
+        # return PD_UTILS.enforce_type(pdf, self.schema.pa_schema, null_safe=True)
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
         """Convert to pyArrow DataFrame"""

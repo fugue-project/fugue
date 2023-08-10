@@ -12,14 +12,14 @@ from fugue_dask.dataframe import DaskDataFrame
 
 def test_parquet_io(tmpdir):
     df1 = DaskDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
-    df2 = DaskDataFrame([[[1, 2]]], "a:[int]")
+    df2 = DaskDataFrame([[[1, 2]]], "a:[long]")
     # {a:int} will become {a:long} because pyarrow lib has issue
     df3 = DaskDataFrame([[dict(a=1)]], "a:{a:long}")
     for df in [df1, df2, df3]:
         path = os.path.join(tmpdir, "a.parquet")
         save_df(df, path)
         actual = load_df(path)
-        df_eq(df, actual, throw=True)
+        df_eq(df, actual, throw=True, check_order=True)
 
     save_df(df1, path)
     actual = load_df(path, columns=["b", "a"])

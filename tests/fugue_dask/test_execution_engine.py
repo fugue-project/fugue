@@ -47,6 +47,7 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
         client = Client(processes=True, n_workers=3, threads_per_worker=1)
         # p2p (new default algo has bugs)
         dask.config.set({"dataframe.shuffle.method": "tasks"})
+        dask.config.set({"dataframe.convert-string": False})
         e = DaskExecutionEngine(client, conf=dict(test=True, **_CONF))
         return e
 
@@ -135,6 +136,7 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
 
     def make_engine(self):
         e = DaskExecutionEngine(conf=dict(test=True, **_CONF))
+        dask.config.set({"dataframe.convert-string": False})
         return e
 
     def test_yield_table(self):

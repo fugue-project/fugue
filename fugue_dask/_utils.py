@@ -8,12 +8,12 @@ import pyarrow as pa
 from dask.dataframe.core import DataFrame
 from dask.distributed import Client, get_client
 from triad.utils.pandas_like import PandasLikeUtils
-from triad.utils.pyarrow import to_pandas_dtype, to_single_pandas_dtype
+from triad.utils.pyarrow import to_pandas_dtype
 
 import fugue.api as fa
 from fugue.constants import FUGUE_CONF_DEFAULT_PARTITIONS
 
-from ._constants import FUGUE_DASK_CONF_DEFAULT_PARTITIONS
+from ._constants import FUGUE_DASK_CONF_DEFAULT_PARTITIONS, FUGUE_DASK_USE_ARROW
 
 _FUGUE_DASK_TEMP_IDX_COLUMN = "_fugue_dask_temp_index"
 
@@ -241,13 +241,9 @@ class DaskUtils(PandasLikeUtils[dd.DataFrame, dd.Series]):
             This is a temporary solution, it will be removed when we use the Slide
             package. Do not use this function directly.
         """
-        res: Dict[str, np.dtype] = {}
-        for f in schema:
-            if pa.types.is_nested(f.type):
-                res[f.name] = np.dtype(object)
-            else:
-                res[f.name] = to_single_pandas_dtype(f.type, use_extension_types=False)
-        return res
+        return to_pandas_dtype(
+            schema, use_extension_types=True, use_arrow_dtype=FUGUE_DASK_USE_ARROW
+        )
 
     # TODO: merge this back to base class
     def enforce_type(  # noqa: C901
@@ -281,10 +277,10 @@ class DaskUtils(PandasLikeUtils[dd.DataFrame, dd.Series]):
                     try:
                         s = s.str.lower() == "true"
                     except AttributeError:
-                        s = s.fillna(0).astype(bool)
+                        s = s.fillna(0).astype(pd.BooleanDtype())
                 else:
-                    s = s.fillna(0).astype(bool)
-                s = s.mask(ns, None).astype("boolean")
+                    s = s.fillna(0).astype(pd.BooleanDtype())
+                s = s.mask(ns, None).astype(pd.BooleanDtype())
             elif pa.types.is_integer(v.type) and not pd.api.types.is_integer_dtype(
                 s.dtype
             ):

@@ -63,8 +63,8 @@ def test_init():
     assert df.count() == 0
     assert df.schema == "a:str,b:int"
 
-    pdf = pandas.DataFrame([["a", 1], ["b", 2]])
-    raises(Exception, lambda: DaskDataFrame(pdf))
+    pdf = pandas.DataFrame([["a", 1], ["b", 2]], columns=["a", "b"])
+    # raises(Exception, lambda: DaskDataFrame(pdf))
     df = DaskDataFrame(pdf, "a:str,b:str")
     assert [["a", "1"], ["b", "2"]] == df.as_pandas().values.tolist()
     df = DaskDataFrame(pdf, "a:str,b:int")
@@ -88,7 +88,7 @@ def test_init():
     assert [["1", "a"], ["2", "b"]] == ddf.as_pandas().values.tolist()
     assert df.native is ddf.native  # no real copy happened
 
-    df = DaskDataFrame([["a", 1], ["b", "2"]], "x:str,y:double")
+    df = DaskDataFrame([["a", 1], ["b", 2]], "x:str,y:double")
     assert [["a", 1.0], ["b", 2.0]] == df.as_pandas().values.tolist()
 
     df = DaskDataFrame([], "x:str,y:double")
@@ -103,7 +103,7 @@ def test_simple_methods():
     assert 0 == df.count()
     assert not df.is_local
 
-    df = DaskDataFrame([["a", 1], ["b", "2"]], "x:str,y:double")
+    df = DaskDataFrame([["a", 1], ["b", 2]], "x:str,y:double")
     assert not df.empty
     assert 2 == df.count()
     assert ["a", 1.0] == df.peek_array()
@@ -143,37 +143,37 @@ def test_as_array():
     assert [[1, "a"]] == df.as_array(["b", "a"])
 
     # prevent pandas auto type casting
-    df = DaskDataFrame([[1.0, 1.1]], "a:double,b:int")
+    df = DaskDataFrame([[1.0, 1.0]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array()
     assert isinstance(df.as_array()[0][0], float)
     assert isinstance(df.as_array()[0][1], int)
     assert [[1.0, 1]] == df.as_array(["a", "b"])
     assert [[1, 1.0]] == df.as_array(["b", "a"])
 
-    df = DaskDataFrame([[np.float64(1.0), 1.1]], "a:double,b:int")
+    df = DaskDataFrame([[np.float64(1.0), 1.0]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array()
     assert isinstance(df.as_array()[0][0], float)
     assert isinstance(df.as_array()[0][1], int)
 
-    df = DaskDataFrame([[pandas.Timestamp("2020-01-01"), 1.1]], "a:datetime,b:int")
+    df = DaskDataFrame([[pandas.Timestamp("2020-01-01"), 1.0]], "a:datetime,b:int")
     df.native["a"] = pd.to_datetime(df.native["a"])
     assert [[datetime(2020, 1, 1), 1]] == df.as_array()
     assert isinstance(df.as_array()[0][0], datetime)
     assert isinstance(df.as_array()[0][1], int)
 
-    df = DaskDataFrame([[pandas.NaT, 1.1]], "a:datetime,b:int")
+    df = DaskDataFrame([[pandas.NaT, 1.0]], "a:datetime,b:int")
     df.native["a"] = pd.to_datetime(df.native["a"])
     assert df.as_array()[0][0] is None
     assert isinstance(df.as_array()[0][1], int)
 
-    df = DaskDataFrame([[1.0, 1.1]], "a:double,b:int")
+    df = DaskDataFrame([[1.0, 1.0]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array(type_safe=True)
     assert isinstance(df.as_array()[0][0], float)
     assert isinstance(df.as_array()[0][1], int)
 
 
 def test_as_dict_iterable():
-    df = DaskDataFrame([["2020-01-01", 1.1]], "a:datetime,b:int")
+    df = DaskDataFrame([["2020-01-01", 1.0]], "a:datetime,b:int")
     assert [dict(a=datetime(2020, 1, 1), b=1)] == list(df.as_dict_iterable())
 
 

@@ -1,8 +1,8 @@
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import dask.dataframe as dd
-import pandas
 import pyarrow as pa
+import pandas as pd
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.pyarrow import to_pandas_dtype
@@ -31,6 +31,7 @@ from fugue.plugins import (
 )
 
 from ._utils import DASK_UTILS, get_default_partitions
+from ._constants import FUGUE_DASK_USE_ARROW
 
 
 class DaskDataFrame(DataFrame):
@@ -71,15 +72,20 @@ class DaskDataFrame(DataFrame):
                 df = df.to_frame()
             pdf = df
             schema = None if schema is None else _input_schema(schema)
-        elif isinstance(df, (pandas.DataFrame, pandas.Series)):
-            if isinstance(df, pandas.Series):
+        elif isinstance(df, (pd.DataFrame, pd.Series)):
+            if isinstance(df, pd.Series):
                 df = df.to_frame()
             pdf = dd.from_pandas(df, npartitions=num_partitions, sort=False)
             schema = None if schema is None else _input_schema(schema)
         elif isinstance(df, Iterable):
             schema = _input_schema(schema).assert_not_empty()
             t = PandasDataFrame(df, schema)
-            pdf = dd.from_pandas(t.native, npartitions=num_partitions, sort=False)
+            tdf = t.native.astype(
+                schema.to_pandas_dtype(
+                    use_extension_types=True, use_arrow_dtype=FUGUE_DASK_USE_ARROW
+                )
+            )
+            pdf = dd.from_pandas(tdf, npartitions=num_partitions, sort=False)
             type_safe = False
         else:
             raise ValueError(f"{df} is incompatible with DaskDataFrame")
@@ -137,7 +143,7 @@ class DaskDataFrame(DataFrame):
     def count(self) -> int:
         return self.native.shape[0].compute()
 
-    def as_pandas(self) -> pandas.DataFrame:
+    def as_pandas(self) -> pd.DataFrame:
         return self.native.compute().reset_index(drop=True)
 
     def rename(self, columns: Dict[str, str]) -> DataFrame:
@@ -153,7 +159,7 @@ class DaskDataFrame(DataFrame):
         if new_schema == self.schema:
             return self
         new_pdf = self.native.assign()
-        pd_types = to_pandas_dtype(new_schema.pa_schema)
+        pd_types = to_pandas_dtype(new_schema.pa_schema, use_extension_types=True)
         for k, v in new_schema.items():
             if not v.type.equals(self.schema[k].type):
                 old_type = self.schema[k].type
@@ -163,33 +169,35 @@ class DaskDataFrame(DataFrame):
                     series = new_pdf[k]
                     ns = series.isnull()
                     series = series.fillna(0).astype(int).astype(str)
-                    new_pdf[k] = series.mask(ns, None)
+                    new_pdf[k] = series.mask(ns, pd.NA)
                 # bool -> str
                 elif pa.types.is_boolean(old_type) and pa.types.is_string(new_type):
                     series = new_pdf[k]
                     ns = series.isnull()
-                    positive = series != 0
-                    new_pdf[k] = "False"
-                    new_pdf[k] = new_pdf[k].mask(positive, "True").mask(ns, None)
+                    new_pdf[k] = series.astype(str).mask(ns, pd.NA)
                 # str -> bool
                 elif pa.types.is_string(old_type) and pa.types.is_boolean(new_type):
                     series = new_pdf[k]
                     ns = series.isnull()
                     new_pdf[k] = (
-                        series.fillna("true")
-                        .apply(lambda x: None if x is None else x.lower())
+                        (series.fillna("true").str.lower() == "true")
                         .mask(ns, None)
+                        .astype("boolean")
                     )
                 elif pa.types.is_integer(new_type):
                     series = new_pdf[k]
                     ns = series.isnull()
-                    series = series.fillna(0).astype(pd_types[k])
-                    new_pdf[k] = series.mask(ns, None)
+                    if pa.types.is_string(old_type):
+                        series = series.fillna("0")
+                    else:
+                        series = series.fillna(0)
+                    series = series.astype(pd_types[k])
+                    new_pdf[k] = series.mask(ns, pd.NA)
                 else:
                     series = new_pdf[k]
                     ns = series.isnull()
                     series = series.astype(pd_types[k])
-                    new_pdf[k] = series.mask(ns, None)
+                    new_pdf[k] = series.mask(ns, pd.NA)
         return DaskDataFrame(new_pdf, new_schema, type_safe=True)
 
     def as_array(
@@ -221,6 +229,12 @@ class DaskDataFrame(DataFrame):
             assert_arg_not_none(pdf, "pdf")
             assert_arg_not_none(schema, "schema")
             return pdf, schema
+        if schema is not None:
+            pdf = pdf.astype(
+                schema.to_pandas_dtype(
+                    use_extension_types=True, use_arrow_dtype=FUGUE_DASK_USE_ARROW
+                )
+            )
         DASK_UTILS.ensure_compatible(pdf)
         if pdf.columns.dtype == "object":  # pdf has named schema
             pschema = Schema(DASK_UTILS.to_schema(pdf))
@@ -315,7 +329,7 @@ def _dd_head(
     n: int,
     columns: Optional[List[str]] = None,
     as_fugue: bool = False,
-) -> pandas.DataFrame:
+) -> pd.DataFrame:
     if columns is not None:
         df = df[columns]
     res = df.head(n, compute=True, npartitions=-1)

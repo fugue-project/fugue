@@ -7,7 +7,7 @@ import pytest
 from fugue_dask._utils import even_repartition, hash_repartition, rand_repartition
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def dask_client():
     from dask.distributed import Client
 
