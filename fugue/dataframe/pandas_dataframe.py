@@ -3,7 +3,6 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import pandas as pd
 import pyarrow as pa
 from triad.collections.schema import Schema
-from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
 
 from fugue.dataset.api import (
@@ -76,10 +75,9 @@ class PandasDataFrame(LocalBoundedDataFrame):
         elif isinstance(df, Iterable):
             schema = _input_schema(schema).assert_not_empty()
             pdf = pd.DataFrame(df, columns=schema.names)
-            pdf = PD_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True)
-            if PD_UTILS.empty(pdf):
-                for k, v in schema.items():
-                    pdf[k] = pdf[k].astype(v.type.to_pandas_dtype())
+            pdf = PD_UTILS.cast_df(
+                pdf, schema.pa_schema, use_extension_types=True, use_arrow_dtype=False
+            )
             apply_schema = False
         else:
             raise ValueError(f"{df} is incompatible with PandasDataFrame")
@@ -150,7 +148,7 @@ class PandasDataFrame(LocalBoundedDataFrame):
                     positive = series != 0
                     new_pdf[k] = "False"
                     new_pdf[k] = new_pdf[k].mask(positive, "True").mask(ns, None)
-        return PandasDataFrame(new_pdf, new_schema)
+        return PandasDataFrame(new_pdf, new_schema, pandas_df_wrapper=False)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
@@ -179,21 +177,16 @@ class PandasDataFrame(LocalBoundedDataFrame):
         self, pdf: pd.DataFrame, schema: Optional[Schema]
     ) -> Tuple[pd.DataFrame, Schema]:
         PD_UTILS.ensure_compatible(pdf)
-        if pdf.columns.dtype == "object":  # pdf has named schema
-            pschema = _input_schema(pdf)
-            if schema is None or pschema == schema:
-                return pdf, pschema.assert_not_empty()
-            pdf = pdf[schema.assert_not_empty().names]
-        else:  # pdf has no named schema
-            schema = _input_schema(schema).assert_not_empty()
-            assert_or_throw(
-                pdf.shape[1] == len(schema),
-                lambda: ValueError(
-                    f"Pandas datafame column count doesn't match {schema}"
-                ),
-            )
-            pdf.columns = schema.names
-        return PD_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True), schema
+        pschema = _input_schema(pdf)
+        if schema is None or pschema == schema:
+            return pdf, pschema.assert_not_empty()
+        pdf = pdf[schema.assert_not_empty().names]
+        return (
+            PD_UTILS.cast_df(
+                pdf, schema.pa_schema, use_extension_types=True, use_arrow_dtype=False
+            ),
+            schema,
+        )
 
 
 @as_local.candidate(lambda df: isinstance(df, pd.DataFrame))

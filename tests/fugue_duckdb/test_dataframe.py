@@ -3,6 +3,7 @@ from typing import Any
 
 import duckdb
 import pandas as pd
+import pytest
 
 import fugue.api as fa
 from fugue import ArrowDataFrame
@@ -11,9 +12,13 @@ from fugue_test.dataframe_suite import DataFrameTests
 
 
 class DuckDataFrameTests(DataFrameTests.Tests):
+    @pytest.fixture(autouse=True)
+    def init_client(self, fugue_duckdb_connection):
+        self._con = fugue_duckdb_connection
+
     @classmethod
     def setUpClass(cls):
-        cls._con = duckdb.connect()
+        pass
 
     def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
         df = ArrowDataFrame(data, schema)

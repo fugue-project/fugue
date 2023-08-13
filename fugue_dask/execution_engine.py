@@ -81,13 +81,9 @@ class DaskSQLEngine(SQLEngine):
 
     def _to_safe_df(self, df: DataFrame) -> dd.DataFrame:
         df = self.to_df(df)
-        ddf = df.native.astype(
+        return df.native.astype(
             df.schema.to_pandas_dtype(use_extension_types=True, use_arrow_dtype=False)
         )
-        for k, v in ddf.dtypes.to_dict().items():
-            if v == pd.StringDtype("pyarrow"):
-                ddf[k] = ddf[k].astype(str)
-        return ddf
 
 
 class DaskMapEngine(MapEngine):
@@ -149,7 +145,7 @@ class DaskMapEngine(MapEngine):
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()[output_schema.names]
 
-        def _map(pdf: pd.DataFrame, enforce_types: bool = True) -> pd.DataFrame:
+        def _map(pdf: pd.DataFrame) -> pd.DataFrame:
             if pdf.shape[0] == 0:
                 return PandasDataFrame([], output_schema).as_pandas()
             pdf = pdf.reset_index(drop=True)

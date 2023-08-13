@@ -76,12 +76,12 @@ class NativeExecutionEngineBuiltInQPDTests(BuiltInTests.Tests):
         pdf = pd.DataFrame(dict(a=range(5)))
         res = fa.transform(pdf, tr, schema="*", partition="a")
         assert len(res) == 1
-        assert res.dtypes[0] == "int64"
+        assert res.dtypes[0] == pd.Int64Dtype()
 
         pdf = pd.DataFrame(dict(a=[2, 3]))
         res = fa.transform(pdf, tr, schema="*", partition="a")
         assert len(res) == 0
-        assert res.dtypes[0] == "int64"
+        assert res.dtypes[0] == pd.Int64Dtype()
 
     def test_multiple_partitions(self):
         def assert_one_item(df: pd.DataFrame) -> pd.DataFrame:

@@ -1,6 +1,7 @@
 from typing import Any
 
 import numpy as np
+import pandas as pd
 from pytest import raises
 
 import fugue.api as fa
@@ -34,24 +35,24 @@ class LocalDataFrameIterableDataFrameTests(DataFrameTests.Tests):
         df = IterablePandasDataFrame([], schema="a:long,b:int")
         assert df.empty
         pdf = df.as_pandas()
-        assert pdf.dtypes["a"] == np.int64
-        assert pdf.dtypes["b"] == np.int32
+        assert pdf.dtypes["a"] == pd.Int64Dtype()
+        assert pdf.dtypes["b"] == pd.Int32Dtype()
         assert fa.get_schema(df.as_arrow()) == "a:long,b:int"
 
         dfs = [PandasDataFrame(schema="a:long,b:int")]
         df = IterablePandasDataFrame(dfs)
         assert df.empty
         pdf = df.as_pandas()
-        assert pdf.dtypes["a"] == np.int64
-        assert pdf.dtypes["b"] == np.int32
+        assert pdf.dtypes["a"] == pd.Int64Dtype()
+        assert pdf.dtypes["b"] == pd.Int32Dtype()
         assert fa.get_schema(df.as_arrow()) == "a:long,b:int"
 
         dfs = [ArrowDataFrame(schema="a:long,b:int")]
         df = IterableArrowDataFrame(dfs)
         assert df.empty
         pdf = df.as_pandas()
-        assert pdf.dtypes["a"] == np.int64
-        assert pdf.dtypes["b"] == np.int32
+        assert pdf.dtypes["a"] == pd.Int64Dtype()
+        assert pdf.dtypes["b"] == pd.Int32Dtype()
         assert fa.get_schema(df.as_arrow()) == "a:long,b:int"
 
 

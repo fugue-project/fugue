@@ -4,7 +4,7 @@ import dask.dataframe as dd
 import pyarrow as pa
 import pandas as pd
 from triad.collections.schema import Schema
-from triad.utils.assertion import assert_arg_not_none, assert_or_throw
+from triad.utils.assertion import assert_arg_not_none
 from triad.utils.pyarrow import to_pandas_dtype
 
 from fugue.dataframe import (
@@ -229,28 +229,20 @@ class DaskDataFrame(DataFrame):
             assert_arg_not_none(pdf, "pdf")
             assert_arg_not_none(schema, "schema")
             return pdf, schema
-        if schema is not None:
-            pdf = pdf.astype(
-                schema.to_pandas_dtype(
-                    use_extension_types=True, use_arrow_dtype=FUGUE_DASK_USE_ARROW
-                )
-            )
         DASK_UTILS.ensure_compatible(pdf)
-        if pdf.columns.dtype == "object":  # pdf has named schema
-            pschema = Schema(DASK_UTILS.to_schema(pdf))
-            if schema is None or pschema == schema:
-                return pdf, pschema.assert_not_empty()
-            pdf = pdf[schema.assert_not_empty().names]
-        else:  # pdf has no named schema
-            schema = _input_schema(schema).assert_not_empty()
-            assert_or_throw(
-                pdf.shape[1] == len(schema),
-                lambda: ValueError(
-                    f"Pandas datafame column count doesn't match {schema}"
-                ),
-            )
-            pdf.columns = schema.names
-        return DASK_UTILS.enforce_type(pdf, schema.pa_schema, null_safe=True), schema
+        pschema = Schema(DASK_UTILS.to_schema(pdf))
+        if schema is None or pschema == schema:
+            return pdf, pschema.assert_not_empty()
+        pdf = pdf[schema.assert_not_empty().names]
+        return (
+            DASK_UTILS.cast_df(
+                pdf,
+                schema.pa_schema,
+                use_extension_types=True,
+                use_arrow_dtype=FUGUE_DASK_USE_ARROW,
+            ),
+            schema,
+        )
 
 
 @is_df.candidate(lambda df: isinstance(df, dd.DataFrame))

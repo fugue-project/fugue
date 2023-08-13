@@ -113,6 +113,10 @@ setup(
             "dask_ibis = fugue_dask.ibis_engine[dask,ibis]",
             "ray = fugue_ray.registry[ray]",
             "polars = fugue_polars.registry[polars]",
-        ]
+        ],
+        "pytest11": [
+            "fugue_test_dask = fugue_test.plugins.dask[dask]",
+            "fugue_test_duckdb = fugue_test.plugins.duckdb[duckdb]",
+        ],
     },
 )

@@ -7,7 +7,7 @@ import pandas as pd
 import pyarrow as pa
 from dask.dataframe.core import DataFrame
 from dask.distributed import Client, get_client
-from triad.utils.pandas_like import PandasLikeUtils
+from triad.utils.pandas_like import PandasLikeUtils, PD_UTILS
 from triad.utils.pyarrow import to_pandas_dtype
 
 import fugue.api as fa
@@ -245,51 +245,27 @@ class DaskUtils(PandasLikeUtils[dd.DataFrame, dd.Series]):
             schema, use_extension_types=True, use_arrow_dtype=FUGUE_DASK_USE_ARROW
         )
 
-    # TODO: merge this back to base class
-    def enforce_type(  # noqa: C901
-        self, df: dd.DataFrame, schema: pa.Schema, null_safe: bool = False
-    ) -> dd.DataFrame:  # pragma: no cover
-        """Enforce the pandas like dataframe to comply with `schema`.
-        :param df: pandas like dataframe
-        :param schema: pyarrow schema
-        :param null_safe: whether to enforce None value for int, string and bool values
-        :return: converted dataframe
-        :Notice:
-        When `null_safe` is true, the native column types in the dataframe may change,
-        for example, if a column of `int64` has None values, the output will make sure
-        each value in the column is either None or an integer, however, due to the
-        behavior of pandas like dataframes, the type of the columns may
-        no longer be `int64`
-        This method does not enforce struct and list types
-        """
-        if not null_safe:
-            return df.astype(dtype=to_pandas_dtype(schema))
-        for v in schema:
-            s = df[v.name]
-            if pa.types.is_string(v.type) and not pd.api.types.is_string_dtype(s.dtype):
-                ns = s.isnull()
-                s = s.astype(str).mask(ns, None)
-            elif pa.types.is_boolean(v.type) and not pd.api.types.is_bool_dtype(
-                s.dtype
-            ):
-                ns = s.isnull()
-                if pd.api.types.is_string_dtype(s.dtype):
-                    try:
-                        s = s.str.lower() == "true"
-                    except AttributeError:
-                        s = s.fillna(0).astype(pd.BooleanDtype())
-                else:
-                    s = s.fillna(0).astype(pd.BooleanDtype())
-                s = s.mask(ns, None).astype(pd.BooleanDtype())
-            elif pa.types.is_integer(v.type) and not pd.api.types.is_integer_dtype(
-                s.dtype
-            ):
-                ns = s.isnull()
-                s = s.fillna(0).astype(v.type.to_pandas_dtype()).mask(ns, None)
-            elif not pa.types.is_struct(v.type) and not pa.types.is_list(v.type):
-                s = s.astype(v.type.to_pandas_dtype())
-            df[v.name] = s
-        return df
+    def cast_df(
+        self,
+        df: DataFrame,
+        schema: pa.Schema,
+        use_extension_types: bool = True,
+        use_arrow_dtype: bool = False,
+        **kwargs: Any
+    ) -> DataFrame:
+        output_dtypes = to_pandas_dtype(
+            schema,
+            use_extension_types=use_extension_types,
+            use_arrow_dtype=use_arrow_dtype,
+        )
+        return df.map_partitions(
+            PD_UTILS.cast_df,
+            schema=schema,
+            use_extension_types=use_extension_types,
+            use_arrow_dtype=use_arrow_dtype,
+            meta=output_dtypes,
+            **kwargs
+        )
 
 
 DASK_UTILS = DaskUtils()

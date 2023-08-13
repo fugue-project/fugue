@@ -1,14 +1,12 @@
-from fugue import FugueWorkflow
-from fugue import fsql
-from dask.distributed import Client
 import pytest
 
+from fugue import FugueWorkflow, fsql
 
-def test_importless():
+
+def test_importless(fugue_dask_client):
     pytest.importorskip("fugue_sql_antlr")
     pytest.importorskip("ibis")
-    client = Client()
-    for engine in ["dask", client]:
+    for engine in ["dask", fugue_dask_client]:
         dag = FugueWorkflow()
         dag.df([[0]], "a:int").show()
 

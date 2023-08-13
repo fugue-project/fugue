@@ -1,16 +1,16 @@
 import os
 
-from fugue._utils.io import save_df as pd_save_df
-from fugue.dataframe.utils import _df_eq as df_eq
 from pytest import mark, raises
 from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
 
+from fugue._utils.io import save_df as pd_save_df
+from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_dask._io import load_df, save_df
 from fugue_dask.dataframe import DaskDataFrame
 
 
-def test_parquet_io(tmpdir):
+def test_parquet_io(tmpdir, fugue_dask_client):
     df1 = DaskDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
     df2 = DaskDataFrame([[[1, 2]]], "a:[long]")
     # {a:int} will become {a:long} because pyarrow lib has issue
@@ -75,7 +75,7 @@ def test_parquet_io(tmpdir):
     raises(NotImplementedError, lambda: save_df(df1, f1, mode="dummy"))
 
 
-def test_csv_io(tmpdir):
+def test_csv_io(tmpdir, fugue_dask_client):
     df1 = DaskDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
     path = os.path.join(tmpdir, "a.csv")
     # without header
@@ -106,7 +106,7 @@ def test_csv_io(tmpdir):
     )
 
 
-def test_json(tmpdir):
+def test_json(tmpdir, fugue_dask_client):
     df1 = DaskDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
     path = os.path.join(tmpdir, "a.json")
     save_df(df1, path)

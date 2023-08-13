@@ -9,6 +9,7 @@ from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
+from triad.utils.pandas_like import PD_UTILS
 
 from fugue.dataframe import LocalBoundedDataFrame, LocalDataFrame, PandasDataFrame
 
@@ -154,8 +155,15 @@ def _get_single_files(
 
 
 def _save_parquet(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
-    df.as_pandas().to_parquet(
-        p.uri, **{"engine": "pyarrow", "schema": df.schema.pa_schema, **kwargs}
+    PD_UTILS.to_parquet_friendly(
+        df.as_pandas(), partition_cols=kwargs.get("partition_cols", [])
+    ).to_parquet(
+        p.uri,
+        **{
+            "engine": "pyarrow",
+            "schema": df.schema.pa_schema,
+            **kwargs,
+        },
     )
 
 

@@ -70,7 +70,7 @@ def test_simple_methods():
     assert dict(x="a", y=1.0) == df.peek_dict()
     assert [["a", 1], ["b", "2"]] == df.as_array()
 
-    df = ArrayDataFrame([["a", 1], ["b", "2"]], "x:str,y:double")
+    df = ArrayDataFrame([["a", 1], ["b", 2]], "x:str,y:double")
     pdf = df.as_pandas()
     assert [["a", 1.0], ["b", 2.0]] == pdf.values.tolist()
 

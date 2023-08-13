@@ -2,20 +2,11 @@ import json
 
 import dask.dataframe as dd
 import pandas as pd
-import pytest
 
 from fugue_dask._utils import even_repartition, hash_repartition, rand_repartition
 
 
-@pytest.fixture(scope="module")
-def dask_client():
-    from dask.distributed import Client
-
-    with Client(processes=True) as client:
-        yield client
-
-
-def test_even_repartition_num(dask_client):
+def test_even_repartition_num(fugue_dask_client):
     def tr(df: pd.DataFrame):
         if len(df) == 0:
             return pd.DataFrame(dict(v=pd.Series(dtype="string")))
@@ -46,7 +37,7 @@ def test_even_repartition_num(dask_client):
         assert [json.loads(x) for x in sorted(res.v)] == []
 
 
-def test_even_repartition_cols(dask_client):
+def test_even_repartition_cols(fugue_dask_client):
     def tr(df: pd.DataFrame):
         if len(df) == 0:
             return pd.DataFrame(dict(v=pd.Series(dtype="string")))
@@ -77,7 +68,7 @@ def test_even_repartition_cols(dask_client):
         assert [json.loads(x) for x in sorted(res.v)] == [[0], [1], [2], [3], [4]]
 
 
-def test_hash_repartition(dask_client):
+def test_hash_repartition(fugue_dask_client):
     def tr(df: pd.DataFrame):
         if len(df) == 0:
             return pd.DataFrame(dict(v=pd.Series(dtype="string")))
@@ -113,7 +104,7 @@ def test_hash_repartition(dask_client):
         assert [json.loads(x) for x in sorted(res.v)] == []
 
 
-def test_rand_repartition(dask_client):
+def test_rand_repartition(fugue_dask_client):
     def tr(df: pd.DataFrame):
         if len(df) == 0:
             return pd.DataFrame(dict(v=pd.Series(dtype="string")))

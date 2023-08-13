@@ -8,8 +8,12 @@ from fugue_test.ibis_suite import IbisTests
 
 
 class DaskIbisTests(IbisTests.Tests):
+    @pytest.fixture(autouse=True)
+    def init_client(self, fugue_dask_client):
+        self.dask_client = fugue_dask_client
+
     def make_engine(self):
-        e = DaskExecutionEngine(conf=dict(test=True))
+        e = DaskExecutionEngine(self.dask_client, conf=dict(test=True))
         return e
 
     def make_ibis_engine(self) -> IbisEngine:

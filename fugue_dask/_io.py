@@ -1,14 +1,17 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
-import pyarrow as pa
+
 import fs as pfs
+import pandas as pd
 from dask import dataframe as dd
-from fugue._utils.io import FileParser, _get_single_files
 from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
-import pandas as pd
+
+from fugue._utils.io import FileParser, _get_single_files
 from fugue_dask.dataframe import DaskDataFrame
+
+from ._utils import DASK_UTILS
 
 
 def load_df(
@@ -63,10 +66,7 @@ def _save_parquet(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
         "write_index": False,
         **kwargs,
     }
-    if int(pa.__version__.split(".")[0]) >= 11:
-        has_nested = any(pa.types.is_nested(f.type) for f in df.schema.fields)
-        params["store_schema"] = not has_nested
-    df.native.to_parquet(p.uri, **params)
+    DASK_UTILS.to_parquet_friendly(df.native).to_parquet(p.uri, **params)
 
 
 def _load_parquet(

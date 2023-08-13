@@ -47,8 +47,7 @@ def test_init():
     assert df.schema == "a:str,b:int"
     assert Schema(df.native) == "a:str,b:int"
 
-    pdf = pd.DataFrame([["a", 1], ["b", 2]])
-    raises(Exception, lambda: PandasDataFrame(pdf))
+    pdf = pd.DataFrame([["a", 1], ["b", 2]], columns=["a", "b"])
     df = PandasDataFrame(pdf, "a:str,b:str")
     assert [["a", "1"], ["b", "2"]] == df.native.values.tolist()
     df = PandasDataFrame(pdf, "a:str,b:int")
@@ -72,7 +71,7 @@ def test_init():
     assert [["1", "a"], ["2", "b"]] == ddf.native.values.tolist()
     assert df.native is ddf.native  # no real copy happened
 
-    df = PandasDataFrame([["a", 1], ["b", "2"]], "x:str,y:double")
+    df = PandasDataFrame([["a", 1], ["b", 2]], "x:str,y:double")
     assert [["a", 1.0], ["b", 2.0]] == df.native.values.tolist()
 
     df = PandasDataFrame([], "x:str,y:double")
@@ -88,7 +87,7 @@ def test_simple_methods():
     assert 0 == df.count()
     assert df.is_local
 
-    df = PandasDataFrame([["a", 1], ["b", "2"]], "x:str,y:double")
+    df = PandasDataFrame([["a", "1"], ["b", "2"]], "x:str,y:double")
     assert df.as_pandas() is df.native
     assert not df.empty
     assert 2 == df.count()
@@ -131,27 +130,27 @@ def test_as_array():
     # prevent pandas auto type casting
     df = PandasDataFrame([[1.0, 1.1]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array()
-    assert isinstance(df.as_array()[0][0], float)
-    assert isinstance(df.as_array()[0][1], int)
+    assert isinstance(df.as_array()[0][0], (float, np.float_))
+    assert isinstance(df.as_array()[0][1], (int, np.integer))
     assert [[1.0, 1]] == df.as_array(["a", "b"])
     assert [[1, 1.0]] == df.as_array(["b", "a"])
 
     df = PandasDataFrame([[np.float64(1.0), 1.1]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array()
-    assert isinstance(df.as_array()[0][0], float)
-    assert isinstance(df.as_array()[0][1], int)
+    assert isinstance(df.as_array()[0][0], (float, np.float_))
+    assert isinstance(df.as_array()[0][1], (int, np.integer))
 
     df = PandasDataFrame([[pd.Timestamp("2020-01-01"), 1.1]], "a:datetime,b:int")
     # df.native["a"] = pd.to_datetime(df.native["a"])
     assert [[datetime(2020, 1, 1), 1]] == df.as_array()
     assert isinstance(df.as_array()[0][0], datetime)
     # assert not isinstance(df.as_array()[0][0], pd.Timestamp)
-    assert isinstance(df.as_array()[0][1], int)
+    assert isinstance(df.as_array()[0][1], (int, np.integer))
 
     df = PandasDataFrame([[1.0, 1.1]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array(type_safe=True)
     assert isinstance(df.as_array()[0][0], float)
-    assert isinstance(df.as_array()[0][1], int)
+    assert isinstance(df.as_array()[0][1], (int, np.integer))
 
 
 def test_as_dict_iterable():
@@ -163,10 +162,10 @@ def test_as_dict_iterable():
 
 def test_nan_none():
     df = ArrayDataFrame([[None, None]], "b:str,c:double")
-    assert df.as_pandas().iloc[0, 0] is None
+    assert pd.isna(df.as_pandas().iloc[0, 0])
     arr = PandasDataFrame(df.as_pandas(), df.schema).as_array()[0]
-    assert arr[0] is None
-    assert math.isnan(arr[1])
+    assert pd.isna(arr[0])
+    assert pd.isna(arr[1])
 
     df = ArrayDataFrame([[None, None]], "b:int,c:bool")
     arr = PandasDataFrame(df.as_pandas(), df.schema).as_array(type_safe=True)[0]
