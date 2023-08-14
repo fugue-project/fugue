@@ -33,7 +33,7 @@ jobs:
     - name: Install dependencies
       run: make devenv
     - name: Setup Ray
-      run: pip install ray[data]==2.1.0 pyarrow==6.0.1 pandas==1.5.3
+      run: pip install ray[data]==2.1.0 pyarrow==6.0.1 pandas==1.5.3 'pydantic<2'
     - name: Test
       run: make testray
 

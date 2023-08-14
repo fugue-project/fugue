@@ -296,10 +296,7 @@ def _select_pa_columns(df: pa.Table, columns: List[Any]) -> pa.Table:
 
 def _build_empty_arrow(schema: Schema) -> pa.Table:  # pragma: no cover
     # TODO: remove
-    if pa.__version__ < "7":
-        arr = [pa.array([])] * len(schema)
-        return pa.Table.from_arrays(arr, schema=schema.pa_schema)
-    return pa.Table.from_pylist([], schema=schema.pa_schema)
+    return schema.create_empty_arrow_table()
 
 
 def _assert_no_missing(df: pa.Table, columns: Iterable[Any]) -> None:

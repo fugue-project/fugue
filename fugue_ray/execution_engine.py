@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, List, Optional, Type, Union
 import pyarrow as pa
 import ray
 from duckdb import DuckDBPyConnection
+from packaging import version
 from triad import Schema, assert_or_throw, to_uuid
 from triad.utils.threading import RunOnce
 
@@ -93,7 +94,7 @@ class RayMapEngine(MapEngine):
                 return output_schema.create_empty_arrow_table()
             adf = adf.remove_column(len(input_schema))  # remove partition key
             if len(partition_spec.presort) > 0:
-                if pa.__version__ < "7":  # pragma: no cover
+                if version.parse(pa.__version__).major < 7:  # pragma: no cover
                     idx = pa.compute.sort_indices(
                         adf, options=pa.compute.SortOptions(presort_tuples)
                     )

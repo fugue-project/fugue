@@ -31,7 +31,7 @@ setup(
     keywords="distributed spark dask sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
     install_requires=[
-        "triad==0.9.2.dev1",
+        "triad==0.9.2.dev2",
         "adagio>=0.2.4",
         # sql dependencies
         "qpd>=0.4.4",
@@ -77,7 +77,7 @@ setup(
             "jupyterlab",
             "ipython>=7.10.0",
             "duckdb>=0.5.0",
-            "pyarrow>=7.0.0",
+            "pyarrow>=6.0.1",
             "pandas>=2.0.2; python_version >= '3.8'",
             "ibis-framework>=2.1.1; python_version < '3.8'",
             "ibis-framework>=3.2.0,<6; python_version >= '3.8'",
