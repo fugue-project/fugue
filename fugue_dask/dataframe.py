@@ -6,7 +6,7 @@ import pyarrow as pa
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.pandas_like import PD_UTILS
-from triad.utils.pyarrow import cast_pa_table, to_pandas_dtype
+from triad.utils.pyarrow import cast_pa_table
 
 from fugue.dataframe import (
     ArrowDataFrame,
@@ -162,50 +162,10 @@ class DaskDataFrame(DataFrame):
         return DaskDataFrame(df, schema, type_safe=False)
 
     def alter_columns(self, columns: Any) -> DataFrame:
-        new_schema = self._get_altered_schema(columns)
+        new_schema = self.schema.alter(columns)
         if new_schema == self.schema:
             return self
-        new_pdf = self.native.assign()
-        pd_types = to_pandas_dtype(new_schema.pa_schema, use_extension_types=True)
-        for k, v in new_schema.items():
-            if not v.type.equals(self.schema[k].type):
-                old_type = self.schema[k].type
-                new_type = v.type
-                # int -> str
-                if pa.types.is_integer(old_type) and pa.types.is_string(new_type):
-                    series = new_pdf[k]
-                    ns = series.isnull()
-                    series = series.fillna(0).astype(int).astype(str)
-                    new_pdf[k] = series.mask(ns, pd.NA)
-                # bool -> str
-                elif pa.types.is_boolean(old_type) and pa.types.is_string(new_type):
-                    series = new_pdf[k]
-                    ns = series.isnull()
-                    new_pdf[k] = series.astype(str).mask(ns, pd.NA)
-                # str -> bool
-                elif pa.types.is_string(old_type) and pa.types.is_boolean(new_type):
-                    series = new_pdf[k]
-                    ns = series.isnull()
-                    new_pdf[k] = (
-                        (series.fillna("true").str.lower() == "true")
-                        .mask(ns, None)
-                        .astype("boolean")
-                    )
-                elif pa.types.is_integer(new_type):
-                    series = new_pdf[k]
-                    ns = series.isnull()
-                    if pa.types.is_string(old_type):
-                        series = series.fillna("0")
-                    else:
-                        series = series.fillna(0)
-                    series = series.astype(pd_types[k])
-                    new_pdf[k] = series.mask(ns, pd.NA)
-                else:
-                    series = new_pdf[k]
-                    ns = series.isnull()
-                    series = series.astype(pd_types[k])
-                    new_pdf[k] = series.mask(ns, pd.NA)
-        return DaskDataFrame(new_pdf, new_schema, type_safe=True)
+        return DaskDataFrame(self.native, new_schema)
 
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False

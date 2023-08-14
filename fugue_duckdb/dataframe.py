@@ -79,7 +79,7 @@ class DuckDataFrame(LocalBoundedDataFrame):
         return DuckDataFrame(self._rel.project(expr))
 
     def alter_columns(self, columns: Any) -> DataFrame:
-        new_schema = self._get_altered_schema(columns)
+        new_schema = self.schema.alter(columns)
         if new_schema == self.schema:
             return self
         fields: List[str] = []

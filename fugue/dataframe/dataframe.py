@@ -274,31 +274,9 @@ class DataFrame(Dataset):
     def __deepcopy__(self, memo: Any) -> "DataFrame":
         return self
 
-    def _get_altered_schema(self, subschema: Any) -> Schema:
-        sub = Schema(subschema)
-        assert_or_throw(
-            sub.names in self.schema,
-            lambda: FugueDataFrameOperationError(
-                f"{sub.names} are not all in {self.schema}"
-            ),
-        )
-        for k, v in sub.items():
-            old_type = self.schema[k].type
-            new_type = v.type
-            if not old_type.equals(new_type):
-                assert_or_throw(
-                    not pa.types.is_struct(old_type)
-                    and not pa.types.is_list(old_type)
-                    and not pa.types.is_binary(old_type),
-                    lambda: NotImplementedError(f"can't convert from {old_type}"),
-                )
-                assert_or_throw(
-                    not pa.types.is_struct(new_type)
-                    and not pa.types.is_list(new_type)
-                    and not pa.types.is_binary(new_type),
-                    lambda: NotImplementedError(f"can't convert to {new_type}"),
-                )
-        return Schema([(k, sub.get(k, v)) for k, v in self.schema.items()])
+    def _get_altered_schema(self, subschema: Any) -> Schema:  # pragma: no cover
+        # TODO: remove
+        return self.schema.alter(subschema)
 
 
 class LocalDataFrame(DataFrame):

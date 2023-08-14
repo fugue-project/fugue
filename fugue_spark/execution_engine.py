@@ -37,7 +37,6 @@ from fugue.dataframe import (
     LocalDataFrameIterableDataFrame,
     PandasDataFrame,
 )
-from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue.dataframe.utils import get_join_schemas
 from fugue.exceptions import FugueDataFrameInitError
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
@@ -296,7 +295,7 @@ class SparkMapEngine(MapEngine):
 
             input_df = IterableArrowDataFrame(get_dfs(), input_schema)
             if input_df.empty:
-                yield from _build_empty_arrow(output_schema).to_batches()
+                yield from output_schema.create_empty_arrow_table().to_batches()
                 return
             if on_init_once is not None:
                 on_init_once(0, input_df)

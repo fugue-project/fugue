@@ -16,7 +16,6 @@ from fugue import (
     PartitionSpec,
 )
 from fugue.constants import KEYWORD_PARALLELISM, KEYWORD_ROWCOUNT
-from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckExecutionEngine
 
@@ -91,7 +90,7 @@ class RayMapEngine(MapEngine):
 
         def _udf(adf: pa.Table) -> pa.Table:  # pragma: no cover
             if adf.shape[0] == 0:
-                return _build_empty_arrow(output_schema)
+                return output_schema.create_empty_arrow_table()
             adf = adf.remove_column(len(input_schema))  # remove partition key
             if len(partition_spec.presort) > 0:
                 if pa.__version__ < "7":  # pragma: no cover
@@ -164,7 +163,7 @@ class RayMapEngine(MapEngine):
 
         def _udf(adf: pa.Table) -> pa.Table:  # pragma: no cover
             if adf.shape[0] == 0:
-                return _build_empty_arrow(output_schema)
+                return output_schema.create_empty_arrow_table()
             input_df = ArrowDataFrame(adf)
             if on_init_once is not None:
                 on_init_once(0, input_df)

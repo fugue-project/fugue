@@ -5,7 +5,7 @@ import pyarrow as pa
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
-from triad.utils.pyarrow import pa_table_to_pandas
+from triad.utils.pyarrow import cast_pa_table, pa_table_to_pandas
 
 from fugue.dataset.api import (
     as_fugue_dataset,
@@ -20,13 +20,14 @@ from fugue.dataset.api import (
 from fugue.exceptions import FugueDataFrameOperationError
 
 from .api import (
+    alter_columns,
+    as_pandas,
     drop_columns,
     get_column_names,
     get_schema,
     is_df,
     rename,
     select_columns,
-    as_pandas,
 )
 from .dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
 
@@ -54,7 +55,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
     ):
         if df is None:
             schema = _input_schema(schema).assert_not_empty()
-            self._native: pa.Table = _build_empty_arrow(schema)
+            self._native: pa.Table = schema.create_empty_arrow_table()
             super().__init__(schema)
             return
         elif isinstance(df, pa.Table):
@@ -80,7 +81,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
             else:
                 schema = _input_schema(schema).assert_not_empty()
                 if pdf.shape[0] == 0:
-                    self._native = _build_empty_arrow(schema)
+                    self._native = schema.create_empty_arrow_table()
                 else:
                     self._native = pa.Table.from_pandas(
                         pdf,
@@ -92,18 +93,9 @@ class ArrowDataFrame(LocalBoundedDataFrame):
             return
         elif isinstance(df, Iterable):
             schema = _input_schema(schema).assert_not_empty()
-            # n = len(schema)
-            # arr = []
-            # for i in range(n):
-            #     arr.append([])
-            # for row in df:
-            #     for i in range(n):
-            #         arr[i].append(row[i])
-            # cols = [pa.array(arr[i], type=schema.types[i]) for i in range(n)]
-            # self._native = pa.Table.from_arrays(cols, schema=schema.pa_schema)
             pdf = pd.DataFrame(df, columns=schema.names)
             if pdf.shape[0] == 0:
-                self._native = _build_empty_arrow(schema)
+                self._native = schema.create_empty_arrow_table()
             else:
                 for f in schema.fields:
                     if pa.types.is_timestamp(f.type) or pa.types.is_date(f.type):
@@ -171,55 +163,10 @@ class ArrowDataFrame(LocalBoundedDataFrame):
         return ArrowDataFrame(self.native.rename_columns(new_cols))
 
     def alter_columns(self, columns: Any) -> DataFrame:
-        new_schema = self._get_altered_schema(columns)
-        if new_schema == self.schema:
+        adf = _pa_table_alter_columns(self.native, columns)
+        if adf is self.native:
             return self
-        cols: List[pa.Array] = []
-        for i in range(len(new_schema)):
-            # TODO: this following logic may be generalized for entire arrow dataframe?
-            col = self.native.columns[i]
-            new_type = new_schema.get_value_by_index(i).type
-            old_type = self.schema.get_value_by_index(i).type
-            if new_type.equals(old_type):
-                cols.append(col)
-            elif pa.types.is_date(new_type):
-                # -> date
-                col = pa.Array.from_pandas(pd.to_datetime(col.to_pandas()).dt.date)
-                cols.append(col)
-            elif pa.types.is_timestamp(new_type):
-                # -> datetime
-                col = pa.Array.from_pandas(pd.to_datetime(col.to_pandas()))
-                cols.append(col)
-            elif pa.types.is_string(new_type):
-                if pa.types.is_date(old_type):
-                    # date -> str
-                    series = pd.to_datetime(col.to_pandas()).dt.date
-                    ns = series.isnull()
-                    series = series.astype(str)
-                    col = pa.Array.from_pandas(series.mask(ns, None))
-                elif pa.types.is_timestamp(old_type):
-                    # datetime -> str
-                    series = pd.to_datetime(col.to_pandas())
-                    ns = series.isnull()
-                    series = series.astype(str)
-                    col = pa.Array.from_pandas(series.mask(ns, None))
-                elif pa.types.is_boolean(old_type):
-                    # bool -> str
-                    series = col.to_pandas()
-                    ns = series.isnull()
-                    series = (
-                        series.mask(series == 0, "False")
-                        .mask(series != 0, "True")
-                        .mask(ns, None)
-                    )
-                    col = pa.Array.from_pandas(series)
-                else:
-                    col = col.cast(new_type, safe=True)
-                cols.append(col)
-            else:
-                cols.append(col.cast(new_type, safe=True))
-        df = pa.Table.from_arrays(cols, schema=new_schema.pa_schema)
-        return ArrowDataFrame(df)
+        return ArrowDataFrame(adf)
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
         return self.native
@@ -263,6 +210,17 @@ def _pa_table_as_pandas(df: pa.Table) -> pd.DataFrame:
         use_threads=False,
         date_as_object=False,
     )
+
+
+@alter_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
+def _pa_table_alter_columns(
+    df: pa.Table, columns: Any, as_fugue: bool = False
+) -> pa.Table:
+    schema = Schema(df.schema)
+    new_schema = schema.alter(columns)
+    if schema != new_schema:
+        df = cast_pa_table(df, new_schema.pa_schema)
+    return df if not as_fugue else ArrowDataFrame(df)
 
 
 @as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, pa.Table))
@@ -337,6 +295,7 @@ def _select_pa_columns(df: pa.Table, columns: List[Any]) -> pa.Table:
 
 
 def _build_empty_arrow(schema: Schema) -> pa.Table:  # pragma: no cover
+    # TODO: remove
     if pa.__version__ < "7":
         arr = [pa.array([])] * len(schema)
         return pa.Table.from_arrays(arr, schema=schema.pa_schema)

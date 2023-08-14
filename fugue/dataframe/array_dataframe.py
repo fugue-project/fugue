@@ -73,7 +73,7 @@ class ArrayDataFrame(LocalBoundedDataFrame):
         return ArrayDataFrame(self.native, schema)
 
     def alter_columns(self, columns: Any) -> DataFrame:
-        new_schema = self._get_altered_schema(columns)
+        new_schema = self.schema.alter(columns)
         if new_schema == self.schema:
             return self
         temp = ArrayDataFrame(self.native, new_schema).as_array(type_safe=True)

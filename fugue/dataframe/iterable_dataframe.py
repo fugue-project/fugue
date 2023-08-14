@@ -92,7 +92,7 @@ class IterableDataFrame(LocalUnboundedDataFrame):
         return IterableDataFrame(self.native, schema)
 
     def alter_columns(self, columns: Any) -> DataFrame:
-        new_schema = self._get_altered_schema(columns)
+        new_schema = self.schema.alter(columns)
         if new_schema == self.schema:
             return self
         return IterableDataFrame(self.native, new_schema)

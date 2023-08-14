@@ -5,6 +5,7 @@ import pyarrow as pa
 import ray
 import ray.data as rd
 from triad.collections.schema import Schema
+from triad.utils.pyarrow import cast_pa_table
 
 from fugue.dataframe import ArrowDataFrame, DataFrame, LocalBoundedDataFrame
 from fugue.dataframe.dataframe import _input_schema
@@ -96,7 +97,7 @@ class RayDataFrame(DataFrame):
         rdf, schema = self._apply_schema(rdf, schema, internal_schema)
         super().__init__(schema)
         self._native = rdf
-        if metadata is not None:
+        if metadata is not None:  # pragma: no cover
             self.reset_metadata(metadata)
 
     @property
@@ -183,12 +184,13 @@ class RayDataFrame(DataFrame):
         return RayDataFrame(rdf, schema=new_schema, internal_schema=True)
 
     def alter_columns(self, columns: Any) -> DataFrame:
+        new_schema = self.schema.alter(columns)
+
         def _alter(
             table: pa.Table,
         ) -> pa.Table:  # pragma: no cover (pytest can't capture)
-            return ArrowDataFrame(table).alter_columns(columns).native  # type: ignore
+            return cast_pa_table(table, new_schema.pa_schema)
 
-        new_schema = self._get_altered_schema(columns)
         if self.schema == new_schema:
             return self
         rdf = self.native.map_batches(

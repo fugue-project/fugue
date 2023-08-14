@@ -9,7 +9,6 @@ from pytest import raises
 from triad import Schema
 
 from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.arrow_dataframe import _build_empty_arrow
 from fugue.dataframe.utils import get_column_names, rename
 from fugue_ray import RayDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
@@ -59,7 +58,7 @@ class RayDataFrameTests(DataFrameTests.Tests):
         assert not df.is_local
         assert df.is_bounded
 
-        df = RayDataFrame(_build_empty_arrow(Schema("x:str,y:double")))
+        df = RayDataFrame(Schema("x:str,y:double").create_empty_arrow_table())
         assert df.empty
         assert df.schema == "x:str,y:double"
         assert df.is_bounded

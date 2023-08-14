@@ -1,5 +1,5 @@
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import dask.dataframe as dd
 import numpy as np
@@ -13,7 +13,7 @@ from triad.utils.pyarrow import to_pandas_dtype
 import fugue.api as fa
 from fugue.constants import FUGUE_CONF_DEFAULT_PARTITIONS
 
-from ._constants import FUGUE_DASK_CONF_DEFAULT_PARTITIONS, FUGUE_DASK_USE_ARROW
+from ._constants import FUGUE_DASK_CONF_DEFAULT_PARTITIONS
 
 _FUGUE_DASK_TEMP_IDX_COLUMN = "_fugue_dask_temp_index"
 
@@ -209,7 +209,7 @@ class DaskUtils(PandasLikeUtils[dd.DataFrame, dd.Series]):
             return client
         try:
             return get_client()
-        except ValueError:
+        except ValueError:  # pragma: no cover
             return Client(processes=True)
 
     def ensure_compatible(self, df: DataFrame) -> None:
@@ -227,22 +227,6 @@ class DaskUtils(PandasLikeUtils[dd.DataFrame, dd.Series]):
             return True
         return isinstance(df.index, pd.RangeIndex) or (  # pragma: no cover
             hasattr(df.index, "inferred_type") and df.index.inferred_type == "integer"
-        )
-
-    def safe_to_pandas_dtype(self, schema: pa.Schema) -> Dict[str, np.dtype]:
-        """Safely convert pyarrow types to pandas types. It will convert nested types
-        to numpy object type. And this does not convert to pandas extension types.
-
-        :param schema: the input pyarrow schema
-        :return: the dictionary of numpy types
-
-        .. note::
-
-            This is a temporary solution, it will be removed when we use the Slide
-            package. Do not use this function directly.
-        """
-        return to_pandas_dtype(
-            schema, use_extension_types=True, use_arrow_dtype=FUGUE_DASK_USE_ARROW
         )
 
     def cast_df(

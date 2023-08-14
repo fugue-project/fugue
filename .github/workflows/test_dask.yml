@@ -33,7 +33,7 @@ jobs:
     - name: Install dependencies
       run: make devenv
     - name: Setup Dask
-      run: pip install pyarrow==11.0.0 pandas==2.0.2 dask[dataframe,distributed]==2023.5.0
+      run: pip install pyarrow==7.0.0 pandas==2.0.2 dask[dataframe,distributed]==2023.5.0
     - name: Test
       run: make testdask
 
