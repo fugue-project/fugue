@@ -1,11 +1,12 @@
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import dask.dataframe as dd
-import pyarrow as pa
 import pandas as pd
+import pyarrow as pa
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none
-from triad.utils.pyarrow import to_pandas_dtype
+from triad.utils.pandas_like import PD_UTILS
+from triad.utils.pyarrow import cast_pa_table, to_pandas_dtype
 
 from fugue.dataframe import (
     ArrowDataFrame,
@@ -30,8 +31,8 @@ from fugue.plugins import (
     select_columns,
 )
 
-from ._utils import DASK_UTILS, get_default_partitions
 from ._constants import FUGUE_DASK_USE_ARROW
+from ._utils import DASK_UTILS, get_default_partitions
 
 
 class DaskDataFrame(DataFrame):
@@ -75,17 +76,16 @@ class DaskDataFrame(DataFrame):
         elif isinstance(df, (pd.DataFrame, pd.Series)):
             if isinstance(df, pd.Series):
                 df = df.to_frame()
-            pdf = dd.from_pandas(df, npartitions=num_partitions, sort=False)
             schema = None if schema is None else _input_schema(schema)
+            tdf = PandasDataFrame(df, schema=schema)
+            pdf = dd.from_pandas(tdf.native, npartitions=num_partitions, sort=False)
+            schema = tdf.schema
+            type_safe = False
         elif isinstance(df, Iterable):
             schema = _input_schema(schema).assert_not_empty()
-            t = PandasDataFrame(df, schema)
-            tdf = t.native.astype(
-                schema.to_pandas_dtype(
-                    use_extension_types=True, use_arrow_dtype=FUGUE_DASK_USE_ARROW
-                )
-            )
-            pdf = dd.from_pandas(tdf, npartitions=num_partitions, sort=False)
+            tdf = PandasDataFrame(df, schema=schema)
+            pdf = dd.from_pandas(tdf.native, npartitions=num_partitions, sort=False)
+            schema = tdf.schema
             type_safe = False
         else:
             raise ValueError(f"{df} is incompatible with DaskDataFrame")
@@ -144,7 +144,14 @@ class DaskDataFrame(DataFrame):
         return self.native.shape[0].compute()
 
     def as_pandas(self) -> pd.DataFrame:
-        return self.native.compute().reset_index(drop=True)
+        pdf = self.native.compute().reset_index(drop=True)
+        return PD_UTILS.cast_df(
+            pdf, self.schema.pa_schema, use_extension_types=True, use_arrow_dtype=False
+        )
+
+    def as_arrow(self, type_safe: bool = False) -> pa.Table:
+        adf = pa.Table.from_pandas(self.native.compute().reset_index(drop=True))
+        return cast_pa_table(adf, self.schema.pa_schema)
 
     def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:

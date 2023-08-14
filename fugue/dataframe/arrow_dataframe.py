@@ -5,6 +5,7 @@ import pyarrow as pa
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
+from triad.utils.pyarrow import pa_table_to_pandas
 
 from fugue.dataset.api import (
     as_fugue_dataset,
@@ -25,6 +26,7 @@ from .api import (
     is_df,
     rename,
     select_columns,
+    as_pandas,
 )
 from .dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
 
@@ -141,12 +143,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
         return self.native.shape[0]
 
     def as_pandas(self) -> pd.DataFrame:
-        mapper: Any = None
-        if hasattr(pd, "ArrowDtype"):
-            mapper = pd.ArrowDtype
-        return self.native.to_pandas(
-            use_threads=False, date_as_object=False, types_mapper=mapper
-        )
+        return _pa_table_as_pandas(self.native)
 
     def head(
         self, n: int, columns: Optional[List[str]] = None
@@ -255,6 +252,17 @@ def _pa_table_as_local(df: pa.Table) -> pa.Table:
 @as_local_bounded.candidate(lambda df: isinstance(df, pa.Table))
 def _pa_table_as_local_bounded(df: pa.Table) -> pa.Table:
     return df
+
+
+@as_pandas.candidate(lambda df: isinstance(df, pa.Table))
+def _pa_table_as_pandas(df: pa.Table) -> pd.DataFrame:
+    return pa_table_to_pandas(
+        df,
+        use_extension_types=True,
+        use_arrow_dtype=False,
+        use_threads=False,
+        date_as_object=False,
+    )
 
 
 @as_fugue_dataset.candidate(lambda df, **kwargs: isinstance(df, pa.Table))

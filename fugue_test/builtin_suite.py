@@ -1728,7 +1728,6 @@ class BuiltInTests(object):
         @pytest.mark.skipif(os.name == "nt", reason="Skip Windows")
         @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
         def test_any_column_name(self):
-
             f_parquet = os.path.join(str(self.tmpdir), "a.parquet")
             f_csv = os.path.join(str(self.tmpdir), "a.csv")
 

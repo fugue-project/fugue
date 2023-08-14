@@ -7,11 +7,13 @@ from triad import Schema
 from triad.utils.pyarrow import LARGE_TYPES_REPLACEMENT, replace_types_in_table
 
 from fugue import ArrayDataFrame, ArrowDataFrame, DataFrame, LocalBoundedDataFrame
+from fugue.dataframe.arrow_dataframe import _pa_table_as_pandas
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from fugue.plugins import (
     as_arrow,
     as_fugue_dataset,
     as_local_bounded,
+    as_pandas,
     get_column_names,
     get_num_partitions,
     get_schema,
@@ -96,10 +98,7 @@ class DuckDataFrame(LocalBoundedDataFrame):
         return _duck_as_arrow(self._rel)
 
     def as_pandas(self) -> pd.DataFrame:
-        if any(pa.types.is_nested(f.type) for f in self.schema.fields):
-            # Duckdb has issue to directly convert nested types to pandas
-            return ArrowDataFrame(self.as_arrow()).as_pandas()
-        return self._rel.to_df()
+        return _duck_as_pandas(self._rel)
 
     def as_local_bounded(self) -> LocalBoundedDataFrame:
         res = ArrowDataFrame(self.as_arrow())
@@ -169,6 +168,12 @@ def _duck_as_arrow(df: DuckDBPyRelation) -> pa.Table:
     _df = df.arrow()
     _df = replace_types_in_table(_df, LARGE_TYPES_REPLACEMENT, recursive=True)
     return _df
+
+
+@as_pandas.candidate(lambda df: isinstance(df, DuckDBPyRelation))
+def _duck_as_pandas(df: DuckDBPyRelation) -> pd.DataFrame:
+    adf = _duck_as_arrow(df)
+    return _pa_table_as_pandas(adf)
 
 
 @get_schema.candidate(lambda df: isinstance(df, DuckDBPyRelation))

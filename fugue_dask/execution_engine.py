@@ -73,7 +73,6 @@ class DaskSQLEngine(SQLEngine):
         sql = statement.construct(dialect=self.dialect, log=self.log)
         res = ctx.sql(
             sql,
-            return_futures=False,
             dataframes=_dfs,
             config_options={"sql.identifier.case_sensitive": True},
         )

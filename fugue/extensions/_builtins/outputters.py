@@ -37,7 +37,7 @@ class Show(Outputter):
 class AssertEqual(Outputter):
     def process(self, dfs: DataFrames) -> None:
         assert_or_throw(len(dfs) > 1, FugueWorkflowError("can't accept single input"))
-        expected = dfs[0]
+        expected = dfs[0].as_local_bounded()
         for i in range(1, len(dfs)):
             _df_eq(expected, dfs[i], throw=True, **self.params)
 

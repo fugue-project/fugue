@@ -6,7 +6,7 @@ from fugue import FugueWorkflow
 from fugue_ray import RayExecutionEngine
 
 
-def test_registry():
+def test_registry(fugue_ray_session):
     def creator() -> rd.Dataset:
         return rd.from_pandas(pd.DataFrame(dict(a=[1, 2], b=["a", "b"])))
 
@@ -23,5 +23,4 @@ def test_registry():
     dag = FugueWorkflow()
     dag.create(creator).process(processor1).process(processor2).output(outputter)
 
-    with ray.init():
-        dag.run("ray")
+    dag.run(fugue_ray_session)
