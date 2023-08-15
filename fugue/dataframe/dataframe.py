@@ -9,6 +9,7 @@ from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
+from triad.utils.pyarrow import cast_pa_table
 
 from .._utils.display import PrettyTable
 from ..collections.yielded import Yielded
@@ -120,12 +121,12 @@ class DataFrame(Dataset):
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
         """Convert to pyArrow DataFrame"""
         pdf = pd.DataFrame(self.as_array(), columns=self.columns)
-        return pa.Table.from_pandas(
+        adf = pa.Table.from_pandas(
             pdf,
             preserve_index=False,
-            schema=self.schema.pa_schema,
             safe=type_safe,
         )
+        return cast_pa_table(adf, self.schema.pa_schema)
 
     @abstractmethod
     def as_array(
