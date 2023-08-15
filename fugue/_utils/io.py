@@ -202,7 +202,6 @@ def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
     except IsADirectoryError:
         return load_dir()
     except pd.errors.ParserError:  # pragma: no cover
-        # for python < 3.7
         return load_dir()
     except PermissionError:  # pragma: no cover
         # for windows

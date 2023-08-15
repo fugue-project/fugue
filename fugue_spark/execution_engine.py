@@ -42,9 +42,16 @@ from fugue.exceptions import FugueDataFrameInitError
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 
 from ._constants import FUGUE_SPARK_CONF_USE_PANDAS_UDF, FUGUE_SPARK_DEFAULT_CONF
-from ._utils.convert import to_schema, to_spark_schema, to_type_safe_input, to_spark_df
+from ._utils.convert import (
+    to_schema,
+    to_spark_df,
+    to_spark_schema,
+    to_type_safe_input,
+    _PYSPARK_ARROW_FRIENDLY,
+)
 from ._utils.io import SparkIO
-from ._utils.misc import is_spark_connect as _is_spark_connect, is_spark_dataframe
+from ._utils.misc import is_spark_connect as _is_spark_connect
+from ._utils.misc import is_spark_dataframe
 from ._utils.partition import even_repartition, hash_repartition, rand_repartition
 from .dataframe import SparkDataFrame
 
@@ -202,7 +209,9 @@ class SparkMapEngine(MapEngine):
 
         def _udf_pandas(pdf: Any) -> pd.DataFrame:  # pragma: no cover
             if pdf.shape[0] == 0:
-                return PandasDataFrame([], output_schema).as_pandas()
+                return _to_safe_spark_worker_pandas(
+                    PandasDataFrame([], output_schema).as_pandas()
+                )
             if len(partition_spec.presort) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             input_df = PandasDataFrame(
@@ -212,7 +221,7 @@ class SparkMapEngine(MapEngine):
                 on_init_once(0, input_df)
             cursor.set(lambda: input_df.peek_array(), 0, 0)
             output_df = map_func(cursor, input_df)
-            return output_df.as_pandas()
+            return _to_safe_spark_worker_pandas(output_df.as_pandas())
 
         df = self.to_df(df)
 
@@ -260,16 +269,18 @@ class SparkMapEngine(MapEngine):
 
             input_df = IterablePandasDataFrame(get_dfs(), input_schema)
             if input_df.empty:
-                yield PandasDataFrame([], output_schema).as_pandas()
+                yield _to_safe_spark_worker_pandas(
+                    PandasDataFrame([], output_schema).as_pandas()
+                )
                 return
             if on_init_once is not None:
                 on_init_once(0, input_df)
             output_df = map_func(cursor, input_df)
             if isinstance(output_df, LocalDataFrameIterableDataFrame):
                 for res in output_df.native:
-                    yield res.as_pandas()
+                    yield _to_safe_spark_worker_pandas(res.as_pandas())
             else:
-                yield output_df.as_pandas()
+                yield _to_safe_spark_worker_pandas(output_df.as_pandas())
 
         def _udf_arrow(
             dfs: Iterable[pa.RecordBatch],
@@ -840,3 +851,7 @@ class _Mapper(object):  # pragma: no cover
             res = self.map_func(self.cursor, sub_df)
             for r in res.as_array_iterable(type_safe=True):
                 yield r
+
+
+def _to_safe_spark_worker_pandas(df: pd.DataFrame):
+    return df if _PYSPARK_ARROW_FRIENDLY else df.astype(object)

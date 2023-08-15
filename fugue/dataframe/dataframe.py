@@ -119,8 +119,9 @@ class DataFrame(Dataset):
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
         """Convert to pyArrow DataFrame"""
+        pdf = pd.DataFrame(self.as_array(), columns=self.columns)
         return pa.Table.from_pandas(
-            self.as_pandas().reset_index(drop=True),
+            pdf,
             preserve_index=False,
             schema=self.schema.pa_schema,
             safe=type_safe,
