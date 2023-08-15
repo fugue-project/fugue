@@ -338,7 +338,7 @@ class ExecutionEngineTests(object):
             e = self.engine
             dt = datetime.now()
             # test dict
-            o = PandasDataFrame([[dt, dict(a=1)]], "a:datetime,b:{a:int}")
+            o = PandasDataFrame([[dt, dict(a=1)]], "a:datetime,b:{a:long}")
             c = e.map_engine.map_dataframe(
                 o, select_top, o.schema, PartitionSpec(by=["a"])
             )
