@@ -5,7 +5,7 @@
 [![PyPI license](https://img.shields.io/pypi/l/fugue.svg)](https://pypi.python.org/pypi/fugue/)
 [![codecov](https://codecov.io/gh/fugue-project/fugue/branch/master/graph/badge.svg?token=ZO9YD5N3IA)](https://codecov.io/gh/fugue-project/fugue)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/4fa5f2f53e6f48aaa1218a89f4808b91)](https://www.codacy.com/gh/fugue-project/fugue/dashboard?utm_source=github.com&utm_medium=referral&utm_content=fugue-project/fugue&utm_campaign=Badge_Grade)
-[![Downloads](https://pepy.tech/badge/fugue)](https://pepy.tech/project/fugue)
+[![Downloads](https://static.pepy.tech/badge/fugue)](https://pepy.tech/project/fugue)
 
 | Tutorials                                                                                           | API Documentation                                                                     | Chat with us on slack!                                                                                                   |
 | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |

@@ -1,5 +1,13 @@
 # Release Notes
 
+## 0.8.7
+
+-   [506](https://github.com/fugue-project/fugue/issues/506) Adopt pandas `ExtensionDType`
+-   [504](https://github.com/fugue-project/fugue/issues/504) Create Fugue pytest fixtures
+-   [503](https://github.com/fugue-project/fugue/issues/503) Deprecate python 3.7 support
+-   [495](https://github.com/fugue-project/fugue/issues/495) Resolve segfault on Duckdb 0.8.1
+-   [494](https://github.com/fugue-project/fugue/issues/494) Remove the version cap of Dask
+
 ## 0.8.6
 
 -   [497](https://github.com/fugue-project/fugue/issues/497) Make LocalExecutionEngine respect partition numbers
