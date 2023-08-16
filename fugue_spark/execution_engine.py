@@ -853,5 +853,5 @@ class _Mapper(object):  # pragma: no cover
                 yield r
 
 
-def _to_safe_spark_worker_pandas(df: pd.DataFrame):
+def _to_safe_spark_worker_pandas(df: pd.DataFrame):  # pragma: no cover
     return df if _PYSPARK_ARROW_FRIENDLY else df.astype(object)
