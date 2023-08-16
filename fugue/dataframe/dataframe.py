@@ -9,16 +9,17 @@ from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
 from triad.utils.pandas_like import PD_UTILS
+from triad.utils.pyarrow import cast_pa_table
 
 from .._utils.display import PrettyTable
 from ..collections.yielded import Yielded
 from ..dataset import (
     Dataset,
     DatasetDisplay,
+    as_fugue_dataset,
     as_local,
     as_local_bounded,
     get_dataset_display,
-    as_fugue_dataset,
 )
 from ..exceptions import FugueDataFrameOperationError
 
@@ -113,23 +114,19 @@ class DataFrame(Dataset):
     def as_pandas(self) -> pd.DataFrame:
         """Convert to pandas DataFrame"""
         pdf = pd.DataFrame(self.as_array(), columns=self.columns)
-        if len(pdf) == 0:  # TODO: move to triad
-            return pd.DataFrame(
-                {
-                    k: pd.Series(dtype=v.type.to_pandas_dtype())
-                    for k, v in self.schema.items()
-                }
-            )
-        return PD_UTILS.enforce_type(pdf, self.schema.pa_schema, null_safe=True)
+        return PD_UTILS.cast_df(
+            pdf, self.schema.pa_schema, use_extension_types=True, use_arrow_dtype=False
+        )
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
         """Convert to pyArrow DataFrame"""
-        return pa.Table.from_pandas(
-            self.as_pandas().reset_index(drop=True),
+        pdf = pd.DataFrame(self.as_array(), columns=self.columns)
+        adf = pa.Table.from_pandas(
+            pdf,
             preserve_index=False,
-            schema=self.schema.pa_schema,
             safe=type_safe,
         )
+        return cast_pa_table(adf, self.schema.pa_schema)
 
     @abstractmethod
     def as_array(
@@ -279,31 +276,9 @@ class DataFrame(Dataset):
     def __deepcopy__(self, memo: Any) -> "DataFrame":
         return self
 
-    def _get_altered_schema(self, subschema: Any) -> Schema:
-        sub = Schema(subschema)
-        assert_or_throw(
-            sub.names in self.schema,
-            lambda: FugueDataFrameOperationError(
-                f"{sub.names} are not all in {self.schema}"
-            ),
-        )
-        for k, v in sub.items():
-            old_type = self.schema[k].type
-            new_type = v.type
-            if not old_type.equals(new_type):
-                assert_or_throw(
-                    not pa.types.is_struct(old_type)
-                    and not pa.types.is_list(old_type)
-                    and not pa.types.is_binary(old_type),
-                    lambda: NotImplementedError(f"can't convert from {old_type}"),
-                )
-                assert_or_throw(
-                    not pa.types.is_struct(new_type)
-                    and not pa.types.is_list(new_type)
-                    and not pa.types.is_binary(new_type),
-                    lambda: NotImplementedError(f"can't convert to {new_type}"),
-                )
-        return Schema([(k, sub.get(k, v)) for k, v in self.schema.items()])
+    def _get_altered_schema(self, subschema: Any) -> Schema:  # pragma: no cover
+        # TODO: remove
+        return self.schema.alter(subschema)
 
 
 class LocalDataFrame(DataFrame):

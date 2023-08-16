@@ -27,10 +27,10 @@ jupyter_contrib_nbextensions
 
 pyspark[connect]
 duckdb-engine>=0.6.4
-duckdb!=0.8.1
 sqlalchemy==2.0.10  # 2.0.11 has a bug
 ray[data]>=2.5.0
 # pyarrow==7.0.0
+dask-sql
 
 # publish to pypi
 wheel

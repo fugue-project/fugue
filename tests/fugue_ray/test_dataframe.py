@@ -2,29 +2,30 @@ from typing import Any
 
 import pandas as pd
 import pyarrow as pa
+import pytest
 import ray
 import ray.data as rd
-from fugue.dataframe.array_dataframe import ArrayDataFrame
-from fugue.dataframe.arrow_dataframe import _build_empty_arrow
-from fugue.dataframe.utils import (
-    get_column_names,
-    rename,
-)
-from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 from triad import Schema
 
+from fugue.dataframe.array_dataframe import ArrayDataFrame
+from fugue.dataframe.utils import get_column_names, rename
 from fugue_ray import RayDataFrame
+from fugue_test.dataframe_suite import DataFrameTests
 
 
 class RayDataFrameTests(DataFrameTests.Tests):
+    @pytest.fixture(autouse=True)
+    def init_client(self, fugue_ray_session):
+        pass
+
     @classmethod
     def setUpClass(cls):
-        ray.init(num_cpus=2)
+        pass
 
     @classmethod
     def tearDownClass(cls):
-        ray.shutdown()
+        pass
 
     def df(self, data: Any = None, schema: Any = None) -> RayDataFrame:
         return RayDataFrame(data, schema)
@@ -57,7 +58,7 @@ class RayDataFrameTests(DataFrameTests.Tests):
         assert not df.is_local
         assert df.is_bounded
 
-        df = RayDataFrame(_build_empty_arrow(Schema("x:str,y:double")))
+        df = RayDataFrame(Schema("x:str,y:double").create_empty_arrow_table())
         assert df.empty
         assert df.schema == "x:str,y:double"
         assert df.is_bounded
@@ -121,13 +122,17 @@ class RayDataFrameTests(DataFrameTests.Tests):
 
 
 class NativeRayDataFrameTests(DataFrameTests.NativeTests):
+    @pytest.fixture(autouse=True)
+    def init_client(self, fugue_ray_session):
+        pass
+
     @classmethod
     def setUpClass(cls):
-        ray.init(num_cpus=2)
+        pass
 
     @classmethod
     def tearDownClass(cls):
-        ray.shutdown()
+        pass
 
     def df(self, data: Any = None, schema: Any = None):
         res = RayDataFrame(data, schema)

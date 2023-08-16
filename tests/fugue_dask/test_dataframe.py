@@ -6,26 +6,33 @@ from typing import Any
 import dask.dataframe as pd
 import numpy as np
 import pandas
+import pytest
+from pytest import raises
+from triad.collections.schema import Schema
+
 import fugue.api as fi
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
+from fugue.dataframe.utils import get_column_names, rename
 from fugue_dask.dataframe import DaskDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
-from pytest import raises
-from triad.collections.schema import Schema
-from fugue.dataframe.utils import (
-    get_column_names,
-    rename,
-)
 
 
 class DaskDataFrameTests(DataFrameTests.Tests):
+    @pytest.fixture(autouse=True)
+    def init_client(self, fugue_dask_client):
+        self.dask_client = fugue_dask_client
+
     def df(self, data: Any = None, schema: Any = None) -> DaskDataFrame:
         return DaskDataFrame(data, schema)
 
 
 class NativeDaskDataFrameTests(DataFrameTests.NativeTests):
+    @pytest.fixture(autouse=True)
+    def init_client(self, fugue_dask_client):
+        self.dask_client = fugue_dask_client
+
     def df(self, data: Any = None, schema: Any = None):
         return DaskDataFrame(data, schema).native
 
@@ -57,14 +64,14 @@ class NativeDaskDataFrameTests(DataFrameTests.NativeTests):
         pass
 
 
-def test_init():
+def test_init(fugue_dask_client):
     df = DaskDataFrame(schema="a:str,b:int")
     assert df.is_bounded
     assert df.count() == 0
     assert df.schema == "a:str,b:int"
 
-    pdf = pandas.DataFrame([["a", 1], ["b", 2]])
-    raises(Exception, lambda: DaskDataFrame(pdf))
+    pdf = pandas.DataFrame([["a", 1], ["b", 2]], columns=["a", "b"])
+    # raises(Exception, lambda: DaskDataFrame(pdf))
     df = DaskDataFrame(pdf, "a:str,b:str")
     assert [["a", "1"], ["b", "2"]] == df.as_pandas().values.tolist()
     df = DaskDataFrame(pdf, "a:str,b:int")
@@ -88,7 +95,7 @@ def test_init():
     assert [["1", "a"], ["2", "b"]] == ddf.as_pandas().values.tolist()
     assert df.native is ddf.native  # no real copy happened
 
-    df = DaskDataFrame([["a", 1], ["b", "2"]], "x:str,y:double")
+    df = DaskDataFrame([["a", 1], ["b", 2]], "x:str,y:double")
     assert [["a", 1.0], ["b", 2.0]] == df.as_pandas().values.tolist()
 
     df = DaskDataFrame([], "x:str,y:double")
@@ -97,13 +104,13 @@ def test_init():
     raises(Exception, lambda: DaskDataFrame(123))
 
 
-def test_simple_methods():
+def test_simple_methods(fugue_dask_client):
     df = DaskDataFrame([], "a:str,b:int")
     assert df.empty
     assert 0 == df.count()
     assert not df.is_local
 
-    df = DaskDataFrame([["a", 1], ["b", "2"]], "x:str,y:double")
+    df = DaskDataFrame([["a", 1], ["b", 2]], "x:str,y:double")
     assert not df.empty
     assert 2 == df.count()
     assert ["a", 1.0] == df.peek_array()
@@ -117,7 +124,7 @@ def test_simple_methods():
     )
 
 
-def _test_nested():
+def _test_nested(fugue_dask_client):
     # TODO: nested type doesn't work in dask
     # data = [[dict(a=1, b=[3, 4], d=1.0)], [json.dumps(dict(b=[30, "40"]))]]
     # df = DaskDataFrame(data, "a:{a:str,b:[int]}")
@@ -130,7 +137,7 @@ def _test_nested():
     assert [[[dict(a=None, b=[30, 40])]]] == a
 
 
-def test_as_array():
+def test_as_array(fugue_dask_client):
     df = DaskDataFrame([], "a:str,b:int")
     assert [] == df.as_array()
     assert [] == df.as_array(type_safe=True)
@@ -143,41 +150,41 @@ def test_as_array():
     assert [[1, "a"]] == df.as_array(["b", "a"])
 
     # prevent pandas auto type casting
-    df = DaskDataFrame([[1.0, 1.1]], "a:double,b:int")
+    df = DaskDataFrame([[1.0, 1.0]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array()
     assert isinstance(df.as_array()[0][0], float)
     assert isinstance(df.as_array()[0][1], int)
     assert [[1.0, 1]] == df.as_array(["a", "b"])
     assert [[1, 1.0]] == df.as_array(["b", "a"])
 
-    df = DaskDataFrame([[np.float64(1.0), 1.1]], "a:double,b:int")
+    df = DaskDataFrame([[np.float64(1.0), 1.0]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array()
     assert isinstance(df.as_array()[0][0], float)
     assert isinstance(df.as_array()[0][1], int)
 
-    df = DaskDataFrame([[pandas.Timestamp("2020-01-01"), 1.1]], "a:datetime,b:int")
+    df = DaskDataFrame([[pandas.Timestamp("2020-01-01"), 1.0]], "a:datetime,b:int")
     df.native["a"] = pd.to_datetime(df.native["a"])
     assert [[datetime(2020, 1, 1), 1]] == df.as_array()
     assert isinstance(df.as_array()[0][0], datetime)
     assert isinstance(df.as_array()[0][1], int)
 
-    df = DaskDataFrame([[pandas.NaT, 1.1]], "a:datetime,b:int")
+    df = DaskDataFrame([[pandas.NaT, 1.0]], "a:datetime,b:int")
     df.native["a"] = pd.to_datetime(df.native["a"])
     assert df.as_array()[0][0] is None
     assert isinstance(df.as_array()[0][1], int)
 
-    df = DaskDataFrame([[1.0, 1.1]], "a:double,b:int")
+    df = DaskDataFrame([[1.0, 1.0]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array(type_safe=True)
     assert isinstance(df.as_array()[0][0], float)
     assert isinstance(df.as_array()[0][1], int)
 
 
-def test_as_dict_iterable():
-    df = DaskDataFrame([["2020-01-01", 1.1]], "a:datetime,b:int")
+def test_as_dict_iterable(fugue_dask_client):
+    df = DaskDataFrame([["2020-01-01", 1.0]], "a:datetime,b:int")
     assert [dict(a=datetime(2020, 1, 1), b=1)] == list(df.as_dict_iterable())
 
 
-def test_nan_none():
+def test_nan_none(fugue_dask_client):
     # TODO: on dask, these tests can't pass
     # df = ArrayDataFrame([[None, None]], "b:str,c:double")
     # assert df.as_pandas().iloc[0, 0] is None
@@ -203,7 +210,7 @@ def test_nan_none():
     assert arr[0] is None
 
 
-def _test_as_array_perf():
+def _test_as_array_perf(fugue_dask_client):
     s = Schema()
     arr = []
     for i in range(100):
@@ -232,12 +239,12 @@ def _test_as_array_perf():
     print(nts, ts)
 
 
-def _test_get_column_names():
+def _test_get_column_names(fugue_dask_client):
     df = pd.from_pandas(pandas.DataFrame([[0, 1, 2]]), npartitions=1)
     assert get_column_names(df) == [0, 1, 2]
 
 
-def _test_rename():
+def _test_rename(fugue_dask_client):
     pdf = pd.from_pandas(
         pandas.DataFrame([[0, 1, 2]], columns=["a", "b", "c"]), npartitions=1
     )

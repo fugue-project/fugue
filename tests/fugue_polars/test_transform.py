@@ -67,7 +67,7 @@ def test_transform_empty_result():
         assert fdf.as_array() == []
 
 
-def test_polars_on_engines():
+def test_polars_on_engines(spark_session, fugue_dask_client, fugue_ray_session):
     def tr1(df: pl.DataFrame) -> pl.DataFrame:
         tdf = df.with_columns(pl.lit(1, pl.Int32()).alias("c"))
         return tdf
@@ -90,11 +90,8 @@ def test_polars_on_engines():
                     ["b", datetime(2022, 1, 2), 1],
                 ] == sorted(fdf.as_array(), key=lambda x: x[0])
 
-    with SparkSession.builder.getOrCreate() as spark:
-        test(spark)
+    test(spark_session)
 
-    with Client(processes=True) as client:
-        test(client)
+    test(fugue_dask_client)
 
-    with ray.init():
-        test("ray")
+    test(fugue_ray_session)

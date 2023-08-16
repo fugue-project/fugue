@@ -10,15 +10,15 @@ from triad.collections.dict import IndexedOrderedDict, ParamDict
 from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
-from triad.utils.threading import RunOnce
 from triad.utils.pandas_like import PandasUtils
+from triad.utils.threading import RunOnce
 from fugue import StructuredRawSQL
-from fugue._utils.misc import import_fsql_dependency
 from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
     parse_presort_exp,
 )
+from fugue.exceptions import FugueBug
 from fugue.constants import KEYWORD_PARALLELISM, KEYWORD_ROWCOUNT
 from fugue.dataframe import (
     AnyDataFrame,
@@ -41,15 +41,17 @@ from fugue_dask._utils import (
 )
 from fugue_dask.dataframe import DaskDataFrame
 
+from ._constants import FUGUE_DASK_USE_ARROW
+
 _DASK_PARTITION_KEY = "__dask_partition_key__"
 
 
-class QPDDaskEngine(SQLEngine):
-    """QPD execution implementation."""
+class DaskSQLEngine(SQLEngine):
+    """Dask-sql implementation."""
 
     @property
     def dialect(self) -> Optional[str]:
-        return "spark"
+        return "trino"
 
     def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
         return to_dask_engine_df(df, schema)
@@ -59,12 +61,28 @@ class QPDDaskEngine(SQLEngine):
         return True
 
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
-        qpd_dask = import_fsql_dependency("qpd_dask")
+        try:
+            from dask_sql import Context
+        except ImportError:  # pragma: no cover
+            raise ImportError(
+                "dask-sql is not installed. "
+                "Please install it with `pip install dask-sql`"
+            )
+        ctx = Context()
+        _dfs: Dict[str, dd.DataFrame] = {k: self._to_safe_df(v) for k, v in dfs.items()}
+        sql = statement.construct(dialect=self.dialect, log=self.log)
+        res = ctx.sql(
+            sql,
+            dataframes=_dfs,
+            config_options={"sql.identifier.case_sensitive": True},
+        )
+        return DaskDataFrame(res)
 
-        _dfs, _sql = self.encode(dfs, statement)
-        dask_dfs = {k: self.to_df(v).native for k, v in _dfs.items()}  # type: ignore
-        df = qpd_dask.run_sql_on_dask(_sql, dask_dfs, ignore_case=True)
-        return DaskDataFrame(df)
+    def _to_safe_df(self, df: DataFrame) -> dd.DataFrame:
+        df = self.to_df(df)
+        return df.native.astype(
+            df.schema.to_pandas_dtype(use_extension_types=True, use_arrow_dtype=False)
+        )
 
 
 class DaskMapEngine(MapEngine):
@@ -76,7 +94,7 @@ class DaskMapEngine(MapEngine):
     def is_distributed(self) -> bool:
         return True
 
-    def map_dataframe(
+    def map_dataframe(  # noqa: C901
         self,
         df: DataFrame,
         map_func: Callable[[PartitionCursor, LocalDataFrame], LocalDataFrame],
@@ -91,6 +109,9 @@ class DaskMapEngine(MapEngine):
         presort_keys = list(presort.keys())
         presort_asc = list(presort.values())
         output_schema = Schema(output_schema)
+        output_dtypes = output_schema.to_pandas_dtype(
+            use_extension_types=True, use_arrow_dtype=FUGUE_DASK_USE_ARROW
+        )
         input_schema = df.schema
         cursor = partition_spec.get_cursor(input_schema, 0)
         on_init_once: Any = (
@@ -101,9 +122,17 @@ class DaskMapEngine(MapEngine):
             )
         )
 
-        def _map(pdf: pd.DataFrame) -> pd.DataFrame:
-            if pdf.shape[0] == 0:
-                return PandasDataFrame([], output_schema).as_pandas()
+        def _fix_dask_bug(pdf: pd.DataFrame) -> pd.DataFrame:
+            assert_or_throw(
+                pdf.shape[1] == len(input_schema),
+                FugueBug(
+                    "partitioned dataframe has different number of columns: "
+                    f"{pdf.columns} vs {input_schema}"
+                ),
+            )
+            return pdf
+
+        def _core_map(pdf: pd.DataFrame) -> pd.DataFrame:
             if len(partition_spec.presort) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
             input_df = PandasDataFrame(
@@ -115,34 +144,43 @@ class DaskMapEngine(MapEngine):
             output_df = map_func(cursor, input_df)
             return output_df.as_pandas()[output_schema.names]
 
+        def _map(pdf: pd.DataFrame) -> pd.DataFrame:
+            if pdf.shape[0] == 0:
+                return PandasDataFrame([], output_schema).as_pandas()
+            pdf = pdf.reset_index(drop=True)
+            pdf = _fix_dask_bug(pdf)
+            res = _core_map(pdf)
+            return res.astype(output_dtypes)
+
         def _gp_map(pdf: pd.DataFrame) -> pd.DataFrame:
             if pdf.shape[0] == 0:  # pragma: no cover
                 return PandasDataFrame([], output_schema).as_pandas()
+            pdf = pdf.reset_index(drop=True)
+            pdf = _fix_dask_bug(pdf)
             pu = PandasUtils()
-            return pu.safe_groupby_apply(
-                pdf.reset_index(drop=True), partition_spec.partition_by, _map
-            )
+            res = pu.safe_groupby_apply(pdf, partition_spec.partition_by, _core_map)
+            return res.astype(output_dtypes)
 
         df = self.to_df(df)
-        meta = self.execution_engine.pl_utils.safe_to_pandas_dtype(  # type: ignore
-            output_schema.pa_schema
-        )
         pdf = self.execution_engine.repartition(df, partition_spec)
         if len(partition_spec.partition_by) == 0:
-            result = pdf.native.map_partitions(_map, meta=meta)  # type: ignore
+            result = pdf.native.map_partitions(_map, meta=output_dtypes)  # type: ignore
         else:
             if partition_spec.algo == "default":
-                engine = self.execution_engine
-                result = engine.pl_utils.safe_groupby_apply(  # type: ignore
-                    df.native,
+                result = df.native.groupby(
                     partition_spec.partition_by,
-                    _map,
-                    meta=meta,
-                )
+                    sort=False,
+                    group_keys=False,
+                    dropna=False,
+                ).apply(_map, meta=output_dtypes)
             elif partition_spec.algo == "coarse":
-                result = pdf.native.map_partitions(_map, meta=meta)  # type: ignore
+                result = pdf.native.map_partitions(  # type: ignore
+                    _map, meta=output_dtypes
+                )
             else:
-                result = pdf.native.map_partitions(_gp_map, meta=meta)  # type: ignore
+                result = pdf.native.map_partitions(  # type: ignore
+                    _gp_map, meta=output_dtypes
+                )
         return DaskDataFrame(result, output_schema)
 
 
@@ -194,7 +232,7 @@ class DaskExecutionEngine(ExecutionEngine):
         return self._fs
 
     def create_default_sql_engine(self) -> SQLEngine:
-        return QPDDaskEngine(self)
+        return DaskSQLEngine(self)
 
     def create_default_map_engine(self) -> MapEngine:
         return DaskMapEngine(self)
@@ -238,6 +276,7 @@ class DaskExecutionEngine(ExecutionEngine):
             return df
         if len(partition_spec.partition_by) > 0 and partition_spec.algo == "default":
             return df
+
         p = partition_spec.get_num_partitions(
             **{
                 KEYWORD_ROWCOUNT: lambda: df.persist().count(),  # type: ignore
@@ -432,7 +471,11 @@ class DaskExecutionEngine(ExecutionEngine):
         _presort: IndexedOrderedDict = presort or partition_spec.presort
 
         def _partition_take(partition, n, presort):
-            if len(presort.keys()) > 0:
+            assert_or_throw(
+                partition.shape[1] == len(meta),
+                FugueBug("hitting the dask bug where partition keys are lost"),
+            )
+            if len(presort.keys()) > 0 and len(partition) > 1:
                 partition = partition.sort_values(
                     list(presort.keys()),
                     ascending=list(presort.values()),

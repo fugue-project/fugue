@@ -138,7 +138,7 @@ class SparkDataFrame(DataFrame):
         return SparkDataFrame(_rename_spark_dataframe(self.native, columns))
 
     def alter_columns(self, columns: Any) -> DataFrame:
-        new_schema = self._get_altered_schema(columns)
+        new_schema = self.schema.alter(columns)
         if new_schema == self.schema:
             return self
         return SparkDataFrame(self.native, new_schema)

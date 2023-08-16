@@ -1,14 +1,13 @@
 import os
 from typing import Any, List
 
-import duckdb
 import pandas as pd
-import ray
+import pytest
 import ray.data as rd
 from triad import FileSystem
 
 import fugue.api as fa
-from fugue import ArrayDataFrame, DataFrame, FugueWorkflow, fsql, transform
+from fugue import ArrayDataFrame, DataFrame, FugueWorkflow, transform
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.plugins import infer_execution_engine
 from fugue_ray import RayDataFrame, RayExecutionEngine
@@ -24,18 +23,19 @@ _CONF = {
 
 
 class RayExecutionEngineTests(ExecutionEngineTests.Tests):
+    @pytest.fixture(autouse=True)
+    def init_client(self, fugue_ray_session, fugue_duckdb_connection):
+        self._con = fugue_duckdb_connection
+        self._engine = self.make_engine()
+        fa.set_global_engine(self._engine)
+
     @classmethod
     def setUpClass(cls):
-        ray.init(num_cpus=2)
-        cls._con = duckdb.connect()
-        cls._engine = cls.make_engine(cls)
-        fa.set_global_engine(cls._engine)
+        pass
 
     @classmethod
     def tearDownClass(cls):
         fa.clear_global_engine()
-        cls._con.close()
-        ray.shutdown()
 
     def make_engine(self):
         e = RayExecutionEngine(
@@ -169,16 +169,19 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
 
 
 class RayBuiltInTests(BuiltInTests.Tests):
+    @pytest.fixture(autouse=True)
+    def init_client(self, fugue_ray_session, fugue_duckdb_connection):
+        self._con = fugue_duckdb_connection
+        self._engine = self.make_engine()
+        fa.set_global_engine(self._engine)
+
     @classmethod
     def setUpClass(cls):
-        ray.init(num_cpus=2)
-        cls._con = duckdb.connect()
-        cls._engine = cls.make_engine(cls)
+        pass
 
     @classmethod
     def tearDownClass(cls):
-        cls._con.close()
-        ray.shutdown()
+        fa.clear_global_engine()
 
     def make_engine(self):
         e = RayExecutionEngine(
@@ -186,6 +189,9 @@ class RayBuiltInTests(BuiltInTests.Tests):
             connection=self._con,
         )
         return e
+    
+    def test_datetime_in_workflow(self):
+        pass
 
     def test_yield_table(self):
         pass

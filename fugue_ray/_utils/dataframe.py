@@ -7,8 +7,6 @@ import ray
 import ray.data as rd
 from triad import Schema
 
-from fugue.dataframe.arrow_dataframe import _build_empty_arrow
-
 from .._constants import _ZERO_COPY
 
 _RAY_NULL_REPR = "__RAY_NULL__"
@@ -62,7 +60,7 @@ def to_schema(schema: Any) -> Schema:  # pragma: no cover
 
 
 def build_empty(schema: Schema) -> rd.Dataset:
-    return rd.from_arrow(_build_empty_arrow(schema))
+    return rd.from_arrow(schema.create_empty_arrow_table())
 
 
 def add_partition_key(

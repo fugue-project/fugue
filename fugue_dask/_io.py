@@ -1,14 +1,17 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import fs as pfs
+import pandas as pd
 from dask import dataframe as dd
-from fugue._utils.io import FileParser, _get_single_files
 from triad.collections.dict import ParamDict
 from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
 
+from fugue._utils.io import FileParser, _get_single_files
 from fugue_dask.dataframe import DaskDataFrame
+
+from ._utils import DASK_UTILS
 
 
 def load_df(
@@ -58,22 +61,37 @@ def save_df(
 
 
 def _save_parquet(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
-    df.native.to_parquet(p.uri, **{"schema": df.schema.pa_schema, **kwargs})
+    params = {
+        "schema": df.schema.pa_schema,
+        "write_index": False,
+        **kwargs,
+    }
+    DASK_UTILS.to_parquet_friendly(df.native).to_parquet(p.uri, **params)
 
 
 def _load_parquet(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[dd.DataFrame, Any]:
+    params = dict(kwargs)
+    dtype_backend: Any = params.pop("dtype_backend", None)
+    params["engine"] = "pyarrow"
+    params["arrow_to_pandas"] = {"ignore_metadata": True}
+    if pd.__version__ >= "1.5":
+        dtype_backend = "pyarrow"
     if columns is None:
-        pdf = dd.read_parquet(p.uri, **kwargs)
+        pdf = dd.read_parquet(p.uri, dtype_backend=dtype_backend, **params)
         schema = Schema(pdf.head(1))
         return pdf, schema
     if isinstance(columns, list):  # column names
-        pdf = dd.read_parquet(p.uri, columns=columns, **kwargs)
+        pdf = dd.read_parquet(
+            p.uri, columns=columns, dtype_backend=dtype_backend, **params
+        )
         schema = Schema(pdf.head(1))
         return pdf, schema
     schema = Schema(columns)
-    pdf = dd.read_parquet(p.uri, columns=schema.names, **kwargs)
+    pdf = dd.read_parquet(
+        p.uri, columns=schema.names, dtype_backend=dtype_backend, **params
+    )
     return pdf, schema
 
 

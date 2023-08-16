@@ -271,7 +271,7 @@ class DataFrameTests(object):
             assert data == ArrowDataFrame(fi.as_arrow(df)).as_array()
             # list[dict]
             data = [[[dict(b=[30, 40])]]]
-            df = self.df(data, "a:[{b:[int]}]")
+            df = self.df(data, "a:[{b:[long]}]")
             assert data == ArrowDataFrame(fi.as_arrow(df)).as_array()
 
         def test_head(self):
@@ -294,20 +294,6 @@ class DataFrameTests(object):
         def test_show(self):
             df = self.df([["a", 1]], "a:str,b:int")
             fi.show(df)
-
-        def test_get_altered_schema(self):
-            df = self.df([["a", 1]], "a:str,b:int")
-            assert df._get_altered_schema("") == "a:str,b:int"
-            assert df._get_altered_schema(None) == "a:str,b:int"
-            assert df._get_altered_schema("b:str,a:str") == "a:str,b:str"
-            with raises(FugueDataFrameOperationError):
-                df._get_altered_schema("bb:str,a:str")
-            with raises(NotImplementedError):
-                df._get_altered_schema("b:binary")
-            with raises(NotImplementedError):
-                df._get_altered_schema("b:[str]")
-            with raises(NotImplementedError):
-                df._get_altered_schema("b:{x:str}")
 
         def test_alter_columns(self):
             # empty
@@ -456,9 +442,6 @@ class DataFrameTests(object):
     class NativeTests(Tests):
         def to_native_df(self, pdf: pd.DataFrame) -> Any:  # pragma: no cover
             raise NotImplementedError
-
-        def test_get_altered_schema(self):
-            pass
 
         def test_get_column_names(self):
             df = self.to_native_df(pd.DataFrame([[0, 1, 2]], columns=["0", "1", "2"]))

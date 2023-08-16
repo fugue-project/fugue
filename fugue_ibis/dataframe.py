@@ -106,7 +106,7 @@ class IbisDataFrame(DataFrame):
         return self if df is self._table else self._to_new_df(df, schema=schema)
 
     def alter_columns(self, columns: Any) -> DataFrame:
-        new_schema = self._get_altered_schema(columns)
+        new_schema = self.schema.alter(columns)
         if new_schema == self.schema:
             return self
         return self._to_new_df(

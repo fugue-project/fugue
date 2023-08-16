@@ -121,7 +121,7 @@ def test_parquet_io(tmpdir):
         path = os.path.join(tmpdir, "a.parquet")
         save_df(df, path)
         actual = load_df(path)
-        df_eq(df, actual, throw=True)
+        df_eq(df, actual, throw=True, check_order=True)
 
     save_df(df1, path)
     actual = load_df(path, columns=["b", "a"])
@@ -221,5 +221,3 @@ def test_json(tmpdir):
     actual = load_df(path, columns="b:str,a:int")
     df_eq(actual, [["2", 1]], "b:str,a:int")
     raises(KeyError, lambda: load_df(path, columns="bb:str,a:int"))
-
-

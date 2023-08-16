@@ -5,6 +5,7 @@ from typing import Any, List, Optional
 import dask
 import dask.dataframe as dd
 import pandas as pd
+import pytest
 from dask.distributed import Client
 
 import fugue.api as fa
@@ -24,6 +25,7 @@ from fugue_dask.execution_engine import DaskExecutionEngine
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 
+
 _CONF = {
     "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
     "fugue.rpc.flask_server.host": "127.0.0.1",
@@ -33,21 +35,22 @@ _CONF = {
 
 
 class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
+    @pytest.fixture(autouse=True)
+    def init_client(self, fugue_dask_client):
+        self.dask_client = fugue_dask_client
+        self._engine = self.make_engine()
+        fa.set_global_engine(self._engine)
+
     @classmethod
     def setUpClass(cls):
-        cls._engine = cls.make_engine(cls)
-        fa.set_global_engine(cls._engine)
+        pass
 
     @classmethod
     def tearDownClass(cls):
         fa.clear_global_engine()
-        cls._engine.dask_client.close()
 
     def make_engine(self):
-        client = Client(processes=True, n_workers=3, threads_per_worker=1)
-        # p2p (new default algo has bugs)
-        dask.config.set({"dataframe.shuffle.method": "tasks"})
-        e = DaskExecutionEngine(client, conf=dict(test=True, **_CONF))
+        e = DaskExecutionEngine(self.dask_client, conf=dict(test=True, **_CONF))
         return e
 
     def test_properties(self):
@@ -123,18 +126,22 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
 
 
 class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
+    @pytest.fixture(autouse=True)
+    def init_client(self, fugue_dask_client):
+        self.dask_client = fugue_dask_client
+        self._engine = self.make_engine()
+        fa.set_global_engine(self._engine)
+
     @classmethod
     def setUpClass(cls):
-        cls._engine = cls.make_engine(cls)
-        fa.set_global_engine(cls._engine)
+        pass
 
     @classmethod
     def tearDownClass(cls):
         fa.clear_global_engine()
-        cls._engine.dask_client.close()
 
     def make_engine(self):
-        e = DaskExecutionEngine(conf=dict(test=True, **_CONF))
+        e = DaskExecutionEngine(self.dask_client, conf=dict(test=True, **_CONF))
         return e
 
     def test_yield_table(self):
@@ -255,7 +262,7 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
         dag.run(self.engine)
 
 
-def test_transform():
+def test_transform(fugue_dask_client):
     class CB:
         def __init__(self):
             self._lock = RLock()
