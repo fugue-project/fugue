@@ -2,8 +2,8 @@ import pickle
 from threading import RLock
 from typing import Any, List, Optional
 
-import dask
 import dask.dataframe as dd
+import numpy as np
 import pandas as pd
 import pytest
 from dask.distributed import Client
@@ -24,7 +24,6 @@ from fugue_dask.dataframe import DaskDataFrame
 from fugue_dask.execution_engine import DaskExecutionEngine
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
-
 
 _CONF = {
     "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
@@ -319,6 +318,48 @@ def test_transform(fugue_dask_client):
     assert not res.is_local
     assert 5 == res.count()
     assert 5 == cb.n
+
+
+def test_multiple_transforms(fugue_dask_client):
+    def t1(df: pd.DataFrame) -> pd.DataFrame:
+        return pd.concat([df, df])
+
+    def t2(df: pd.DataFrame) -> pd.DataFrame:
+        return (
+            df.groupby(["a", "b"], as_index=False, dropna=False)
+            .apply(lambda x: x.head(1))
+            .reset_index(drop=True)
+        )
+
+    def compute(df: pd.DataFrame, engine) -> pd.DataFrame:
+        with fa.engine_context(engine):
+            ddf = fa.as_fugue_df(df)
+            ddf1 = fa.transform(ddf, t1, schema="*", partition=dict(algo="hash"))
+            ddf2 = fa.transform(
+                ddf1,
+                t2,
+                schema="*",
+                partition=dict(by=["a", "b"], presort="c", algo="coarse", num=2),
+            )
+            return (
+                ddf2.as_pandas()
+                .astype("float64")
+                .fillna(float("nan"))
+                .sort_values(["a", "b"])
+            )
+
+    np.random.seed(0)
+    df = pd.DataFrame(
+        dict(
+            a=np.random.randint(1, 5, 1000),
+            b=np.random.choice([1, 2, 3, None], 1000),
+            c=np.random.rand(1000),
+        )
+    )
+
+    actual = compute(df, fugue_dask_client)
+    expected = compute(df, None)
+    assert np.allclose(actual, expected, equal_nan=True)
 
 
 @transformer("ct:long")
