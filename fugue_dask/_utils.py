@@ -41,6 +41,7 @@ def hash_repartition(df: dd.DataFrame, num: int, cols: List[Any]) -> dd.DataFram
         return df
     if num == 1:
         return df.repartition(1)
+    df = df.reset_index(drop=True).clear_divisions()
     idf, ct = _add_hash_index(df, num, cols)
     return _postprocess(idf, ct, num)
 
@@ -63,9 +64,10 @@ def even_repartition(df: dd.DataFrame, num: int, cols: List[Any]) -> dd.DataFram
     """
     if num == 1:
         return df.repartition(1)
+    if len(cols) == 0 and num <= 0:
+        return df
+    df = df.reset_index(drop=True).clear_divisions()
     if len(cols) == 0:
-        if num <= 0:
-            return df
         idf, ct = _add_continuous_index(df)
     else:
         idf, ct = _add_group_index(df, cols, shuffle=False)
@@ -97,6 +99,7 @@ def rand_repartition(
         return df
     if num == 1:
         return df.repartition(1)
+    df = df.reset_index(drop=True).clear_divisions()
     if len(cols) == 0:
         idf, ct = _add_random_index(df, num=num, seed=seed)
     else:
