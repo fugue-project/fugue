@@ -100,7 +100,7 @@ class RayIO(object):
         if "header" in kw:
             kw["include_header"] = kw.pop("header")
 
-        def _fn() -> Dict[str, Any]:
+        def _fn() -> Dict[str, Any]:  # pragma: no cover
             return dict(write_options=pacsv.WriteOptions(**kw))
 
         df.native.write_csv(
