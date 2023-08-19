@@ -54,7 +54,7 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_not_using_pandas_udf(self):
         assert not self.engine.create_default_map_engine()._should_use_pandas_udf(
-            Schema("a:int")
+            Schema("a:int"), Schema("a:int")
         )
 
     def test__join_outer_pandas_incompatible(self):
@@ -144,10 +144,13 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
 
     def test_using_pandas_udf(self):
         assert self.engine.map_engine._should_use_pandas_udf(  # type: ignore
-            Schema("a:int")
+            Schema("a:int"), Schema("a:int")
         )
         assert not self.engine.map_engine._should_use_pandas_udf(  # type: ignore
-            Schema("a:{x:int}")
+            Schema("a:int"), Schema("a:{x:int}")
+        )
+        assert self.engine.map_engine._should_use_pandas_udf(  # type: ignore
+            Schema("a:{x:int}"), Schema("a:int")
         )
 
     def test_sample_n(self):
