@@ -331,12 +331,22 @@ class DaskExecutionEngine(ExecutionEngine):
         on: Optional[List[str]] = None,
     ) -> DataFrame:
         key_schema, output_schema = get_join_schemas(df1, df2, how=how, on=on)
-        d = self.pl_utils.join(
-            self.to_df(df1).native,
-            self.to_df(df2).native,
-            join_type=how,
-            on=key_schema.names,
-        )
+        # Dask joins on different types such as int64 vs Int64 can occasionally fail
+        # so we need to cast to the same type
+        ndf1 = self.to_df(df1).native
+        ntp1 = ndf1.dtypes[key_schema.names].to_dict()
+        ndf2 = self.to_df(df2).native
+        ntp2 = ndf2.dtypes[key_schema.names].to_dict()
+        if ntp1 != ntp2:
+            ntp = key_schema.to_pandas_dtype(
+                use_extension_types=True, use_arrow_dtype=FUGUE_DASK_USE_ARROW
+            )
+            if ntp1 != ntp:
+                ndf1 = ndf1.astype(ntp)
+            if ntp2 != ntp:
+                ndf2 = ndf2.astype(ntp)
+
+        d = self.pl_utils.join(ndf1, ndf2, join_type=how, on=key_schema.names)
         return DaskDataFrame(d, output_schema, type_safe=False)
 
     def union(

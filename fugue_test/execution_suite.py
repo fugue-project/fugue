@@ -344,6 +344,30 @@ class ExecutionEngineTests(object):
             )
             df_eq(c, o, no_pandas=True, check_order=True, throw=True)
 
+            # input has dict, output doesn't
+            def mp2(cursor, data):
+                return data[["a"]]
+
+            c = e.map_engine.map_dataframe(
+                o, mp2, "a:datetime", PartitionSpec(by=["a"])
+            )
+            df_eq(
+                c,
+                PandasDataFrame([[dt]], "a:datetime"),
+                no_pandas=True,
+                check_order=True,
+                throw=True,
+            )
+
+            # input doesn't have dict, output has
+            def mp3(cursor, data):
+                return PandasDataFrame([[dt, dict(a=1)]], "a:datetime,b:{a:long}")
+
+            c = e.map_engine.map_dataframe(
+                c, mp3, "a:datetime,b:{a:long}", PartitionSpec(by=["a"])
+            )
+            df_eq(c, o, no_pandas=True, check_order=True, throw=True)
+
         def test_map_with_binary(self):
             e = self.engine
             o = ArrayDataFrame(

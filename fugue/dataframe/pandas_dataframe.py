@@ -59,8 +59,11 @@ class PandasDataFrame(LocalBoundedDataFrame):
         apply_schema = True
         if df is None:
             schema = _input_schema(schema).assert_not_empty()
-            df = []
-        if isinstance(df, PandasDataFrame):
+            pdf = schema.create_empty_pandas_df(
+                use_extension_types=True, use_arrow_dtype=False
+            )
+            apply_schema = False
+        elif isinstance(df, PandasDataFrame):
             # TODO: This is useless if in this way and wrong
             pdf = df.native
             schema = None

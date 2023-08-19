@@ -43,11 +43,12 @@ from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngi
 
 from ._constants import FUGUE_SPARK_CONF_USE_PANDAS_UDF, FUGUE_SPARK_DEFAULT_CONF
 from ._utils.convert import (
+    _PYSPARK_ARROW_FRIENDLY,
+    pandas_udf_can_accept,
     to_schema,
     to_spark_df,
     to_spark_schema,
     to_type_safe_input,
-    _PYSPARK_ARROW_FRIENDLY,
 )
 from ._utils.io import SparkIO
 from ._utils.misc import is_spark_connect as _is_spark_connect
@@ -108,24 +109,27 @@ class SparkMapEngine(MapEngine):
         """Whether the spark session is created by spark connect"""
         return self.execution_engine.is_spark_connect  # type:ignore
 
-    def _should_use_pandas_udf(self, schema: Schema) -> bool:
+    def _should_use_pandas_udf(
+        self, input_schema: Schema, output_schema: Schema
+    ) -> bool:
         if self.is_spark_connect:  # pragma: no cover
             return True
-        possible = hasattr(ps.DataFrame, "mapInPandas")  # must be new version of Spark
         # else:  # this condition seems to be unnecessary
         #    possible &= self.execution_engine.conf.get(
         #        "spark.sql.execution.arrow.pyspark.enabled", False
         #    )
+        compatible = pandas_udf_can_accept(
+            input_schema, is_input=True
+        ) and pandas_udf_can_accept(output_schema, is_input=False)
         enabled = self.execution_engine.conf.get_or_throw(
             FUGUE_SPARK_CONF_USE_PANDAS_UDF, bool
         )
-        if not possible or any(pa.types.is_nested(t) for t in schema.types):
-            if enabled and not possible:  # pragma: no cover
-                self.log.warning(
-                    f"{FUGUE_SPARK_CONF_USE_PANDAS_UDF}"
-                    " is enabled but the current PySpark session"
-                    "did not enable Pandas UDF support"
-                )
+        if enabled and not compatible:  # pragma: no cover
+            self.log.warning(
+                f"{FUGUE_SPARK_CONF_USE_PANDAS_UDF}"
+                f" is enabled but {input_schema} or {output_schema}"
+                " is not compatible with pandas udf, using RDD instead"
+            )
             return False
         return enabled
 
@@ -139,7 +143,7 @@ class SparkMapEngine(MapEngine):
         map_func_format_hint: Optional[str] = None,
     ) -> DataFrame:
         output_schema = Schema(output_schema)
-        if self._should_use_pandas_udf(output_schema):
+        if self._should_use_pandas_udf(df.schema, output_schema):
             if len(partition_spec.partition_by) > 0:
                 if partition_spec.algo in ["coarse", "even"]:
                     return self._map_by_pandas_udf(
@@ -210,7 +214,7 @@ class SparkMapEngine(MapEngine):
         def _udf_pandas(pdf: Any) -> pd.DataFrame:  # pragma: no cover
             if pdf.shape[0] == 0:
                 return _to_safe_spark_worker_pandas(
-                    PandasDataFrame([], output_schema).as_pandas()
+                    PandasDataFrame(schema=output_schema).as_pandas()
                 )
             if len(partition_spec.presort) > 0:
                 pdf = pdf.sort_values(presort_keys, ascending=presort_asc)
@@ -270,7 +274,7 @@ class SparkMapEngine(MapEngine):
             input_df = IterablePandasDataFrame(get_dfs(), input_schema)
             if input_df.empty:
                 yield _to_safe_spark_worker_pandas(
-                    PandasDataFrame([], output_schema).as_pandas()
+                    PandasDataFrame(schema=output_schema).as_pandas()
                 )
                 return
             if on_init_once is not None:
