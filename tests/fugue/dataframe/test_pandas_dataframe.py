@@ -52,8 +52,18 @@ def test_init():
     assert [["a", "1"], ["b", "2"]] == df.native.values.tolist()
     df = PandasDataFrame(pdf, "a:str,b:int")
     assert [["a", 1], ["b", 2]] == df.native.values.tolist()
+    assert pdf is not df.native
     df = PandasDataFrame(pdf, "a:str,b:double")
     assert [["a", 1.0], ["b", 2.0]] == df.native.values.tolist()
+
+    # no copy is important for performance
+    df = PandasDataFrame(pdf, "a:str,b:long")
+    assert pdf is df.native
+    df = PandasDataFrame(pdf, pandas_df_wrapper=True)
+    assert pdf is df.native
+    assert df.schema == "a:str,b:long"
+    df = PandasDataFrame(pdf, "a:str,b:int", pandas_df_wrapper=True)
+    assert pdf is df.native
 
     pdf = pd.DataFrame([["a", 1], ["b", 2]], columns=["a", "b"])["b"]
     assert isinstance(pdf, pd.Series)
@@ -101,10 +111,9 @@ def test_nested():
     # a = df.as_array(type_safe=True)
     # assert [[dict(a="1", b=[3, 4])], [dict(a=None, b=[30, 40])]] == a
 
-    data = [[[json.dumps(dict(b=[30, "40"]))]]]
-    df = PandasDataFrame(data, "a:[{a:str,b:[int]}]")
-    a = df.as_array(type_safe=True)
-    assert [[[dict(a=None, b=[30, 40])]]] == a
+    data = [[[dict(b=[30, 40])]]]
+    df = PandasDataFrame(data, "a:[{b:[int]}]")
+    assert df.as_array(type_safe=True) == data
 
 
 def test_rename():

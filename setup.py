@@ -28,10 +28,10 @@ setup(
     license="Apache-2.0",
     author="The Fugue Development Team",
     author_email="hello@fugue.ai",
-    keywords="distributed spark dask sql dsl domain specific language",
+    keywords="distributed spark dask ray sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
     install_requires=[
-        "triad==0.9.2.dev2",
+        "triad==0.9.2.dev3",
         "adagio>=0.2.4",
         # sql dependencies
         "qpd>=0.4.4",
@@ -67,6 +67,7 @@ setup(
             "fugue-sql-antlr[cpp]>=0.1.6",
             "pyspark>=3.1.1",
             "dask[distributed,dataframe]>=2023.5.0",
+            "dask-sql",
             "ray[data]>=2.1.0",
             "notebook",
             "jupyterlab",

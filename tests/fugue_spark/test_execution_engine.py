@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, Iterable, List
 
 import numpy as np
 import pandas as pd
@@ -54,7 +54,7 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test_not_using_pandas_udf(self):
         assert not self.engine.create_default_map_engine()._should_use_pandas_udf(
-            Schema("a:int")
+            Schema("a:int"), Schema("a:int")
         )
 
     def test__join_outer_pandas_incompatible(self):
@@ -144,10 +144,13 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
 
     def test_using_pandas_udf(self):
         assert self.engine.map_engine._should_use_pandas_udf(  # type: ignore
-            Schema("a:int")
+            Schema("a:int"), Schema("a:int")
         )
         assert not self.engine.map_engine._should_use_pandas_udf(  # type: ignore
-            Schema("a:{x:int}")
+            Schema("a:int"), Schema("a:{x:int}")
+        )
+        assert self.engine.map_engine._should_use_pandas_udf(  # type: ignore
+            Schema("a:{x:int}"), Schema("a:int")
         )
 
     def test_sample_n(self):
@@ -396,6 +399,17 @@ class SparkExecutionEnginePandasUDFBuiltInTests(SparkExecutionEngineBuiltInTests
         )
         assert e.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
         return e
+
+
+def test_rdd_pd_extension_types_handling(spark_session):
+    def tr(df: List[List[Any]]) -> Iterable[pd.DataFrame]:
+        assert isinstance(df[0][0], float)
+        yield pd.DataFrame([[0.1, [1]]], columns=["a", "b"]).convert_dtypes()
+
+    with fa.engine_context(spark_session, {"fugue.spark.use_pandas_udf": False}):
+        df = pd.DataFrame([[0.1]], columns=["a"]).convert_dtypes()
+        res = fa.as_array(fa.transform(df, tr, schema="a:double,b:[long]"))
+        assert res == [[0.1, [1]]]
 
 
 @transformer("ct:long")

@@ -154,14 +154,14 @@ def test_iterable_pandas_dataframes():
     df = PandasDataFrame(pdf)
     data = list(p.to_input_data(df, ctx=None))
     assert 1 == len(data)
-    assert data[0] is pdf  # this is to guarantee no copy in any wrapping logic
+    assert data[0] is df.native  # this is to guarantee no copy in any wrapping logic
     assert data[0].values.tolist() == [[0, "x"]]
 
     dfs = IterablePandasDataFrame([df, df])
     data = list(p.to_input_data(dfs, ctx=None))
     assert 2 == len(data)
-    assert data[0] is pdf
-    assert data[1] is pdf
+    assert data[0] is df.native
+    assert data[1] is df.native
 
     def get_pdfs():
         yield pdf

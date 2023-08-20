@@ -261,6 +261,20 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
         dag.run(self.engine)
 
 
+def test_join_keys_unification(fugue_dask_client):
+    df1 = DaskDataFrame(
+        pd.DataFrame([[10, 1], [11, 3]], columns=["a", "b"]).convert_dtypes(),
+        "a:long,b:long",
+    )
+    df2 = PandasDataFrame(
+        pd.DataFrame([[10, [2]]], columns=["a", "c"]),
+        "a:long,c:[long]",
+    )
+    with fa.engine_context(fugue_dask_client) as engine:
+        assert fa.as_array(fa.inner_join(df1, df2)) == [[10, 1, [2]]]
+        assert fa.as_array(fa.inner_join(df2, df1)) == [[10, [2], 1]]
+
+
 def test_transform(fugue_dask_client):
     class CB:
         def __init__(self):

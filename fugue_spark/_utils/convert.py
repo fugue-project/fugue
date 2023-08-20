@@ -8,7 +8,12 @@ import pyspark.sql as ps
 import pyspark.sql.types as pt
 from packaging import version
 from pyarrow.types import is_list, is_struct, is_timestamp
-from pyspark.sql.pandas.types import from_arrow_type, to_arrow_type
+from pyspark.sql.pandas.types import (
+    from_arrow_schema,
+    from_arrow_type,
+    to_arrow_schema,
+    to_arrow_type,
+)
 from triad.collections import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
@@ -26,6 +31,18 @@ except ImportError:  # pragma: no cover
     from pyspark.sql.types import TimestampType as TimestampNTZType
 
 _PYSPARK_ARROW_FRIENDLY = version.parse(pyspark.__version__) >= version.parse("3.3")
+
+
+def pandas_udf_can_accept(schema: Schema, is_input: bool) -> bool:
+    try:
+        # pyspark's own from_arrow_schema to_arrow_schema
+        # can validate if a type can be supported by pandas udf
+        if not is_input and any(pa.types.is_struct(t) for t in schema.types):
+            return False
+        to_arrow_schema(from_arrow_schema(schema.pa_schema))
+        return True
+    except Exception:
+        return False
 
 
 def to_spark_schema(obj: Any) -> pt.StructType:

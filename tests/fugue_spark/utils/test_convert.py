@@ -1,10 +1,23 @@
+import pyarrow as pa
+from pytest import raises
+from triad import Schema
+
 from fugue_spark._utils.convert import (
+    pandas_udf_can_accept,
     to_cast_expression,
     to_schema,
     to_select_expression,
     to_spark_schema,
 )
-from pytest import raises
+
+
+def test_pandas_udf_can_accept():
+    for is_input in [True, False]:
+        assert pandas_udf_can_accept(Schema("a:int,b:str"), is_input)
+        assert pandas_udf_can_accept(Schema("a:int,b:[str],c:[float]"), is_input)
+        assert not pandas_udf_can_accept(Schema("a:int,b:[datetime]"), is_input)
+    assert pandas_udf_can_accept(Schema("a:int,b:{a:int}"), True)
+    assert not pandas_udf_can_accept(Schema("a:int,b:{a:int}"), False)
 
 
 def test_schema_conversion(spark_session):
