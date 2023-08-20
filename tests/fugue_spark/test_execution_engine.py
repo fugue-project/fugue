@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, Iterable, List
 
 import numpy as np
 import pandas as pd
@@ -399,6 +399,17 @@ class SparkExecutionEnginePandasUDFBuiltInTests(SparkExecutionEngineBuiltInTests
         )
         assert e.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
         return e
+
+
+def test_rdd_pd_extension_types_handling(spark_session):
+    def tr(df: List[List[Any]]) -> Iterable[pd.DataFrame]:
+        assert isinstance(df[0][0], float)
+        yield pd.DataFrame([[0.1, [1]]], columns=["a", "b"]).convert_dtypes()
+
+    with fa.engine_context(spark_session, {"fugue.spark.use_pandas_udf": False}):
+        df = pd.DataFrame([[0.1]], columns=["a"]).convert_dtypes()
+        res = fa.as_array(fa.transform(df, tr, schema="a:double,b:[long]"))
+        assert res == [[0.1, [1]]]
 
 
 @transformer("ct:long")

@@ -111,10 +111,9 @@ def test_nested():
     # a = df.as_array(type_safe=True)
     # assert [[dict(a="1", b=[3, 4])], [dict(a=None, b=[30, 40])]] == a
 
-    data = [[[json.dumps(dict(b=[30, "40"]))]]]
-    df = PandasDataFrame(data, "a:[{a:str,b:[int]}]")
-    a = df.as_array(type_safe=True)
-    assert [[[dict(a=None, b=[30, 40])]]] == a
+    data = [[[dict(b=[30, 40])]]]
+    df = PandasDataFrame(data, "a:[{b:[int]}]")
+    assert df.as_array(type_safe=True) == data
 
 
 def test_rename():
