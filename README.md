@@ -251,7 +251,8 @@ Feel free to message us on [Slack](http://slack.fugue.ai). We also have [contrib
 
 *   [How LyftLearn Democratizes Distributed Compute through Kubernetes Spark and Fugue](https://eng.lyft.com/how-lyftlearn-democratizes-distributed-compute-through-kubernetes-spark-and-fugue-c0875b97c3d9)
 *   [Clobotics - Large Scale Image Processing with Spark through Fugue](https://medium.com/fugue-project/large-scale-image-processing-with-spark-through-fugue-e510b9813da8)
-
+*   [Architecture for a data lake REST API using Delta Lake, Fugue & Spark (article by bitsofinfo)](https://bitsofinfo.wordpress.com/2023/08/14/data-lake-rest-api-delta-lake-fugue-spark)
+  
 ### Mentioned Uses
 
 *   [Productionizing Data Science at Interos, Inc. (LinkedIn post by Anthony Holten)](https://www.linkedin.com/posts/anthony-holten_pandas-spark-dask-activity-7022628193983459328-QvcF)
