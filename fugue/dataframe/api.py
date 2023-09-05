@@ -11,12 +11,12 @@ from .dataframe import AnyDataFrame, DataFrame, as_fugue_df
 
 @fugue_plugin
 def is_df(df: Any) -> bool:
-    """Whether ``df`` is a DataFrame like object"""
+    """Whether the input object is any type of DataFrame"""
     return isinstance(df, DataFrame)
 
 
 def get_native_as_df(df: AnyDataFrame) -> AnyDataFrame:
-    """Return the dataframe form of the input ``df``.
+    """Return the dataframe form of any dataframe.
     If ``df`` is a :class:`~.DataFrame`, then call the
     :meth:`~.DataFrame.native_as_df`, otherwise, it depends on whether there is
     a correspondent function handling it.
@@ -30,30 +30,49 @@ def get_native_as_df(df: AnyDataFrame) -> AnyDataFrame:
 
 @fugue_plugin
 def get_schema(df: AnyDataFrame) -> Schema:
-    """Get the schema of the ``df``
+    """The generic function to get the schema of any dataframe
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :return: the Schema object
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            import fugue.api as fa
+            import pandas as pd
+
+            df = pd.DataFrame([[0,1],[2,3]], columns=["a","b"])
+            fa.get_schema(df) # == Schema("a:long,b:long")
+
+    .. related_topics
+        How to get schema of any dataframe using Fugue?
     """
     return as_fugue_df(df).schema
 
 
 @fugue_plugin
 def as_pandas(df: AnyDataFrame) -> pd.DataFrame:
-    """Convert ``df`` to a Pandas DataFrame
+    """The generic function to convert any dataframe to a Pandas DataFrame
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :return: the Pandas DataFrame
+
+    .. related_topics
+        How to convert any dataframe to a pandas dataframe?
     """
     return as_fugue_df(df).as_pandas()
 
 
 @fugue_plugin
 def as_arrow(df: AnyDataFrame) -> pa.Table:
-    """Convert ``df`` to a PyArrow Table
+    """The generic function to convert any dataframe to a PyArrow Table
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :return: the PyArrow Table
+
+    .. related_topics
+        How to convert any dataframe to a pyarrow dataframe?
     """
     return as_fugue_df(df).as_arrow()
 
@@ -62,7 +81,7 @@ def as_arrow(df: AnyDataFrame) -> pa.Table:
 def as_array(
     df: AnyDataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
 ) -> List[Any]:  # pragma: no cover
-    """Convert df to 2-dimensional native python array
+    """The generic function to convert any dataframe to a 2-dimensional python array
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :param columns: columns to extract, defaults to None
@@ -81,7 +100,7 @@ def as_array(
 def as_array_iterable(
     df: AnyDataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
 ) -> Iterable[Any]:  # pragma: no cover
-    """Convert df to iterable of native python arrays
+    """The generic function to convert any dataframe to iterable of python arrays
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :param columns: columns to extract, defaults to None
@@ -101,7 +120,7 @@ def as_array_iterable(
 def as_dict_iterable(
     df: AnyDataFrame, columns: Optional[List[str]] = None
 ) -> Iterable[Dict[str, Any]]:
-    """Convert df to iterable of native python dicts
+    """Convert any dataframe to iterable of native python dicts
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :param columns: columns to extract, defaults to None
@@ -116,7 +135,7 @@ def as_dict_iterable(
 
 @fugue_plugin
 def peek_array(df: AnyDataFrame) -> List[Any]:
-    """Peek the first row of the dataframe as an array
+    """Peek the first row of any dataframe as an array
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :return: the first row as an array
@@ -126,7 +145,7 @@ def peek_array(df: AnyDataFrame) -> List[Any]:
 
 @fugue_plugin
 def peek_dict(df: AnyDataFrame) -> Dict[str, Any]:
-    """Peek the first row of the dataframe as a array
+    """Peek the first row of any dataframe as a array
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :return: the first row as a dict
@@ -141,7 +160,7 @@ def head(
     columns: Optional[List[str]] = None,
     as_fugue: bool = False,
 ) -> AnyDataFrame:
-    """Get first n rows of the dataframe as a new local bounded dataframe
+    """Get first n rows of any dataframe as a new local bounded dataframe
 
     :param n: number of rows
     :param columns: selected columns, defaults to None (all columns)
@@ -160,7 +179,7 @@ def head(
 def alter_columns(
     df: AnyDataFrame, columns: Any, as_fugue: bool = False
 ) -> AnyDataFrame:
-    """Change column types
+    """Change column data types of any dataframe
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :param columns: |SchemaLikeObject|,
@@ -178,7 +197,7 @@ def alter_columns(
 def drop_columns(
     df: AnyDataFrame, columns: List[str], as_fugue: bool = False
 ) -> AnyDataFrame:
-    """Drop certain columns and return a new dataframe
+    """Drop certain columns of any dataframe
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :param columns: columns to drop
@@ -194,7 +213,7 @@ def drop_columns(
 def select_columns(
     df: AnyDataFrame, columns: List[Any], as_fugue: bool = False
 ) -> AnyDataFrame:
-    """Select certain columns and return a new dataframe
+    """Select certain columns of any dataframe and return a new dataframe
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :param columns: columns to return
