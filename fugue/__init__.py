@@ -48,6 +48,7 @@ from fugue.execution.factory import (
     register_default_sql_engine,
     register_execution_engine,
     register_sql_engine,
+    parse_execution_engine
 )
 from fugue.execution.native_execution_engine import (
     NativeExecutionEngine,
