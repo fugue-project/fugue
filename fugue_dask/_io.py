@@ -1,5 +1,6 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import fsspec
 import fs as pfs
 import pandas as pd
 from dask import dataframe as dd
@@ -96,6 +97,8 @@ def _load_parquet(
 
 
 def _save_csv(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
+    fs, path = fsspec.core.url_to_fs(p.uri)
+    fs.makedirs(path, exist_ok=True)
     df.native.to_csv(
         pfs.path.combine(p.uri, "*.csv"), **{"index": False, "header": False, **kwargs}
     )
@@ -145,6 +148,8 @@ def _load_csv(  # noqa: C901
 
 
 def _save_json(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
+    fs, path = fsspec.core.url_to_fs(p.uri)
+    fs.makedirs(path, exist_ok=True)
     df.native.to_json(pfs.path.combine(p.uri, "*.json"), **kwargs)
 
 

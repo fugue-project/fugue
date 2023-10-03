@@ -9,7 +9,7 @@ from triad.utils.assertion import assert_or_throw
 
 from fugue._utils.io import FileParser, save_df
 from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import DataFrame
+from fugue.dataframe import DataFrame, PandasDataFrame
 from fugue_spark.dataframe import SparkDataFrame
 
 from .convert import to_schema, to_spark_schema
@@ -62,6 +62,8 @@ class SparkIO(object):
             writer.save(uri)
         else:
             ldf = df.as_local()
+            if isinstance(ldf, PandasDataFrame) and hasattr(ldf.native, "attrs"):
+                ldf.native.attrs = {}
             save_df(ldf, uri, format_hint=format_hint, mode=mode, fs=self._fs, **kwargs)
 
     def _get_writer(
