@@ -23,8 +23,7 @@ class SparkDataFrameTests(DataFrameTests.Tests):
         self.spark_session = spark_session
 
     def df(self, data: Any = None, schema: Any = None) -> SparkDataFrame:
-        session = SparkSession.builder.getOrCreate()
-        engine = SparkExecutionEngine(session)
+        engine = SparkExecutionEngine(self.spark_session)
         return engine.to_df(data, schema=schema)
 
     def test_alter_columns_invalid(self):

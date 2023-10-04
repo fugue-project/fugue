@@ -224,7 +224,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
 
     def test_default_session(self):
         a = FugueWorkflow().df([[0]], "a:int")
-        df_eq(a.compute(SparkExecutionEngine), [[0]], "a:int")
+        df_eq(a.compute(self.spark_session), [[0]], "a:int")
 
     def test_repartition(self):
         with FugueWorkflow() as dag:
