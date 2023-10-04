@@ -82,17 +82,19 @@ def _df_eq(
         ), f"schema mismatch {df.schema.pa_schema}, {df2.schema.pa_schema}"
         if not check_content:
             return True
+        cols: Any = df1.columns
         if no_pandas:
             dd1 = [[x.__repr__()] for x in df1.as_array_iterable(type_safe=True)]
             dd2 = [[x.__repr__()] for x in df2.as_array_iterable(type_safe=True)]
             d1 = pd.DataFrame(dd1, columns=["data"])
             d2 = pd.DataFrame(dd2, columns=["data"])
+            cols = ["data"]
         else:
             d1 = df1.as_pandas()
             d2 = df2.as_pandas()
         if not check_order:
-            d1 = d1.sort_values(df1.columns)
-            d2 = d2.sort_values(df1.columns)
+            d1 = d1.sort_values(cols)
+            d2 = d2.sort_values(cols)
         d1 = d1.reset_index(drop=True)
         d2 = d2.reset_index(drop=True)
         pd.testing.assert_frame_equal(
