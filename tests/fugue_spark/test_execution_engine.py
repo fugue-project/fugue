@@ -212,7 +212,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
     def test_df_init(self):
         sdf = self.spark_session.createDataFrame([[1.1]], "a:double")
         a = FugueWorkflow().df(sdf)
-        df_eq(a.compute(SparkExecutionEngine), [[1.1]], "a:double")
+        df_eq(a.compute(self.spark_session), [[1.1]], "a:double")
 
     def test_yield_table(self):
         pass
