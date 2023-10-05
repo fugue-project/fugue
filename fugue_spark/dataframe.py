@@ -9,11 +9,10 @@ from triad.collections.schema import SchemaError
 from triad.utils.assertion import assert_or_throw
 
 from fugue.dataframe import (
-    ArrayDataFrame,
+    ArrowDataFrame,
     DataFrame,
     IterableDataFrame,
     LocalBoundedDataFrame,
-    PandasDataFrame,
 )
 from fugue.exceptions import FugueDataFrameOperationError
 from fugue.plugins import (
@@ -100,11 +99,7 @@ class SparkDataFrame(DataFrame):
         return True
 
     def as_local_bounded(self) -> LocalBoundedDataFrame:
-        if any(pa.types.is_nested(t) for t in self.schema.types):
-            data = list(to_type_safe_input(self.native.collect(), self.schema))
-            res: LocalBoundedDataFrame = ArrayDataFrame(data, self.schema)
-        else:
-            res = PandasDataFrame(self.as_pandas(), self.schema)
+        res = ArrowDataFrame(self.as_arrow())
         if self.has_metadata:
             res.reset_metadata(self.metadata)
         return res

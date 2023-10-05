@@ -174,7 +174,7 @@ def pd_to_spark_df(
 
 
 def to_pandas(df: ps.DataFrame) -> pd.DataFrame:
-    if pd.__version__ < "2" or not any(
+    if version.parse(pd.__version__) < version.parse("2.0.0") or not any(
         isinstance(x.dataType, (pt.TimestampType, TimestampNTZType))
         for x in df.schema.fields
     ):
@@ -208,9 +208,10 @@ def to_arrow(df: ps.DataFrame) -> pa.Table:
             return schema.create_empty_arrow_table()
         table = pa.Table.from_batches(batches)
         del batches
+        return cast_pa_table(table, schema.pa_schema)
     else:  # pragma: no cover
-        table = pa.Table.from_pandas(to_pandas(df))
-    return cast_pa_table(table, schema.pa_schema)
+        # df.toPandas has bugs on nested types
+        return pa.Table.from_pylist(df.collect(), schema=schema.pa_schema)
 
 
 # TODO: the following function always set nullable to true,
