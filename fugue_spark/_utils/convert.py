@@ -194,7 +194,11 @@ def to_arrow(df: ps.DataFrame) -> pa.Table:
     schema = to_schema(df.schema)
     destruct: Optional[bool] = None
     try:
-        destruct = df.sparkSession._jconf.arrowPySparkSelfDestructEnabled()
+        jconf = df.sparkSession._jconf
+        if jconf.arrowPySparkEnabled() and pandas_udf_can_accept(
+            schema, is_input=False
+        ):
+            destruct = jconf.arrowPySparkSelfDestructEnabled()
     except Exception:  # pragma: no cover
         # older spark does not have this config
         pass
