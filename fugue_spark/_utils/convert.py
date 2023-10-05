@@ -1,5 +1,6 @@
 import pickle
-from typing import Any, Iterable, List, Tuple
+from typing import Any, Iterable, List, Tuple, Optional
+
 
 import pandas as pd
 import pyarrow as pa
@@ -191,8 +192,13 @@ def to_pandas(df: ps.DataFrame) -> pd.DataFrame:
 
 def to_arrow(df: ps.DataFrame) -> pa.Table:
     schema = to_schema(df.schema)
-    if hasattr(df, "_collect_as_arrow"):
+    destruct: Optional[bool] = None
+    try:
         destruct = df.sparkSession._jconf.arrowPySparkSelfDestructEnabled()
+    except Exception:  # pragma: no cover
+        # older spark does not have this config
+        pass
+    if destruct is not None and hasattr(df, "_collect_as_arrow"):
         batches = df._collect_as_arrow(split_batches=destruct)
         if len(batches) == 0:
             return schema.create_empty_arrow_table()
