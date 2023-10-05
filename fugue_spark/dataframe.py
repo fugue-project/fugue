@@ -17,7 +17,9 @@ from fugue.dataframe import (
 )
 from fugue.exceptions import FugueDataFrameOperationError
 from fugue.plugins import (
+    as_arrow,
     as_local_bounded,
+    as_pandas,
     count,
     drop_columns,
     get_column_names,
@@ -31,7 +33,13 @@ from fugue.plugins import (
     select_columns,
 )
 
-from ._utils.convert import to_cast_expression, to_pandas, to_schema, to_type_safe_input
+from ._utils.convert import (
+    to_arrow,
+    to_cast_expression,
+    to_pandas,
+    to_schema,
+    to_type_safe_input,
+)
 from ._utils.misc import is_spark_connect, is_spark_dataframe
 
 
@@ -128,7 +136,10 @@ class SparkDataFrame(DataFrame):
         return SparkDataFrame(self.native[schema.names])
 
     def as_pandas(self) -> pd.DataFrame:
-        return to_pandas(self.native)
+        return _spark_df_as_pandas(self.native)
+
+    def as_arrow(self, type_safe: bool = False) -> pa.Table:
+        return _spark_df_as_arrow(self.native)
 
     def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
@@ -190,6 +201,16 @@ class SparkDataFrame(DataFrame):
 @is_df.candidate(lambda df: is_spark_dataframe(df))
 def _spark_is_df(df: ps.DataFrame) -> bool:
     return True
+
+
+@as_arrow.candidate(lambda df: isinstance(df, ps.DataFrame))
+def _spark_df_as_arrow(df: ps.DataFrame) -> pd.DataFrame:
+    return to_arrow(df)
+
+
+@as_pandas.candidate(lambda df: isinstance(df, ps.DataFrame))
+def _spark_df_as_pandas(df: ps.DataFrame) -> pd.DataFrame:
+    return to_pandas(df)
 
 
 @get_num_partitions.candidate(lambda df: is_spark_dataframe(df))

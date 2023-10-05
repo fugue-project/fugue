@@ -16,7 +16,7 @@ from pyspark.sql.pandas.types import (
 )
 from triad.collections import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
-from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
+from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP, cast_pa_table
 from triad.utils.schema import quote_name
 
 import fugue.api as fa
@@ -41,7 +41,7 @@ def pandas_udf_can_accept(schema: Schema, is_input: bool) -> bool:
             return False
         to_arrow_schema(from_arrow_schema(schema.pa_schema))
         return True
-    except Exception:
+    except Exception:  # pragma: no cover
         return False
 
 
@@ -187,6 +187,20 @@ def to_pandas(df: ps.DataFrame) -> pd.DataFrame:
 
         sdf = df.mapInPandas(serialize, schema="data binary")
         return pd.concat(pickle.loads(x.data) for x in sdf.collect())
+
+
+def to_arrow(df: ps.DataFrame) -> pa.Table:
+    schema = to_schema(df.schema)
+    if hasattr(df, "_collect_as_arrow"):
+        destruct = df.sparkSession._jconf.arrowPySparkSelfDestructEnabled()
+        batches = df._collect_as_arrow(split_batches=destruct)
+        if len(batches) == 0:
+            return schema.create_empty_arrow_table()
+        table = pa.Table.from_batches(batches)
+        del batches
+    else:  # pragma: no cover
+        table = pa.Table.from_pandas(to_pandas(df))
+    return cast_pa_table(table, schema.pa_schema)
 
 
 # TODO: the following function always set nullable to true,
