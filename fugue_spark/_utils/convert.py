@@ -133,7 +133,7 @@ def to_type_safe_input(rows: Iterable[ps.Row], schema: Schema) -> Iterable[List[
                 if r[i] is not None:
                     r[i] = r[i].asDict(recursive=True)
             yield r
-    else:
+    else:  # pragma: no cover
         for row in rows:
             data = row.asDict(recursive=True)
             r = [data[n] for n in schema.names]
@@ -179,9 +179,9 @@ def to_pandas(df: ps.DataFrame) -> pd.DataFrame:
         for x in df.schema.fields
     ):
         return df.toPandas()
-    else:
+    else:  # pragma: no cover
 
-        def serialize(dfs):  # pragma: no cover
+        def serialize(dfs):
             for df in dfs:
                 data = pickle.dumps(df)
                 yield pd.DataFrame([[data]], columns=["data"])
