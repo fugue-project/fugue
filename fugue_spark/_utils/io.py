@@ -63,7 +63,7 @@ class SparkIO(object):
         else:
             ldf = df.as_local()
             if isinstance(ldf, PandasDataFrame) and hasattr(ldf.native, "attrs"):
-                ldf.native.attrs = {}
+                ldf.native.attrs = {}  # pragma: no cover
             save_df(ldf, uri, format_hint=format_hint, mode=mode, fs=self._fs, **kwargs)
 
     def _get_writer(
