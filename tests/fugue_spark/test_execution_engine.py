@@ -212,7 +212,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
     def test_df_init(self):
         sdf = self.spark_session.createDataFrame([[1.1]], "a:double")
         a = FugueWorkflow().df(sdf)
-        df_eq(a.compute(SparkExecutionEngine), [[1.1]], "a:double")
+        df_eq(a.compute(self.spark_session), [[1.1]], "a:double")
 
     def test_yield_table(self):
         pass
@@ -224,7 +224,7 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
 
     def test_default_session(self):
         a = FugueWorkflow().df([[0]], "a:int")
-        df_eq(a.compute(SparkExecutionEngine), [[0]], "a:int")
+        df_eq(a.compute(self.spark_session), [[0]], "a:int")
 
     def test_repartition(self):
         with FugueWorkflow() as dag:

@@ -4,7 +4,7 @@ import pandas as pd
 import pyarrow as pa
 
 import fugue.api as fa
-from fugue import FugueWorkflow, NativeExecutionEngine, QPDPandasEngine
+from fugue import FugueWorkflow, NativeExecutionEngine, QPDPandasEngine, PandasDataFrame
 from fugue.execution.execution_engine import _get_file_threshold
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
@@ -98,6 +98,15 @@ class NativeExecutionEngineBuiltInQPDTests(BuiltInTests.Tests):
 
         res = fa.transform(df, num_part, schema="*,b:long", partition=2)
         assert res.values.tolist() == [[1, 2], [2, 2], [3, 1]]
+
+    def test_pandas_df_convert(self):
+        def tr(df: pd.DataFrame) -> pd.DataFrame:
+            return df
+
+        pdf = PandasDataFrame(pd.DataFrame(dict(a=[1])))
+        df = fa.transform(pdf, tr, schema="a:str")
+        assert fa.get_schema(df) == "a:str"
+        assert fa.as_array(df) == [["1"]]
 
 
 def test_get_file_threshold():

@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.8, "3.10"]
 
     steps:
     - uses: actions/checkout@v2
@@ -36,10 +36,12 @@ jobs:
     - name: Install dependencies
       run: make devenv
     - name: Lint
+      if: matrix.python-version == '3.10'
       run: make lint
     - name: Test
       run: make test
     - name: "Upload coverage to Codecov"
+      if: matrix.python-version == '3.10'
       uses: codecov/codecov-action@v3
       with:
         fail_ci_if_error: false
@@ -49,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9, "3.10"]
+        python-version: [3.9]
 
     steps:
     - uses: actions/checkout@v2

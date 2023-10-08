@@ -1,5 +1,6 @@
 import pickle
-from typing import Any, Iterable, List, Tuple
+from typing import Any, Iterable, List, Tuple, Optional
+
 
 import pandas as pd
 import pyarrow as pa
@@ -16,7 +17,7 @@ from pyspark.sql.pandas.types import (
 )
 from triad.collections import Schema
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
-from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
+from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP, cast_pa_table
 from triad.utils.schema import quote_name
 
 import fugue.api as fa
@@ -41,7 +42,7 @@ def pandas_udf_can_accept(schema: Schema, is_input: bool) -> bool:
             return False
         to_arrow_schema(from_arrow_schema(schema.pa_schema))
         return True
-    except Exception:
+    except Exception:  # pragma: no cover
         return False
 
 
@@ -132,7 +133,7 @@ def to_type_safe_input(rows: Iterable[ps.Row], schema: Schema) -> Iterable[List[
                 if r[i] is not None:
                     r[i] = r[i].asDict(recursive=True)
             yield r
-    else:
+    else:  # pragma: no cover
         for row in rows:
             data = row.asDict(recursive=True)
             r = [data[n] for n in schema.names]
@@ -173,20 +174,44 @@ def pd_to_spark_df(
 
 
 def to_pandas(df: ps.DataFrame) -> pd.DataFrame:
-    if pd.__version__ < "2" or not any(
+    if version.parse(pd.__version__) < version.parse("2.0.0") or not any(
         isinstance(x.dataType, (pt.TimestampType, TimestampNTZType))
         for x in df.schema.fields
     ):
         return df.toPandas()
-    else:
+    else:  # pragma: no cover
 
-        def serialize(dfs):  # pragma: no cover
+        def serialize(dfs):
             for df in dfs:
                 data = pickle.dumps(df)
                 yield pd.DataFrame([[data]], columns=["data"])
 
         sdf = df.mapInPandas(serialize, schema="data binary")
         return pd.concat(pickle.loads(x.data) for x in sdf.collect())
+
+
+def to_arrow(df: ps.DataFrame) -> pa.Table:
+    schema = to_schema(df.schema)
+    destruct: Optional[bool] = None
+    try:
+        jconf = df.sparkSession._jconf
+        if jconf.arrowPySparkEnabled() and pandas_udf_can_accept(
+            schema, is_input=False
+        ):
+            destruct = jconf.arrowPySparkSelfDestructEnabled()
+    except Exception:  # pragma: no cover
+        # older spark does not have this config
+        pass
+    if destruct is not None and hasattr(df, "_collect_as_arrow"):
+        batches = df._collect_as_arrow(split_batches=destruct)
+        if len(batches) == 0:
+            return schema.create_empty_arrow_table()
+        table = pa.Table.from_batches(batches)
+        del batches
+        return cast_pa_table(table, schema.pa_schema)
+    else:  # pragma: no cover
+        # df.toPandas has bugs on nested types
+        return pa.Table.from_pylist(df.collect(), schema=schema.pa_schema)
 
 
 # TODO: the following function always set nullable to true,

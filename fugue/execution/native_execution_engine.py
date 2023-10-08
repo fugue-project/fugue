@@ -143,7 +143,7 @@ class PandasMapEngine(MapEngine):
             if (
                 isinstance(output_df, PandasDataFrame)
                 and output_df.schema != output_schema
-            ):
+            ):  # pragma: no cover
                 output_df = PandasDataFrame(output_df.native, output_schema)
             assert_or_throw(
                 output_df.schema == output_schema,

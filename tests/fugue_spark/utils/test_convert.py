@@ -1,5 +1,7 @@
 import pyarrow as pa
 from pytest import raises
+import pyspark
+from packaging import version
 from triad import Schema
 
 from fugue_spark._utils.convert import (
@@ -15,7 +17,8 @@ def test_pandas_udf_can_accept():
     for is_input in [True, False]:
         assert pandas_udf_can_accept(Schema("a:int,b:str"), is_input)
         assert pandas_udf_can_accept(Schema("a:int,b:[str],c:[float]"), is_input)
-        assert not pandas_udf_can_accept(Schema("a:int,b:[datetime]"), is_input)
+        if version.parse(pyspark.__version__) < version.parse("3.5"):
+            assert not pandas_udf_can_accept(Schema("a:int,b:[datetime]"), is_input)
     assert pandas_udf_can_accept(Schema("a:int,b:{a:int}"), True)
     assert not pandas_udf_can_accept(Schema("a:int,b:{a:int}"), False)
 

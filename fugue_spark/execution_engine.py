@@ -5,6 +5,7 @@ from uuid import uuid4
 import pandas as pd
 import pyarrow as pa
 import pyspark.sql as ps
+from py4j.protocol import Py4JError
 from pyspark import StorageLevel
 from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
@@ -350,9 +351,12 @@ class SparkExecutionEngine(ExecutionEngine):
         self._spark_session = spark_session
         cf = dict(FUGUE_SPARK_DEFAULT_CONF)
         if not self.is_spark_connect:
-            cf.update(
-                {x[0]: x[1] for x in spark_session.sparkContext.getConf().getAll()}
-            )
+            try:
+                spark_conf = spark_session.sparkContext.getConf()
+                cf.update({x[0]: x[1] for x in spark_conf.getAll()})
+            except Py4JError:  # pragma: no cover:
+                # edge case: https://github.com/fugue-project/fugue/issues/517z
+                pass
         cf.update(ParamDict(conf))
         super().__init__(cf)
         self._lock = SerializableRLock()

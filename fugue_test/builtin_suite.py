@@ -1329,7 +1329,7 @@ class BuiltInTests(object):
                     [[datetime.date(2020, 1, 1), datetime.datetime(2020, 1, 2)]],
                     "a:date,b:datetime",
                 )
-                b.assert_eq(a)
+                b.assert_eq(a, no_pandas=True)
                 c = dag.df([["2020-01-01", "2020-01-01 00:00:00"]], "a:date,b:datetime")
                 c.transform(T2).assert_eq(c)
                 c.partition(by=["a"]).transform(T2).assert_eq(c)
