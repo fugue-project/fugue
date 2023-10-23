@@ -131,6 +131,11 @@ class PolarsDataFrame(LocalBoundedDataFrame):
                 columns=columns
             )
 
+    def as_dicts(self, columns: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        if not self.empty:
+            return ArrowDataFrame(_pl_as_arrow(self.native)).as_dicts(columns=columns)
+        return []
+
     def as_dict_iterable(
         self, columns: Optional[List[str]] = None
     ) -> Iterable[Dict[str, Any]]:

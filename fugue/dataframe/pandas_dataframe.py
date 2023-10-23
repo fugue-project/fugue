@@ -1,8 +1,11 @@
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
+import pyarrow as pa
+from triad import assert_or_throw
 from triad.collections.schema import Schema
 from triad.utils.pandas_like import PD_UTILS
+from triad.utils.pyarrow import pa_batch_to_dicts
 
 from fugue.dataset.api import (
     as_fugue_dataset,
@@ -17,6 +20,10 @@ from fugue.dataset.api import (
 from fugue.exceptions import FugueDataFrameOperationError
 
 from .api import (
+    as_array,
+    as_array_iterable,
+    as_dict_iterable,
+    as_dicts,
     drop_columns,
     get_column_names,
     get_schema,
@@ -134,6 +141,9 @@ class PandasDataFrame(LocalBoundedDataFrame):
             return self
         return PandasDataFrame(self.native, new_schema)
 
+    def as_arrow(self, type_safe: bool = False) -> pa.Table:
+        return PD_UTILS.as_arrow(self.native, schema=self.schema.pa_schema)
+
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:
@@ -149,6 +159,18 @@ class PandasDataFrame(LocalBoundedDataFrame):
             type_safe=type_safe,
         ):
             yield row
+
+    def as_dicts(self, columns: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        res: List[Dict[str, Any]] = []
+        for block in _to_dicts(self.native, columns, self.schema):
+            res += block
+        return res
+
+    def as_dict_iterable(
+        self, columns: Optional[List[str]] = None
+    ) -> Iterable[Dict[str, Any]]:
+        for block in _to_dicts(self.native, columns, self.schema):
+            yield from block
 
     def head(
         self, n: int, columns: Optional[List[str]] = None
@@ -272,6 +294,43 @@ def _pd_head(
     return _adjust_df(df.head(n), as_fugue=as_fugue)
 
 
+@as_array.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
+def _pd_as_array(
+    df: pd.DataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> List[Any]:
+    return list(_pd_as_array_iterable(df, columns, type_safe=type_safe))
+
+
+@as_array_iterable.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
+def _pd_as_array_iterable(
+    df: pd.DataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> Iterable[Any]:
+    for row in PD_UTILS.as_array_iterable(
+        df,
+        columns=columns,
+        type_safe=type_safe,
+    ):
+        yield row
+
+
+@as_dicts.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
+def _pd_as_dicts(
+    df: pd.DataFrame, columns: Optional[List[str]] = None
+) -> List[Dict[str, Any]]:
+    res: List[Dict[str, Any]] = []
+    for block in _to_dicts(df, columns):
+        res += block
+    return res
+
+
+@as_dict_iterable.candidate(lambda df, *args, **kwargs: isinstance(df, pd.DataFrame))
+def _pd_as_dict_iterable(
+    df: pa.Table, columns: Optional[List[str]] = None
+) -> Iterable[Dict[str, Any]]:
+    for block in _to_dicts(df, columns):
+        yield from block
+
+
 def _adjust_df(res: pd.DataFrame, as_fugue: bool):
     return res if not as_fugue else PandasDataFrame(res)
 
@@ -280,3 +339,17 @@ def _assert_no_missing(df: pd.DataFrame, columns: Iterable[Any]) -> None:
     missing = [x for x in columns if x not in df.columns]
     if len(missing) > 0:
         raise FugueDataFrameOperationError("found nonexistent columns: {missing}")
+
+
+def _to_dicts(
+    df: pd.DataFrame,
+    columns: Optional[List[str]] = None,
+    schema: Optional[Schema] = None,
+) -> Iterable[List[Dict[str, Any]]]:
+    cols = list(df.columns) if columns is None else columns
+    assert_or_throw(len(cols) > 0, ValueError("columns cannot be empty"))
+    pa_schema = schema.extract(cols).pa_schema if schema is not None else None
+    adf = PD_UTILS.as_arrow(df[cols], schema=pa_schema)
+    for batch in adf.to_batches():
+        if batch.num_rows > 0:
+            yield pa_batch_to_dicts(batch)

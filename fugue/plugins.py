@@ -7,6 +7,7 @@ from fugue.dataframe import (
     as_array_iterable,
     as_arrow,
     as_dict_iterable,
+    as_dicts,
     as_pandas,
     drop_columns,
     fugue_annotated_param,

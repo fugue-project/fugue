@@ -237,13 +237,31 @@ class DataFrame(Dataset):
         """
         raise NotImplementedError
 
+    def as_dicts(self, columns: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        """Convert to a list of python dicts
+
+        :param columns: columns to extract, defaults to None
+        :return: a list of python dicts
+
+        .. note::
+
+            The default implementation enforces ``type_safe`` True
+        """
+        if columns is None:
+            columns = self.columns
+        idx = range(len(columns))
+        return [
+            {columns[i]: x[i] for i in idx}
+            for x in self.as_array(columns, type_safe=True)
+        ]
+
     def as_dict_iterable(
         self, columns: Optional[List[str]] = None
     ) -> Iterable[Dict[str, Any]]:
-        """Convert to iterable of native python dicts
+        """Convert to iterable of python dicts
 
         :param columns: columns to extract, defaults to None
-        :return: iterable of native python dicts
+        :return: iterable of python dicts
 
         .. note::
 

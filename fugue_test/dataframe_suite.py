@@ -211,6 +211,12 @@ class DataFrameTests(object):
             df = self.df([[pd.Timestamp("2020-01-01"), 1]], "a:datetime,b:int")
             assert [dict(a=datetime(2020, 1, 1), b=1)] == list(fi.as_dict_iterable(df))
 
+        def test_as_dicts(self):
+            df = self.df([[pd.NaT, 1]], "a:datetime,b:int")
+            assert [dict(a=None, b=1)] == fi.as_dicts(df)
+            df = self.df([[pd.Timestamp("2020-01-01"), 1]], "a:datetime,b:int")
+            assert [dict(a=datetime(2020, 1, 1), b=1)] == fi.as_dicts(df)
+
         def test_list_type(self):
             data = [[[30, 40]]]
             df = self.df(data, "a:[int]")

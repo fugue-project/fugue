@@ -105,6 +105,9 @@ class IterableDataFrame(LocalUnboundedDataFrame):
     ) -> List[Any]:
         return list(self.as_array_iterable(columns, type_safe=type_safe))
 
+    def as_dicts(self, columns: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        return list(self.as_dict_iterable(columns))
+
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
