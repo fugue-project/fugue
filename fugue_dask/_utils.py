@@ -1,13 +1,14 @@
 import math
-from typing import Any, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple, TypeVar
 
 import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 from dask.dataframe.core import DataFrame
+from dask.delayed import delayed
 from dask.distributed import Client, get_client
-from triad.utils.pandas_like import PandasLikeUtils, PD_UTILS
+from triad.utils.pandas_like import PD_UTILS, PandasLikeUtils
 from triad.utils.pyarrow import to_pandas_dtype
 
 import fugue.api as fa
@@ -16,6 +17,7 @@ from fugue.constants import FUGUE_CONF_DEFAULT_PARTITIONS
 from ._constants import FUGUE_DASK_CONF_DEFAULT_PARTITIONS
 
 _FUGUE_DASK_TEMP_IDX_COLUMN = "_fugue_dask_temp_index"
+T = TypeVar("T")
 
 
 def get_default_partitions() -> int:
@@ -26,6 +28,17 @@ def get_default_partitions() -> int:
         conf.get(FUGUE_CONF_DEFAULT_PARTITIONS, -1),
     )
     return n if n > 0 else fa.get_current_parallelism() * 2
+
+
+def collect(df: dd.DataFrame, func: Callable[[pd.DataFrame], T]) -> Tuple[T]:
+    """Compute each partition in parallel and collect the results
+
+    :param df: dask dataframe
+    :return: the collected result
+    """
+    dfs = df.to_delayed()
+    objs = [delayed(func)(df) for df in dfs]
+    return dd.compute(*objs)
 
 
 def hash_repartition(df: dd.DataFrame, num: int, cols: List[Any]) -> dd.DataFrame:

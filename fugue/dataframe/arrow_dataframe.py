@@ -5,7 +5,7 @@ import pyarrow as pa
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
-from triad.utils.pyarrow import cast_pa_table, pa_batch_to_dicts, pa_table_to_pandas
+from triad.utils.pyarrow import cast_pa_table, pa_table_to_pandas
 
 from fugue.dataset.api import (
     as_fugue_dataset,
@@ -34,6 +34,12 @@ from .api import (
     select_columns,
 )
 from .dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
+from .utils import (
+    pa_table_as_array,
+    pa_table_as_array_iterable,
+    pa_table_as_dict_iterable,
+    pa_table_as_dicts,
+)
 
 
 class ArrowDataFrame(LocalBoundedDataFrame):
@@ -178,22 +184,20 @@ class ArrowDataFrame(LocalBoundedDataFrame):
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:
-        return _pa_table_as_array(self.native, columns, type_safe=type_safe)
+        return pa_table_as_array(self.native, columns=columns)
 
     def as_dicts(self, columns: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-        return _pa_table_as_dicts(self.native, columns)
+        return pa_table_as_dicts(self.native, columns=columns)
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
-        yield from _pa_table_as_array_iterable(
-            self.native, columns, type_safe=type_safe
-        )
+        yield from pa_table_as_array_iterable(self.native, columns=columns)
 
     def as_dict_iterable(
         self, columns: Optional[List[str]] = None
     ) -> Iterable[Dict[str, Any]]:
-        yield from _pa_table_as_dict_iterable(self.native, columns)
+        yield from pa_table_as_dict_iterable(self.native, columns=columns)
 
 
 @as_local.candidate(lambda df: isinstance(df, pa.Table))
@@ -221,46 +225,28 @@ def _pa_table_as_pandas(df: pa.Table) -> pd.DataFrame:
 def _pa_table_as_array(
     df: pa.Table, columns: Optional[List[str]] = None, type_safe: bool = False
 ) -> List[Any]:
-    return list(_pa_table_as_array_iterable(df, columns, type_safe=type_safe))
+    return pa_table_as_array(df, columns=columns)
 
 
 @as_array_iterable.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
 def _pa_table_as_array_iterable(
     df: pa.Table, columns: Optional[List[str]] = None, type_safe: bool = False
 ) -> Iterable[Any]:
-    assert_or_throw(columns is None or len(columns) > 0, ValueError("empty columns"))
-    _df = df if columns is None or len(columns) == 0 else df.select(columns)
-    if _df.num_rows == 0:
-        return []
-    for batch in _df.to_batches():
-        d = batch.to_pydict()
-        cols = [d[n] for n in _df.schema.names]
-        for x in zip(*cols):
-            yield list(x)
+    yield from pa_table_as_array_iterable(df, columns=columns)
 
 
 @as_dicts.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
 def _pa_table_as_dicts(
     df: pa.Table, columns: Optional[List[str]] = None
 ) -> List[Dict[str, Any]]:
-    assert_or_throw(columns is None or len(columns) > 0, ValueError("empty columns"))
-    _df = df if columns is None or len(columns) == 0 else df.select(columns)
-    res: List[Dict[str, Any]] = []
-    for batch in _df.to_batches():
-        if batch.num_rows > 0:
-            res += pa_batch_to_dicts(batch)
-    return res
+    return pa_table_as_dicts(df, columns=columns)
 
 
 @as_dict_iterable.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
 def _pa_table_as_dict_iterable(
     df: pa.Table, columns: Optional[List[str]] = None
 ) -> Iterable[Dict[str, Any]]:
-    assert_or_throw(columns is None or len(columns) > 0, ValueError("empty columns"))
-    _df = df if columns is None or len(columns) == 0 else df.select(columns)
-    for batch in _df.to_batches():
-        if batch.num_rows > 0:
-            yield from pa_batch_to_dicts(batch)
+    yield from pa_table_as_dict_iterable(df, columns=columns)
 
 
 @alter_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))

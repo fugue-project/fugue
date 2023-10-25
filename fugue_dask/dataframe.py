@@ -3,20 +3,21 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import dask.dataframe as dd
 import pandas as pd
 import pyarrow as pa
+from triad import assert_or_throw
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.pandas_like import PD_UTILS
 from triad.utils.pyarrow import cast_pa_table
 
-from fugue.dataframe import (
-    ArrowDataFrame,
-    DataFrame,
-    LocalBoundedDataFrame,
-    PandasDataFrame,
-)
+from fugue.dataframe import DataFrame, LocalBoundedDataFrame, PandasDataFrame
 from fugue.dataframe.dataframe import _input_schema
+from fugue.dataframe.pandas_dataframe import _pd_as_dicts
 from fugue.exceptions import FugueDataFrameOperationError
 from fugue.plugins import (
+    as_array,
+    as_array_iterable,
+    as_dict_iterable,
+    as_dicts,
     as_local_bounded,
     count,
     drop_columns,
@@ -32,7 +33,7 @@ from fugue.plugins import (
 )
 
 from ._constants import FUGUE_DASK_USE_ARROW
-from ._utils import DASK_UTILS, get_default_partitions
+from ._utils import DASK_UTILS, collect, get_default_partitions
 
 
 class DaskDataFrame(DataFrame):
@@ -150,8 +151,16 @@ class DaskDataFrame(DataFrame):
         )
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
-        adf = pa.Table.from_pandas(self.native.compute().reset_index(drop=True))
-        return cast_pa_table(adf, self.schema.pa_schema)
+        schema = self.schema.pa_schema
+        return pa.concat_tables(
+            collect(
+                self.native,
+                lambda df: cast_pa_table(
+                    pa.Table.from_pandas(df.reset_index(drop=True), schema=schema),
+                    schema=schema,
+                ),
+            )
+        )
 
     def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
@@ -170,17 +179,28 @@ class DaskDataFrame(DataFrame):
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:
-        df: DataFrame = self
-        if columns is not None:
-            df = df[columns]
-        return ArrowDataFrame(df.as_pandas(), schema=df.schema).as_array(
-            type_safe=type_safe
-        )
+        chunks = _to_array_chunks(self.native, columns, type_safe, schema=self.schema)
+        res: List[List[Any]] = []
+        for x in chunks:
+            res += x
+        return res
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
-        yield from self.as_array(columns=columns, type_safe=type_safe)
+        chunks = _to_array_chunks(self.native, columns, type_safe, schema=self.schema)
+        for x in chunks:
+            yield from x
+
+    def as_dicts(
+        self, columns: Optional[List[str]] = None, type_safe: bool = False
+    ) -> List[Dict[str, Any]]:
+        return _dd_as_dicts(self.native, columns)
+
+    def as_dict_iterable(
+        self, columns: Optional[List[str]] = None, type_safe: bool = False
+    ) -> Iterable[Dict[str, Any]]:
+        yield from _dd_as_dict_iterable(self.native, columns)
 
     def head(
         self, n: int, columns: Optional[List[str]] = None
@@ -197,8 +217,11 @@ class DaskDataFrame(DataFrame):
             assert_arg_not_none(schema, "schema")
             return pdf, schema
         DASK_UTILS.ensure_compatible(pdf)
-        pschema = Schema(DASK_UTILS.to_schema(pdf))
-        if schema is None or pschema == schema:
+        # when pdf contains bytes, or any object types, and schema contains str
+        # there is no way to get the real schema of the pdf, (pschema will contain
+        # strs instead of the real types) so we have to force cast it to the schema
+        if schema is None:
+            pschema = Schema(DASK_UTILS.to_schema(pdf))
             return pdf, pschema.assert_not_empty()
         pdf = pdf[schema.assert_not_empty().names]
         return (
@@ -295,6 +318,48 @@ def _dd_head(
     return PandasDataFrame(res) if as_fugue else res
 
 
+@as_array.candidate(lambda df, *args, **kwargs: isinstance(df, dd.DataFrame))
+def _dd_as_array(
+    df: dd.DataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> List[Any]:
+    chunks = _to_array_chunks(df, columns, type_safe)
+    res: List[List[Any]] = []
+    for x in chunks:
+        res += x
+    return res
+
+
+@as_array_iterable.candidate(lambda df, *args, **kwargs: isinstance(df, dd.DataFrame))
+def _dd_as_array_iterable(
+    df: dd.DataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> Iterable[Any]:
+    chunks = _to_array_chunks(df, columns, type_safe)
+    for x in chunks:
+        yield from x
+
+
+@as_dicts.candidate(lambda df, *args, **kwargs: isinstance(df, dd.DataFrame))
+def _dd_as_dicts(
+    df: dd.DataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> List[Dict[str, Any]]:
+    assert_or_throw(columns is None or len(columns) > 0, ValueError("empty columns"))
+    _df = df if columns is None or len(columns) == 0 else df[columns]
+    res: List[Dict[str, Any]] = []
+    for x in collect(_df, lambda df: _pd_as_dicts(df, columns)):
+        res += x
+    return res
+
+
+@as_dict_iterable.candidate(lambda df, *args, **kwargs: isinstance(df, dd.DataFrame))
+def _dd_as_dict_iterable(
+    df: dd.DataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> Iterable[Dict[str, Any]]:
+    assert_or_throw(columns is None or len(columns) > 0, ValueError("empty columns"))
+    _df = df if columns is None or len(columns) == 0 else df[columns]
+    for x in collect(_df, lambda df: _pd_as_dicts(df, columns)):
+        yield from x
+
+
 def _assert_no_missing(df: dd.DataFrame, columns: Iterable[Any]) -> None:
     missing = set(columns) - set(df.columns)
     if len(missing) > 0:
@@ -303,3 +368,25 @@ def _assert_no_missing(df: dd.DataFrame, columns: Iterable[Any]) -> None:
 
 def _adjust_df(res: dd.DataFrame, as_fugue: bool):
     return res if not as_fugue else DaskDataFrame(res)
+
+
+def _to_array_chunks(
+    df: dd.DataFrame,
+    columns: Optional[List[str]] = None,
+    type_safe: bool = False,
+    schema: Optional[Schema] = None,
+) -> Tuple[List[Any]]:
+    assert_or_throw(columns is None or len(columns) > 0, ValueError("empty columns"))
+    _df = df if columns is None or len(columns) == 0 else df[columns]
+
+    def _to_list(pdf: pd.DataFrame) -> List[Any]:
+        return list(
+            PD_UTILS.as_array_iterable(
+                pdf,
+                schema=None if schema is None else schema.pa_schema,
+                columns=columns,
+                type_safe=type_safe,
+            )
+        )
+
+    return collect(_df, _to_list)
