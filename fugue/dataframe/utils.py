@@ -290,7 +290,7 @@ def pa_table_as_dict_iterable(
     :param columns: if not None, only these columns will be returned, defaults to None
     :return: an iterable of dict
     """
-    for ck in _pa_table_as_dicts_chunks(df):
+    for ck in _pa_table_as_dicts_chunks(df, columns=columns):
         yield from ck
 
 
@@ -304,7 +304,7 @@ def pa_table_as_dicts(
     :return: a list of dict
     """
     res: List[Dict[str, Any]] = []
-    for ck in _pa_table_as_dicts_chunks(df):
+    for ck in _pa_table_as_dicts_chunks(df, columns=columns):
         res += ck
     return res
 

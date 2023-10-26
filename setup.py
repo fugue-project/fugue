@@ -53,7 +53,7 @@ setup(
             "pyarrow>=7.0.0",
             "pandas>=2.0.2",
         ],
-        "ray": ["ray[data]>=2.1.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
+        "ray": ["ray[data]>=2.2.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
         "duckdb": [
             "duckdb>=0.5.0",
             "numpy",
@@ -68,7 +68,7 @@ setup(
             "pyspark>=3.1.1",
             "dask[distributed,dataframe]>=2023.5.0",
             "dask-sql",
-            "ray[data]>=2.1.0",
+            "ray[data]>=2.2.0",
             "notebook",
             "jupyterlab",
             "ipython>=7.10.0",
