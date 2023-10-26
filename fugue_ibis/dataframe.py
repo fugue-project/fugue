@@ -143,6 +143,19 @@ class IbisDataFrame(DataFrame):
                 type_safe=type_safe
             )
 
+    def as_dicts(self, columns: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        if columns is not None:
+            return self[columns].as_dicts()
+        return self.as_local().as_dicts()
+
+    def as_dict_iterable(
+        self, columns: Optional[List[str]] = None
+    ) -> Iterable[Dict[str, Any]]:
+        if columns is not None:
+            yield from self[columns].as_dict_iterable()
+        else:
+            yield from self._to_iterable_df(self._table).as_dict_iterable()
+
     def head(
         self, n: int, columns: Optional[List[str]] = None
     ) -> LocalBoundedDataFrame:
