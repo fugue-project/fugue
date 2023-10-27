@@ -269,7 +269,7 @@ class _EmptyAwareIterableListParam(_LocalNoSchemaDataFrameParam):
 class _ListDictParam(_LocalNoSchemaDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> List[Dict[str, Any]]:
-        return list(df.as_local().as_dict_iterable())
+        return df.as_local().as_dicts()
 
     @no_type_check
     def to_output_df(

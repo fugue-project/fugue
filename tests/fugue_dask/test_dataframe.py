@@ -153,30 +153,30 @@ def test_as_array(fugue_dask_client):
     df = DaskDataFrame([[1.0, 1.0]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array()
     assert isinstance(df.as_array()[0][0], float)
-    assert isinstance(df.as_array()[0][1], int)
+    assert isinstance(df.as_array(type_safe=True)[0][1], int)
     assert [[1.0, 1]] == df.as_array(["a", "b"])
     assert [[1, 1.0]] == df.as_array(["b", "a"])
 
     df = DaskDataFrame([[np.float64(1.0), 1.0]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array()
     assert isinstance(df.as_array()[0][0], float)
-    assert isinstance(df.as_array()[0][1], int)
+    assert isinstance(df.as_array(type_safe=True)[0][1], int)
 
-    df = DaskDataFrame([[pandas.Timestamp("2020-01-01"), 1.0]], "a:datetime,b:int")
+    df = DaskDataFrame([[pandas.Timestamp("2020-01-01"), 1]], "a:datetime,b:int")
     df.native["a"] = pd.to_datetime(df.native["a"])
     assert [[datetime(2020, 1, 1), 1]] == df.as_array()
     assert isinstance(df.as_array()[0][0], datetime)
-    assert isinstance(df.as_array()[0][1], int)
+    assert isinstance(df.as_array(type_safe=True)[0][1], int)
 
-    df = DaskDataFrame([[pandas.NaT, 1.0]], "a:datetime,b:int")
+    df = DaskDataFrame([[pandas.NaT, 1]], "a:datetime,b:int")
     df.native["a"] = pd.to_datetime(df.native["a"])
-    assert df.as_array()[0][0] is None
-    assert isinstance(df.as_array()[0][1], int)
+    assert df.as_array(type_safe=True)[0][0] is None
+    assert isinstance(df.as_array(type_safe=True)[0][1], int)
 
     df = DaskDataFrame([[1.0, 1.0]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array(type_safe=True)
     assert isinstance(df.as_array()[0][0], float)
-    assert isinstance(df.as_array()[0][1], int)
+    assert isinstance(df.as_array(type_safe=True)[0][1], int)
 
 
 def test_as_dict_iterable(fugue_dask_client):
@@ -198,15 +198,15 @@ def test_nan_none(fugue_dask_client):
     # assert np.isnan(arr[1])  # TODO: this will cause inconsistent behavior cross engine
 
     df = ArrayDataFrame([["a", 1.1], [None, None]], "b:str,c:double")
-    arr = DaskDataFrame(df.as_pandas(), df.schema).as_array()[1]
+    arr = DaskDataFrame(df.as_pandas(), df.schema).as_array(type_safe=True)[1]
     assert arr[0] is None
     assert arr[1] is None
 
-    arr = DaskDataFrame(df.as_array(), df.schema).as_array()[1]
+    arr = DaskDataFrame(df.as_array(), df.schema).as_array(type_safe=True)[1]
     assert arr[0] is None
     assert arr[1] is None
 
-    arr = DaskDataFrame(df.as_pandas()["b"], "b:str").as_array()[1]
+    arr = DaskDataFrame(df.as_pandas()["b"], "b:str").as_array(type_safe=True)[1]
     assert arr[0] is None
 
 

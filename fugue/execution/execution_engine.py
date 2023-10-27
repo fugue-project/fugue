@@ -1323,7 +1323,7 @@ class _Comap:
         self._on_init(partition_no, empty_dfs)
 
     def run(self, cursor: PartitionCursor, df: LocalDataFrame) -> LocalDataFrame:
-        data = list(df.as_dict_iterable())
+        data = df.as_dicts()
         if self.how == "inner":
             if len(data) < self.dfs_count:
                 return ArrayDataFrame([], self.output_schema)

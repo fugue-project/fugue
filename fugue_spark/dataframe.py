@@ -14,9 +14,14 @@ from fugue.dataframe import (
     IterableDataFrame,
     LocalBoundedDataFrame,
 )
+from fugue.dataframe.utils import pa_table_as_array, pa_table_as_dicts
 from fugue.exceptions import FugueDataFrameOperationError
 from fugue.plugins import (
+    as_array,
+    as_array_iterable,
     as_arrow,
+    as_dict_iterable,
+    as_dicts,
     as_local_bounded,
     as_pandas,
     count,
@@ -152,23 +157,22 @@ class SparkDataFrame(DataFrame):
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:
-        sdf = self._select_columns(columns)
-        return sdf.as_local().as_array(type_safe=type_safe)
+        return _spark_as_array(self.native, columns=columns, type_safe=type_safe)
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
-        if is_spark_connect(self.native):  # pragma: no cover
-            yield from self.as_array(columns, type_safe=type_safe)
-            return
-        sdf = self._select_columns(columns)
-        if not type_safe:
-            for row in to_type_safe_input(sdf.native.rdd.toLocalIterator(), sdf.schema):
-                yield row
-        else:
-            df = IterableDataFrame(sdf.as_array_iterable(type_safe=False), sdf.schema)
-            for row in df.as_array_iterable(type_safe=True):
-                yield row
+        yield from _spark_as_array_iterable(
+            self.native, columns=columns, type_safe=type_safe
+        )
+
+    def as_dicts(self, columns: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        return _spark_as_dicts(self.native, columns=columns)
+
+    def as_dict_iterable(
+        self, columns: Optional[List[str]] = None
+    ) -> Iterable[Dict[str, Any]]:
+        yield from _spark_as_dict_iterable(self.native, columns=columns)
 
     def head(
         self, n: int, columns: Optional[List[str]] = None
@@ -286,6 +290,58 @@ def _spark_df_head(
         df = df[columns]
     res = df.limit(n)
     return SparkDataFrame(res).as_local() if as_fugue else to_pandas(res)
+
+
+@as_array.candidate(lambda df, *args, **kwargs: is_spark_dataframe(df))
+def _spark_as_array(
+    df: ps.DataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> List[Any]:
+    assert_or_throw(columns is None or len(columns) > 0, ValueError("empty columns"))
+    _df = df if columns is None or len(columns) == 0 else df[columns]
+    return pa_table_as_array(to_arrow(_df), columns)
+
+
+@as_array_iterable.candidate(lambda df, *args, **kwargs: is_spark_dataframe(df))
+def _spark_as_array_iterable(
+    df: ps.DataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> Iterable[Any]:
+    if is_spark_connect(df):  # pragma: no cover
+        yield from _spark_as_array(df, columns, type_safe=type_safe)
+    else:
+        assert_or_throw(
+            columns is None or len(columns) > 0, ValueError("empty columns")
+        )
+        _df = df if columns is None or len(columns) == 0 else df[columns]
+        if not type_safe:
+            for row in to_type_safe_input(
+                _df.rdd.toLocalIterator(), to_schema(_df.schema)
+            ):
+                yield list(row)
+        else:
+            tdf = IterableDataFrame(
+                _spark_as_array_iterable(_df, type_safe=False), to_schema(_df.schema)
+            )
+            yield from tdf.as_array_iterable(type_safe=True)
+
+
+@as_dicts.candidate(lambda df, *args, **kwargs: is_spark_dataframe(df))
+def _spark_as_dicts(
+    df: ps.DataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> List[Dict[str, Any]]:
+    assert_or_throw(columns is None or len(columns) > 0, ValueError("empty columns"))
+    _df = df if columns is None or len(columns) == 0 else df[columns]
+    return pa_table_as_dicts(to_arrow(_df), columns)
+
+
+@as_dict_iterable.candidate(lambda df, *args, **kwargs: is_spark_dataframe(df))
+def _spark_as_dict_iterable(
+    df: ps.DataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> Iterable[Dict[str, Any]]:
+    assert_or_throw(columns is None or len(columns) > 0, ValueError("empty columns"))
+    _df = df if columns is None or len(columns) == 0 else df[columns]
+    cols = list(_df.columns)
+    for row in _spark_as_array_iterable(_df, type_safe=type_safe):
+        yield dict(zip(cols, row))
 
 
 def _rename_spark_dataframe(df: ps.DataFrame, names: Dict[str, Any]) -> ps.DataFrame:

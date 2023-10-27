@@ -14,22 +14,32 @@ from triad.utils.pyarrow import (
 
 from fugue import ArrowDataFrame
 from fugue.api import (
+    as_array,
+    as_array_iterable,
     as_arrow,
+    as_dict_iterable,
+    as_dicts,
     drop_columns,
     get_column_names,
     get_schema,
     is_df,
+    is_empty,
     rename,
     select_columns,
 )
 from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
+from fugue.dataframe.utils import (
+    pa_table_as_array,
+    pa_table_as_array_iterable,
+    pa_table_as_dict_iterable,
+    pa_table_as_dicts,
+)
 from fugue.dataset.api import (
     as_local,
     as_local_bounded,
     count,
     get_num_partitions,
     is_bounded,
-    is_empty,
     is_local,
 )
 from fugue.exceptions import FugueDataFrameOperationError
@@ -52,7 +62,7 @@ class PolarsDataFrame(LocalBoundedDataFrame):
     ):
         if df is None:
             schema = _input_schema(schema).assert_not_empty()
-            self._native: pa.Table = build_empty_pl(schema)
+            self._native: pl.DataFrame = build_empty_pl(schema)
             super().__init__(schema)
             return
         else:
@@ -73,7 +83,7 @@ class PolarsDataFrame(LocalBoundedDataFrame):
 
     @property
     def empty(self) -> bool:
-        return self._native.shape[0] == 0
+        return self._native.is_empty()
 
     def peek_array(self) -> List[Any]:
         self.assert_not_empty()
@@ -118,26 +128,20 @@ class PolarsDataFrame(LocalBoundedDataFrame):
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:
-        tdf = self.native
-        if columns is not None:
-            tdf = tdf.select(columns)
-        return [list(row) for row in tdf.rows()]
+        return _pl_as_array(self.native, columns=columns)
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
-        if not self.empty:
-            yield from ArrowDataFrame(_pl_as_arrow(self.native)).as_array_iterable(
-                columns=columns
-            )
+        yield from _pl_as_array_iterable(self.native, columns=columns)
+
+    def as_dicts(self, columns: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        return _pl_as_dicts(self.native, columns=columns)
 
     def as_dict_iterable(
         self, columns: Optional[List[str]] = None
     ) -> Iterable[Dict[str, Any]]:
-        if not self.empty:
-            yield from ArrowDataFrame(_pl_as_arrow(self.native)).as_dict_iterable(
-                columns=columns
-            )
+        yield from _pl_as_dict_iterable(self.native, columns=columns)
 
 
 @as_local.candidate(lambda df: isinstance(df, pl.DataFrame))
@@ -174,7 +178,7 @@ def _pl_is_bounded(df: pl.DataFrame) -> bool:
 
 @is_empty.candidate(lambda df: isinstance(df, pl.DataFrame))
 def _pl_is_empty(df: pl.DataFrame) -> bool:
-    return df.shape[0] == 0
+    return df.is_empty()
 
 
 @is_local.candidate(lambda df: isinstance(df, pl.DataFrame))
@@ -226,6 +230,39 @@ def _select_pa_columns(df: pl.DataFrame, columns: List[Any]) -> pl.DataFrame:
         raise FugueDataFrameOperationError("must select at least one column")
     _assert_no_missing(df, columns=columns)
     return df.select(columns)
+
+
+@as_array.candidate(lambda df, *args, **kwargs: isinstance(df, pl.DataFrame))
+def _pl_as_array(
+    df: pl.DataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> List[List[Any]]:
+    _df = df if columns is None else _select_pa_columns(df, columns)
+    adf = _pl_as_arrow(_df)
+    return pa_table_as_array(adf, columns=columns)
+
+
+@as_array_iterable.candidate(lambda df, *args, **kwargs: isinstance(df, pl.DataFrame))
+def _pl_as_array_iterable(
+    df: pl.DataFrame, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> Iterable[List[Any]]:
+    _df = df if columns is None else _select_pa_columns(df, columns)
+    yield from pa_table_as_array_iterable(_df.to_arrow(), columns=columns)
+
+
+@as_dicts.candidate(lambda df, *args, **kwargs: isinstance(df, pl.DataFrame))
+def _pl_as_dicts(
+    df: pl.DataFrame, columns: Optional[List[str]] = None
+) -> List[Dict[str, Any]]:
+    _df = df if columns is None else _select_pa_columns(df, columns)
+    return pa_table_as_dicts(_df.to_arrow(), columns=columns)
+
+
+@as_dict_iterable.candidate(lambda df, *args, **kwargs: isinstance(df, pl.DataFrame))
+def _pl_as_dict_iterable(
+    df: pl.DataFrame, columns: Optional[List[str]] = None
+) -> Iterable[Dict[str, Any]]:
+    _df = df if columns is None else _select_pa_columns(df, columns)
+    yield from pa_table_as_dict_iterable(_df.to_arrow(), columns=columns)
 
 
 def _assert_no_missing(df: pl.DataFrame, columns: Iterable[Any]) -> None:

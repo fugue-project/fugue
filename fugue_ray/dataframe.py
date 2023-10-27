@@ -4,14 +4,22 @@ import pandas as pd
 import pyarrow as pa
 import ray
 import ray.data as rd
+from triad import assert_or_throw
 from triad.collections.schema import Schema
 from triad.utils.pyarrow import cast_pa_table
 
 from fugue.dataframe import ArrowDataFrame, DataFrame, LocalBoundedDataFrame
 from fugue.dataframe.dataframe import _input_schema
+from fugue.dataframe.utils import pa_table_as_array, pa_table_as_dicts
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from fugue.plugins import (
+    as_array,
+    as_array_iterable,
+    as_arrow,
+    as_dict_iterable,
+    as_dicts,
     as_local_bounded,
+    as_pandas,
     get_column_names,
     get_num_partitions,
     is_df,
@@ -141,13 +149,11 @@ class RayDataFrame(DataFrame):
     def _select_cols(self, cols: List[Any]) -> DataFrame:
         if cols == self.columns:
             return self
-        rdf = self.native.map_batches(
-            lambda b: b.select(cols),
-            batch_format="pyarrow",
-            **_ZERO_COPY,
-            **self._remote_args(),
+        return RayDataFrame(
+            self.native.select_columns(cols),
+            self.schema.extract(cols),
+            internal_schema=True,
         )
-        return RayDataFrame(rdf, self.schema.extract(cols), internal_schema=True)
 
     def peek_array(self) -> List[Any]:
         data = self.native.limit(1).to_pandas().values.tolist()
@@ -164,10 +170,10 @@ class RayDataFrame(DataFrame):
         return self.native.count()
 
     def as_arrow(self, type_safe: bool = False) -> pa.Table:
-        return pa.concat_tables(_get_arrow_tables(self.native))
+        return _rd_as_arrow(self.native)
 
     def as_pandas(self) -> pd.DataFrame:
-        return self.as_arrow().to_pandas()
+        return _rd_as_pandas(self.native)
 
     def rename(self, columns: Dict[str, str]) -> DataFrame:
         try:
@@ -201,18 +207,20 @@ class RayDataFrame(DataFrame):
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:
-        df: DataFrame = self
-        if columns is not None:
-            df = df[columns]
-        adf = df.as_arrow()
-        if adf.shape[0] == 0:
-            return []
-        return ArrowDataFrame(adf).as_array(type_safe=type_safe)
+        return _rd_as_array(self.native, columns, type_safe)
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
-        yield from self.as_array(columns=columns, type_safe=type_safe)
+        yield from _rd_as_array_iterable(self.native, columns, type_safe)
+
+    def as_dicts(self, columns: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        return _rd_as_dicts(self.native, columns)
+
+    def as_dict_iterable(
+        self, columns: Optional[List[str]] = None
+    ) -> Iterable[Dict[str, Any]]:
+        yield from _rd_as_dict_iterable(self.native, columns)
 
     def head(
         self, n: int, columns: Optional[List[str]] = None
@@ -259,8 +267,8 @@ def _rd_num_partitions(df: rd.Dataset) -> int:
 
 
 @as_local_bounded.candidate(lambda df: isinstance(df, rd.Dataset))
-def _rd_as_local(df: rd.Dataset) -> bool:
-    return pa.concat_tables(_get_arrow_tables(df))
+def _rd_as_local(df: rd.Dataset) -> pa.Table:
+    return _rd_as_arrow(df)
 
 
 @get_column_names.candidate(lambda df: isinstance(df, rd.Dataset))
@@ -290,10 +298,54 @@ def _rename_ray_dataframe(df: rd.Dataset, columns: Dict[str, Any]) -> rd.Dataset
     )
 
 
+@as_pandas.candidate(lambda df: isinstance(df, rd.Dataset))
+def _rd_as_pandas(df: rd.Dataset) -> pd.DataFrame:
+    return _rd_as_arrow(df).to_pandas()
+
+
+@as_arrow.candidate(lambda df: isinstance(df, rd.Dataset))
+def _rd_as_arrow(df: rd.Dataset) -> pa.Table:
+    return pa.concat_tables(_get_arrow_tables(df))
+
+
+@as_array.candidate(lambda df, *args, **kwargs: isinstance(df, rd.Dataset))
+def _rd_as_array(
+    df: rd.Dataset, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> List[Any]:
+    assert_or_throw(columns is None or len(columns) > 0, ValueError("empty columns"))
+    _df = df if columns is None or len(columns) == 0 else df.select_columns(columns)
+    adf = _rd_as_arrow(_df)
+    return pa_table_as_array(adf)
+
+
+@as_array_iterable.candidate(lambda df, *args, **kwargs: isinstance(df, rd.Dataset))
+def _rd_as_array_iterable(
+    df: rd.Dataset, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> Iterable[Any]:
+    yield from _rd_as_array(df, columns, type_safe)
+
+
+@as_dicts.candidate(lambda df, *args, **kwargs: isinstance(df, rd.Dataset))
+def _rd_as_dicts(
+    df: rd.Dataset, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> List[Dict[str, Any]]:
+    assert_or_throw(columns is None or len(columns) > 0, ValueError("empty columns"))
+    _df = df if columns is None or len(columns) == 0 else df.select_columns(columns)
+    adf = _rd_as_arrow(_df)
+    return pa_table_as_dicts(adf)
+
+
+@as_dict_iterable.candidate(lambda df, *args, **kwargs: isinstance(df, rd.Dataset))
+def _rd_as_dict_iterable(
+    df: rd.Dataset, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> Iterable[Dict[str, Any]]:
+    yield from _rd_as_dicts(df, columns, type_safe)
+
+
 def _get_arrow_tables(df: rd.Dataset) -> Iterable[pa.Table]:
     last_empty: Any = None
     empty = True
-    for block in df.get_internal_block_refs():
+    for block in df.to_arrow_refs():
         tb = ray.get(block)
         if tb.shape[0] > 0:
             yield tb

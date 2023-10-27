@@ -117,14 +117,31 @@ def as_array_iterable(
 
 
 @fugue_plugin
-def as_dict_iterable(
+def as_dicts(
     df: AnyDataFrame, columns: Optional[List[str]] = None
-) -> Iterable[Dict[str, Any]]:
-    """Convert any dataframe to iterable of native python dicts
+) -> List[Dict[str, Any]]:
+    """Convert any dataframe to a list of python dicts
 
     :param df: the object that can be recognized as a dataframe by Fugue
     :param columns: columns to extract, defaults to None
-    :return: iterable of native python dicts
+    :return: a list of python dicts
+
+    .. note::
+
+        The default implementation enforces ``type_safe`` True
+    """
+    return as_fugue_df(df).as_dicts(columns=columns)
+
+
+@fugue_plugin
+def as_dict_iterable(
+    df: AnyDataFrame, columns: Optional[List[str]] = None
+) -> Iterable[Dict[str, Any]]:
+    """Convert any dataframe to iterable of python dicts
+
+    :param df: the object that can be recognized as a dataframe by Fugue
+    :param columns: columns to extract, defaults to None
+    :return: iterable of python dicts
 
     .. note::
 

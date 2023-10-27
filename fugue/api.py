@@ -6,6 +6,7 @@ from .dataframe.api import (
     as_array_iterable,
     as_arrow,
     as_dict_iterable,
+    as_dicts,
     as_fugue_df,
     as_pandas,
     drop_columns,

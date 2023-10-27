@@ -21,6 +21,10 @@ from fugue.exceptions import FugueDataFrameOperationError
 
 from .api import (
     alter_columns,
+    as_array,
+    as_array_iterable,
+    as_dict_iterable,
+    as_dicts,
     as_pandas,
     drop_columns,
     get_column_names,
@@ -30,6 +34,12 @@ from .api import (
     select_columns,
 )
 from .dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
+from .utils import (
+    pa_table_as_array,
+    pa_table_as_array_iterable,
+    pa_table_as_dict_iterable,
+    pa_table_as_dicts,
+)
 
 
 class ArrowDataFrame(LocalBoundedDataFrame):
@@ -174,21 +184,20 @@ class ArrowDataFrame(LocalBoundedDataFrame):
     def as_array(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> List[Any]:
-        return list(self.as_array_iterable(columns, type_safe=type_safe))
+        return pa_table_as_array(self.native, columns=columns)
+
+    def as_dicts(self, columns: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        return pa_table_as_dicts(self.native, columns=columns)
 
     def as_array_iterable(
         self, columns: Optional[List[str]] = None, type_safe: bool = False
     ) -> Iterable[Any]:
-        if self.empty:
-            return
-        if columns is not None:
-            for x in self[columns].as_array_iterable(type_safe=type_safe):
-                yield x
-        else:
-            d = self.native.to_pydict()
-            cols = [d[n] for n in self.columns]
-            for arr in zip(*cols):
-                yield list(arr)
+        yield from pa_table_as_array_iterable(self.native, columns=columns)
+
+    def as_dict_iterable(
+        self, columns: Optional[List[str]] = None
+    ) -> Iterable[Dict[str, Any]]:
+        yield from pa_table_as_dict_iterable(self.native, columns=columns)
 
 
 @as_local.candidate(lambda df: isinstance(df, pa.Table))
@@ -210,6 +219,34 @@ def _pa_table_as_pandas(df: pa.Table) -> pd.DataFrame:
         use_threads=False,
         date_as_object=False,
     )
+
+
+@as_array.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
+def _pa_table_as_array(
+    df: pa.Table, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> List[Any]:
+    return pa_table_as_array(df, columns=columns)
+
+
+@as_array_iterable.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
+def _pa_table_as_array_iterable(
+    df: pa.Table, columns: Optional[List[str]] = None, type_safe: bool = False
+) -> Iterable[Any]:
+    yield from pa_table_as_array_iterable(df, columns=columns)
+
+
+@as_dicts.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
+def _pa_table_as_dicts(
+    df: pa.Table, columns: Optional[List[str]] = None
+) -> List[Dict[str, Any]]:
+    return pa_table_as_dicts(df, columns=columns)
+
+
+@as_dict_iterable.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
+def _pa_table_as_dict_iterable(
+    df: pa.Table, columns: Optional[List[str]] = None
+) -> Iterable[Dict[str, Any]]:
+    yield from pa_table_as_dict_iterable(df, columns=columns)
 
 
 @alter_columns.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))
