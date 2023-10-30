@@ -11,7 +11,7 @@ from pyspark.rdd import RDD
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import broadcast, col, lit, row_number
 from pyspark.sql.window import Window
-from triad import FileSystem, IndexedOrderedDict, ParamDict, Schema, SerializableRLock
+from triad import IndexedOrderedDict, ParamDict, Schema, SerializableRLock
 from triad.utils.assertion import assert_arg_not_none, assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.iter import EmptyAwareIterable
@@ -360,13 +360,12 @@ class SparkExecutionEngine(ExecutionEngine):
         cf.update(ParamDict(conf))
         super().__init__(cf)
         self._lock = SerializableRLock()
-        self._fs = FileSystem()
         self._log = logging.getLogger()
         self._broadcast_func = RunOnce(
             self._broadcast, lambda *args, **kwargs: id(args[0])
         )
         self._persist_func = RunOnce(self._persist, lambda *args, **kwargs: id(args[0]))
-        self._io = SparkIO(self.spark_session, self.fs)
+        self._io = SparkIO(self.spark_session)
         self._registered_dfs: Dict[str, SparkDataFrame] = {}
 
     def __repr__(self) -> str:
@@ -394,10 +393,6 @@ class SparkExecutionEngine(ExecutionEngine):
     @property
     def log(self) -> logging.Logger:
         return self._log
-
-    @property
-    def fs(self) -> FileSystem:
-        return self._fs
 
     def create_default_sql_engine(self) -> SQLEngine:
         return SparkSQLEngine(self)

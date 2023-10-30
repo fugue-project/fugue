@@ -1,13 +1,13 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import fsspec
-import fs as pfs
 import pandas as pd
 from dask import dataframe as dd
+from fsspec import AbstractFileSystem
 from triad.collections.dict import ParamDict
-from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
+from triad.utils.io import join, url_to_fs
 
 from fugue._utils.io import FileParser, _get_single_files
 from fugue_dask.dataframe import DaskDataFrame
@@ -19,7 +19,7 @@ def load_df(
     uri: Union[str, List[str]],
     format_hint: Optional[str] = None,
     columns: Any = None,
-    fs: Optional[FileSystem] = None,
+    fs: Optional[AbstractFileSystem] = None,
     **kwargs: Any,
 ) -> DaskDataFrame:
     if isinstance(uri, str):
@@ -39,7 +39,7 @@ def save_df(
     uri: str,
     format_hint: Optional[str] = None,
     mode: str = "overwrite",
-    fs: Optional[FileSystem] = None,
+    fs: Optional[AbstractFileSystem] = None,
     **kwargs: Any,
 ) -> None:
     assert_or_throw(
@@ -48,16 +48,13 @@ def save_df(
     )
     p = FileParser(uri, format_hint).assert_no_glob()
     if fs is None:
-        fs = FileSystem()
+        fs, _ = url_to_fs(uri)
     if fs.exists(uri):
         assert_or_throw(mode == "overwrite", FileExistsError(uri))
         try:
-            fs.remove(uri)
-        except Exception:
-            try:
-                fs.removetree(uri)
-            except Exception:  # pragma: no cover
-                pass
+            fs.rm(uri, recursive=True)
+        except Exception:  # pragma: no cover
+            pass
     _FORMAT_SAVE[p.file_format](df, p, **kwargs)
 
 
@@ -100,7 +97,7 @@ def _save_csv(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
     fs, path = fsspec.core.url_to_fs(p.uri)
     fs.makedirs(path, exist_ok=True)
     df.native.to_csv(
-        pfs.path.combine(p.uri, "*.csv"), **{"index": False, "header": False, **kwargs}
+        join(p.uri, "*.csv"), **{"index": False, "header": False, **kwargs}
     )
 
 
@@ -108,7 +105,7 @@ def _safe_load_csv(path: str, **kwargs: Any) -> dd.DataFrame:
     try:
         return dd.read_csv(path, **kwargs)
     except (IsADirectoryError, PermissionError):
-        return dd.read_csv(pfs.path.combine(path, "*.csv"), **kwargs)
+        return dd.read_csv(join(path, "*.csv"), **kwargs)
 
 
 def _load_csv(  # noqa: C901
@@ -150,14 +147,14 @@ def _load_csv(  # noqa: C901
 def _save_json(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
     fs, path = fsspec.core.url_to_fs(p.uri)
     fs.makedirs(path, exist_ok=True)
-    df.native.to_json(pfs.path.combine(p.uri, "*.json"), **kwargs)
+    df.native.to_json(join(p.uri, "*.json"), **kwargs)
 
 
 def _safe_load_json(path: str, **kwargs: Any) -> dd.DataFrame:
     try:
         return dd.read_json(path, **kwargs)
     except (IsADirectoryError, PermissionError):
-        x = dd.read_json(pfs.path.combine(path, "*.json"), **kwargs)
+        x = dd.read_json(join(path, "*.json"), **kwargs)
         print(x.compute())
         return x
 

@@ -1,6 +1,6 @@
 from typing import Any, Dict, Iterable, List
 
-from fugue import FileSystem, FugueWorkflow, Schema
+from fugue import FugueWorkflow, Schema
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from triad import to_uuid
 

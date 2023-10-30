@@ -4,7 +4,7 @@ from typing import Any, List
 import pandas as pd
 import pytest
 import ray.data as rd
-from triad import FileSystem
+from triad.utils.io import isfile
 
 import fugue.api as fa
 from fugue import ArrayDataFrame, DataFrame, FugueWorkflow, transform
@@ -189,7 +189,7 @@ class RayBuiltInTests(BuiltInTests.Tests):
             connection=self._con,
         )
         return e
-    
+
     def test_datetime_in_workflow(self):
         pass
 
@@ -223,7 +223,7 @@ class RayBuiltInTests(BuiltInTests.Tests):
             b.partition(num=3).save(path, fmt="parquet", single=True)
             b.save(path2, header=True)
         dag.run(self.engine)
-        assert FileSystem().isfile(path)
+        assert isfile(path)
         with FugueWorkflow() as dag:
             a = dag.load(path, fmt="parquet", columns=["a", "c"])
             a.assert_eq(dag.df([[1, 6], [7, 2]], "a:long,c:int"))
@@ -236,9 +236,9 @@ class RayBuiltInTests(BuiltInTests.Tests):
         # with FugueWorkflow() as dag:
         #     b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
         #     b.partition(by="c").save(path3, fmt="parquet", single=False)
-        # assert FileSystem().isdir(path3)
-        # assert FileSystem().isdir(os.path.join(path3, "c=6"))
-        # assert FileSystem().isdir(os.path.join(path3, "c=2"))
+        # assert isdir(path3)
+        # assert isdir(os.path.join(path3, "c=6"))
+        # assert isdir(os.path.join(path3, "c=2"))
         # # TODO: in test below, once issue #288 is fixed, use dag.load
         # #  instead of pd.read_parquet
         # pd.testing.assert_frame_equal(

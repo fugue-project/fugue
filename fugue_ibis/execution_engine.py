@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Type
 
 import ibis
 from ibis import BaseBackend
-from triad import FileSystem, assert_or_throw
+from triad import assert_or_throw
 
 from fugue import StructuredRawSQL
 from fugue.bag import Bag, LocalBag
@@ -374,10 +374,6 @@ class IbisExecutionEngine(ExecutionEngine):
     @property
     def log(self) -> logging.Logger:
         return self.non_ibis_engine.log
-
-    @property
-    def fs(self) -> FileSystem:
-        return self.non_ibis_engine.fs
 
     def get_current_parallelism(self) -> int:
         return self.non_ibis_engine.get_current_parallelism()

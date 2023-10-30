@@ -1,15 +1,15 @@
-import os
 import pickle
-from typing import Any, Iterable, Optional, Tuple, List, Dict
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 import pyarrow as pa
-from fs import open_fs
-from triad import FileSystem, Schema, assert_or_throw
+from fsspec import AbstractFileSystem
+from triad import Schema, assert_or_throw
 from triad.collections.schema import SchemaError
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.assertion import assert_or_throw as aot
+from triad.utils.io import url_to_fs
 from triad.utils.pyarrow import pa_batch_to_dicts
 
 from .api import as_fugue_df, get_column_names, normalize_column_names, rename
@@ -112,7 +112,6 @@ def serialize_df(
     df: Optional[DataFrame],
     threshold: int = -1,
     file_path: Optional[str] = None,
-    fs: Optional[FileSystem] = None,
 ) -> Optional[bytes]:
     """Serialize input dataframe to base64 string or to file
     if it's larger than threshold
@@ -121,15 +120,8 @@ def serialize_df(
     :param threshold: file byte size threshold, defaults to -1
     :param file_path: file path to store the data (used only if the serialized data
       is larger than ``threshold``), defaults to None
-    :param fs: :class:`~triad:triad.collections.fs.FileSystem`, defaults to None
     :raises InvalidOperationError: if file is large but ``file_path`` is not provided
     :return: a pickled blob either containing the data or the file path
-
-    .. note::
-
-        If fs is not provided but it needs to write to disk, then it will use
-        :meth:`~fs:fs.opener.registry.Registry.open_fs` to try to open the file to
-        write.
     """
     if df is None:
         return None
@@ -140,24 +132,20 @@ def serialize_df(
     else:
         if file_path is None:
             raise InvalidOperationError("file_path is not provided")
-        if fs is None:
-            with open_fs(
-                os.path.dirname(file_path), writeable=True, create=False
-            ) as _fs:
-                _fs.writebytes(os.path.basename(file_path), data)
-        else:
-            fs.writebytes(file_path, data)
+        fs, path = url_to_fs(file_path)
+        with fs.open(path, "wb") as f:
+            f.write(data)
         return pickle.dumps(file_path)
 
 
 def deserialize_df(
-    data: Optional[bytes], fs: Optional[FileSystem] = None
+    data: Optional[bytes], fs: Optional[AbstractFileSystem] = None
 ) -> Optional[LocalBoundedDataFrame]:
     """Deserialize json string to
     :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame`
 
     :param json_str: json string containing the base64 data or a file path
-    :param fs: :class:`~triad:triad.collections.fs.FileSystem`, defaults to None
+    :param fs: the file system to use, defaults to None
     :raises ValueError: if the json string is invalid, not generated from
       :func:`~.serialize_df`
     :return: :class:`~fugue.dataframe.dataframe.LocalBoundedDataFrame` if ``json_str``
@@ -169,10 +157,9 @@ def deserialize_df(
     if isinstance(obj, LocalBoundedDataFrame):
         return obj
     elif isinstance(obj, str):
-        if fs is None:
-            with open_fs(os.path.dirname(obj), create=False) as _fs:
-                return pickle.loads(_fs.readbytes(os.path.basename(obj)))
-        return pickle.loads(fs.readbytes(obj))
+        fs, path = url_to_fs(obj)
+        with fs.open(path, "rb") as f:
+            return pickle.load(f)
     raise ValueError("data is invalid")
 
 

@@ -1,6 +1,5 @@
 # flake8: noqa
 from triad.collections import Schema
-from triad.collections.fs import FileSystem
 
 from fugue.api import out_transform, transform
 from fugue.bag.array_bag import ArrayBag

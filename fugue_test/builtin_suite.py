@@ -12,11 +12,12 @@ import pickle
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional
 from unittest import TestCase
 from uuid import uuid4
-
+from triad.utils.io import write_text, join
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pytest
+from fsspec.implementations.local import LocalFileSystem
 from pytest import raises
 from triad import SerializableRLock
 
@@ -28,7 +29,6 @@ from fugue import (
     DataFrame,
     DataFrames,
     ExecutionEngine,
-    FileSystem,
     FugueWorkflow,
     LocalDataFrame,
     OutputCoTransformer,
@@ -64,6 +64,8 @@ from fugue.exceptions import (
     FugueWorkflowError,
     FugueWorkflowRuntimeValidationError,
 )
+
+_LOCAL_FS = LocalFileSystem(auto_mkdir=True)
 
 
 class BuiltInTests(object):
@@ -633,9 +635,8 @@ class BuiltInTests(object):
             tmpdir = str(self.tmpdir)
 
             def incr():
-                fs = FileSystem(auto_close=False).makedirs(tmpdir, recreate=True)
-                fs.writetext(str(uuid4()) + ".txt", "")
-                return fs.glob("*.txt").count().files
+                write_text(join(tmpdir, str(uuid4()) + ".txt"), "")
+                return len(_LOCAL_FS.glob(join(tmpdir, "*.txt")))
 
             def t1(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
                 for row in df:
@@ -717,9 +718,8 @@ class BuiltInTests(object):
             tmpdir = str(self.tmpdir)
 
             def incr():
-                fs = FileSystem(auto_close=False).makedirs(tmpdir, recreate=True)
-                fs.writetext(str(uuid4()) + ".txt", "")
-                return fs.glob("*.tx" "t").count().files
+                write_text(join(tmpdir, str(uuid4()) + ".txt"), "")
+                return len(_LOCAL_FS.glob(join(tmpdir, "*.txt")))
 
             def t1(
                 df: Iterable[Dict[str, Any]], df2: pd.DataFrame
@@ -1348,7 +1348,7 @@ class BuiltInTests(object):
                 b.partition(num=3).save(path, fmt="parquet", single=True)
                 b.save(path2, header=True)
             dag.run(self.engine)
-            assert FileSystem().isfile(path)
+            assert _LOCAL_FS.isfile(path)
             with FugueWorkflow() as dag:
                 a = dag.load(path, fmt="parquet", columns=["a", "c"])
                 a.assert_eq(dag.df([[1, 6], [7, 2]], "a:long,c:int"))
@@ -1359,9 +1359,9 @@ class BuiltInTests(object):
                 b = dag.df([[6, 1], [2, 7]], "c:int,a:long")
                 b.partition(by="c").save(path3, fmt="parquet", single=False)
             dag.run(self.engine)
-            assert FileSystem().isdir(path3)
-            assert FileSystem().isdir(os.path.join(path3, "c=6"))
-            assert FileSystem().isdir(os.path.join(path3, "c=2"))
+            assert _LOCAL_FS.isdir(path3)
+            assert _LOCAL_FS.isdir(os.path.join(path3, "c=6"))
+            assert _LOCAL_FS.isdir(os.path.join(path3, "c=2"))
             # TODO: in test below, once issue #288 is fixed, use dag.load
             #  instead of pd.read_parquet
             pdf = pd.read_parquet(path3).sort_values("a").reset_index(drop=True)

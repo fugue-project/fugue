@@ -1,13 +1,12 @@
 import os
 
+from pytest import raises
+from triad.utils.io import makedirs, read_text, touch
+
+from fugue._utils.io import _FORMAT_MAP, FileParser, load_df, save_df
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue._utils.io import FileParser, load_df, save_df, _FORMAT_MAP
-from fugue.exceptions import FugueDataFrameOperationError
-from pytest import raises
-from triad.collections.fs import FileSystem
-from triad.exceptions import InvalidOperationError
 
 
 def test_file_parser():
@@ -132,14 +131,13 @@ def test_parquet_io(tmpdir):
     raises(Exception, lambda: load_df(path, columns="bb:str,a:int"))
 
     # load directory
-    fs = FileSystem()
     for name in ["folder.parquet", "folder"]:
         folder = os.path.join(tmpdir, name)
-        fs.makedirs(folder)
+        makedirs(folder)
         f0 = os.path.join(folder, "_SUCCESS")
         f1 = os.path.join(folder, "1.parquet")
         f2 = os.path.join(folder, "3.parquet")
-        fs.touch(f0)
+        touch(f0)
         save_df(df1, f1)
         save_df(df1, f2)
 
@@ -178,12 +176,11 @@ def test_parquet_io(tmpdir):
 
 
 def test_csv_io(tmpdir):
-    fs = FileSystem()
     df1 = PandasDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
     path = os.path.join(tmpdir, "a.csv")
     # without header
     save_df(df1, path)
-    assert fs.readtext(path).startswith("1,2,3")
+    assert read_text(path).startswith("1,2,3")
     raises(ValueError, lambda: load_df(path, header=False))
     actual = load_df(path, columns=["a", "b", "c"], header=False, infer_schema=True)
     assert [[1, 2, 3]] == actual.as_array()
@@ -193,7 +190,7 @@ def test_csv_io(tmpdir):
     assert actual.schema == "a:double,b:str,c:str"
     # with header
     save_df(df1, path, header=True)
-    assert fs.readtext(path).startswith("a,b,c")
+    assert read_text(path).startswith("a,b,c")
     actual = load_df(path, header=True)
     assert [["1", "2", "3"]] == actual.as_array()
     actual = load_df(path, header=True, infer_schema=True)
@@ -210,7 +207,6 @@ def test_csv_io(tmpdir):
 
 
 def test_json(tmpdir):
-    fs = FileSystem()
     df1 = PandasDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
     path = os.path.join(tmpdir, "a.json")
     save_df(df1, path)

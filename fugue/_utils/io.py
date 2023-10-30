@@ -3,12 +3,12 @@ import pathlib
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 
-import fs as pfs
 import pandas as pd
+from fsspec import AbstractFileSystem
 from triad.collections.dict import ParamDict
-from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
+from triad.utils.io import join, url_to_fs
 from triad.utils.pandas_like import PD_UTILS
 
 from fugue.dataframe import LocalBoundedDataFrame, LocalDataFrame, PandasDataFrame
@@ -32,7 +32,7 @@ class FileParser(object):
         else:
             self._uri = urlparse(path[:last])
             self._glob_pattern = path[last + 1 :]
-            self._path = pfs.path.combine(self._uri.path, self._glob_pattern)
+            self._path = join(self._uri.path, self._glob_pattern)
 
         if format_hint is None or format_hint == "":
             for k, v in _FORMAT_MAP.items():
@@ -54,8 +54,22 @@ class FileParser(object):
     def with_glob(self, glob: str, format_hint: Optional[str] = None) -> "FileParser":
         uri = self.uri
         if glob != "":
-            uri = pfs.path.combine(uri, glob)
+            uri = join(uri, glob)
         return FileParser(uri, format_hint or self._orig_format_hint)
+
+    def find_all(self, fs: Optional[AbstractFileSystem] = None) -> List[str]:
+        if self.glob_pattern == "":
+            return [self.uri]
+        else:
+            if fs is None:
+                return self.fs.glob(self._path)
+            else:
+                return fs.glob(self._path)
+
+    @property
+    def fs(self) -> AbstractFileSystem:
+        _fs, _ = url_to_fs(self.uri)
+        return _fs
 
     @property
     def glob_pattern(self) -> str:
@@ -69,7 +83,7 @@ class FileParser(object):
     def uri_with_glob(self) -> str:
         if self.glob_pattern == "":
             return self.uri
-        return pfs.path.combine(self.uri, self.glob_pattern)
+        return join(self.uri, self.glob_pattern)
 
     @property
     def parent(self) -> str:
@@ -97,7 +111,7 @@ def load_df(
     uri: Union[str, List[str]],
     format_hint: Optional[str] = None,
     columns: Any = None,
-    fs: Optional[FileSystem] = None,
+    fs: Optional[AbstractFileSystem] = None,
     **kwargs: Any,
 ) -> LocalBoundedDataFrame:
     if isinstance(uri, str):
@@ -117,7 +131,7 @@ def save_df(
     uri: str,
     format_hint: Optional[str] = None,
     mode: str = "overwrite",
-    fs: Optional[FileSystem] = None,
+    fs: Optional[AbstractFileSystem] = None,
     **kwargs: Any,
 ) -> None:
     assert_or_throw(
@@ -125,30 +139,22 @@ def save_df(
     )
     p = FileParser(uri, format_hint).assert_no_glob()
     if fs is None:
-        fs = FileSystem()
+        fs, _ = url_to_fs(uri)
     if fs.exists(uri):
         assert_or_throw(mode == "overwrite", FileExistsError(uri))
         try:
-            fs.remove(uri)
+            fs.rm(uri, recursive=True)
         except Exception:
-            try:
-                fs.removetree(uri)
-            except Exception:  # pragma: no cover
-                pass
+            pass
     _FORMAT_SAVE[p.file_format](df, p, **kwargs)
 
 
 def _get_single_files(
-    fp: Iterable[FileParser], fs: Optional[FileSystem]
+    fp: Iterable[FileParser], fs: Optional[AbstractFileSystem]
 ) -> Iterable[FileParser]:
-    if fs is None:
-        fs = FileSystem()
     for f in fp:
         if f.glob_pattern != "":
-            files = [
-                FileParser(pfs.path.combine(f.uri, pfs.path.basename(x.path)))
-                for x in fs.opendir(f.uri).glob(f.glob_pattern)
-            ]
+            files = [FileParser(x) for x in f.find_all(fs)]
             yield from _get_single_files(files, fs)
         else:
             yield f
@@ -189,12 +195,9 @@ def _save_csv(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
 
 def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
     def load_dir() -> pd.DataFrame:
-        fs = FileSystem()
+        fs, _ = url_to_fs(path)
         return pd.concat(
-            [
-                pd.read_csv(pfs.path.combine(path, pfs.path.basename(x.path)), **kwargs)
-                for x in fs.opendir(path).glob("*.csv")
-            ]
+            [pd.read_csv(x, **kwargs) for x in fs.glob(join(path, "*.csv"))]
         )
 
     try:
@@ -257,13 +260,8 @@ def _safe_load_json(path: str, **kwargs: Any) -> pd.DataFrame:
     try:
         return pd.read_json(path, **kw)
     except (IsADirectoryError, PermissionError):
-        fs = FileSystem()
-        return pd.concat(
-            [
-                pd.read_json(pfs.path.combine(path, pfs.path.basename(x.path)), **kw)
-                for x in fs.opendir(path).glob("*.json")
-            ]
-        )
+        fs, _ = url_to_fs(path)
+        return pd.concat([pd.read_json(x, **kw) for x in fs.glob(join(path, "*.json"))])
 
 
 def _load_json(
