@@ -1,5 +1,7 @@
 import os
+import sys
 
+import pytest
 from pytest import raises
 from triad.utils.io import makedirs, read_text, touch
 
@@ -9,55 +11,67 @@ from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 
 
-def test_file_parser():
-    f = FileParser("c.parquet")
-    assert "c.parquet" == f.uri
-    assert "c.parquet" == f.uri_with_glob
-    assert "" == f.scheme
-    assert "c.parquet" == f.path
-    assert ".parquet" == f.suffix
-    assert "parquet" == f.file_format
-    assert "" == f.glob_pattern
-    assert "." == f.parent
-
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="not a test for windows")
+def test_file_parser_linux():
     f = FileParser("/a/b/c.parquet")
     assert "/a/b/c.parquet" == f.uri
     assert "/a/b/c.parquet" == f.uri_with_glob
-    assert "" == f.scheme
-    assert "/a/b/c.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "" == f.glob_pattern
     assert "/a/b" == f.parent
 
+
+@pytest.mark.skipif(
+    not sys.platform.startswith("win"), reason="a test only for windows"
+)
+def test_file_parser_win():
+    f = FileParser("c:\\a\\c.parquet")
+    assert "c:\\a\\c.parquet" == f.uri
+    assert "c:\\a\\c.parquet" == f.uri_with_glob
+    assert ".parquet" == f.suffix
+    assert "parquet" == f.file_format
+    assert "" == f.glob_pattern
+    assert "c:\\a" == f.parent
+
+    f = FileParser("c:\\a\\*.parquet")
+    assert "c:\\a" == f.uri
+    assert "c:\\a\\*.parquet" == f.uri_with_glob
+    assert ".parquet" == f.suffix
+    assert "parquet" == f.file_format
+    assert "*.parquet" == f.glob_pattern
+    assert "c:\\a" == f.parent
+
+
+def test_file_parser():
+    f = FileParser("c.parquet")
+    assert "c.parquet" == f.uri
+    assert "c.parquet" == f.uri_with_glob
+    assert ".parquet" == f.suffix
+    assert "parquet" == f.file_format
+    assert "" == f.glob_pattern
+    assert "." == f.parent
+
     for k, v in _FORMAT_MAP.items():
         f = FileParser(f"s3://a/b/c{k}")
         assert f"s3://a/b/c{k}" == f.uri
-        assert "s3" == f.scheme
-        assert f"/b/c{k}" == f.path
         assert k == f.suffix
         assert v == f.file_format
         assert "s3://a/b" == f.parent
 
     f = FileParser("s3://a/b/c.test.parquet")
     assert "s3://a/b/c.test.parquet" == f.uri
-    assert "s3" == f.scheme
-    assert "/b/c.test.parquet" == f.path
     assert ".test.parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "s3://a/b" == f.parent
 
     f = FileParser("s3://a/b/c.ppp.gz", "csv")
     assert "s3://a/b/c.ppp.gz" == f.uri
-    assert "s3" == f.scheme
-    assert "/b/c.ppp.gz" == f.path
     assert ".ppp.gz" == f.suffix
     assert "csv" == f.file_format
 
     f = FileParser("s3://a/b/c", "csv")
     assert "s3://a/b/c" == f.uri
-    assert "s3" == f.scheme
-    assert "/b/c" == f.path
     assert "" == f.suffix
     assert "csv" == f.file_format
 
@@ -66,11 +80,10 @@ def test_file_parser():
     raises(NotImplementedError, lambda: FileParser("s3://a/b/c"))
 
 
-def test_file_parser_glob():
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="not a test for windows")
+def test_file_parser_glob_linux():
     f = FileParser("/a/b/*.parquet")
     assert "/a/b" == f.uri
-    assert "" == f.scheme
-    assert "/a/b/*.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "*.parquet" == f.glob_pattern
@@ -78,17 +91,15 @@ def test_file_parser_glob():
 
     f = FileParser("/a/b/*123.parquet")
     assert "/a/b" == f.uri
-    assert "" == f.scheme
-    assert "/a/b/*123.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "*123.parquet" == f.glob_pattern
     assert "/a/b/*123.parquet" == f.uri_with_glob
 
+
+def test_file_parser_glob():
     f = FileParser("s3://a/b/*.parquet")
     assert "s3://a/b" == f.uri
-    assert "s3" == f.scheme
-    assert "/b/*.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "*.parquet" == f.glob_pattern

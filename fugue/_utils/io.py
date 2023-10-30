@@ -1,10 +1,10 @@
 import os
 import pathlib
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
-from urllib.parse import urlparse
 
 import pandas as pd
 from fsspec import AbstractFileSystem
+from fsspec.core import split_protocol
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
@@ -19,20 +19,22 @@ class FileParser(object):
         last = len(path)
         has_glob = False
         self._orig_format_hint = format_hint
+        p, _ = split_protocol(path)
+        sep = os.path.sep if p is None else "/"
         for i in range(len(path)):
-            if path[i] in ["/", "\\"]:
+            if path[i] == sep:
                 last = i
             if path[i] in ["*", "?"]:
                 has_glob = True
                 break
         if not has_glob:
-            self._uri = urlparse(path)
+            self._uri = path
             self._glob_pattern = ""
-            self._path = self._uri.path
+            self._raw_path = path
         else:
-            self._uri = urlparse(path[:last])
+            self._uri = path[:last]
             self._glob_pattern = path[last + 1 :]
-            self._path = join(self._uri.path, self._glob_pattern)
+            self._raw_path = path
 
         if format_hint is None or format_hint == "":
             for k, v in _FORMAT_MAP.items():
@@ -48,7 +50,7 @@ class FileParser(object):
             self._format = format_hint
 
     def assert_no_glob(self) -> "FileParser":
-        assert_or_throw(self.glob_pattern == "", f"{self.path} has glob pattern")
+        assert_or_throw(self.glob_pattern == "", f"{self.raw_path} has glob pattern")
         return self
 
     def with_glob(self, glob: str, format_hint: Optional[str] = None) -> "FileParser":
@@ -62,9 +64,9 @@ class FileParser(object):
             return [self.uri]
         else:
             if fs is None:
-                return self.fs.glob(self._path)
+                return self.fs.glob(self.raw_path)
             else:
-                return fs.glob(self._path)
+                return fs.glob(self.raw_path)
 
     @property
     def fs(self) -> AbstractFileSystem:
@@ -77,7 +79,7 @@ class FileParser(object):
 
     @property
     def uri(self) -> str:
-        return self._uri.geturl()
+        return self._uri
 
     @property
     def uri_with_glob(self) -> str:
@@ -91,16 +93,12 @@ class FileParser(object):
         return dn if dn != "" else "."
 
     @property
-    def scheme(self) -> str:
-        return self._uri.scheme
-
-    @property
-    def path(self) -> str:
-        return self._path
+    def raw_path(self) -> str:
+        return self._raw_path
 
     @property
     def suffix(self) -> str:
-        return "".join(pathlib.Path(self.path.lower()).suffixes)
+        return "".join(pathlib.Path(self.raw_path.lower()).suffixes)
 
     @property
     def file_format(self) -> str:
