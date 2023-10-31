@@ -8,7 +8,7 @@ from fsspec.core import split_protocol
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
-from triad.utils.io import join, url_to_fs
+from triad.utils.io import join, url_to_fs, glob as get_glob
 from triad.utils.pandas_like import PD_UTILS
 
 from fugue.dataframe import LocalBoundedDataFrame, LocalDataFrame, PandasDataFrame
@@ -58,20 +58,6 @@ class FileParser(object):
         if glob != "":
             uri = join(uri, glob)
         return FileParser(uri, format_hint or self._orig_format_hint)
-
-    def find_all(self, fs: Optional[AbstractFileSystem] = None) -> List[str]:
-        if self.glob_pattern == "":
-            return [self.uri]
-        else:
-            if fs is None:
-                return self.fs.glob(self.raw_path)
-            else:
-                return fs.glob(self.raw_path)
-
-    @property
-    def fs(self) -> AbstractFileSystem:
-        _fs, _ = url_to_fs(self.uri)
-        return _fs
 
     @property
     def glob_pattern(self) -> str:
@@ -142,7 +128,7 @@ def save_df(
         assert_or_throw(mode == "overwrite", FileExistsError(uri))
         try:
             fs.rm(uri, recursive=True)
-        except Exception:
+        except Exception:  # pragma: no cover
             pass
     _FORMAT_SAVE[p.file_format](df, p, **kwargs)
 
@@ -152,7 +138,7 @@ def _get_single_files(
 ) -> Iterable[FileParser]:
     for f in fp:
         if f.glob_pattern != "":
-            files = [FileParser(x) for x in f.find_all(fs)]
+            files = [FileParser(x) for x in get_glob(f.raw_path)]
             yield from _get_single_files(files, fs)
         else:
             yield f

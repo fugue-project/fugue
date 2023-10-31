@@ -40,7 +40,7 @@ def test_file_parser_win():
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "*.parquet" == f.glob_pattern
-    assert "c:\\a" == f.parent
+    assert "c:\\" == f.parent
 
 
 def test_file_parser():
