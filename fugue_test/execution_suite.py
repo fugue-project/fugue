@@ -984,7 +984,7 @@ class ExecutionEngineTests(object):
             df_eq(res, [[1, "z1"]], "a:int,v:str", throw=True)
 
         @pytest.fixture(autouse=True)
-        def init_tmpdir(self, tmpdir):
+        def init_tmpdir(self, tmpdir, tmp_mem_dir):
             self.tmpdir = tmpdir
 
         def test_save_single_and_load_parquet(self):

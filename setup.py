@@ -109,6 +109,7 @@ setup(
             "fugue_test_dask = fugue_test.plugins.dask[dask]",
             "fugue_test_ray = fugue_test.plugins.ray[ray]",
             "fugue_test_duckdb = fugue_test.plugins.duckdb[duckdb]",
+            "fugue_test_misc = fugue_test.plugins.misc",
         ],
     },
 )

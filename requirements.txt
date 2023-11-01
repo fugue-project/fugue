@@ -25,6 +25,8 @@ seaborn
 notebook<7
 jupyter_contrib_nbextensions
 
+s3fs
+
 pyspark[connect]
 duckdb-engine>=0.6.4
 sqlalchemy==2.0.10  # 2.0.11 has a bug

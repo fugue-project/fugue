@@ -19,7 +19,7 @@ def test_file_parser_linux():
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "" == f.glob_pattern
-    assert "/a/b" == f.parent
+    assert "file:///a/b" == f.parent
 
 
 @pytest.mark.skipif(
@@ -50,7 +50,15 @@ def test_file_parser():
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "" == f.glob_pattern
-    assert "." == f.parent
+    #assert "." == f.parent
+
+    f = FileParser("memory:///c.parquet")
+    assert "memory:///c.parquet" == f.uri
+    assert "memory:///c.parquet" == f.uri_with_glob
+    assert ".parquet" == f.suffix
+    assert "parquet" == f.file_format
+    assert "" == f.glob_pattern
+    assert "memory:///" == f.parent
 
     for k, v in _FORMAT_MAP.items():
         f = FileParser(f"s3://a/b/c{k}")

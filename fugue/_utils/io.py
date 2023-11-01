@@ -8,7 +8,7 @@ from fsspec.core import split_protocol
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
-from triad.utils.io import join, url_to_fs, glob as get_glob
+from triad.utils.io import join, url_to_fs
 from triad.utils.pandas_like import PD_UTILS
 
 from fugue.dataframe import LocalBoundedDataFrame, LocalDataFrame, PandasDataFrame
@@ -75,8 +75,8 @@ class FileParser(object):
 
     @property
     def parent(self) -> str:
-        dn = os.path.dirname(self.uri)
-        return dn if dn != "" else "."
+        fs, _path = url_to_fs(self.uri)
+        return fs.unstrip_protocol(fs._parent(_path))
 
     @property
     def raw_path(self) -> str:
@@ -138,7 +138,8 @@ def _get_single_files(
 ) -> Iterable[FileParser]:
     for f in fp:
         if f.glob_pattern != "":
-            files = [FileParser(x) for x in get_glob(f.raw_path)]
+            fs, _ = url_to_fs(f.uri)
+            files = [FileParser(fs.unstrip_protocol(x)) for x in fs.glob(f.raw_path)]
             yield from _get_single_files(files, fs)
         else:
             yield f
@@ -179,10 +180,12 @@ def _save_csv(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
 
 def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
     def load_dir() -> pd.DataFrame:
-        fs, _ = url_to_fs(path)
-        return pd.concat(
-            [pd.read_csv(x, **kwargs) for x in fs.glob(join(path, "*.csv"))]
-        )
+        fs, _path = url_to_fs(path)
+        dfs: List[pd.DataFrame] = []
+        for _p in fs.glob(fs.sep.join([_path, "*.csv"])):  # type: ignore
+            with fs.open(_p, "r") as f:
+                dfs.append(pd.read_csv(f, **kwargs))
+        return pd.concat(dfs)
 
     try:
         return pd.read_csv(path, **kwargs)
@@ -241,11 +244,19 @@ def _save_json(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
 
 def _safe_load_json(path: str, **kwargs: Any) -> pd.DataFrame:
     kw = {"orient": "records", "lines": True, **kwargs}
+
+    def load_dir() -> pd.DataFrame:
+        fs, _path = url_to_fs(path)
+        dfs: List[pd.DataFrame] = []
+        for _p in fs.glob(fs.sep.join([_path, "*.json"])):  # type: ignore
+            with fs.open(_p, "r") as f:
+                dfs.append(pd.read_json(f, **kw))
+        return pd.concat(dfs)
+
     try:
         return pd.read_json(path, **kw)
     except (IsADirectoryError, PermissionError):
-        fs, _ = url_to_fs(path)
-        return pd.concat([pd.read_json(x, **kw) for x in fs.glob(join(path, "*.json"))])
+        return load_dir()
 
 
 def _load_json(
