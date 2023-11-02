@@ -5,9 +5,8 @@ from dask import dataframe as dd
 from fsspec import AbstractFileSystem
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
-
 from triad.utils.assertion import assert_or_throw
-from triad.utils.io import join, url_to_fs, makedirs
+from triad.utils.io import join, makedirs, url_to_fs
 
 from fugue._utils.io import FileParser, _get_single_files
 from fugue_dask.dataframe import DaskDataFrame
