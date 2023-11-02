@@ -14,11 +14,10 @@ from fugue.dataframe.utils import _df_eq as df_eq
 @pytest.mark.skipif(sys.platform.startswith("win"), reason="not a test for windows")
 def test_file_parser_linux():
     f = FileParser("/a/b/c.parquet")
-    assert "/a/b/c.parquet" == f.uri
-    assert "/a/b/c.parquet" == f.uri_with_glob
+    assert "file:///a/b/c.parquet" == f.path
+    assert not f.has_glob
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "" == f.glob_pattern
     assert "file:///a/b" == f.parent
 
 
@@ -27,59 +26,54 @@ def test_file_parser_linux():
 )
 def test_file_parser_win():
     f = FileParser("c:\\a\\c.parquet")
-    assert "c:\\a\\c.parquet" == f.uri
-    assert "c:\\a\\c.parquet" == f.uri_with_glob
+    assert "file://c:/a/c.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "" == f.glob_pattern
-    assert "c:\\a" == f.parent
+    assert not f.has_glob
+    assert "file://c:/a" == f.parent
 
     f = FileParser("c:\\a\\*.parquet")
-    assert "c:\\a" == f.uri
-    assert "c:\\a\\*.parquet" == f.uri_with_glob
+    assert "file://c:/a" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "*.parquet" == f.glob_pattern
-    assert "c:\\" == f.parent
+    assert f.has_glob
+    assert "file://c:" == f.parent
 
 
 def test_file_parser():
     f = FileParser("c.parquet")
-    assert "c.parquet" == f.uri
-    assert "c.parquet" == f.uri_with_glob
+    assert "c.parquet" == f.raw_path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "" == f.glob_pattern
-    #assert "." == f.parent
+    # assert "." == f.parent
 
-    f = FileParser("memory:///c.parquet")
-    assert "memory:///c.parquet" == f.uri
-    assert "memory:///c.parquet" == f.uri_with_glob
+    f = FileParser("memory://c.parquet")
+    assert "memory://c.parquet" == f.raw_path
+    assert "memory:///c.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "" == f.glob_pattern
     assert "memory:///" == f.parent
 
     for k, v in _FORMAT_MAP.items():
         f = FileParser(f"s3://a/b/c{k}")
-        assert f"s3://a/b/c{k}" == f.uri
+        assert f"s3://a/b/c{k}" == f.raw_path
         assert k == f.suffix
         assert v == f.file_format
         assert "s3://a/b" == f.parent
 
     f = FileParser("s3://a/b/c.test.parquet")
-    assert "s3://a/b/c.test.parquet" == f.uri
+    assert "s3://a/b/c.test.parquet" == f.raw_path
     assert ".test.parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "s3://a/b" == f.parent
 
     f = FileParser("s3://a/b/c.ppp.gz", "csv")
-    assert "s3://a/b/c.ppp.gz" == f.uri
+    assert "s3://a/b/c.ppp.gz" == f.raw_path
     assert ".ppp.gz" == f.suffix
     assert "csv" == f.file_format
 
     f = FileParser("s3://a/b/c", "csv")
-    assert "s3://a/b/c" == f.uri
+    assert "s3://a/b/c" == f.raw_path
     assert "" == f.suffix
     assert "csv" == f.file_format
 
@@ -91,42 +85,39 @@ def test_file_parser():
 @pytest.mark.skipif(sys.platform.startswith("win"), reason="not a test for windows")
 def test_file_parser_glob_linux():
     f = FileParser("/a/b/*.parquet")
-    assert "/a/b" == f.uri
+    assert "file:///a/b/*.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "*.parquet" == f.glob_pattern
-    assert "/a/b/*.parquet" == f.uri_with_glob
+    assert f.has_glob
 
     f = FileParser("/a/b/*123.parquet")
-    assert "/a/b" == f.uri
+    assert "file:///a/b/*123.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "*123.parquet" == f.glob_pattern
-    assert "/a/b/*123.parquet" == f.uri_with_glob
+    assert f.has_glob
 
 
 def test_file_parser_glob():
     f = FileParser("s3://a/b/*.parquet")
-    assert "s3://a/b" == f.uri
+    assert "s3://a/b/*.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "*.parquet" == f.glob_pattern
-    assert "s3://a/b/*.parquet" == f.uri_with_glob
+    assert f.has_glob
 
-    ff = FileParser("s3://a/b", "parquet").with_glob("*.csv", "csv")
-    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    ff = FileParser("s3://a/b", "parquet").join("*.csv", "csv")
+    assert "s3://a/b/*.csv" == ff.path
     assert "csv" == ff.file_format
-    ff = FileParser("s3://a/b/", "csv").with_glob("*.csv")
-    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    ff = FileParser("s3://a/b/", "csv").join("*.csv")
+    assert "s3://a/b/*.csv" == ff.path
     assert "csv" == ff.file_format
-    ff = FileParser("s3://a/b/*.parquet").with_glob("*.csv")
-    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    ff = FileParser("s3://a/b/*.parquet").join("*.csv")
+    assert "s3://a/b/*.csv" == ff.path
     assert "csv" == ff.file_format
-    ff = FileParser("s3://a/b/*.parquet", "parquet").with_glob("*.csv")
-    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    ff = FileParser("s3://a/b/*.parquet", "parquet").join("*.csv")
+    assert "s3://a/b/*.csv" == ff.path
     assert "parquet" == ff.file_format
-    ff = FileParser("s3://a/b/*.parquet", "parquet").with_glob("*.csv", "csv")
-    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    ff = FileParser("s3://a/b/*.parquet", "parquet").join("*.csv", "csv")
+    assert "s3://a/b/*.csv" == ff.path
     assert "csv" == ff.file_format
 
 

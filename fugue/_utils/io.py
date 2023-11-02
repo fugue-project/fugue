@@ -1,10 +1,8 @@
-import os
 import pathlib
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import pandas as pd
 from fsspec import AbstractFileSystem
-from fsspec.core import split_protocol
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
@@ -16,25 +14,11 @@ from fugue.dataframe import LocalBoundedDataFrame, LocalDataFrame, PandasDataFra
 
 class FileParser(object):
     def __init__(self, path: str, format_hint: Optional[str] = None):
-        last = len(path)
-        has_glob = False
         self._orig_format_hint = format_hint
-        p, _ = split_protocol(path)
-        sep = os.path.sep if p is None else "/"
-        for i in range(len(path)):
-            if path[i] == sep:
-                last = i
-            if path[i] in ["*", "?"]:
-                has_glob = True
-                break
-        if not has_glob:
-            self._uri = path
-            self._glob_pattern = ""
-            self._raw_path = path
-        else:
-            self._uri = path[:last]
-            self._glob_pattern = path[last + 1 :]
-            self._raw_path = path
+        self._has_glob = "*" in path or "?" in path
+        self._raw_path = path
+        self._fs, self._fs_path = url_to_fs(path)
+        self._path = self._fs.unstrip_protocol(self._fs_path)
 
         if format_hint is None or format_hint == "":
             for k, v in _FORMAT_MAP.items():
@@ -50,33 +34,27 @@ class FileParser(object):
             self._format = format_hint
 
     def assert_no_glob(self) -> "FileParser":
-        assert_or_throw(self.glob_pattern == "", f"{self.raw_path} has glob pattern")
+        assert_or_throw(not self.has_glob, f"{self.raw_path} has glob pattern")
         return self
 
-    def with_glob(self, glob: str, format_hint: Optional[str] = None) -> "FileParser":
-        uri = self.uri
-        if glob != "":
-            uri = join(uri, glob)
-        return FileParser(uri, format_hint or self._orig_format_hint)
-
     @property
-    def glob_pattern(self) -> str:
-        return self._glob_pattern
+    def has_glob(self):
+        return self._has_glob
 
-    @property
-    def uri(self) -> str:
-        return self._uri
-
-    @property
-    def uri_with_glob(self) -> str:
-        if self.glob_pattern == "":
-            return self.uri
-        return join(self.uri, self.glob_pattern)
+    def join(self, path: str, format_hint: Optional[str] = None) -> "FileParser":
+        if not self.has_glob:
+            _path = join(self.path, path)
+        else:
+            _path = join(self.parent, path)
+        return FileParser(_path, format_hint or self._orig_format_hint)
 
     @property
     def parent(self) -> str:
-        fs, _path = url_to_fs(self.uri)
-        return fs.unstrip_protocol(fs._parent(_path))
+        return self._fs.unstrip_protocol(self._fs._parent(self._fs_path))
+
+    @property
+    def path(self) -> str:
+        return self._path
 
     @property
     def raw_path(self) -> str:
@@ -89,6 +67,17 @@ class FileParser(object):
     @property
     def file_format(self) -> str:
         return self._format
+
+    def find_all(self) -> Iterable["FileParser"]:
+        if self.has_glob:
+            for x in self._fs.glob(self._fs_path):
+                yield FileParser(self._fs.unstrip_protocol(x))
+        else:
+            yield self
+
+    def open(self, *args: Any, **kwargs: Any) -> Any:
+        self.assert_no_glob()
+        return self._fs.open(self._fs_path, *args, **kwargs)
 
 
 def load_df(
@@ -137,19 +126,14 @@ def _get_single_files(
     fp: Iterable[FileParser], fs: Optional[AbstractFileSystem]
 ) -> Iterable[FileParser]:
     for f in fp:
-        if f.glob_pattern != "":
-            fs, _ = url_to_fs(f.uri)
-            files = [FileParser(fs.unstrip_protocol(x)) for x in fs.glob(f.raw_path)]
-            yield from _get_single_files(files, fs)
-        else:
-            yield f
+        yield from f.find_all()
 
 
 def _save_parquet(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
     PD_UTILS.to_parquet_friendly(
         df.as_pandas(), partition_cols=kwargs.get("partition_cols", [])
     ).to_parquet(
-        p.uri,
+        p.assert_no_glob().path,
         **{
             "engine": "pyarrow",
             "schema": df.schema.pa_schema,
@@ -162,33 +146,36 @@ def _load_parquet(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[pd.DataFrame, Any]:
     if columns is None:
-        pdf = pd.read_parquet(p.uri, **{"engine": "pyarrow", **kwargs})
+        pdf = pd.read_parquet(p.path, **{"engine": "pyarrow", **kwargs})
         return pdf, None
     if isinstance(columns, list):  # column names
-        pdf = pd.read_parquet(p.uri, columns=columns, **{"engine": "pyarrow", **kwargs})
+        pdf = pd.read_parquet(
+            p.path, columns=columns, **{"engine": "pyarrow", **kwargs}
+        )
         return pdf, None
     schema = Schema(columns)
     pdf = pd.read_parquet(
-        p.uri, columns=schema.names, **{"engine": "pyarrow", **kwargs}
+        p.path, columns=schema.names, **{"engine": "pyarrow", **kwargs}
     )
     return pdf, schema
 
 
 def _save_csv(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
-    df.as_pandas().to_csv(p.uri, **{"index": False, "header": False, **kwargs})
+    with p.open("w") as f:
+        df.as_pandas().to_csv(f, **{"index": False, "header": False, **kwargs})
 
 
-def _safe_load_csv(path: str, **kwargs: Any) -> pd.DataFrame:
+def _safe_load_csv(p: FileParser, **kwargs: Any) -> pd.DataFrame:
     def load_dir() -> pd.DataFrame:
-        fs, _path = url_to_fs(path)
         dfs: List[pd.DataFrame] = []
-        for _p in fs.glob(fs.sep.join([_path, "*.csv"])):  # type: ignore
-            with fs.open(_p, "r") as f:
+        for _p in p.join("*.csv").find_all():  # type: ignore
+            with _p.open("r") as f:
                 dfs.append(pd.read_csv(f, **kwargs))
         return pd.concat(dfs)
 
     try:
-        return pd.read_csv(path, **kwargs)
+        with p.open("r") as f:
+            return pd.read_csv(f, **kwargs)
     except IsADirectoryError:
         return load_dir()
     except pd.errors.ParserError:  # pragma: no cover
@@ -214,7 +201,7 @@ def _load_csv(  # noqa: C901
         header = kw["header"]
         del kw["header"]
     if str(header) in ["True", "0"]:
-        pdf = _safe_load_csv(p.uri, **{"index_col": False, "header": 0, **kw})
+        pdf = _safe_load_csv(p, **{"index_col": False, "header": 0, **kw})
         if columns is None:
             return pdf, None
         if isinstance(columns, list):  # column names
@@ -226,12 +213,14 @@ def _load_csv(  # noqa: C901
             raise ValueError("columns must be set if without header")
         if isinstance(columns, list):  # column names
             pdf = _safe_load_csv(
-                p.uri, **{"index_col": False, "header": None, "names": columns, **kw}
+                p,
+                **{"index_col": False, "header": None, "names": columns, **kw},
             )
             return pdf, None
         schema = Schema(columns)
         pdf = _safe_load_csv(
-            p.uri, **{"index_col": False, "header": None, "names": schema.names, **kw}
+            p,
+            **{"index_col": False, "header": None, "names": schema.names, **kw},
         )
         return pdf, schema
     else:
@@ -239,22 +228,23 @@ def _load_csv(  # noqa: C901
 
 
 def _save_json(df: LocalDataFrame, p: FileParser, **kwargs: Any) -> None:
-    df.as_pandas().to_json(p.uri, **{"orient": "records", "lines": True, **kwargs})
+    with p.open("w") as f:
+        df.as_pandas().to_json(f, **{"orient": "records", "lines": True, **kwargs})
 
 
-def _safe_load_json(path: str, **kwargs: Any) -> pd.DataFrame:
+def _safe_load_json(p: FileParser, **kwargs: Any) -> pd.DataFrame:
     kw = {"orient": "records", "lines": True, **kwargs}
 
     def load_dir() -> pd.DataFrame:
-        fs, _path = url_to_fs(path)
         dfs: List[pd.DataFrame] = []
-        for _p in fs.glob(fs.sep.join([_path, "*.json"])):  # type: ignore
-            with fs.open(_p, "r") as f:
+        for _p in p.join("*.json").find_all():  # type: ignore
+            with _p.open("r") as f:
                 dfs.append(pd.read_json(f, **kw))
         return pd.concat(dfs)
 
     try:
-        return pd.read_json(path, **kw)
+        with p.open("r") as f:
+            return pd.read_json(f, **kw)
     except (IsADirectoryError, PermissionError):
         return load_dir()
 
@@ -262,7 +252,7 @@ def _safe_load_json(path: str, **kwargs: Any) -> pd.DataFrame:
 def _load_json(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[pd.DataFrame, Any]:
-    pdf = _safe_load_json(p.uri, **kwargs).reset_index(drop=True)
+    pdf = _safe_load_json(p, **kwargs).reset_index(drop=True)
     if columns is None:
         return pdf, None
     if isinstance(columns, list):  # column names
