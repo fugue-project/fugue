@@ -14,7 +14,7 @@ from fugue.dataframe.utils import _df_eq as df_eq
 @pytest.mark.skipif(sys.platform.startswith("win"), reason="not a test for windows")
 def test_file_parser_linux():
     f = FileParser("/a/b/c.parquet")
-    assert "file:///a/b/c.parquet" == f.path
+    assert "/a/b/c.parquet" == f.path
     assert not f.has_glob
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
@@ -26,18 +26,18 @@ def test_file_parser_linux():
 )
 def test_file_parser_win():
     f = FileParser("c:\\a\\c.parquet")
-    assert "file://c:/a/c.parquet" == f.path
+    assert "c:\\a\\c.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert not f.has_glob
     assert "file://c:/a" == f.parent
 
     f = FileParser("c:\\a\\*.parquet")
-    assert "file://c:/a" == f.path
+    assert "c:\\a\\*.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert f.has_glob
-    assert "file://c:" == f.parent
+    assert "file://c:/a" == f.parent
 
 
 def test_file_parser():
@@ -85,13 +85,13 @@ def test_file_parser():
 @pytest.mark.skipif(sys.platform.startswith("win"), reason="not a test for windows")
 def test_file_parser_glob_linux():
     f = FileParser("/a/b/*.parquet")
-    assert "file:///a/b/*.parquet" == f.path
+    assert "/a/b/*.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert f.has_glob
 
     f = FileParser("/a/b/*123.parquet")
-    assert "file:///a/b/*123.parquet" == f.path
+    assert "/a/b/*123.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert f.has_glob

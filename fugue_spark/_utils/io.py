@@ -39,7 +39,7 @@ class SparkIO(object):
             len(fmts) == 1, NotImplementedError("can't support multiple formats")
         )
         fmt = fmts[0]
-        files = [f.uri for f in fp]
+        files = [f.path for f in fp]
         return self._loads[fmt](files, columns, **kwargs)
 
     def save_df(

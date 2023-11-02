@@ -50,7 +50,7 @@ class RayIO(object):
             len(fmts) == 1, NotImplementedError("can't support multiple formats")
         )
         fmt = fmts[0]
-        files = [f.uri for f in fp]
+        files = [f.path for f in fp]
         return self._loads[fmt](files, columns, **kwargs)
 
     def save_df(
@@ -74,7 +74,7 @@ class RayIO(object):
         if not force_single:
             df = self._prepartition(df, partition_spec=partition_spec)
 
-            self._saves[p.file_format](df=df, uri=p.uri, **kwargs)
+            self._saves[p.file_format](df=df, uri=p.path, **kwargs)
         else:
             ldf = df.as_local()
             makedirs(os.path.dirname(uri), exist_ok=True)

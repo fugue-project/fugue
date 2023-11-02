@@ -1,8 +1,10 @@
+import os
 import pathlib
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import pandas as pd
 from fsspec import AbstractFileSystem
+from fsspec.implementations.local import LocalFileSystem
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
@@ -18,7 +20,10 @@ class FileParser(object):
         self._has_glob = "*" in path or "?" in path
         self._raw_path = path
         self._fs, self._fs_path = url_to_fs(path)
-        self._path = self._fs.unstrip_protocol(self._fs_path)
+        if not self.is_local:
+            self._path = self._fs.unstrip_protocol(self._fs_path)
+        else:
+            self._path = os.path.abspath(self._fs._strip_protocol(path))
 
         if format_hint is None or format_hint == "":
             for k, v in _FORMAT_MAP.items():
@@ -40,6 +45,10 @@ class FileParser(object):
     @property
     def has_glob(self):
         return self._has_glob
+
+    @property
+    def is_local(self):
+        return isinstance(self._fs, LocalFileSystem)
 
     def join(self, path: str, format_hint: Optional[str] = None) -> "FileParser":
         if not self.has_glob:

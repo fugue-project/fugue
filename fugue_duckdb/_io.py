@@ -18,10 +18,10 @@ from fugue_duckdb._utils import (
 from fugue_duckdb.dataframe import DuckDataFrame
 
 
-def _get_single_files(fp: Iterable[FileParser], fmt: str) -> Iterable[FileParser]:
+def _get_files(fp: Iterable[FileParser], fmt: str) -> Iterable[FileParser]:
     for f in fp:
-        if f.glob_pattern == "" and isdir(f.uri):
-            yield f.with_glob("*." + fmt, fmt)
+        if not f.has_glob and isdir(f.path):
+            yield from f.join("*." + fmt, fmt).find_all()
         else:
             yield f
 
@@ -48,7 +48,7 @@ class DuckDBIO:
         if fp[0].file_format not in self._format_load:
             return load_df(uri, format_hint=format_hint, columns=columns, **kwargs)
         dfs: List[DuckDataFrame] = []
-        for f in _get_single_files(fp, fp[0].file_format):
+        for f in _get_files(fp, fp[0].file_format):
             df = self._format_load[f.file_format](f, columns, **kwargs)
             dfs.append(df)
         rel = dfs[0].native
@@ -86,6 +86,7 @@ class DuckDBIO:
         self._format_save[p.file_format](df, p, **kwargs)
 
     def _save_csv(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
+        p.assert_no_glob()
         dn = TempTableName()
         df.native.create_view(dn.key)
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
@@ -94,7 +95,7 @@ class DuckDBIO:
         for k, v in kw.items():
             params.append(f"{k.upper()} " + encode_value_to_expr(v))
         pm = ", ".join(params)
-        query = f"COPY {dn.key} TO {encode_value_to_expr(p.uri)} WITH ({pm})"
+        query = f"COPY {dn.key} TO {encode_value_to_expr(p.path)} WITH ({pm})"
         self._con.execute(query)
 
     def _load_csv(  # noqa: C901
@@ -108,7 +109,7 @@ class DuckDBIO:
             ValueError("when csv has no header, columns must be specified"),
         )
         kw.pop("auto_detect", None)
-        params: List[str] = [encode_value_to_expr(p.uri_with_glob)]
+        params: List[str] = [encode_value_to_expr(p.path)]
         kw["header"] = 1 if header else 0
         kw["auto_detect"] = 1 if infer_schema else 0
         if infer_schema:
@@ -171,6 +172,7 @@ class DuckDBIO:
                 return DuckDataFrame(self._con.from_query(query))
 
     def _save_parquet(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
+        p.assert_no_glob()
         dn = TempTableName()
         df.native.create_view(dn.key)
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
@@ -179,7 +181,7 @@ class DuckDBIO:
         for k, v in kw.items():
             params.append(f"{k.upper()} " + encode_value_to_expr(v))
         pm = ", ".join(params)
-        query = f"COPY {dn.key} TO {encode_value_to_expr(p.uri)}"
+        query = f"COPY {dn.key} TO {encode_value_to_expr(p.path)}"
         if len(params) > 0:
             query += f" WITH ({pm})"
         self._con.execute(query)
@@ -188,7 +190,7 @@ class DuckDBIO:
         self, p: FileParser, columns: Any = None, **kwargs: Any
     ) -> DuckDataFrame:
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
-        params: List[str] = [encode_value_to_expr(p.uri_with_glob)]
+        params: List[str] = [encode_value_to_expr(p.path)]
         if isinstance(columns, list):
             cols = ", ".join(encode_column_names(columns))
         else:
