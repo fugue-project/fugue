@@ -2,6 +2,10 @@
 
 ## 0.8.7
 
+-   [488](https://github.com/fugue-project/fugue/issues/488) Migrate from fs to fsspec
+-   [521](https://github.com/fugue-project/fugue/issues/521) Add `as_dicts` to Fugue API
+-   [516](https://github.com/fugue-project/fugue/issues/516) Use `_collect_as_arrow` for Spark `as_arrow``
+-   [520](https://github.com/fugue-project/fugue/pull/520) Add Python 3.10 to Windows Tests
 -   [506](https://github.com/fugue-project/fugue/issues/506) Adopt pandas `ExtensionDType`
 -   [504](https://github.com/fugue-project/fugue/issues/504) Create Fugue pytest fixtures
 -   [503](https://github.com/fugue-project/fugue/issues/503) Deprecate python 3.7 support
