@@ -77,6 +77,9 @@ class FileParser(object):
     def file_format(self) -> str:
         return self._format
 
+    def make_parent_dirs(self) -> None:
+        self._fs.makedirs(self._fs._parent(self._fs_path), exist_ok=True)
+
     def find_all(self) -> Iterable["FileParser"]:
         if self.has_glob:
             for x in self._fs.glob(self._fs_path):

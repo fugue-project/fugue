@@ -81,8 +81,7 @@ class DuckDBIO:
                 rm(uri, recursive=True)
             except Exception:  # pragma: no cover
                 pass
-        if not exists(p.parent):
-            makedirs(p.parent, exist_ok=True)
+        p.make_parent_dirs()
         self._format_save[p.file_format](df, p, **kwargs)
 
     def _save_csv(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):

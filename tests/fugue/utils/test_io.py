@@ -3,7 +3,7 @@ import sys
 
 import pytest
 from pytest import raises
-from triad.utils.io import makedirs, read_text, touch
+from triad.utils.io import makedirs, read_text, touch, exists
 
 from fugue._utils.io import _FORMAT_MAP, FileParser, load_df, save_df
 from fugue.dataframe.array_dataframe import ArrayDataFrame
@@ -40,12 +40,20 @@ def test_file_parser_win():
     assert "file://c:/a" == f.parent
 
 
-def test_file_parser():
+def test_file_parser(tmpdir):
     f = FileParser("c.parquet")
     assert "c.parquet" == f.raw_path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     # assert "." == f.parent
+
+    tp = os.path.join(str(tmpdir), "a", "b")
+    f = FileParser(os.path.join(tp, "c.parquet"))
+    assert not exists(tp)
+    f.make_parent_dirs()
+    assert exists(tp)
+    f.make_parent_dirs()
+    assert exists(tp)
 
     f = FileParser("memory://c.parquet")
     assert "memory://c.parquet" == f.raw_path
