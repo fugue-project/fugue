@@ -1,12 +1,13 @@
 import logging
 import os
 from typing import Any, Callable, Dict, List, Optional, Type, Union
+
 import numpy as np
 import pandas as pd
 from triad import Schema
 from triad.collections.dict import IndexedOrderedDict
-from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
+from triad.utils.io import makedirs
 from triad.utils.pandas_like import PandasUtils
 
 from fugue._utils.io import load_df, save_df
@@ -179,7 +180,6 @@ class NativeExecutionEngine(ExecutionEngine):
 
     def __init__(self, conf: Any = None):
         super().__init__(conf)
-        self._fs = FileSystem()
         self._log = logging.getLogger()
 
     def __repr__(self) -> str:
@@ -188,10 +188,6 @@ class NativeExecutionEngine(ExecutionEngine):
     @property
     def log(self) -> logging.Logger:
         return self._log
-
-    @property
-    def fs(self) -> FileSystem:
-        return self._fs
 
     @property
     def is_distributed(self) -> bool:
@@ -395,9 +391,7 @@ class NativeExecutionEngine(ExecutionEngine):
         **kwargs: Any,
     ) -> LocalBoundedDataFrame:
         return self.to_df(
-            load_df(
-                path, format_hint=format_hint, columns=columns, fs=self.fs, **kwargs
-            )
+            load_df(path, format_hint=format_hint, columns=columns, **kwargs)
         )
 
     def save_df(
@@ -413,9 +407,9 @@ class NativeExecutionEngine(ExecutionEngine):
         partition_spec = partition_spec or PartitionSpec()
         if not force_single and not partition_spec.empty:
             kwargs["partition_cols"] = partition_spec.partition_by
-        self.fs.makedirs(os.path.dirname(path), recreate=True)
+        makedirs(os.path.dirname(path), exist_ok=True)
         df = self.to_df(df)
-        save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
+        save_df(df, path, format_hint=format_hint, mode=mode, **kwargs)
 
 
 @fugue_annotated_param(NativeExecutionEngine)

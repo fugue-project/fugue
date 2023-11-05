@@ -4,23 +4,24 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 import pyarrow as pa
 import ray.data as rd
-from fugue import ExecutionEngine
-from fugue._utils.io import FileParser, save_df
-from fugue.collections.partition import PartitionSpec
-from fugue.dataframe import DataFrame
-from fugue_ray.dataframe import RayDataFrame
 from pyarrow import csv as pacsv
 from pyarrow import json as pajson
 from ray.data.datasource import FileExtensionFilter
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
+from triad.utils.io import exists, makedirs, rm
+
+from fugue import ExecutionEngine
+from fugue._utils.io import FileParser, save_df
+from fugue.collections.partition import PartitionSpec
+from fugue.dataframe import DataFrame
+from fugue_ray.dataframe import RayDataFrame
 
 
 class RayIO(object):
     def __init__(self, engine: ExecutionEngine):
         self._engine = engine
-        self._fs = engine.fs
         self._logger = engine.log
         self._loads: Dict[str, Callable[..., DataFrame]] = {
             "csv": self._load_csv,
@@ -49,7 +50,7 @@ class RayIO(object):
             len(fmts) == 1, NotImplementedError("can't support multiple formats")
         )
         fmt = fmts[0]
-        files = [f.uri for f in fp]
+        files = [f.path for f in fp]
         return self._loads[fmt](files, columns, **kwargs)
 
     def save_df(
@@ -63,24 +64,21 @@ class RayIO(object):
         **kwargs: Any,
     ) -> None:
         partition_spec = partition_spec or PartitionSpec()
-        if self._fs.exists(uri):
+        if exists(uri):
             assert_or_throw(mode == "overwrite", FileExistsError(uri))
             try:
-                self._fs.remove(uri)
-            except Exception:
-                try:
-                    self._fs.removetree(uri)
-                except Exception:  # pragma: no cover
-                    pass
+                rm(uri, recursive=True)
+            except Exception:  # pragma: no cover
+                pass
         p = FileParser(uri, format_hint)
         if not force_single:
             df = self._prepartition(df, partition_spec=partition_spec)
 
-            self._saves[p.file_format](df=df, uri=p.uri, **kwargs)
+            self._saves[p.file_format](df=df, uri=p.path, **kwargs)
         else:
             ldf = df.as_local()
-            self._fs.makedirs(os.path.dirname(uri), recreate=True)
-            save_df(ldf, uri, format_hint=format_hint, mode=mode, fs=self._fs, **kwargs)
+            makedirs(os.path.dirname(uri), exist_ok=True)
+            save_df(ldf, uri, format_hint=format_hint, mode=mode, **kwargs)
 
     def _save_parquet(
         self,

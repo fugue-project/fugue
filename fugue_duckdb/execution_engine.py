@@ -4,7 +4,6 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 import duckdb
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from triad import SerializableRLock
-from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 from triad.utils.schema import quote_name
 
@@ -194,10 +193,6 @@ class DuckExecutionEngine(ExecutionEngine):
     @property
     def log(self) -> logging.Logger:
         return self._native_engine.log
-
-    @property
-    def fs(self) -> FileSystem:
-        return self._native_engine.fs
 
     def create_default_sql_engine(self) -> SQLEngine:
         return DuckDBEngine(self)
@@ -488,7 +483,7 @@ class DuckExecutionEngine(ExecutionEngine):
         columns: Any = None,
         **kwargs: Any,
     ) -> LocalBoundedDataFrame:
-        dio = DuckDBIO(self.fs, self.connection)
+        dio = DuckDBIO(self.connection)
         return dio.load_df(path, format_hint, columns, **kwargs)
 
     def save_df(
@@ -504,7 +499,7 @@ class DuckExecutionEngine(ExecutionEngine):
         partition_spec = partition_spec or PartitionSpec()
         if not partition_spec.empty and not force_single:
             kwargs["partition_cols"] = partition_spec.partition_by
-        dio = DuckDBIO(self.fs, self.connection)
+        dio = DuckDBIO(self.connection)
         dio.save_df(_to_duck_df(self, df), path, format_hint, mode, **kwargs)
 
     def convert_yield_dataframe(self, df: DataFrame, as_local: bool) -> DataFrame:

@@ -1,8 +1,7 @@
 import os
 
 from pytest import mark, raises
-from triad.collections.fs import FileSystem
-from triad.exceptions import InvalidOperationError
+from triad.utils.io import makedirs, touch
 
 from fugue._utils.io import save_df as pd_save_df
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -30,14 +29,13 @@ def test_parquet_io(tmpdir, fugue_dask_client):
     raises(Exception, lambda: load_df(path, columns="bb:str,a:int"))
 
     # load directory
-    fs = FileSystem()
     for name in ["folder.parquet", "folder"]:
         folder = os.path.join(tmpdir, name)
-        fs.makedirs(folder)
+        makedirs(folder)
         f0 = os.path.join(folder, "_SUCCESS")
         f1 = os.path.join(folder, "1.parquet")
         f2 = os.path.join(folder, "3.parquet")
-        fs.touch(f0)
+        touch(f0)
         pd_save_df(df1, f1)
         pd_save_df(df1, f2)
 

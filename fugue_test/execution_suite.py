@@ -15,8 +15,8 @@ from unittest import TestCase
 import pandas as pd
 import pytest
 from pytest import raises
-from triad.collections.fs import FileSystem
 from triad.exceptions import InvalidOperationError
+from triad.utils.io import isfile, makedirs, touch
 
 import fugue.api as fa
 import fugue.column.functions as ff
@@ -62,7 +62,6 @@ class ExecutionEngineTests(object):
         def test_init(self):
             print(self.engine)
             assert self.engine.log is not None
-            assert self.engine.fs is not None
             assert copy.copy(self.engine) is self.engine
             assert copy.deepcopy(self.engine) is self.engine
 
@@ -985,17 +984,16 @@ class ExecutionEngineTests(object):
             df_eq(res, [[1, "z1"]], "a:int,v:str", throw=True)
 
         @pytest.fixture(autouse=True)
-        def init_tmpdir(self, tmpdir):
+        def init_tmpdir(self, tmpdir, tmp_mem_dir):
             self.tmpdir = tmpdir
 
         def test_save_single_and_load_parquet(self):
-            e = self.engine
             b = ArrayDataFrame([[6, 1], [2, 7]], "c:int,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
-            e.fs.makedirs(path, recreate=True)
+            makedirs(path, exist_ok=True)
             # over write folder with single file
             fa.save(b, path, format_hint="parquet", force_single=True)
-            assert e.fs.isfile(path)
+            assert isfile(path)
             c = fa.load(path, format_hint="parquet", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2]], "a:long,c:int", throw=True)
 
@@ -1019,7 +1017,7 @@ class ExecutionEngineTests(object):
             path = os.path.join(self.tmpdir, "a", "b")
             fa.save(a, os.path.join(path, "a.parquet"), engine=native)
             fa.save(b, os.path.join(path, "b.parquet"), engine=native)
-            FileSystem().touch(os.path.join(path, "_SUCCESS"))
+            touch(os.path.join(path, "_SUCCESS"))
             c = fa.load(path, format_hint="parquet", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:int", throw=True)
 
@@ -1038,13 +1036,12 @@ class ExecutionEngineTests(object):
             df_eq(c, [[1, 6], [7, 2], [8, 4]], "a:long,c:int", throw=True)
 
         def test_save_single_and_load_csv(self):
-            e = self.engine
             b = ArrayDataFrame([[6.1, 1.1], [2.1, 7.1]], "c:double,a:double")
             path = os.path.join(self.tmpdir, "a", "b")
-            e.fs.makedirs(path, recreate=True)
+            makedirs(path, exist_ok=True)
             # over write folder with single file
             fa.save(b, path, format_hint="csv", header=True, force_single=True)
-            assert e.fs.isfile(path)
+            assert isfile(path)
             c = fa.load(
                 path, format_hint="csv", header=True, infer_schema=False, as_fugue=True
             )
@@ -1099,13 +1096,12 @@ class ExecutionEngineTests(object):
             df_eq(c, [["1.1", "60.1"], ["7.1", "20.1"]], "a:str,c:str", throw=True)
 
         def test_save_single_and_load_csv_no_header(self):
-            e = self.engine
             b = ArrayDataFrame([[6.1, 1.1], [2.1, 7.1]], "c:double,a:double")
             path = os.path.join(self.tmpdir, "a", "b")
-            e.fs.makedirs(path, recreate=True)
+            makedirs(path, exist_ok=True)
             # over write folder with single file
             fa.save(b, path, format_hint="csv", header=False, force_single=True)
-            assert e.fs.isfile(path)
+            assert isfile(path)
 
             with raises(ValueError):
                 c = fa.load(
@@ -1190,7 +1186,7 @@ class ExecutionEngineTests(object):
                 header=True,
                 engine=native,
             )
-            FileSystem().touch(os.path.join(path, "_SUCCESS"))
+            touch(os.path.join(path, "_SUCCESS"))
             c = fa.load(
                 path,
                 format_hint="csv",
@@ -1204,13 +1200,12 @@ class ExecutionEngineTests(object):
             )
 
         def test_save_single_and_load_json(self):
-            e = self.engine
             b = ArrayDataFrame([[6, 1], [2, 7]], "c:int,a:long")
             path = os.path.join(self.tmpdir, "a", "b")
-            e.fs.makedirs(path, recreate=True)
+            makedirs(path, exist_ok=True)
             # over write folder with single file
             fa.save(b, path, format_hint="json", force_single=True)
-            assert e.fs.isfile(path)
+            assert isfile(path)
             c = fa.load(path, format_hint="json", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2]], "a:long,c:long", throw=True)
 
@@ -1241,7 +1236,7 @@ class ExecutionEngineTests(object):
             path = os.path.join(self.tmpdir, "a", "b")
             fa.save(a, os.path.join(path, "a.json"), format_hint="json", engine=native)
             fa.save(b, os.path.join(path, "b.json"), format_hint="json", engine=native)
-            FileSystem().touch(os.path.join(path, "_SUCCESS"))
+            touch(os.path.join(path, "_SUCCESS"))
             c = fa.load(path, format_hint="json", columns=["a", "c"], as_fugue=True)
             df_eq(c, [[1, 6], [7, 2], [8, 4], [4, 3]], "a:long,c:long", throw=True)
 

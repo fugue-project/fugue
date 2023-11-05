@@ -7,18 +7,17 @@ import pandas as pd
 from distributed import Client
 from triad.collections import Schema
 from triad.collections.dict import IndexedOrderedDict, ParamDict
-from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
 from triad.utils.pandas_like import PandasUtils
 from triad.utils.threading import RunOnce
+from triad.utils.io import makedirs
 from fugue import StructuredRawSQL
 from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
     parse_presort_exp,
 )
-from fugue.exceptions import FugueBug
 from fugue.constants import KEYWORD_PARALLELISM, KEYWORD_ROWCOUNT
 from fugue.dataframe import (
     AnyDataFrame,
@@ -28,6 +27,7 @@ from fugue.dataframe import (
     PandasDataFrame,
 )
 from fugue.dataframe.utils import get_join_schemas
+from fugue.exceptions import FugueBug
 from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngine
 from fugue.execution.native_execution_engine import NativeExecutionEngine
 from fugue_dask._constants import FUGUE_DASK_DEFAULT_CONF
@@ -206,7 +206,6 @@ class DaskExecutionEngine(ExecutionEngine):
         p = ParamDict(FUGUE_DASK_DEFAULT_CONF)
         p.update(ParamDict(conf))
         super().__init__(p)
-        self._fs = FileSystem()
         self._log = logging.getLogger()
         self._client = DASK_UTILS.get_or_create_client(dask_client)
         self._native = NativeExecutionEngine(conf=conf)
@@ -226,10 +225,6 @@ class DaskExecutionEngine(ExecutionEngine):
     @property
     def log(self) -> logging.Logger:
         return self._log
-
-    @property
-    def fs(self) -> FileSystem:
-        return self._fs
 
     def create_default_sql_engine(self) -> SQLEngine:
         return DaskSQLEngine(self)
@@ -527,9 +522,7 @@ class DaskExecutionEngine(ExecutionEngine):
         **kwargs: Any,
     ) -> DaskDataFrame:
         return self.to_df(
-            load_df(
-                path, format_hint=format_hint, columns=columns, fs=self.fs, **kwargs
-            )
+            load_df(path, format_hint=format_hint, columns=columns, **kwargs)
         )
 
     def save_df(
@@ -556,9 +549,9 @@ class DaskExecutionEngine(ExecutionEngine):
         else:
             if not partition_spec.empty:
                 kwargs["partition_on"] = partition_spec.partition_by
-            self.fs.makedirs(os.path.dirname(path), recreate=True)
+            makedirs(os.path.dirname(path), exist_ok=True)
             df = self.to_df(df)
-            save_df(df, path, format_hint=format_hint, mode=mode, fs=self.fs, **kwargs)
+            save_df(df, path, format_hint=format_hint, mode=mode, **kwargs)
 
 
 def to_dask_engine_df(df: Any, schema: Any = None) -> DaskDataFrame:

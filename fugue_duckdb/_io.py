@@ -3,9 +3,9 @@ from typing import Any, Iterable, List, Optional, Union
 
 from duckdb import DuckDBPyConnection
 from triad import ParamDict, Schema
-from triad.collections.fs import FileSystem
-from triad.utils.assertion import assert_or_throw
 
+from triad.utils.assertion import assert_or_throw
+from triad.utils.io import isdir, makedirs, rm, exists
 from fugue._utils.io import FileParser, load_df, save_df
 from fugue.collections.sql import TempTableName
 from fugue.dataframe import ArrowDataFrame, LocalBoundedDataFrame
@@ -18,26 +18,17 @@ from fugue_duckdb._utils import (
 from fugue_duckdb.dataframe import DuckDataFrame
 
 
-def _get_single_files(
-    fp: Iterable[FileParser], fs: FileSystem, fmt: str
-) -> Iterable[FileParser]:
-    def _isdir(d: str) -> bool:
-        try:
-            return fs.isdir(d)
-        except Exception:  # pragma: no cover
-            return False
-
+def _get_files(fp: Iterable[FileParser], fmt: str) -> Iterable[FileParser]:
     for f in fp:
-        if f.glob_pattern == "" and _isdir(f.uri):
-            yield f.with_glob("*." + fmt, fmt)
+        if not f.has_glob and isdir(f.path):
+            yield from f.join("*." + fmt, fmt).find_all()
         else:
             yield f
 
 
 class DuckDBIO:
-    def __init__(self, fs: FileSystem, con: DuckDBPyConnection) -> None:
+    def __init__(self, con: DuckDBPyConnection) -> None:
         self._con = con
-        self._fs = fs
         self._format_load = {"csv": self._load_csv, "parquet": self._load_parquet}
         self._format_save = {"csv": self._save_csv, "parquet": self._save_parquet}
 
@@ -55,11 +46,9 @@ class DuckDBIO:
         else:
             fp = [FileParser(u, format_hint) for u in uri]
         if fp[0].file_format not in self._format_load:
-            return load_df(
-                uri, format_hint=format_hint, columns=columns, fs=self._fs, **kwargs
-            )
+            return load_df(uri, format_hint=format_hint, columns=columns, **kwargs)
         dfs: List[DuckDataFrame] = []
-        for f in _get_single_files(fp, self._fs, fp[0].file_format):
+        for f in _get_files(fp, fp[0].file_format):
             df = self._format_load[f.file_format](f, columns, **kwargs)
             dfs.append(df)
         rel = dfs[0].native
@@ -83,26 +72,20 @@ class DuckDBIO:
         )
         p = FileParser(uri, format_hint).assert_no_glob()
         if (p.file_format not in self._format_save) or ("partition_cols" in kwargs):
-            self._fs.makedirs(os.path.dirname(uri), recreate=True)
+            makedirs(os.path.dirname(uri), exist_ok=True)
             ldf = ArrowDataFrame(df.as_arrow())
-            return save_df(
-                ldf, uri=uri, format_hint=format_hint, mode=mode, fs=self._fs, **kwargs
-            )
-        fs = self._fs
-        if fs.exists(uri):
+            return save_df(ldf, uri=uri, format_hint=format_hint, mode=mode, **kwargs)
+        if exists(uri):
             assert_or_throw(mode == "overwrite", FileExistsError(uri))
             try:
-                fs.remove(uri)
-            except Exception:
-                try:
-                    fs.removetree(uri)
-                except Exception:  # pragma: no cover
-                    pass
-        if not fs.exists(p.parent):
-            fs.makedirs(p.parent, recreate=True)
+                rm(uri, recursive=True)
+            except Exception:  # pragma: no cover
+                pass
+        p.make_parent_dirs()
         self._format_save[p.file_format](df, p, **kwargs)
 
     def _save_csv(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
+        p.assert_no_glob()
         dn = TempTableName()
         df.native.create_view(dn.key)
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
@@ -111,7 +94,7 @@ class DuckDBIO:
         for k, v in kw.items():
             params.append(f"{k.upper()} " + encode_value_to_expr(v))
         pm = ", ".join(params)
-        query = f"COPY {dn.key} TO {encode_value_to_expr(p.uri)} WITH ({pm})"
+        query = f"COPY {dn.key} TO {encode_value_to_expr(p.path)} WITH ({pm})"
         self._con.execute(query)
 
     def _load_csv(  # noqa: C901
@@ -125,7 +108,7 @@ class DuckDBIO:
             ValueError("when csv has no header, columns must be specified"),
         )
         kw.pop("auto_detect", None)
-        params: List[str] = [encode_value_to_expr(p.uri_with_glob)]
+        params: List[str] = [encode_value_to_expr(p.path)]
         kw["header"] = 1 if header else 0
         kw["auto_detect"] = 1 if infer_schema else 0
         if infer_schema:
@@ -188,6 +171,7 @@ class DuckDBIO:
                 return DuckDataFrame(self._con.from_query(query))
 
     def _save_parquet(self, df: DuckDataFrame, p: FileParser, **kwargs: Any):
+        p.assert_no_glob()
         dn = TempTableName()
         df.native.create_view(dn.key)
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
@@ -196,7 +180,7 @@ class DuckDBIO:
         for k, v in kw.items():
             params.append(f"{k.upper()} " + encode_value_to_expr(v))
         pm = ", ".join(params)
-        query = f"COPY {dn.key} TO {encode_value_to_expr(p.uri)}"
+        query = f"COPY {dn.key} TO {encode_value_to_expr(p.path)}"
         if len(params) > 0:
             query += f" WITH ({pm})"
         self._con.execute(query)
@@ -205,7 +189,7 @@ class DuckDBIO:
         self, p: FileParser, columns: Any = None, **kwargs: Any
     ) -> DuckDataFrame:
         kw = ParamDict({k.lower(): v for k, v in kwargs.items()})
-        params: List[str] = [encode_value_to_expr(p.uri_with_glob)]
+        params: List[str] = [encode_value_to_expr(p.path)]
         if isinstance(columns, list):
             cols = ", ".join(encode_column_names(columns))
         else:

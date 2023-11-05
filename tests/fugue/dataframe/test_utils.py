@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 from pytest import raises
-from triad import FileSystem, Schema
+from triad import Schema
 from triad.collections.schema import SchemaError
 from triad.exceptions import InvalidOperationError, NoneArgumentError
 
@@ -112,7 +112,6 @@ def test_serialize_df(tmpdir):
         else:
             df_eq(df_expected, df_actual, throw=True)
 
-    fs = FileSystem()
     assert deserialize_df(serialize_df(None)) is None
     assert_eq(ArrayDataFrame([], "a:int,b:int"))
     assert_eq(ArrayDataFrame([[None, None]], "a:int,b:int"))
@@ -136,8 +135,7 @@ def test_serialize_df(tmpdir):
     path = os.path.join(tmpdir, "1.pkl")
 
     df = ArrayDataFrame([[None, None]], "a:int,b:int")
-    s = serialize_df(df, 0, path, fs)
-    df_eq(df, deserialize_df(s, fs), throw=True)
+    s = serialize_df(df, 0, path)
     df_eq(df, deserialize_df(s), throw=True)
 
     s = serialize_df(df, 0, path)

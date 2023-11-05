@@ -1,13 +1,12 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import fsspec
-import fs as pfs
 import pandas as pd
 from dask import dataframe as dd
+from fsspec import AbstractFileSystem
 from triad.collections.dict import ParamDict
-from triad.collections.fs import FileSystem
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
+from triad.utils.io import join, makedirs, url_to_fs
 
 from fugue._utils.io import FileParser, _get_single_files
 from fugue_dask.dataframe import DaskDataFrame
@@ -19,7 +18,7 @@ def load_df(
     uri: Union[str, List[str]],
     format_hint: Optional[str] = None,
     columns: Any = None,
-    fs: Optional[FileSystem] = None,
+    fs: Optional[AbstractFileSystem] = None,
     **kwargs: Any,
 ) -> DaskDataFrame:
     if isinstance(uri, str):
@@ -39,7 +38,7 @@ def save_df(
     uri: str,
     format_hint: Optional[str] = None,
     mode: str = "overwrite",
-    fs: Optional[FileSystem] = None,
+    fs: Optional[AbstractFileSystem] = None,
     **kwargs: Any,
 ) -> None:
     assert_or_throw(
@@ -48,16 +47,13 @@ def save_df(
     )
     p = FileParser(uri, format_hint).assert_no_glob()
     if fs is None:
-        fs = FileSystem()
+        fs, _ = url_to_fs(uri)
     if fs.exists(uri):
         assert_or_throw(mode == "overwrite", FileExistsError(uri))
         try:
-            fs.remove(uri)
-        except Exception:
-            try:
-                fs.removetree(uri)
-            except Exception:  # pragma: no cover
-                pass
+            fs.rm(uri, recursive=True)
+        except Exception:  # pragma: no cover
+            pass
     _FORMAT_SAVE[p.file_format](df, p, **kwargs)
 
 
@@ -67,7 +63,7 @@ def _save_parquet(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
         "write_index": False,
         **kwargs,
     }
-    DASK_UTILS.to_parquet_friendly(df.native).to_parquet(p.uri, **params)
+    DASK_UTILS.to_parquet_friendly(df.native).to_parquet(p.path, **params)
 
 
 def _load_parquet(
@@ -80,27 +76,26 @@ def _load_parquet(
     if pd.__version__ >= "1.5":
         dtype_backend = "pyarrow"
     if columns is None:
-        pdf = dd.read_parquet(p.uri, dtype_backend=dtype_backend, **params)
+        pdf = dd.read_parquet(p.path, dtype_backend=dtype_backend, **params)
         schema = Schema(pdf.head(1))
         return pdf, schema
     if isinstance(columns, list):  # column names
         pdf = dd.read_parquet(
-            p.uri, columns=columns, dtype_backend=dtype_backend, **params
+            p.path, columns=columns, dtype_backend=dtype_backend, **params
         )
         schema = Schema(pdf.head(1))
         return pdf, schema
     schema = Schema(columns)
     pdf = dd.read_parquet(
-        p.uri, columns=schema.names, dtype_backend=dtype_backend, **params
+        p.path, columns=schema.names, dtype_backend=dtype_backend, **params
     )
     return pdf, schema
 
 
 def _save_csv(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
-    fs, path = fsspec.core.url_to_fs(p.uri)
-    fs.makedirs(path, exist_ok=True)
+    makedirs(p.path, exist_ok=True)
     df.native.to_csv(
-        pfs.path.combine(p.uri, "*.csv"), **{"index": False, "header": False, **kwargs}
+        p.join("*.csv").path, **{"index": False, "header": False, **kwargs}
     )
 
 
@@ -108,7 +103,7 @@ def _safe_load_csv(path: str, **kwargs: Any) -> dd.DataFrame:
     try:
         return dd.read_csv(path, **kwargs)
     except (IsADirectoryError, PermissionError):
-        return dd.read_csv(pfs.path.combine(path, "*.csv"), **kwargs)
+        return dd.read_csv(join(path, "*.csv"), **kwargs)
 
 
 def _load_csv(  # noqa: C901
@@ -127,7 +122,7 @@ def _load_csv(  # noqa: C901
         header = kw["header"]
         del kw["header"]
     if str(header) in ["True", "0"]:
-        pdf = _safe_load_csv(p.uri, **{"header": 0, **kw})
+        pdf = _safe_load_csv(p.path, **{"header": 0, **kw})
         if columns is None:
             return pdf, None
         if isinstance(columns, list):  # column names
@@ -138,34 +133,32 @@ def _load_csv(  # noqa: C901
         if columns is None:
             raise ValueError("columns must be set if without header")
         if isinstance(columns, list):  # column names
-            pdf = _safe_load_csv(p.uri, **{"header": None, "names": columns, **kw})
+            pdf = _safe_load_csv(p.path, **{"header": None, "names": columns, **kw})
             return pdf, None
         schema = Schema(columns)
-        pdf = _safe_load_csv(p.uri, **{"header": None, "names": schema.names, **kw})
+        pdf = _safe_load_csv(p.path, **{"header": None, "names": schema.names, **kw})
         return pdf, schema
     else:
         raise NotImplementedError(f"{header} is not supported")
 
 
 def _save_json(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
-    fs, path = fsspec.core.url_to_fs(p.uri)
-    fs.makedirs(path, exist_ok=True)
-    df.native.to_json(pfs.path.combine(p.uri, "*.json"), **kwargs)
+    makedirs(p.path, exist_ok=True)
+    df.native.to_json(p.join("*.json").path, **kwargs)
 
 
 def _safe_load_json(path: str, **kwargs: Any) -> dd.DataFrame:
     try:
         return dd.read_json(path, **kwargs)
     except (IsADirectoryError, PermissionError):
-        x = dd.read_json(pfs.path.combine(path, "*.json"), **kwargs)
-        print(x.compute())
+        x = dd.read_json(join(path, "*.json"), **kwargs)
         return x
 
 
 def _load_json(
     p: FileParser, columns: Any = None, **kwargs: Any
 ) -> Tuple[dd.DataFrame, Any]:
-    pdf = _safe_load_json(p.uri, **kwargs).reset_index(drop=True)
+    pdf = _safe_load_json(p.path, **kwargs).reset_index(drop=True)
     if columns is None:
         return pdf, None
     if isinstance(columns, list):  # column names

@@ -1,64 +1,87 @@
 import os
+import sys
 
+import pytest
+from pytest import raises
+from triad.utils.io import makedirs, read_text, touch, exists
+
+from fugue._utils.io import _FORMAT_MAP, FileParser, load_df, save_df
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
-from fugue._utils.io import FileParser, load_df, save_df, _FORMAT_MAP
-from fugue.exceptions import FugueDataFrameOperationError
-from pytest import raises
-from triad.collections.fs import FileSystem
-from triad.exceptions import InvalidOperationError
 
 
-def test_file_parser():
-    f = FileParser("c.parquet")
-    assert "c.parquet" == f.uri
-    assert "c.parquet" == f.uri_with_glob
-    assert "" == f.scheme
-    assert "c.parquet" == f.path
-    assert ".parquet" == f.suffix
-    assert "parquet" == f.file_format
-    assert "" == f.glob_pattern
-    assert "." == f.parent
-
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="not a test for windows")
+def test_file_parser_linux():
     f = FileParser("/a/b/c.parquet")
-    assert "/a/b/c.parquet" == f.uri
-    assert "/a/b/c.parquet" == f.uri_with_glob
-    assert "" == f.scheme
     assert "/a/b/c.parquet" == f.path
+    assert not f.has_glob
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "" == f.glob_pattern
-    assert "/a/b" == f.parent
+    assert "file:///a/b" == f.parent
+
+
+@pytest.mark.skipif(
+    not sys.platform.startswith("win"), reason="a test only for windows"
+)
+def test_file_parser_win():
+    f = FileParser("c:\\a\\c.parquet")
+    assert "c:\\a\\c.parquet" == f.path
+    assert ".parquet" == f.suffix
+    assert "parquet" == f.file_format
+    assert not f.has_glob
+    assert "file://c:/a" == f.parent
+
+    f = FileParser("c:\\a\\*.parquet")
+    assert "c:\\a\\*.parquet" == f.path
+    assert ".parquet" == f.suffix
+    assert "parquet" == f.file_format
+    assert f.has_glob
+    assert "file://c:/a" == f.parent
+
+
+def test_file_parser(tmpdir):
+    f = FileParser("c.parquet")
+    assert "c.parquet" == f.raw_path
+    assert ".parquet" == f.suffix
+    assert "parquet" == f.file_format
+    # assert "." == f.parent
+
+    tp = os.path.join(str(tmpdir), "a", "b")
+    f = FileParser(os.path.join(tp, "c.parquet"))
+    assert not exists(tp)
+    f.make_parent_dirs()
+    assert exists(tp)
+    f.make_parent_dirs()
+    assert exists(tp)
+
+    f = FileParser("memory://c.parquet")
+    assert "memory://c.parquet" == f.raw_path
+    assert "memory:///c.parquet" == f.path
+    assert ".parquet" == f.suffix
+    assert "parquet" == f.file_format
+    assert "memory:///" == f.parent
 
     for k, v in _FORMAT_MAP.items():
         f = FileParser(f"s3://a/b/c{k}")
-        assert f"s3://a/b/c{k}" == f.uri
-        assert "s3" == f.scheme
-        assert f"/b/c{k}" == f.path
+        assert f"s3://a/b/c{k}" == f.raw_path
         assert k == f.suffix
         assert v == f.file_format
         assert "s3://a/b" == f.parent
 
     f = FileParser("s3://a/b/c.test.parquet")
-    assert "s3://a/b/c.test.parquet" == f.uri
-    assert "s3" == f.scheme
-    assert "/b/c.test.parquet" == f.path
+    assert "s3://a/b/c.test.parquet" == f.raw_path
     assert ".test.parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "s3://a/b" == f.parent
 
     f = FileParser("s3://a/b/c.ppp.gz", "csv")
-    assert "s3://a/b/c.ppp.gz" == f.uri
-    assert "s3" == f.scheme
-    assert "/b/c.ppp.gz" == f.path
+    assert "s3://a/b/c.ppp.gz" == f.raw_path
     assert ".ppp.gz" == f.suffix
     assert "csv" == f.file_format
 
     f = FileParser("s3://a/b/c", "csv")
-    assert "s3://a/b/c" == f.uri
-    assert "s3" == f.scheme
-    assert "/b/c" == f.path
+    assert "s3://a/b/c" == f.raw_path
     assert "" == f.suffix
     assert "csv" == f.file_format
 
@@ -67,48 +90,42 @@ def test_file_parser():
     raises(NotImplementedError, lambda: FileParser("s3://a/b/c"))
 
 
-def test_file_parser_glob():
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="not a test for windows")
+def test_file_parser_glob_linux():
     f = FileParser("/a/b/*.parquet")
-    assert "/a/b" == f.uri
-    assert "" == f.scheme
     assert "/a/b/*.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "*.parquet" == f.glob_pattern
-    assert "/a/b/*.parquet" == f.uri_with_glob
+    assert f.has_glob
 
     f = FileParser("/a/b/*123.parquet")
-    assert "/a/b" == f.uri
-    assert "" == f.scheme
     assert "/a/b/*123.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "*123.parquet" == f.glob_pattern
-    assert "/a/b/*123.parquet" == f.uri_with_glob
+    assert f.has_glob
 
+
+def test_file_parser_glob():
     f = FileParser("s3://a/b/*.parquet")
-    assert "s3://a/b" == f.uri
-    assert "s3" == f.scheme
-    assert "/b/*.parquet" == f.path
+    assert "s3://a/b/*.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "*.parquet" == f.glob_pattern
-    assert "s3://a/b/*.parquet" == f.uri_with_glob
+    assert f.has_glob
 
-    ff = FileParser("s3://a/b", "parquet").with_glob("*.csv", "csv")
-    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    ff = FileParser("s3://a/b", "parquet").join("*.csv", "csv")
+    assert "s3://a/b/*.csv" == ff.path
     assert "csv" == ff.file_format
-    ff = FileParser("s3://a/b/", "csv").with_glob("*.csv")
-    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    ff = FileParser("s3://a/b/", "csv").join("*.csv")
+    assert "s3://a/b/*.csv" == ff.path
     assert "csv" == ff.file_format
-    ff = FileParser("s3://a/b/*.parquet").with_glob("*.csv")
-    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    ff = FileParser("s3://a/b/*.parquet").join("*.csv")
+    assert "s3://a/b/*.csv" == ff.path
     assert "csv" == ff.file_format
-    ff = FileParser("s3://a/b/*.parquet", "parquet").with_glob("*.csv")
-    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    ff = FileParser("s3://a/b/*.parquet", "parquet").join("*.csv")
+    assert "s3://a/b/*.csv" == ff.path
     assert "parquet" == ff.file_format
-    ff = FileParser("s3://a/b/*.parquet", "parquet").with_glob("*.csv", "csv")
-    assert "s3://a/b/*.csv" == ff.uri_with_glob
+    ff = FileParser("s3://a/b/*.parquet", "parquet").join("*.csv", "csv")
+    assert "s3://a/b/*.csv" == ff.path
     assert "csv" == ff.file_format
 
 
@@ -132,14 +149,13 @@ def test_parquet_io(tmpdir):
     raises(Exception, lambda: load_df(path, columns="bb:str,a:int"))
 
     # load directory
-    fs = FileSystem()
     for name in ["folder.parquet", "folder"]:
         folder = os.path.join(tmpdir, name)
-        fs.makedirs(folder)
+        makedirs(folder)
         f0 = os.path.join(folder, "_SUCCESS")
         f1 = os.path.join(folder, "1.parquet")
         f2 = os.path.join(folder, "3.parquet")
-        fs.touch(f0)
+        touch(f0)
         save_df(df1, f1)
         save_df(df1, f2)
 
@@ -178,12 +194,11 @@ def test_parquet_io(tmpdir):
 
 
 def test_csv_io(tmpdir):
-    fs = FileSystem()
     df1 = PandasDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
     path = os.path.join(tmpdir, "a.csv")
     # without header
     save_df(df1, path)
-    assert fs.readtext(path).startswith("1,2,3")
+    assert read_text(path).startswith("1,2,3")
     raises(ValueError, lambda: load_df(path, header=False))
     actual = load_df(path, columns=["a", "b", "c"], header=False, infer_schema=True)
     assert [[1, 2, 3]] == actual.as_array()
@@ -193,7 +208,7 @@ def test_csv_io(tmpdir):
     assert actual.schema == "a:double,b:str,c:str"
     # with header
     save_df(df1, path, header=True)
-    assert fs.readtext(path).startswith("a,b,c")
+    assert read_text(path).startswith("a,b,c")
     actual = load_df(path, header=True)
     assert [["1", "2", "3"]] == actual.as_array()
     actual = load_df(path, header=True, infer_schema=True)
@@ -210,7 +225,6 @@ def test_csv_io(tmpdir):
 
 
 def test_json(tmpdir):
-    fs = FileSystem()
     df1 = PandasDataFrame([["1", 2, 3]], "a:str,b:int,c:long")
     path = os.path.join(tmpdir, "a.json")
     save_df(df1, path)

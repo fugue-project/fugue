@@ -18,7 +18,6 @@ from typing import (
 from uuid import uuid4
 
 from triad import ParamDict, Schema, SerializableRLock, assert_or_throw, to_uuid
-from triad.collections.fs import FileSystem
 from triad.collections.function_wrapper import AnnotatedParam
 from triad.exceptions import InvalidOperationError
 from triad.utils.convert import to_size
@@ -470,12 +469,6 @@ class ExecutionEngine(FugueEngineBase):
         :param engine: :class:`~.SQLEngine` instance
         """
         self._sql_engine = engine
-
-    @property
-    @abstractmethod
-    def fs(self) -> FileSystem:  # pragma: no cover
-        """File system of this engine instance"""
-        raise NotImplementedError
 
     @abstractmethod
     def create_default_map_engine(self) -> MapEngine:  # pragma: no cover

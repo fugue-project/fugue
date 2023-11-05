@@ -1,20 +1,20 @@
 import os
 
-from fugue.collections.partition import PartitionSpec
-from fugue.dataframe.pandas_dataframe import PandasDataFrame
-from fugue.dataframe.utils import _df_eq as df_eq
-from fugue_spark.dataframe import SparkDataFrame
-from fugue_spark._utils.convert import to_schema, to_spark_schema
-from fugue_spark._utils.io import SparkIO
 from pyspark.sql import SparkSession
 from pyspark.sql.utils import AnalysisException
 from pytest import raises
-from triad.collections.fs import FileSystem
-from triad.exceptions import InvalidOperationError
+from triad.utils.io import isfile, makedirs, touch
+
+from fugue.collections.partition import PartitionSpec
+from fugue.dataframe.pandas_dataframe import PandasDataFrame
+from fugue.dataframe.utils import _df_eq as df_eq
+from fugue_spark._utils.convert import to_schema, to_spark_schema
+from fugue_spark._utils.io import SparkIO
+from fugue_spark.dataframe import SparkDataFrame
 
 
 def test_parquet_io(tmpdir, spark_session):
-    si = SparkIO(spark_session, FileSystem())
+    si = SparkIO(spark_session)
     df1 = _df([["1", 2, 3]], "a:str,b:int,c:long")
     df2 = _df([[[1, 2]]], "a:[int]")
     # {a:int} will become {a:long} because pyarrow lib has issue
@@ -33,16 +33,15 @@ def test_parquet_io(tmpdir, spark_session):
     raises(Exception, lambda: si.load_df(path, columns="bb:str,a:int"))
 
     # load directory
-    fs = FileSystem()
     folder = os.path.join(tmpdir, "folder")
-    fs.makedirs(folder)
+    makedirs(folder)
     f0 = os.path.join(folder, "_SUCCESS")
     f1 = os.path.join(folder, "1.parquet")
     f2 = os.path.join(folder, "3.parquet")
-    fs.touch(f0)
+    touch(f0)
     si.save_df(df1, f1, force_single=True)
     si.save_df(df1, f2, force_single=True)
-    assert fs.isfile(f1)
+    assert isfile(f1)
     actual = si.load_df(folder, "parquet")
     df_eq(actual, [["1", 2, 3], ["1", 2, 3]], "a:str,b:int,c:long")
 
@@ -61,8 +60,7 @@ def test_parquet_io(tmpdir, spark_session):
 
 
 def test_csv_io(tmpdir, spark_session):
-    fs = FileSystem()
-    si = SparkIO(spark_session, fs)
+    si = SparkIO(spark_session)
     df1 = _df([["1", 2, 3]], "a:str,b:int,c:long")
     path = os.path.join(tmpdir, "a.csv")
     # without header
@@ -91,8 +89,7 @@ def test_csv_io(tmpdir, spark_session):
 
 
 def test_json_io(tmpdir, spark_session):
-    fs = FileSystem()
-    si = SparkIO(spark_session, fs)
+    si = SparkIO(spark_session)
     df1 = _df([["1", 2, 3]], "a:str,b:int,c:long")
     path = os.path.join(tmpdir, "a.json")
     si.save_df(df1, path)
@@ -106,7 +103,7 @@ def test_json_io(tmpdir, spark_session):
 
 
 def test_save_with_partition(tmpdir, spark_session):
-    si = SparkIO(spark_session, FileSystem())
+    si = SparkIO(spark_session)
     df1 = _df([["1", 2, 3]], "a:str,b:int,c:long")
     path = os.path.join(tmpdir, "a.parquet")
     si.save_df(df1, path, partition_spec=PartitionSpec(num=2))

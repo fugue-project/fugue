@@ -4,7 +4,6 @@ import pyspark.sql as ps
 from pyspark.sql import SparkSession
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
-from triad.collections.fs import FileSystem
 from triad.utils.assertion import assert_or_throw
 
 from fugue._utils.io import FileParser, save_df
@@ -16,9 +15,8 @@ from .convert import to_schema, to_spark_schema
 
 
 class SparkIO(object):
-    def __init__(self, spark_session: SparkSession, fs: FileSystem):
+    def __init__(self, spark_session: SparkSession):
         self._session = spark_session
-        self._fs = fs
         self._loads: Dict[str, Callable[..., DataFrame]] = {
             "csv": self._load_csv,
             "parquet": self._load_parquet,
@@ -41,7 +39,7 @@ class SparkIO(object):
             len(fmts) == 1, NotImplementedError("can't support multiple formats")
         )
         fmt = fmts[0]
-        files = [f.uri for f in fp]
+        files = [f.path for f in fp]
         return self._loads[fmt](files, columns, **kwargs)
 
     def save_df(
@@ -64,7 +62,7 @@ class SparkIO(object):
             ldf = df.as_local()
             if isinstance(ldf, PandasDataFrame) and hasattr(ldf.native, "attrs"):
                 ldf.native.attrs = {}  # pragma: no cover
-            save_df(ldf, uri, format_hint=format_hint, mode=mode, fs=self._fs, **kwargs)
+            save_df(ldf, uri, format_hint=format_hint, mode=mode, **kwargs)
 
     def _get_writer(
         self, sdf: ps.DataFrame, partition_spec: PartitionSpec

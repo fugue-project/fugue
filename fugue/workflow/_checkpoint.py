@@ -1,14 +1,15 @@
 from typing import Any
 
-import fs as pfs
+from triad.utils.assertion import assert_or_throw
+from triad.utils.hash import to_uuid
+from triad.utils.io import exists, join, makedirs, rm
+
 from fugue.collections.partition import PartitionSpec
 from fugue.collections.yielded import PhysicalYielded
 from fugue.constants import FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH
 from fugue.dataframe import DataFrame
 from fugue.exceptions import FugueWorkflowCompileError, FugueWorkflowRuntimeError
 from fugue.execution.execution_engine import ExecutionEngine
-from triad.utils.assertion import assert_or_throw
-from triad.utils.hash import to_uuid
 
 
 class Checkpoint(object):
@@ -130,7 +131,6 @@ class WeakCheckpoint(Checkpoint):
 class CheckpointPath(object):
     def __init__(self, engine: ExecutionEngine):
         self._engine = engine
-        self._fs = engine.fs
         self._log = engine.log
         self._path = engine.conf.get(FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH, "").strip()
         self._temp_path = ""
@@ -143,14 +143,14 @@ class CheckpointPath(object):
         if self._path == "":
             self._temp_path = ""
             return ""
-        self._temp_path = pfs.path.combine(self._path, execution_id)
-        self._fs.makedirs(self._temp_path, recreate=True)
+        self._temp_path = join(self._path, execution_id)
+        makedirs(self._temp_path, exist_ok=True)
         return self._temp_path
 
     def remove_temp_path(self):
         if self._temp_path != "":
             try:
-                self._fs.removetree(self._temp_path)
+                rm(self._temp_path, recursive=True)
             except Exception as e:  # pragma: no cover
                 self._log.info("Unable to remove " + self._temp_path, e)
 
@@ -162,7 +162,7 @@ class CheckpointPath(object):
                 f"{FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH} is not set"
             ),
         )
-        return pfs.path.combine(path, obj_id + ".parquet")
+        return join(path, obj_id + ".parquet")
 
     def get_table_name(self, obj_id: str, permanent: bool) -> str:
         path = self._path if permanent else self._temp_path
@@ -170,6 +170,6 @@ class CheckpointPath(object):
 
     def temp_file_exists(self, path: str) -> bool:
         try:
-            return self._fs.exists(path)
+            return exists(path)
         except Exception:  # pragma: no cover
             return False

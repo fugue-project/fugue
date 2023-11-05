@@ -1,6 +1,5 @@
 {
 	"name": "Fugue Development Environment",
-	"_image": "fugueproject/devenv:0.7.7",
 	"image": "mcr.microsoft.com/vscode/devcontainers/python:3.10",
 	"customizations": {
 		"vscode": {
@@ -8,6 +7,7 @@
 				"terminal.integrated.shell.linux": "/bin/bash",
 				"python.pythonPath": "/usr/local/bin/python",
 				"python.defaultInterpreterPath": "/usr/local/bin/python",
+				"editor.defaultFormatter": "ms-python.black-formatter",
 				"isort.interpreter": [
 					"/usr/local/bin/python"
 				],
@@ -15,6 +15,9 @@
 					"/usr/local/bin/python"
 				],
 				"pylint.interpreter": [
+					"/usr/local/bin/python"
+				],
+				"black-formatter.interpreter": [
 					"/usr/local/bin/python"
 				]
 			},
@@ -24,6 +27,7 @@
 				"ms-python.flake8",
 				"ms-python.pylint",
 				"ms-python.mypy",
+				"ms-python.black-formatter",
 				"GitHub.copilot",
 				"njpwerner.autodocstring"
 			]
