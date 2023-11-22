@@ -5,11 +5,13 @@ import pandas as pd
 import polars as pl
 
 import fugue.api as fa
+import fugue.test as ft
 from fugue import ArrowDataFrame
 from fugue_polars import PolarsDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
 
 
+@ft.fugue_test_suite("native", mark_test=True)
 class PolarsDataFrameTests(DataFrameTests.Tests):
     def df(self, data: Any = None, schema: Any = None) -> PolarsDataFrame:
         adf = ArrowDataFrame(data, schema).native
@@ -43,6 +45,7 @@ class PolarsDataFrameTests(DataFrameTests.Tests):
         assert data == ArrowDataFrame(fa.as_arrow(df)).as_array()
 
 
+@ft.fugue_test_suite("native", mark_test=True)
 class NativePolarsDataFrameTests(DataFrameTests.NativeTests):
     def df(self, data: Any = None, schema: Any = None) -> pd.DataFrame:
         adf = ArrowDataFrame(data, schema).native

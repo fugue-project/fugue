@@ -2,11 +2,11 @@ import os
 from typing import Any, List
 
 import pandas as pd
-import pytest
 import ray.data as rd
 from triad.utils.io import isfile
 
 import fugue.api as fa
+import fugue.test as ft
 from fugue import ArrayDataFrame, DataFrame, FugueWorkflow, transform
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.plugins import infer_execution_engine
@@ -22,33 +22,8 @@ _CONF = {
 }
 
 
+@ft.fugue_test_suite(("ray", _CONF), mark_test=True)
 class RayExecutionEngineTests(ExecutionEngineTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_ray_session, fugue_duckdb_connection):
-        self._con = fugue_duckdb_connection
-        self._engine = self.make_engine()
-        fa.set_global_engine(self._engine)
-
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    @classmethod
-    def tearDownClass(cls):
-        fa.clear_global_engine()
-
-    def make_engine(self):
-        e = RayExecutionEngine(
-            conf={
-                "test": True,
-                "fugue.duckdb.pragma.threads": 2,
-                "fugue.ray.zero_copy": True,
-                "fugue.ray.default.batch_size": 10000,
-            },
-            connection=self._con,
-        )
-        return e
-
     def test_properties(self):
         assert self.engine.is_distributed
         assert self.engine.map_engine.is_distributed
@@ -168,28 +143,8 @@ class RayExecutionEngineTests(ExecutionEngineTests.Tests):
         assert infer_execution_engine([fdf]) == "ray"
 
 
+@ft.fugue_test_suite(("ray", _CONF), mark_test=True)
 class RayBuiltInTests(BuiltInTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_ray_session, fugue_duckdb_connection):
-        self._con = fugue_duckdb_connection
-        self._engine = self.make_engine()
-        fa.set_global_engine(self._engine)
-
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    @classmethod
-    def tearDownClass(cls):
-        fa.clear_global_engine()
-
-    def make_engine(self):
-        e = RayExecutionEngine(
-            conf={"test": True, "fugue.duckdb.pragma.threads": 2, **_CONF},
-            connection=self._con,
-        )
-        return e
-
     def test_datetime_in_workflow(self):
         pass
 

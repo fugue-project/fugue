@@ -1,12 +1,13 @@
 import pandas as pd
-import ray
 import ray.data as rd
-from fugue import FugueWorkflow
 
+import fugue.test as ft
+from fugue import FugueWorkflow
 from fugue_ray import RayExecutionEngine
 
 
-def test_registry(fugue_ray_session):
+@ft.with_backend("ray")
+def test_registry():
     def creator() -> rd.Dataset:
         return rd.from_pandas(pd.DataFrame(dict(a=[1, 2], b=["a", "b"])))
 
@@ -23,4 +24,4 @@ def test_registry(fugue_ray_session):
     dag = FugueWorkflow()
     dag.create(creator).process(processor1).process(processor2).output(outputter)
 
-    dag.run(fugue_ray_session)
+    dag.run("ray")

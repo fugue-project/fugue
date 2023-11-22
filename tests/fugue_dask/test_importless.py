@@ -1,12 +1,13 @@
 import pytest
 
 from fugue import FugueWorkflow, fsql
+import fugue.test as ft
 
-
-def test_importless(fugue_dask_client):
+@ft.with_backend("dask")
+def test_importless(backend_context):
     pytest.importorskip("fugue_sql_antlr")
     pytest.importorskip("ibis")
-    for engine in ["dask", fugue_dask_client]:
+    for engine in ["dask", backend_context.session]:
         dag = FugueWorkflow()
         dag.df([[0]], "a:int").show()
 

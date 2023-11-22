@@ -10,7 +10,6 @@ import copy
 import os
 import pickle
 from datetime import datetime
-from unittest import TestCase
 
 import pandas as pd
 import pytest
@@ -20,14 +19,13 @@ from triad.utils.io import isfile, makedirs, touch
 
 import fugue.api as fa
 import fugue.column.functions as ff
+import fugue.test as ft
 from fugue import (
     ArrayDataFrame,
     DataFrame,
     DataFrames,
-    ExecutionEngine,
     PandasDataFrame,
     PartitionSpec,
-    register_default_sql_engine,
 )
 from fugue.column import all_cols, col, lit
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -40,25 +38,7 @@ class ExecutionEngineTests(object):
     should pass this test suite.
     """
 
-    class Tests(TestCase):
-        @classmethod
-        def setUpClass(cls):
-            register_default_sql_engine(lambda engine: engine.sql_engine)
-            cls._engine = cls.make_engine(cls)
-            fa.set_global_engine(cls._engine)
-
-        @property
-        def engine(self) -> ExecutionEngine:
-            return self._engine  # type: ignore
-
-        @classmethod
-        def tearDownClass(cls):
-            fa.clear_global_engine()
-            cls._engine.stop()
-
-        def make_engine(self) -> ExecutionEngine:  # pragma: no cover
-            raise NotImplementedError
-
+    class Tests(ft.FugueTestSuite):
         def test_init(self):
             print(self.engine)
             assert self.engine.log is not None
@@ -984,7 +964,7 @@ class ExecutionEngineTests(object):
             df_eq(res, [[1, "z1"]], "a:int,v:str", throw=True)
 
         @pytest.fixture(autouse=True)
-        def init_tmpdir(self, tmpdir, tmp_mem_dir):
+        def init_tmpdir(self, tmpdir):
             self.tmpdir = tmpdir
 
         def test_save_single_and_load_parquet(self):

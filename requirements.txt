@@ -12,7 +12,6 @@ pylint==2.16.2
 pytest
 pytest-cov
 pytest-mock
-pytest-spark
 pytest-rerunfailures==10.2
 sphinx>=2.4.0
 sphinx-rtd-theme

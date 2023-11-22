@@ -2,17 +2,21 @@ from typing import Any
 
 import pandas as pd
 import pyarrow as pa
+from pytest import raises
+
+import fugue.api as fa
+import fugue.test as ft
 from fugue.dataframe import ArrowDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
-from pytest import raises
-import fugue.api as fa
 
 
+@ft.fugue_test_suite("native", mark_test=True)
 class ArrowDataFrameTests(DataFrameTests.Tests):
     def df(self, data: Any = None, schema: Any = None) -> ArrowDataFrame:
         return ArrowDataFrame(data, schema)
 
 
+@ft.fugue_test_suite("native", mark_test=True)
 class NativeArrowDataFrameTests(DataFrameTests.NativeTests):
     def df(self, data: Any = None, schema: Any = None) -> pd.DataFrame:
         return ArrowDataFrame(data, schema).as_arrow()

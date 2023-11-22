@@ -9,7 +9,8 @@ from dask.distributed import Client
 from pytest import raises
 
 import fugue.api as fa
-from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, PartitionSpec, fsql
+import fugue.test as ft
+from fugue import DataFrame, FugueWorkflow, PartitionSpec, fsql
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_dask import DaskDataFrame
 from fugue_duckdb import DuckDaskExecutionEngine
@@ -18,6 +19,8 @@ from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 
 _CONF = {
+    "fugue.test": True,
+    "fugue.duckdb.pragma.threads": 2,
     "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
     "fugue.rpc.flask_server.host": "127.0.0.1",
     "fugue.rpc.flask_server.port": "1234",
@@ -25,29 +28,11 @@ _CONF = {
 }
 
 
+@ft.fugue_test_suite(("duckdask", _CONF), mark_test=True)
 class DuckDaskExecutionEngineTests(ExecutionEngineTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_dask_client, fugue_duckdb_connection):
-        self.dask_client = fugue_dask_client
-        self._con = fugue_duckdb_connection
-        self._engine = self.make_engine()
-        fa.set_global_engine(self._engine)
-
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    @classmethod
-    def tearDownClass(cls):
-        fa.clear_global_engine()
-
-    def make_engine(self):
-        e = DuckDaskExecutionEngine(
-            conf={"test": True, "fugue.duckdb.pragma.threads": 2},
-            connection=self._con,
-            dask_client=self.dask_client,
-        )
-        return e
+    @property
+    def dask_client(self) -> Client:
+        return self.context.session[1]
 
     def test_properties(self):
         assert not self.engine.is_distributed
@@ -96,29 +81,11 @@ class DuckDaskExecutionEngineTests(ExecutionEngineTests.Tests):
         assert isinstance(self.engine.broadcast(ddf), DaskDataFrame)
 
 
+@ft.fugue_test_suite(("duckdask", _CONF), mark_test=True)
 class DuckDaskBuiltInTests(BuiltInTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_dask_client, fugue_duckdb_connection):
-        self.dask_client = fugue_dask_client
-        self._con = fugue_duckdb_connection
-        self._engine = self.make_engine()
-        fa.set_global_engine(self._engine)
-
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    @classmethod
-    def tearDownClass(cls):
-        fa.clear_global_engine()
-
-    def make_engine(self):
-        e = DuckDaskExecutionEngine(
-            conf={"test": True, "fugue.duckdb.pragma.threads": 2, **_CONF},
-            connection=self._con,
-            dask_client=self.dask_client,
-        )
-        return e
+    @property
+    def dask_client(self) -> Client:
+        return self.context.session[1]
 
     def test_datetime_in_workflow(self):
         # there are bugs from duckdb to pandas on date columns

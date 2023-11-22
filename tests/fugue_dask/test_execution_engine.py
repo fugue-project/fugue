@@ -5,10 +5,10 @@ from typing import Any, List, Optional
 import dask.dataframe as dd
 import numpy as np
 import pandas as pd
-import pytest
 from dask.distributed import Client
 
 import fugue.api as fa
+import fugue.test as ft
 from fugue import (
     ArrayDataFrame,
     FugueWorkflow,
@@ -33,24 +33,11 @@ _CONF = {
 }
 
 
+@ft.fugue_test_suite(("dask", _CONF), mark_test=True)
 class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_dask_client):
-        self.dask_client = fugue_dask_client
-        self._engine = self.make_engine()
-        fa.set_global_engine(self._engine)
-
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    @classmethod
-    def tearDownClass(cls):
-        fa.clear_global_engine()
-
-    def make_engine(self):
-        e = DaskExecutionEngine(self.dask_client, conf=dict(test=True, **_CONF))
-        return e
+    @property
+    def dask_client(self) -> Client:
+        return self.context.session
 
     def test_properties(self):
         assert self.engine.is_distributed
@@ -124,24 +111,11 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
         assert isinstance(infer_execution_engine([fdf]), Client)
 
 
+@ft.fugue_test_suite(("dask", _CONF), mark_test=True)
 class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_dask_client):
-        self.dask_client = fugue_dask_client
-        self._engine = self.make_engine()
-        fa.set_global_engine(self._engine)
-
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    @classmethod
-    def tearDownClass(cls):
-        fa.clear_global_engine()
-
-    def make_engine(self):
-        e = DaskExecutionEngine(self.dask_client, conf=dict(test=True, **_CONF))
-        return e
+    @property
+    def dask_client(self) -> Client:
+        return self.context.session
 
     def test_yield_table(self):
         pass
@@ -261,7 +235,8 @@ class DaskExecutionEngineBuiltInTests(BuiltInTests.Tests):
         dag.run(self.engine)
 
 
-def test_join_keys_unification(fugue_dask_client):
+@ft.with_backend("dask")
+def test_join_keys_unification(backend_context):
     df1 = DaskDataFrame(
         pd.DataFrame([[10, 1], [11, 3]], columns=["a", "b"]).convert_dtypes(),
         "a:long,b:long",
@@ -270,12 +245,13 @@ def test_join_keys_unification(fugue_dask_client):
         pd.DataFrame([[10, [2]]], columns=["a", "c"]),
         "a:long,c:[long]",
     )
-    with fa.engine_context(fugue_dask_client) as engine:
+    with fa.engine_context(backend_context.session) as engine:
         assert fa.as_array(fa.inner_join(df1, df2)) == [[10, 1, [2]]]
         assert fa.as_array(fa.inner_join(df2, df1)) == [[10, [2], 1]]
 
 
-def test_transform(fugue_dask_client):
+@ft.with_backend("dask")
+def test_transform():
     class CB:
         def __init__(self):
             self._lock = RLock()
@@ -334,7 +310,8 @@ def test_transform(fugue_dask_client):
     assert 5 == cb.n
 
 
-def test_multiple_transforms(fugue_dask_client):
+@ft.with_backend("dask")
+def test_multiple_transforms(backend_context):
     def t1(df: pd.DataFrame) -> pd.DataFrame:
         return pd.concat([df, df])
 
@@ -371,7 +348,7 @@ def test_multiple_transforms(fugue_dask_client):
         )
     )
 
-    actual = compute(df, fugue_dask_client)
+    actual = compute(df, backend_context.session)
     expected = compute(df, None)
     assert np.allclose(actual, expected, equal_nan=True)
 

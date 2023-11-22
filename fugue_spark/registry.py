@@ -32,6 +32,10 @@ _is_sparksql = namespace_candidate("sparksql", lambda x: isinstance(x, str))
     or any(_is_sparksql(obj) for obj in objs)
 )
 def _infer_spark_client(obj: Any) -> Any:
+    if isinstance(obj, SparkDataFrame):
+        obj = obj.native
+    if hasattr(obj, "sparkSession"):
+        return obj.sparkSession
     return SparkSession.builder.getOrCreate()
 
 

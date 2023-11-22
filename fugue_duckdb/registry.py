@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Tuple
 
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from triad import run_at_def
@@ -15,7 +15,7 @@ from fugue.dev import (
     fugue_annotated_param,
     is_pandas_or,
 )
-from fugue.plugins import infer_execution_engine
+from fugue.plugins import infer_execution_engine, parse_execution_engine
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
 
@@ -65,6 +65,27 @@ def _register_engines() -> None:
     )
     register_sql_engine("duck", lambda engine: DuckDBEngine(engine))
     register_sql_engine("duckdb", lambda engine: DuckDBEngine(engine))
+
+
+try:
+    from fugue_duckdb.dask import DuckDaskExecutionEngine
+    from dask.distributed import Client
+
+    @parse_execution_engine.candidate(
+        lambda engine, conf, **kwargs: isinstance(engine, list)
+        and len(engine) == 2
+        and isinstance(engine[0], DuckDBPyConnection)
+        and isinstance(engine[1], Client),
+    )
+    def _parse_duck_dask_client(
+        engine: Tuple[DuckDBPyConnection, Client], conf: Any, **kwargs: Any
+    ) -> DuckDaskExecutionEngine:
+        return DuckDaskExecutionEngine(
+            connection=engine[0], dask_client=engine[1], conf=conf
+        )
+
+except Exception:  # pragma: no cover
+    pass
 
 
 @fugue_annotated_param(DuckExecutionEngine)
