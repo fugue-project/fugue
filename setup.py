@@ -97,19 +97,16 @@ setup(
         "fugue.plugins": [
             "ibis = fugue_ibis[ibis]",
             "duckdb = fugue_duckdb.registry[duckdb]",
-            "duckdb_test = fugue_duckdb.tester[duckdb]",
-            "duckdb_ibis = fugue_duckdb.ibis_engine[duckdb,ibis]",
             "spark = fugue_spark.registry[spark]",
             "spark_test = fugue_spark.tester[spark]",
             "spark_ibis = fugue_spark.ibis_engine[spark,ibis]",
             "dask = fugue_dask.registry[dask]",
-            "dask_test = fugue_dask.tester[dask]",
             "ray = fugue_ray.registry[ray]",
             "polars = fugue_polars.registry[polars]",
         ],
         "pytest11": [
             "fugue_test = fugue_test",
-            "fugue_test_dask = fugue_dask.test_fixtures",  # this will mess up coverage
+            "fugue_test_fixtures = fugue_test.fixtures",  # this will mess up coverage
             # "fugue_test_spark = fugue_spark.tester",
             # "fugue_test_duckdb = fugue_duckdb.test_backend"
             # "fugue_test_plugins = fugue.test.plugins",

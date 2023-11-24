@@ -19,6 +19,13 @@ from fugue.plugins import infer_execution_engine, parse_execution_engine
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckDBEngine, DuckExecutionEngine
 
+from .tester import DuckDBTestBackend  # noqa: F401  # pylint: disable-all
+
+try:
+    from .tester import DuckDaskTestBackend  # noqa: F401  # pylint: disable-all
+except ImportError:  # pragma: no cover
+    pass
+
 
 @infer_execution_engine.candidate(
     lambda objs: is_pandas_or(objs, (DuckDBPyRelation, DuckDataFrame))
