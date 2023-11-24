@@ -19,6 +19,13 @@ from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
 from ._utils.misc import SparkConnectDataFrame, SparkConnectSession, is_spark_dataframe
+from .tester import SparkTestBackend  # noqa: F401  # pylint: disable-all
+
+try:
+    from .tester import SparkConnectTestBackend  # noqa: F401  # pylint: disable-all
+except ImportError:  # pragma: no cover
+    pass
+
 
 _is_sparksql = namespace_candidate("sparksql", lambda x: isinstance(x, str))
 

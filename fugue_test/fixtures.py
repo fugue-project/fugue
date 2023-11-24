@@ -43,3 +43,19 @@ def ray_session():
 
     with RayTestBackend.generate_session_fixture() as session:
         yield session
+
+
+@pytest.fixture(scope=_DEFAULT_SCOPE)
+def spark_session():
+    from fugue_spark.tester import SparkTestBackend
+
+    with SparkTestBackend.generate_session_fixture() as session:
+        yield session
+
+
+@pytest.fixture(scope=_DEFAULT_SCOPE)
+def sparkconnect_session():
+    from fugue_spark.tester import SparkConnectTestBackend
+
+    with SparkConnectTestBackend.generate_session_fixture() as session:
+        yield session

@@ -4,7 +4,6 @@ from typing import Any, Dict, Iterator
 from pyspark.sql import SparkSession
 
 import fugue.test as ft
-import pytest
 
 from ._utils.misc import SparkConnectSession
 
@@ -39,12 +38,6 @@ class SparkTestBackend(ft.FugueTestBackend):
             yield spark
 
 
-@pytest.fixture(scope="session")
-def spark_session():
-    with SparkTestBackend.generate_session_fixture() as session:
-        yield session
-
-
 if SparkConnectSession is not None:
 
     @ft.fugue_test_backend
@@ -76,8 +69,3 @@ if SparkConnectSession is not None:
                 .getOrCreate()
             )
             yield spark
-
-    @pytest.fixture(scope="session")
-    def sparkconnect_session():
-        with SparkConnectTestBackend.generate_session_fixture() as session:
-            yield session
