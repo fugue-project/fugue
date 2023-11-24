@@ -109,7 +109,7 @@ setup(
         ],
         "pytest11": [
             "fugue_test = fugue_test",
-            "fugue_test_spark = fugue_spark.tester",
+            # "fugue_test_spark = fugue_spark.tester",
             # "fugue_test_duckdb = fugue_duckdb.test_backend"
             # "fugue_test_plugins = fugue.test.plugins",
             # "fugue_test_fixtures = fugue.test.fixtures",

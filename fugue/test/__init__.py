@@ -1,5 +1,5 @@
 # flake8: noqa
-from .pandas_backend import NativeTestBackend, PandasTestBackend
+from .pandas_tester import NativeTestBackend, PandasTestBackend
 from .plugins import (
     FugueTestBackend,
     FugueTestContext,

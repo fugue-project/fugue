@@ -77,11 +77,22 @@ def tmp_mem_dir():
             pass
 
 
+@pytest.fixture(scope="session")
+def pandas_session():
+    yield "pandas"
+
+
+@pytest.fixture(scope="session")
+def native_session():
+    yield "native"
+
+
 @pytest.fixture(scope="class")
 def backend_context(request: Any):
-    from fugue.test.plugins import _make_backend_context
+    from fugue.test.plugins import _make_backend_context, _parse_backend
 
-    session = request.getfixturevalue(request.param[0] + "_session")
+    c, _ = _parse_backend(request.param)
+    session = request.getfixturevalue(c + "_session")
     with _make_backend_context(request.param, session) as ctx:
         yield ctx
 

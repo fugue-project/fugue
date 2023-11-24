@@ -3,16 +3,14 @@ from typing import Any, Dict, Iterator
 
 import pytest
 
-import fugue.test as ft
 import fugue.api as fa
+import fugue.test as ft
 from fugue import NativeExecutionEngine
-
-from fugue.test.pandas_backend import PandasTestBackend
 from fugue_test import _parse_line
 
 
 @ft.fugue_test_backend
-class _MockPandasTestBackend(PandasTestBackend):
+class _MockPandasTestBackend(ft.FugueTestBackend):
     name = "pandas_test_test"
     default_session_conf = {"a": 1, "aa": 2}
     default_fugue_conf = {"fugue.b": 2}
@@ -24,6 +22,11 @@ class _MockPandasTestBackend(PandasTestBackend):
         assert "aa" in session_conf and session_conf["aa"] == 2
         assert "b" not in session_conf
         yield "pandas"
+
+
+@pytest.fixture(scope="session")
+def pandas_test_test_session():
+    yield "pandas"
 
 
 @pytest.fixture(scope="session")

@@ -17,7 +17,6 @@ except ImportError:  # pragma: no cover
 _FUGUE_TEST_BACKENDS: Dict[str, Type["FugueTestBackend"]] = {}
 _FUGUE_TEST_ALL_INI_CONF: Dict[str, Any] = {}
 _FUGUE_TEST_INI_FUGUE_CONF: Dict[str, Any] = {}
-_FUGUE_BACKEND_SESSION_FIXTURES: Dict[str, Any] = {}
 
 
 def _set_global_conf(conf: Dict[str, Any]) -> None:
@@ -30,8 +29,8 @@ def _get_all_ini_conf() -> Dict[str, Any]:
     return _FUGUE_TEST_ALL_INI_CONF
 
 
-def _get_all_backend_session_fixtures() -> Dict[str, Any]:
-    return _FUGUE_BACKEND_SESSION_FIXTURES
+def _get_all_backends() -> Dict[str, Type["FugueTestBackend"]]:
+    return _FUGUE_TEST_BACKENDS
 
 
 def _load_all_backends() -> None:
@@ -40,7 +39,7 @@ def _load_all_backends() -> None:
     load_entry_point(FUGUE_ENTRYPOINT)
 
 
-def with_backend(ctx: str, *other: str, skip_missing: bool = False) -> Any:
+def with_backend(ctx: Any, *other: Any, skip_missing: bool = False) -> Any:
     import pytest
 
     _load_all_backends()
