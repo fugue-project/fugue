@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type
 
-from triad import assert_or_throw
+from triad import assert_or_throw, run_once
 from triad.utils.entry_points import load_entry_point
 
 try:
@@ -33,6 +33,7 @@ def _get_all_backends() -> Dict[str, Type["FugueTestBackend"]]:
     return _FUGUE_TEST_BACKENDS
 
 
+@run_once
 def _load_all_backends() -> None:
     from fugue.constants import FUGUE_ENTRYPOINT
 
@@ -65,7 +66,6 @@ def fugue_test_backend(cls: Type["FugueTestBackend"]) -> Type["FugueTestBackend"
         ValueError(f"Duplicate Fugue test backend name: {name}"),
     )
     _FUGUE_TEST_BACKENDS[name] = cls
-    cls.generate_session_fixture()
     return cls
 
 
