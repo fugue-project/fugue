@@ -35,3 +35,11 @@ def duckdask_session():
 
     with DuckDaskTestBackend.generate_session_fixture() as session:
         yield session
+
+
+@pytest.fixture(scope=_DEFAULT_SCOPE)
+def ray_session():
+    from fugue_ray.tester import RayTestBackend
+
+    with RayTestBackend.generate_session_fixture() as session:
+        yield session
