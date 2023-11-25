@@ -34,7 +34,7 @@ class SparkTestBackend(ft.FugueTestBackend):
     @classmethod
     @contextmanager
     def session_context(cls, session_conf: Dict[str, Any]) -> Iterator[Any]:
-        with SparkSession.builder.config(map=session_conf).getOrCreate() as spark:
+        with _create_session(session_conf).getOrCreate() as spark:
             yield spark
 
 
@@ -63,9 +63,12 @@ if SparkConnectSession is not None:
         @classmethod
         @contextmanager
         def session_context(cls, session_conf: Dict[str, Any]) -> Iterator[Any]:
-            spark = (
-                SparkSession.builder.config(map=session_conf)
-                .remote("sc://localhost")
-                .getOrCreate()
-            )
+            spark = _create_session(session_conf).remote("sc://localhost").getOrCreate()
             yield spark
+
+
+def _create_session(conf: Dict[str, Any]) -> Any:
+    sb = SparkSession.builder
+    for k, v in conf.items():
+        sb = sb.config(k, v)
+    return sb
