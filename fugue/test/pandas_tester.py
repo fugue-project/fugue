@@ -11,7 +11,7 @@ class PandasTestBackend(FugueTestBackend):
     @classmethod
     @contextmanager
     def session_context(cls, session_conf: Dict[str, Any]) -> Iterator[Any]:
-        yield "pandas"
+        yield "pandas"  # pragma: no cover
 
 
 @fugue_test_backend
@@ -21,4 +21,4 @@ class NativeTestBackend(FugueTestBackend):
     @classmethod
     @contextmanager
     def session_context(cls, session_conf: Dict[str, Any]) -> Iterator[Any]:
-        yield "native"
+        yield "native"  # pragma: no cover

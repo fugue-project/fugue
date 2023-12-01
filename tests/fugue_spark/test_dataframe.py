@@ -9,7 +9,7 @@ from triad.collections.schema import Schema
 import fugue.api as fi
 import fugue.test as ft
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
-from fugue.plugins import get_column_names, rename
+from fugue.plugins import get_column_names, rename, infer_execution_engine
 from fugue_spark._utils.convert import to_schema, to_spark_df, to_spark_schema
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
@@ -57,6 +57,16 @@ class NativeSparkDataFrameTests(NativeSparkDataFrameTestsBase):
     pass
 
 
+def test_infer_engine(spark_session):
+    pdf = pd.DataFrame([[0]], columns=["a"])
+    sdf = spark_session.createDataFrame(pdf)
+    df = SparkDataFrame(sdf)
+    assert infer_execution_engine([]) is None
+    assert isinstance(infer_execution_engine([df]), type(spark_session))
+    assert isinstance(infer_execution_engine([sdf]), type(spark_session))
+    assert isinstance(infer_execution_engine([pdf, sdf]), type(spark_session))
+
+
 def test_init(spark_session):
     sdf = spark_session.createDataFrame([["a", 1]])
     df = SparkDataFrame(sdf, "a:str,b:double")
@@ -76,7 +86,6 @@ def test_init(spark_session):
     assert df.schema == "a:str,b:str"
 
 
-@ft.with_backend("spark")
 def test_nested(spark_session):
     # data = [[dict(a=1, b=[3, 4], d=1.0)], [json.dumps(dict(b=[30, "40"]))]]
     # df = SparkDataFrame(data, "a:{a:str,b:[int]}")

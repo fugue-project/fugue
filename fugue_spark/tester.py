@@ -51,7 +51,9 @@ if SparkConnectSession is not None:
         }
 
         @classmethod
-        def transform_session_conf(cls, conf: Dict[str, Any]) -> Dict[str, Any]:
+        def transform_session_conf(
+            cls, conf: Dict[str, Any]
+        ) -> Dict[str, Any]:  # pragma: no cover
             # replace sparkconnect. with spark.
             return {
                 "spark." + k: v
@@ -62,7 +64,9 @@ if SparkConnectSession is not None:
 
         @classmethod
         @contextmanager
-        def session_context(cls, session_conf: Dict[str, Any]) -> Iterator[Any]:
+        def session_context(
+            cls, session_conf: Dict[str, Any]
+        ) -> Iterator[Any]:  # pragma: no cover
             spark = _create_session(session_conf).remote("sc://localhost").getOrCreate()
             yield spark
 

@@ -1,4 +1,3 @@
-import uuid
 from typing import Any, Dict, Tuple
 
 import pyarrow as pa
@@ -8,7 +7,7 @@ from triad.utils.pyarrow import to_pa_datatype
 _FUGUE_TEST_CONF_NAME = "fugue_test_conf"
 
 
-def pytest_addoption(parser: Any):
+def pytest_addoption(parser: Any):  # pragma: no cover
     parser.addini(
         _FUGUE_TEST_CONF_NAME,
         help="Configs for fugue testing execution engines",
@@ -59,22 +58,6 @@ def _parse_line(line: str) -> Tuple[str, Any]:
         raise ValueError(
             f"Invalid config line: {line}, it must be in format: key[:type]=value"
         )
-
-
-@pytest.fixture
-def tmp_mem_dir():
-    from triad.utils.io import makedirs, rm
-
-    uuid_str = str(uuid.uuid4())[:5]
-    path = "memory://test_" + uuid_str
-    makedirs(path)
-    try:
-        yield path
-    finally:
-        try:
-            rm(path, recursive=True)
-        except Exception:  # pragma: no cover
-            pass
 
 
 @pytest.fixture(scope="class")

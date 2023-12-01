@@ -10,7 +10,7 @@ try:
     import dask
 
     _HAS_DASK = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _HAS_DASK = False
 
 
