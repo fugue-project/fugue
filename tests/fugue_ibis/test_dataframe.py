@@ -2,31 +2,26 @@ import sys
 from datetime import datetime
 from typing import Any
 
-import ibis
 import pandas as pd
-import pyarrow as pa
-import pytest
 
 import fugue.api as fe
+import fugue.test as ft
 from fugue import ArrowDataFrame
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
 
 from .mock.dataframe import MockDuckDataFrame
+from .mock.tester import mockibisduck_session  # noqa: F401  # pylint: disable-all
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="< 3.8")
+@ft.fugue_test_suite("mockibisduck", mark_test=True)
 class IbisDataFrameTests(DataFrameTests.Tests):
-    @classmethod
-    def setUpClass(cls):
-        cls._con = ibis.duckdb.connect()
-
-    def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
+    def df(self, data: Any = None, schema: Any = None) -> MockDuckDataFrame:
         df = ArrowDataFrame(data, schema)
         name = f"_{id(df.native)}"
-        # self._con.con.execute("register", (name, df.native))
-        self._con.register(df.native, name)
-        return MockDuckDataFrame(self._con.table(name), schema=schema)
+        con = self.context.engine.sql_engine.backend
+        con.register(df.native, name)
+        return MockDuckDataFrame(con.table(name), schema=schema)
 
     def test_init_df(self):
         df = self.df([["x", 1]], "a:str,b:int")

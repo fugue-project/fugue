@@ -100,10 +100,10 @@ class MockDuckSQLEngine(IbisSQLEngine):
 
 
 class MockDuckExecutionEngine(IbisExecutionEngine):
-    def __init__(self, conf: Any, force_is_ibis: bool = False):
+    def __init__(self, conf: Any):
         super().__init__(conf)
 
-        self._force_is_ibis = force_is_ibis
+        self._force_is_ibis = self.conf.get("fugue.force_is_ibis", False)
 
     @property
     def is_distributed(self) -> bool:
