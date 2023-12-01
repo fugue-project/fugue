@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("flask")
+pytest.importorskip("jinja2")
 from fugue.rpc import make_rpc_server
 from triad import ParamDict
 import cloudpickle
