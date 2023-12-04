@@ -29,10 +29,6 @@ def _get_all_ini_conf() -> Dict[str, Any]:
     return _FUGUE_TEST_ALL_INI_CONF
 
 
-def _get_all_backends() -> Dict[str, Type["FugueTestBackend"]]:
-    return _FUGUE_TEST_BACKENDS
-
-
 @run_once
 def _load_all_backends() -> None:
     from fugue.constants import FUGUE_ENTRYPOINT
@@ -173,11 +169,7 @@ def extract_conf(
 @contextmanager
 def _make_backend_context(obj: Any, session: Any) -> Iterator[Any]:
     _load_all_backends()
-    if isinstance(obj, str):
-        key = obj
-        extra_conf: Dict[str, Any] = {}
-    else:
-        key, extra_conf = obj
+    key, extra_conf = _parse_backend(obj)
     assert_or_throw(
         key in _FUGUE_TEST_BACKENDS,
         lambda: ValueError(

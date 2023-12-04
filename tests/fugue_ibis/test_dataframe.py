@@ -3,11 +3,12 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
+import pytest
 
 import fugue.api as fe
 import fugue.test as ft
 from fugue import ArrowDataFrame
-from fugue_duckdb.dataframe import DuckDataFrame
+from fugue.exceptions import FugueDataFrameOperationError
 from fugue_test.dataframe_suite import DataFrameTests
 
 from .mock.dataframe import MockDuckDataFrame
@@ -56,3 +57,23 @@ class IbisDataFrameTests(DataFrameTests.Tests):
 
     def test_list_type(self):
         pass
+
+    def test_native_table(self):
+        df = self.df([["x", 1]], "a:str,b:int").native
+        assert fe.get_schema(fe.rename(df, dict())) == "a:str,b:int"
+        assert fe.get_schema(fe.rename(df, dict(a="c"))) == "c:str,b:int"
+
+        with pytest.raises(Exception):
+            fe.rename(df, dict(a="b"))
+
+        with pytest.raises(FugueDataFrameOperationError):
+            fe.rename(df, dict(x="y"))
+
+        assert fe.get_schema(fe.drop_columns(df, [])) == "a:str,b:int"
+        assert fe.get_schema(fe.drop_columns(df, ["a"])) == "b:int"
+
+        with pytest.raises(FugueDataFrameOperationError):
+            fe.get_schema(fe.drop_columns(df, ["a", "b"]))
+
+        with pytest.raises(FugueDataFrameOperationError):
+            fe.get_schema(fe.drop_columns(df, ["a", "c"]))

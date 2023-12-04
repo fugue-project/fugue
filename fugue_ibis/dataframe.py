@@ -78,7 +78,7 @@ class IbisDataFrame(DataFrame):
 
     @property
     def columns(self) -> List[str]:
-        return self._table.columns
+        return _get_ibis_columns(self._table)
 
     def peek_array(self) -> List[Any]:
         res = self._to_local_df(self._table.head(1)).as_array()
@@ -202,7 +202,7 @@ def _drop_ibis_columns(df: IbisTable, columns: List[str]) -> IbisTable:
 
 
 @rename.candidate(lambda df, *args, **kwargs: isinstance(df, IbisTable))
-def _rename_dask_dataframe(df: IbisTable, columns: Dict[str, Any]) -> IbisTable:
+def _rename_ibis_table(df: IbisTable, columns: Dict[str, Any]) -> IbisTable:
     _assert_no_missing(df, columns.keys())
     old_names = df.columns
     new_names = [columns.get(name, name) for name in old_names]

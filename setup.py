@@ -35,18 +35,18 @@ setup(
         "adagio>=0.2.4",
         # sql dependencies
         "qpd>=0.4.4",
-        "fugue-sql-antlr>=0.1.6",
+        "fugue-sql-antlr>=0.2.0",
         "sqlglot",
         "jinja2",
     ],
     extras_require={
         "sql": [
             "qpd>=0.4.4",
-            "fugue-sql-antlr>=0.1.6",
+            "fugue-sql-antlr>=0.2.0",
             "sqlglot",
             "jinja2",
         ],
-        "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.6"],
+        "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.2.0"],
         "spark": ["pyspark>=3.1.1"],
         "dask": [
             "dask[distributed,dataframe]>=2023.5.0",
@@ -64,7 +64,7 @@ setup(
         "all": [
             "sqlglot",
             "jinja2",
-            "fugue-sql-antlr[cpp]>=0.1.6",
+            "fugue-sql-antlr[cpp]>=0.2.0",
             "pyspark>=3.1.1",
             "dask[distributed,dataframe]>=2023.5.0",
             "dask-sql",
