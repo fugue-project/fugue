@@ -56,6 +56,35 @@ def with_backend(ctx: Any, *other: Any, skip_missing: bool = False) -> Any:
                 # test load and count under spark and pandas
                 df = fa.load(path_fixture)
                 assert fa.count(df) == 3
+
+    .. note::
+
+        ``ctx`` can be a string or a tuple of string and dict. If it contains a
+        dict, the dict will be merged with the default configuration for the backend.
+
+        the configuration of each backend is extracted from the pytest ini configuration
+        under ``fugue_test_conf``. The configuration must prefixed with the backend
+        name.
+
+        ``fugue_test_conf`` is defined at the parallel place where you define pytest
+        ``addopts``. For example, if you define them in ``setup.cfg``, then it
+        looks like:
+
+        .. code-block:: ini
+
+            [tool:pytest]
+            addopts =
+                -p pytest_cov
+                --cov=fugue
+            fugue_test_conf =
+                fugue.test.dummy=dummy
+                fugue.test:bool=true
+                # ray backend settings
+                ray.num_cpus:int=2
+                # dask backend settings
+                dask.processes:bool=true
+                dask.n_workers:int=3
+                dask.threads_per_worker:int=1
     """
     import pytest
 
