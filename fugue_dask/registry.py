@@ -19,6 +19,8 @@ from fugue_dask._utils import DASK_UTILS
 from fugue_dask.dataframe import DaskDataFrame
 from fugue_dask.execution_engine import DaskExecutionEngine
 
+from .tester import DaskTestBackend  # noqa: F401  # pylint: disable-all
+
 
 @infer_execution_engine.candidate(
     lambda objs: is_pandas_or(objs, (dd.DataFrame, DaskDataFrame))

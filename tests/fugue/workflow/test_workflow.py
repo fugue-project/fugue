@@ -39,6 +39,7 @@ def test_worflow_dataframes():
     dfs1 = WorkflowDataFrames(a=df1, b=df2)
     assert dfs1["a"] is df1
     assert dfs1["b"] is df2
+    assert dfs1.workflow is dag1
 
     dfs2 = WorkflowDataFrames(dfs1, aa=df1, bb=df2)
     assert 4 == len(dfs2)

@@ -2,43 +2,44 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
-import pyspark
 import pyspark.sql as ps
-import pytest
 from pyspark.sql import SparkSession
 from triad.collections.schema import Schema
 
 import fugue.api as fi
+import fugue.test as ft
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
-from fugue.plugins import get_column_names, rename
-from fugue_spark import SparkExecutionEngine
-from fugue_spark._utils.convert import to_schema, to_spark_schema, to_spark_df
+from fugue.plugins import get_column_names, rename, infer_execution_engine
+from fugue_spark._utils.convert import to_schema, to_spark_df, to_spark_schema
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
 
 
-class SparkDataFrameTests(DataFrameTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_session(self, spark_session):
-        self.spark_session = spark_session
+class SparkDataFrameTestsBase(DataFrameTests.Tests):
+    @property
+    def spark_session(self) -> SparkSession:
+        return self.context.session
 
     def df(self, data: Any = None, schema: Any = None) -> SparkDataFrame:
-        engine = SparkExecutionEngine(self.spark_session)
-        return engine.to_df(data, schema=schema)
+        return self.engine.to_df(data, schema=schema)
 
     def test_alter_columns_invalid(self):
         # TODO: Spark will silently cast invalid data to nulls without exceptions
         pass
 
 
-class NativeSparkDataFrameTests(DataFrameTests.NativeTests):
-    @pytest.fixture(autouse=True)
-    def init_session(self, spark_session):
-        self.spark_session = spark_session
+@ft.fugue_test_suite("spark", mark_test=True)
+class SparkDataFrameTests(SparkDataFrameTestsBase):
+    pass
+
+
+class NativeSparkDataFrameTestsBase(DataFrameTests.NativeTests):
+    @property
+    def spark_session(self) -> SparkSession:
+        return self.context.session
 
     def df(self, data: Any = None, schema: Any = None):
-        engine = SparkExecutionEngine(self.spark_session)
-        return engine.to_df(data, schema=schema).native
+        return self.engine.to_df(data, schema=schema).native
 
     def to_native_df(self, pdf: pd.DataFrame) -> Any:
         return to_spark_df(self.spark_session, pdf)
@@ -49,6 +50,21 @@ class NativeSparkDataFrameTests(DataFrameTests.NativeTests):
     def test_alter_columns_invalid(self):
         # TODO: Spark will silently cast invalid data to nulls without exceptions
         pass
+
+
+@ft.fugue_test_suite("spark", mark_test=True)
+class NativeSparkDataFrameTests(NativeSparkDataFrameTestsBase):
+    pass
+
+
+def test_infer_engine(spark_session):
+    pdf = pd.DataFrame([[0]], columns=["a"])
+    sdf = spark_session.createDataFrame(pdf)
+    df = SparkDataFrame(sdf)
+    assert infer_execution_engine([]) is None
+    assert isinstance(infer_execution_engine([df]), type(spark_session))
+    assert isinstance(infer_execution_engine([sdf]), type(spark_session))
+    assert isinstance(infer_execution_engine([pdf, sdf]), type(spark_session))
 
 
 def test_init(spark_session):

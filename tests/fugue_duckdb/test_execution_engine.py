@@ -7,6 +7,7 @@ import pytest
 from pytest import raises
 
 import fugue.api as fa
+import fugue.test as ft
 from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, fsql
 from fugue.api import engine_context
 from fugue.plugins import infer_execution_engine
@@ -15,33 +16,15 @@ from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 
+_CONF = {
+    "fugue.test": True,
+    "fugue.duckdb.pragma.threads": 2,
+    "fugue.duckdb.extensions": ", json , , httpfs",
+}
 
+
+@ft.fugue_test_suite(("duckdb", _CONF), mark_test=True)
 class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_duckdb_connection):
-        self._con = fugue_duckdb_connection
-        self._engine = self.make_engine()
-        fa.set_global_engine(self._engine)
-
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    @classmethod
-    def tearDownClass(cls):
-        fa.clear_global_engine()
-
-    def make_engine(self):
-        e = DuckExecutionEngine(
-            {
-                "test": True,
-                "fugue.duckdb.pragma.threads": 2,
-                "fugue.duckdb.extensions": ", json , , httpfs",
-            },
-            self._con,
-        )
-        return e
-
     def test_properties(self):
         assert not self.engine.is_distributed
         assert not self.engine.map_engine.is_distributed
@@ -97,28 +80,8 @@ class DuckExecutionEngineTests(ExecutionEngineTests.Tests):
         # )
 
 
+@ft.fugue_test_suite(("duckdb", _CONF), mark_test=True)
 class DuckBuiltInTests(BuiltInTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_duckdb_connection):
-        self._con = fugue_duckdb_connection
-        self._engine = self.make_engine()
-        fa.set_global_engine(self._engine)
-
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    @classmethod
-    def tearDownClass(cls):
-        fa.clear_global_engine()
-
-
-    def make_engine(self):
-        e = DuckExecutionEngine(
-            {"test": True, "fugue.duckdb.pragma.threads": 2}, self._con
-        )
-        return e
-
     def test_special_types(self):
         def assert_data(df: DataFrame) -> None:
             assert df.schema == "a:datetime,b:bytes,c:[long]"

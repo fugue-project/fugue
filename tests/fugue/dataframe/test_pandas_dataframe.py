@@ -9,12 +9,14 @@ from pytest import raises
 from triad.collections.schema import Schema
 
 import fugue.api as fa
+import fugue.test as ft
 from fugue.dataframe import ArrowDataFrame, PandasDataFrame
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_test.dataframe_suite import DataFrameTests
 
 
+@ft.fugue_test_suite("native", mark_test=True)
 class PandasDataFrameTests(DataFrameTests.Tests):
     def df(self, data: Any = None, schema: Any = None) -> PandasDataFrame:
         return PandasDataFrame(data, schema)
@@ -26,6 +28,7 @@ class PandasDataFrameTests(DataFrameTests.Tests):
         assert fa.is_local(self.df([[0, 1]], "a:int,b:int"))
 
 
+@ft.fugue_test_suite("native", mark_test=True)
 class NativePandasDataFrameTests(DataFrameTests.NativeTests):
     def df(self, data: Any = None, schema: Any = None) -> pd.DataFrame:
         return ArrowDataFrame(data, schema).as_pandas()

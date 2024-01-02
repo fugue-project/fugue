@@ -492,11 +492,6 @@ class SparkExecutionEngine(ExecutionEngine):
         res.reset_metadata(df.metadata)
         return res
 
-    def register(self, df: DataFrame, name: str) -> SparkDataFrame:
-        sdf = self._to_spark_df(df)
-        sdf.native.createOrReplaceTempView(name)
-        return sdf
-
     def join(
         self,
         df1: DataFrame,

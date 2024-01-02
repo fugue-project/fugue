@@ -10,9 +10,8 @@ import datetime
 import os
 import pickle
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional
-from unittest import TestCase
 from uuid import uuid4
-from triad.utils.io import write_text, join
+
 import numpy as np
 import pandas as pd
 import pyarrow as pa
@@ -20,8 +19,10 @@ import pytest
 from fsspec.implementations.local import LocalFileSystem
 from pytest import raises
 from triad import SerializableRLock
+from triad.utils.io import join, write_text
 
 import fugue.api as fa
+import fugue.test as ft
 from fugue import (
     AnyDataFrame,
     ArrayDataFrame,
@@ -46,7 +47,6 @@ from fugue import (
     outputter,
     processor,
     register_creator,
-    register_default_sql_engine,
     register_output_transformer,
     register_outputter,
     register_processor,
@@ -78,23 +78,7 @@ class BuiltInTests(object):
     add correspondent tests here
     """
 
-    class Tests(TestCase):
-        @classmethod
-        def setUpClass(cls):
-            register_default_sql_engine(lambda engine: engine.sql_engine)
-            cls._engine = cls.make_engine(cls)
-
-        @property
-        def engine(self) -> ExecutionEngine:
-            return self._engine  # type: ignore
-
-        @classmethod
-        def tearDownClass(cls):
-            cls._engine.stop()
-
-        def make_engine(self) -> ExecutionEngine:  # pragma: no cover
-            raise NotImplementedError
-
+    class Tests(ft.FugueTestSuite):
         def test_workflows(self):
             a = FugueWorkflow().df([[0]], "a:int")
             df_eq(a.compute(self.engine), [[0]], "a:int")
@@ -1875,13 +1859,13 @@ def mock_processor(df1: List[List[Any]], df2: List[List[Any]]) -> DataFrame:
 
 
 def mock_processor2(e: ExecutionEngine, dfs: DataFrames) -> DataFrame:
-    assert "test" in e.conf
+    assert "fugue.test" in e.conf
     return ArrayDataFrame([[sum(s.count() for s in dfs.values())]], "a:int")
 
 
 class MockProcessor3(Processor):
     def process(self, dfs):
-        assert "test" in self.workflow_conf
+        assert "fugue.test" in self.workflow_conf
         return ArrayDataFrame([[sum(s.count() for s in dfs.values())]], "a:int")
 
 
@@ -1915,11 +1899,11 @@ class MockOutputter4(Outputter):
 
 class MockTransform1(Transformer):
     def get_output_schema(self, df: DataFrame) -> Any:
-        assert "test" in self.workflow_conf
+        assert "fugue.test" in self.workflow_conf
         return [df.schema, "ct:int,p:int"]
 
     def on_init(self, df: DataFrame) -> None:
-        assert "test" in self.workflow_conf
+        assert "fugue.test" in self.workflow_conf
         self.pn = self.cursor.physical_partition_no
         self.ks = self.key_schema
         if "on_init_called" not in self.__dict__:
@@ -1929,7 +1913,7 @@ class MockTransform1(Transformer):
 
     def transform(self, df: LocalDataFrame) -> LocalDataFrame:
         assert 1 == self.on_init_called
-        assert "test" in self.workflow_conf
+        assert "fugue.test" in self.workflow_conf
         pdf = df.as_pandas()
         pdf["p"] = self.params.get("p", 1)
         pdf["ct"] = pdf.shape[0]
@@ -1971,7 +1955,7 @@ def mock_tf3(df: Iterable[Dict[str, Any]]) -> Iterable[Dict[str, Any]]:
 
 class MockCoTransform1(CoTransformer):
     def get_output_schema(self, dfs: DataFrames) -> Any:
-        assert "test" in self.workflow_conf
+        assert "fugue.test" in self.workflow_conf
         assert 2 == len(dfs)
         if self.params.get("named", False):
             assert dfs.has_key
@@ -1980,7 +1964,7 @@ class MockCoTransform1(CoTransformer):
         return [self.key_schema, "ct1:int,ct2:int,p:int"]
 
     def on_init(self, dfs: DataFrames) -> None:
-        assert "test" in self.workflow_conf
+        assert "fugue.test" in self.workflow_conf
         assert 2 == len(dfs)
         if self.params.get("named", False):
             assert dfs.has_key
@@ -1995,7 +1979,7 @@ class MockCoTransform1(CoTransformer):
 
     def transform(self, dfs: DataFrames) -> LocalDataFrame:
         assert 1 == self.on_init_called
-        assert "test" in self.workflow_conf
+        assert "fugue.test" in self.workflow_conf
         assert 2 == len(dfs)
         if self.params.get("named", False):
             assert dfs.has_key

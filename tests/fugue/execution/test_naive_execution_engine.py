@@ -4,18 +4,15 @@ import pandas as pd
 import pyarrow as pa
 
 import fugue.api as fa
-from fugue import FugueWorkflow, NativeExecutionEngine, QPDPandasEngine, PandasDataFrame
+import fugue.test as ft
+from fugue import FugueWorkflow, NativeExecutionEngine, PandasDataFrame, QPDPandasEngine
 from fugue.execution.execution_engine import _get_file_threshold
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 
 
-class NativeExecutionEngineQPDTests(ExecutionEngineTests.Tests):
-    def make_engine(self):
-        e = NativeExecutionEngine(dict(test=True))
-        e.set_sql_engine(QPDPandasEngine(e))
-        return e
-
+@ft.fugue_test_suite("native", mark_test=True)
+class NativeExecutionEngineTests(ExecutionEngineTests.Tests):
     def test_properties(self):
         assert not self.engine.is_distributed
         assert not self.engine.map_engine.is_distributed
@@ -28,12 +25,8 @@ class NativeExecutionEngineQPDTests(ExecutionEngineTests.Tests):
         return
 
 
-class NativeExecutionEngineBuiltInQPDTests(BuiltInTests.Tests):
-    def make_engine(self):
-        e = NativeExecutionEngine(dict(test=True))
-        e.set_sql_engine(QPDPandasEngine(e))
-        return e
-
+@ft.fugue_test_suite(("native", {"fugue.test": True}), mark_test=True)
+class NativeExecutionEngineBuiltInTests(BuiltInTests.Tests):
     def test_yield_table(self):
         pass
 

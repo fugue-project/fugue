@@ -1,44 +1,28 @@
-import pytest
-from pyspark.sql import SparkSession
+import fugue.test as ft
 
-import fugue.api as fa
-from fugue_spark.execution_engine import SparkExecutionEngine
-
-from .test_dataframe import NativeSparkDataFrameTests as _NativeDataFrameTests
-from .test_dataframe import SparkDataFrameTests as _DataFrameTests
+from .test_dataframe import NativeSparkDataFrameTestsBase as _NativeDataFrameTests
+from .test_dataframe import SparkDataFrameTestsBase as _DataFrameTests
+from .test_execution_engine import _CONF
 from .test_execution_engine import (
-    SparkExecutionEnginePandasUDFBuiltInTests as _WorkflowTests,
+    SparkExecutionEngineBuiltInTestsBase as _WorkflowTests,
 )
-from .test_execution_engine import SparkExecutionEnginePandasUDFTests as _EngineTests
+from .test_execution_engine import (
+    SparkExecutionEnginePandasUDFTestsBase as _EngineTests,
+)
 
 
+@ft.fugue_test_suite("sparkconnect", mark_test=True)
 class SparkConnectDataFrameTests(_DataFrameTests):
-    @pytest.fixture(autouse=True)
-    def init_session(self):
-        self.spark_session = _connect()
+    pass
 
 
+@ft.fugue_test_suite("sparkconnect", mark_test=True)
 class SparkConnectNativeDataFrameTests(_NativeDataFrameTests):
-    @pytest.fixture(autouse=True)
-    def init_session(self):
-        self.spark_session = _connect()
+    pass
 
 
+@ft.fugue_test_suite("sparkconnect", mark_test=True)
 class SparkConnectExecutionEngineTests(_EngineTests):
-    @pytest.fixture(autouse=True)
-    def init_session(self):
-        self.spark_session = _connect()
-
-    def make_engine(self):
-        session = _connect()
-        e = SparkExecutionEngine(
-            session, {"test": True, "fugue.spark.use_pandas_udf": False}
-        )
-        return e
-
-    def test_get_parallelism(self):
-        assert fa.get_current_parallelism() == 200
-
     def test_using_pandas_udf(self):
         return
 
@@ -46,28 +30,8 @@ class SparkConnectExecutionEngineTests(_EngineTests):
         return  # spark connect has a bug
 
 
+@ft.fugue_test_suite(("sparkconnect", _CONF), mark_test=True)
 class SparkConnectBuiltInTests(_WorkflowTests):
-    @pytest.fixture(autouse=True)
-    def init_session(self):
-        self.spark_session = _connect()
-
-    def make_engine(self):
-        session = _connect()
-        e = SparkExecutionEngine(
-            session,
-            {
-                "test": True,
-                "fugue.spark.use_pandas_udf": True,
-                "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
-                "fugue.rpc.flask_server.host": "127.0.0.1",
-                "fugue.rpc.flask_server.port": "1234",
-                "fugue.rpc.flask_server.timeout": "2 sec",
-                "spark.sql.shuffle.partitions": "10",
-            },
-        )
-        assert e.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
-        return e
-
     def test_annotation_3(self):
         return  # RDD is not implemented in spark connect
 
@@ -76,7 +40,3 @@ class SparkConnectBuiltInTests(_WorkflowTests):
 
     def test_repartition_large(self):
         return  # spark connect doesn't support even repartitioning
-
-
-def _connect():
-    return SparkSession.builder.remote("sc://localhost").getOrCreate()

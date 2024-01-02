@@ -2,31 +2,27 @@ import sys
 from datetime import datetime
 from typing import Any
 
-import ibis
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 import fugue.api as fe
+import fugue.test as ft
 from fugue import ArrowDataFrame
-from fugue_duckdb.dataframe import DuckDataFrame
+from fugue.exceptions import FugueDataFrameOperationError
 from fugue_test.dataframe_suite import DataFrameTests
 
 from .mock.dataframe import MockDuckDataFrame
+from .mock.tester import mockibisduck_session  # noqa: F401  # pylint: disable-all
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="< 3.8")
+@ft.fugue_test_suite("mockibisduck", mark_test=True)
 class IbisDataFrameTests(DataFrameTests.Tests):
-    @classmethod
-    def setUpClass(cls):
-        cls._con = ibis.duckdb.connect()
-
-    def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
+    def df(self, data: Any = None, schema: Any = None) -> MockDuckDataFrame:
         df = ArrowDataFrame(data, schema)
         name = f"_{id(df.native)}"
-        # self._con.con.execute("register", (name, df.native))
-        self._con.register(df.native, name)
-        return MockDuckDataFrame(self._con.table(name), schema=schema)
+        con = self.context.engine.sql_engine.backend
+        con.register(df.native, name)
+        return MockDuckDataFrame(con.table(name), schema=schema)
 
     def test_init_df(self):
         df = self.df([["x", 1]], "a:str,b:int")
@@ -62,39 +58,22 @@ class IbisDataFrameTests(DataFrameTests.Tests):
     def test_list_type(self):
         pass
 
+    def test_native_table(self):
+        df = self.df([["x", 1]], "a:str,b:int").native
+        assert fe.get_schema(fe.rename(df, dict())) == "a:str,b:int"
+        assert fe.get_schema(fe.rename(df, dict(a="c"))) == "c:str,b:int"
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="< 3.8")
-class NativeIbisDataFrameTests(DataFrameTests.NativeTests):
-    @classmethod
-    def setUpClass(cls):
-        cls._con = ibis.duckdb.connect()
+        with pytest.raises(Exception):
+            fe.rename(df, dict(a="b"))
 
-    def df(self, data: Any = None, schema: Any = None):
-        df = ArrowDataFrame(data, schema)
-        name = f"_{id(df.native)}"
-        # self._con.con.execute("register", (name, df.native))
-        self._con.register(df.native, name)
-        return MockDuckDataFrame(self._con.table(name), schema=schema).native
+        with pytest.raises(FugueDataFrameOperationError):
+            fe.rename(df, dict(x="y"))
 
-    def to_native_df(self, pdf: pd.DataFrame) -> Any:
-        name = f"_{id(pdf)}"
-        # self._con.con.execute("register", (name, pa.Table.from_pandas(pdf)))
-        self._con.register(pa.Table.from_pandas(pdf), name)
-        return self._con.table(name)
+        assert fe.get_schema(fe.drop_columns(df, [])) == "a:str,b:int"
+        assert fe.get_schema(fe.drop_columns(df, ["a"])) == "b:int"
 
-    def test_is_local(self):
-        df = self.df([["x", 1]], "a:str,b:int")
-        assert not fe.is_local(df)
-        assert fe.is_bounded(df)
+        with pytest.raises(FugueDataFrameOperationError):
+            fe.get_schema(fe.drop_columns(df, ["a", "b"]))
 
-    def test_map_type(self):
-        pass
-
-    def test_as_arrow(self):
-        pass
-
-    def test_deep_nested_types(self):
-        pass
-
-    def test_list_type(self):
-        pass
+        with pytest.raises(FugueDataFrameOperationError):
+            fe.get_schema(fe.drop_columns(df, ["a", "c"]))

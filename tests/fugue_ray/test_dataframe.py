@@ -8,25 +8,15 @@ import ray.data as rd
 from pytest import raises
 from triad import Schema
 
+import fugue.test as ft
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import get_column_names, rename
 from fugue_ray import RayDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
 
 
+@ft.fugue_test_suite("ray", mark_test=True)
 class RayDataFrameTests(DataFrameTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_ray_session):
-        pass
-
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
     def df(self, data: Any = None, schema: Any = None) -> RayDataFrame:
         return RayDataFrame(data, schema)
 
@@ -121,19 +111,8 @@ class RayDataFrameTests(DataFrameTests.Tests):
         assert get_column_names(df) == ["_0", "_1", "_2"]
 
 
+@ft.fugue_test_suite("ray", mark_test=True)
 class NativeRayDataFrameTests(DataFrameTests.NativeTests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_ray_session):
-        pass
-
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
     def df(self, data: Any = None, schema: Any = None):
         res = RayDataFrame(data, schema)
         # native ray dataset can't handle the schema when empty

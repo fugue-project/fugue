@@ -6,6 +6,7 @@ from pytest import raises
 from triad.utils.pyarrow import TRIAD_DEFAULT_TIMESTAMP
 
 from fugue_duckdb._utils import encode_value_to_expr, to_duck_type, to_pa_type
+import fugue.test as ft
 
 
 def test_encode_value_to_expr():
@@ -38,11 +39,14 @@ def test_encode_value_to_expr():
     raises(NotImplementedError, lambda: encode_value_to_expr(D()))
 
 
-def test_type_conversion():
-    con = duckdb.connect()
+@ft.with_backend("duckdb")
+def test_type_conversion(backend_context):
+    con = backend_context.session
 
     def assert_(tp):
-        dt = duckdb.from_arrow(pa.Table.from_pydict(dict(a=pa.nulls(2, tp))), con).types[0]
+        dt = duckdb.from_arrow(
+            pa.Table.from_pydict(dict(a=pa.nulls(2, tp))), con
+        ).types[0]
         assert to_pa_type(dt) == tp
         dt = to_duck_type(tp)
         assert to_pa_type(dt) == tp

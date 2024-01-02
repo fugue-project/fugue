@@ -67,7 +67,7 @@ def test_transform_empty_result():
         assert fdf.as_array() == []
 
 
-def test_polars_on_engines(spark_session, fugue_dask_client, fugue_ray_session):
+def test_polars_on_engines(spark_session, dask_session, ray_session):
     def tr1(df: pl.DataFrame) -> pl.DataFrame:
         tdf = df.with_columns(pl.lit(1, pl.Int32()).alias("c"))
         return tdf
@@ -92,6 +92,6 @@ def test_polars_on_engines(spark_session, fugue_dask_client, fugue_ray_session):
 
     test(spark_session)
 
-    test(fugue_dask_client)
+    test(dask_session)
 
-    test(fugue_ray_session)
+    test(ray_session)

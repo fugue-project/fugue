@@ -7,8 +7,3 @@ try:
     from fugue_duckdb.dask import DuckDaskExecutionEngine
 except Exception:  # pragma: no cover
     pass
-
-try:
-    from fugue_duckdb.ibis_engine import DuckDBIbisEngine
-except Exception:  # pragma: no cover
-    pass

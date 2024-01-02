@@ -19,6 +19,13 @@ from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 
 from ._utils.misc import SparkConnectDataFrame, SparkConnectSession, is_spark_dataframe
+from .tester import SparkTestBackend  # noqa: F401  # pylint: disable-all
+
+try:
+    from .tester import SparkConnectTestBackend  # noqa: F401  # pylint: disable-all
+except ImportError:  # pragma: no cover
+    pass
+
 
 _is_sparksql = namespace_candidate("sparksql", lambda x: isinstance(x, str))
 
@@ -31,7 +38,12 @@ _is_sparksql = namespace_candidate("sparksql", lambda x: isinstance(x, str))
     )
     or any(_is_sparksql(obj) for obj in objs)
 )
-def _infer_spark_client(obj: Any) -> Any:
+def _infer_spark_client(objs: Any) -> Any:
+    obj = objs[0]
+    if isinstance(obj, SparkDataFrame):
+        obj = obj.native
+    if hasattr(obj, "sparkSession"):
+        return obj.sparkSession
     return SparkSession.builder.getOrCreate()
 
 

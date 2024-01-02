@@ -6,11 +6,11 @@ from typing import Any
 import dask.dataframe as pd
 import numpy as np
 import pandas
-import pytest
 from pytest import raises
 from triad.collections.schema import Schema
 
 import fugue.api as fi
+import fugue.test as ft
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
@@ -19,20 +19,14 @@ from fugue_dask.dataframe import DaskDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
 
 
+@ft.fugue_test_suite("dask", mark_test=True)
 class DaskDataFrameTests(DataFrameTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_dask_client):
-        self.dask_client = fugue_dask_client
-
     def df(self, data: Any = None, schema: Any = None) -> DaskDataFrame:
         return DaskDataFrame(data, schema)
 
 
+@ft.fugue_test_suite("dask", mark_test=True)
 class NativeDaskDataFrameTests(DataFrameTests.NativeTests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_dask_client):
-        self.dask_client = fugue_dask_client
-
     def df(self, data: Any = None, schema: Any = None):
         return DaskDataFrame(data, schema).native
 
@@ -64,7 +58,8 @@ class NativeDaskDataFrameTests(DataFrameTests.NativeTests):
         pass
 
 
-def test_init(fugue_dask_client):
+@ft.with_backend("dask")
+def test_init():
     df = DaskDataFrame(schema="a:str,b:int")
     assert df.is_bounded
     assert df.count() == 0
@@ -104,7 +99,8 @@ def test_init(fugue_dask_client):
     raises(Exception, lambda: DaskDataFrame(123))
 
 
-def test_simple_methods(fugue_dask_client):
+@ft.with_backend("dask")
+def test_simple_methods():
     df = DaskDataFrame([], "a:str,b:int")
     assert df.empty
     assert 0 == df.count()
@@ -137,7 +133,8 @@ def _test_nested(fugue_dask_client):
     assert [[[dict(a=None, b=[30, 40])]]] == a
 
 
-def test_as_array(fugue_dask_client):
+@ft.with_backend("dask")
+def test_as_array():
     df = DaskDataFrame([], "a:str,b:int")
     assert [] == df.as_array()
     assert [] == df.as_array(type_safe=True)
@@ -179,12 +176,14 @@ def test_as_array(fugue_dask_client):
     assert isinstance(df.as_array(type_safe=True)[0][1], int)
 
 
-def test_as_dict_iterable(fugue_dask_client):
+@ft.with_backend("dask")
+def test_as_dict_iterable():
     df = DaskDataFrame([["2020-01-01", 1.0]], "a:datetime,b:int")
     assert [dict(a=datetime(2020, 1, 1), b=1)] == list(df.as_dict_iterable())
 
 
-def test_nan_none(fugue_dask_client):
+@ft.with_backend("dask")
+def test_nan_none():
     # TODO: on dask, these tests can't pass
     # df = ArrayDataFrame([[None, None]], "b:str,c:double")
     # assert df.as_pandas().iloc[0, 0] is None
@@ -210,7 +209,7 @@ def test_nan_none(fugue_dask_client):
     assert arr[0] is None
 
 
-def _test_as_array_perf(fugue_dask_client):
+def _test_as_array_perf():
     s = Schema()
     arr = []
     for i in range(100):

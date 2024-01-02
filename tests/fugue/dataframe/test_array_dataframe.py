@@ -9,8 +9,10 @@ from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_test.dataframe_suite import DataFrameTests
 from pytest import raises
 from triad.collections.schema import Schema
+import fugue.test as ft
 
 
+@ft.fugue_test_suite("native", mark_test=True)
 class ArrayDataFrameTests(DataFrameTests.Tests):
     def df(self, data: Any = None, schema: Any = None) -> ArrayDataFrame:
         return ArrayDataFrame(data, schema)

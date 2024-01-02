@@ -11,6 +11,7 @@ from pytest import raises
 from triad import Schema
 
 import fugue.api as fa
+import fugue.test as ft
 from fugue import transform
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import (
@@ -32,17 +33,12 @@ from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 
 
+@ft.fugue_test_suite(("spark", {"fugue.spark.use_pandas_udf": False}), mark_test=True)
 class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_session(self, spark_session):
-        self.spark_session = spark_session
-
-    def make_engine(self):
-        session = SparkSession.builder.getOrCreate()
-        e = SparkExecutionEngine(
-            session, {"test": True, "fugue.spark.use_pandas_udf": False}
-        )
-        return e
+    @property
+    def spark_session(self) -> SparkSession:
+        assert not self.engine.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
+        return self.context.session
 
     def test_properties(self):
         assert self.engine.is_distributed
@@ -126,15 +122,11 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         assert is_spark_session(infer_execution_engine([fdf]))
 
 
-class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_session(self, spark_session):
-        self.spark_session = spark_session
-
-    def make_engine(self):
-        session = SparkSession.builder.getOrCreate()
-        e = SparkExecutionEngine(session, {"test": True})
-        return e
+class SparkExecutionEnginePandasUDFTestsBase(ExecutionEngineTests.Tests):
+    @property
+    def spark_session(self) -> SparkSession:
+        assert self.engine.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
+        return self.context.session
 
     def test_get_parallelism(self):
         assert fa.get_current_parallelism() == 4
@@ -188,26 +180,25 @@ class SparkExecutionEnginePandasUDFTests(ExecutionEngineTests.Tests):
         df_eq(c, expected, throw=True)
 
 
-class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_session(self, spark_session):
-        self.spark_session = spark_session
+@ft.fugue_test_suite("spark", mark_test=True)
+class SparkExecutionEnginePandasUDFTests(SparkExecutionEnginePandasUDFTestsBase):
+    pass
 
-    def make_engine(self):
-        session = SparkSession.builder.getOrCreate()
-        e = SparkExecutionEngine(
-            session,
-            {
-                "test": True,
-                "fugue.spark.use_pandas_udf": False,
-                "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
-                "fugue.rpc.flask_server.host": "127.0.0.1",
-                "fugue.rpc.flask_server.port": "1234",
-                "fugue.rpc.flask_server.timeout": "2 sec",
-                "spark.sql.shuffle.partitions": "10",
-            },
-        )
-        return e
+
+_CONF = {
+    "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
+    "fugue.rpc.flask_server.host": "127.0.0.1",
+    "fugue.rpc.flask_server.port": "1234",
+    "fugue.rpc.flask_server.timeout": "2 sec",
+    "spark.sql.shuffle.partitions": "10",
+}
+
+
+class SparkExecutionEngineBuiltInTestsBase(BuiltInTests.Tests):
+    @property
+    def spark_session(self) -> SparkSession:
+        assert self.engine.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
+        return self.context.session
 
     def test_df_init(self):
         sdf = self.spark_session.createDataFrame([[1.1]], "a:double")
@@ -378,35 +369,30 @@ class SparkExecutionEngineBuiltInTests(BuiltInTests.Tests):
         dag.run(self.engine)
 
 
-class SparkExecutionEnginePandasUDFBuiltInTests(SparkExecutionEngineBuiltInTests):
-    @pytest.fixture(autouse=True)
-    def init_session(self, spark_session):
-        self.spark_session = spark_session
-
-    def make_engine(self):
-        session = SparkSession.builder.getOrCreate()
-        e = SparkExecutionEngine(
-            session,
-            {
-                "test": True,
-                "fugue.spark.use_pandas_udf": True,
-                "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
-                "fugue.rpc.flask_server.host": "127.0.0.1",
-                "fugue.rpc.flask_server.port": "1234",
-                "fugue.rpc.flask_server.timeout": "2 sec",
-                "spark.sql.shuffle.partitions": "10",
-            },
-        )
-        assert e.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
-        return e
+@ft.fugue_test_suite(
+    ("spark", {"fugue.spark.use_pandas_udf": False, **_CONF}), mark_test=True
+)
+class SparkExecutionEngineBuiltInTests(SparkExecutionEngineBuiltInTestsBase):
+    @property
+    def spark_session(self) -> SparkSession:
+        assert not self.engine.conf.get_or_throw("fugue.spark.use_pandas_udf", bool)
+        return self.context.session
 
 
-def test_rdd_pd_extension_types_handling(spark_session):
+@ft.fugue_test_suite(("spark", _CONF), mark_test=True)
+class SparkExecutionEnginePandasUDFBuiltInTests(SparkExecutionEngineBuiltInTestsBase):
+    pass
+
+
+@ft.with_backend("spark")
+def test_rdd_pd_extension_types_handling(backend_context):
     def tr(df: List[List[Any]]) -> Iterable[pd.DataFrame]:
         assert isinstance(df[0][0], float)
         yield pd.DataFrame([[0.1, [1]]], columns=["a", "b"]).convert_dtypes()
 
-    with fa.engine_context(spark_session, {"fugue.spark.use_pandas_udf": False}):
+    with fa.engine_context(
+        backend_context.session, {"fugue.spark.use_pandas_udf": False}
+    ):
         df = pd.DataFrame([[0.1]], columns=["a"]).convert_dtypes()
         res = fa.as_array(fa.transform(df, tr, schema="a:double,b:[long]"))
         assert res == [[0.1, [1]]]

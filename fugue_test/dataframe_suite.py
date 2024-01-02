@@ -2,13 +2,13 @@
 
 from datetime import date, datetime
 from typing import Any
-from unittest import TestCase
 
 import numpy as np
 import pandas as pd
 from pytest import raises
 
 import fugue.api as fi
+import fugue.test as ft
 from fugue.dataframe import ArrowDataFrame, DataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
@@ -19,15 +19,7 @@ class DataFrameTests(object):
     All new DataFrame types should pass this test suite.
     """
 
-    class Tests(TestCase):
-        @classmethod
-        def setUpClass(cls):
-            pass
-
-        @classmethod
-        def tearDownClass(cls):
-            pass
-
+    class Tests(ft.FugueTestSuite):
         def df(self, data: Any = None, schema: Any = None) -> Any:  # pragma: no cover
             raise NotImplementedError
 

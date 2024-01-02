@@ -5,6 +5,7 @@ import pandas as pd
 from pytest import raises
 
 import fugue.api as fa
+import fugue.test as ft
 from fugue.dataframe import (
     ArrayDataFrame,
     ArrowDataFrame,
@@ -17,6 +18,7 @@ from fugue.dataframe import (
 from fugue_test.dataframe_suite import DataFrameTests
 
 
+@ft.fugue_test_suite("native", mark_test=True)
 class LocalDataFrameIterableDataFrameTests(DataFrameTests.Tests):
     def df(self, data: Any = None, schema: Any = None) -> IterableDataFrame:
         def get_dfs():

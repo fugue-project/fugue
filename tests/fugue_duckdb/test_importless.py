@@ -18,12 +18,6 @@ def test_importless():
         ).run(engine)
 
         dag = FugueWorkflow()
-        idf = dag.df([[0], [1]], "a:int").as_ibis()
-        idf[idf.a < 1].as_fugue().show()
-
-        dag.run(engine)
-
-        dag = FugueWorkflow()
         tdf = dag.df([[0], [1]], "a:int")
         dag.select("SELECT * FROM ", tdf, " WHERE a<1", sql_engine=engine)
 

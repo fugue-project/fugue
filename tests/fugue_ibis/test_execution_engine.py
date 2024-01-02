@@ -1,45 +1,23 @@
 import sys
 
 import pytest
+
+import fugue.test as ft
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
 
-from .mock.execution_engine import MockDuckExecutionEngine
+from .mock.tester import mockibisduck_session  # noqa: F401  # pylint: disable-all
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="< 3.8")
+@ft.fugue_test_suite("mockibisduck", mark_test=True)
 class IbisExecutionEngineTests(ExecutionEngineTests.Tests):
-    @classmethod
-    def setUpClass(cls):
-        cls._engine = cls.make_engine(cls)
-
-    @classmethod
-    def tearDownClass(cls):
-        # cls._con.close()
-        pass
-
-    def make_engine(self):
-        return MockDuckExecutionEngine({"test": True})
-
     def test_select(self):
         # it can't work properly with DuckDB (hugeint is not recognized)
         pass
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="< 3.8")
+@ft.fugue_test_suite(("mockibisduck", {"fugue.force_is_ibis": True}), mark_test=True)
 class IbisExecutionEngineForceIbisTests(ExecutionEngineTests.Tests):
-    @classmethod
-    def setUpClass(cls):
-        cls._engine = cls.make_engine(cls)
-
-    @classmethod
-    def tearDownClass(cls):
-        # cls._con.close()
-        pass
-
-    def make_engine(self):
-        return MockDuckExecutionEngine({"test": True}, force_is_ibis=True)
-
     def test_properties(self):
         assert not self.engine.is_distributed
         assert not self.engine.map_engine.is_distributed
@@ -53,39 +31,15 @@ class IbisExecutionEngineForceIbisTests(ExecutionEngineTests.Tests):
         assert self.engine.get_current_parallelism() == 1
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="< 3.8")
+@ft.fugue_test_suite("mockibisduck", mark_test=True)
 class DuckBuiltInTests(BuiltInTests.Tests):
-    @classmethod
-    def setUpClass(cls):
-        cls._engine = cls.make_engine(cls)
-
-    @classmethod
-    def tearDownClass(cls):
-        # cls._con.close()
-        pass
-
-    def make_engine(self):
-        return MockDuckExecutionEngine({"test": True})
-
     def test_df_select(self):
         # it can't work properly with DuckDB (hugeint is not recognized)
         pass
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="< 3.8")
+@ft.fugue_test_suite(("mockibisduck", {"fugue.force_is_ibis": True}), mark_test=True)
 class DuckBuiltInForceIbisTests(BuiltInTests.Tests):
-    @classmethod
-    def setUpClass(cls):
-        cls._engine = cls.make_engine(cls)
-
-    @classmethod
-    def tearDownClass(cls):
-        # cls._con.close()
-        pass
-
-    def make_engine(self):
-        return MockDuckExecutionEngine({"test": True}, force_is_ibis=True)
-
     def test_df_select(self):
         # it can't work properly with DuckDB (hugeint is not recognized)
         pass

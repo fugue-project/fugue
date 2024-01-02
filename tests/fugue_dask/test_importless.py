@@ -1,12 +1,12 @@
 import pytest
 
 from fugue import FugueWorkflow, fsql
+import fugue.test as ft
 
-
-def test_importless(fugue_dask_client):
+@ft.with_backend("dask")
+def test_importless(backend_context):
     pytest.importorskip("fugue_sql_antlr")
-    pytest.importorskip("ibis")
-    for engine in ["dask", fugue_dask_client]:
+    for engine in ["dask", backend_context.session]:
         dag = FugueWorkflow()
         dag.df([[0]], "a:int").show()
 
@@ -21,7 +21,5 @@ def test_importless(fugue_dask_client):
         ).run(engine)
 
         dag = FugueWorkflow()
-        idf = dag.df([[0], [1]], "a:int").as_ibis()
-        idf[idf.a < 1].as_fugue().show()
 
         dag.run(engine)

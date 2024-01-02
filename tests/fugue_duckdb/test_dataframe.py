@@ -3,26 +3,19 @@ from typing import Any
 
 import duckdb
 import pandas as pd
-import pytest
 
 import fugue.api as fa
+import fugue.test as ft
 from fugue import ArrowDataFrame
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_test.dataframe_suite import DataFrameTests
 
 
+@ft.fugue_test_suite("duckdb", mark_test=True)
 class DuckDataFrameTests(DataFrameTests.Tests):
-    @pytest.fixture(autouse=True)
-    def init_client(self, fugue_duckdb_connection):
-        self._con = fugue_duckdb_connection
-
-    @classmethod
-    def setUpClass(cls):
-        pass
-
     def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
         df = ArrowDataFrame(data, schema)
-        return DuckDataFrame(duckdb.from_arrow(df.native, self._con))
+        return DuckDataFrame(duckdb.from_arrow(df.native, self.context.session))
 
     def test_as_array_special_values(self):
         for func in [
@@ -72,14 +65,11 @@ class DuckDataFrameTests(DataFrameTests.Tests):
         assert isinstance(df.as_local(), ArrowDataFrame)
 
 
+@ft.fugue_test_suite("duckdb", mark_test=True)
 class NativeDuckDataFrameTests(DataFrameTests.NativeTests):
-    @classmethod
-    def setUpClass(cls):
-        cls._con = duckdb.connect()
-
     def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
         df = ArrowDataFrame(data, schema)
-        return DuckDataFrame(duckdb.from_arrow(df.native, self._con)).native
+        return DuckDataFrame(duckdb.from_arrow(df.native, self.context.session)).native
 
     def to_native_df(self, pdf: pd.DataFrame) -> Any:
         return duckdb.from_df(pdf)

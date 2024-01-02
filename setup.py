@@ -35,18 +35,18 @@ setup(
         "adagio>=0.2.4",
         # sql dependencies
         "qpd>=0.4.4",
-        "fugue-sql-antlr>=0.1.6",
+        "fugue-sql-antlr>=0.2.0",
         "sqlglot",
         "jinja2",
     ],
     extras_require={
         "sql": [
             "qpd>=0.4.4",
-            "fugue-sql-antlr>=0.1.6",
+            "fugue-sql-antlr>=0.2.0",
             "sqlglot",
             "jinja2",
         ],
-        "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.1.6"],
+        "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.2.0"],
         "spark": ["pyspark>=3.1.1"],
         "dask": [
             "dask[distributed,dataframe]>=2023.5.0",
@@ -64,7 +64,7 @@ setup(
         "all": [
             "sqlglot",
             "jinja2",
-            "fugue-sql-antlr[cpp]>=0.1.6",
+            "fugue-sql-antlr[cpp]>=0.2.0",
             "pyspark>=3.1.1",
             "dask[distributed,dataframe]>=2023.5.0",
             "dask-sql",
@@ -89,6 +89,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3 :: Only",
     ],
     python_requires=">=3.8",
@@ -97,19 +98,14 @@ setup(
         "fugue.plugins": [
             "ibis = fugue_ibis[ibis]",
             "duckdb = fugue_duckdb.registry[duckdb]",
-            "duckdb_ibis = fugue_duckdb.ibis_engine[duckdb,ibis]",
             "spark = fugue_spark.registry[spark]",
-            "spark_ibis = fugue_spark.ibis_engine[spark,ibis]",
             "dask = fugue_dask.registry[dask]",
-            "dask_ibis = fugue_dask.ibis_engine[dask,ibis]",
             "ray = fugue_ray.registry[ray]",
             "polars = fugue_polars.registry[polars]",
         ],
         "pytest11": [
-            "fugue_test_dask = fugue_test.plugins.dask[dask]",
-            "fugue_test_ray = fugue_test.plugins.ray[ray]",
-            "fugue_test_duckdb = fugue_test.plugins.duckdb[duckdb]",
-            "fugue_test_misc = fugue_test.plugins.misc",
+            "fugue_test = fugue_test",
+            "fugue_test_fixtures = fugue_test.fixtures",
         ],
     },
 )

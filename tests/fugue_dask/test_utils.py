@@ -3,140 +3,157 @@ import json
 import dask.dataframe as dd
 import pandas as pd
 
+import fugue.test as ft
 from fugue_dask._utils import even_repartition, hash_repartition, rand_repartition
 
 
-def test_even_repartition_num(fugue_dask_client):
-    def tr(df: pd.DataFrame):
-        if len(df) == 0:
-            return pd.DataFrame(dict(v=pd.Series(dtype="string")))
-        return pd.DataFrame(dict(v=[json.dumps(list(df.aa.sort_values()))]))
+@ft.fugue_test_suite("dask", mark_test=True)
+class DaskUtilsTests(ft.FugueTestSuite):
+    @property
+    def dask_client(self):
+        return self.context.session
 
-    df = make_df([[0, 1], [], [1, 2, 3, 4]])
+    def test_even_repartition_num(self):
+        def tr(df: pd.DataFrame):
+            if len(df) == 0:
+                return pd.DataFrame(dict(v=pd.Series(dtype="string")))
+            return pd.DataFrame(dict(v=[json.dumps(list(df.aa.sort_values()))]))
 
-    for n in [6, 7]:
-        rdf = even_repartition(df, n, [])
+        df = make_df([[0, 1], [], [1, 2, 3, 4]])
+
+        for n in [6, 7]:
+            rdf = even_repartition(df, n, [])
+            res = rdf.map_partitions(tr, meta={"v": str}).compute()
+            assert [json.loads(x) for x in sorted(res.v)] == [
+                [0],
+                [1],
+                [1],
+                [2],
+                [3],
+                [4],
+            ]
+
+        rdf = even_repartition(df, 5, [])
         res = rdf.map_partitions(tr, meta={"v": str}).compute()
-        assert [json.loads(x) for x in sorted(res.v)] == [[0], [1], [1], [2], [3], [4]]
+        assert [json.loads(x) for x in sorted(res.v)] == [[0, 1], [1, 2], [3, 4]]
 
-    rdf = even_repartition(df, 5, [])
-    res = rdf.map_partitions(tr, meta={"v": str}).compute()
-    assert [json.loads(x) for x in sorted(res.v)] == [[0, 1], [1, 2], [3, 4]]
-
-    rdf = even_repartition(df, 1, [])
-    res = rdf.map_partitions(tr, meta={"v": str}).compute()
-    assert [json.loads(x) for x in sorted(res.v)] == [[0, 1, 1, 2, 3, 4]]
-
-    assert df is even_repartition(df, 0, [])
-
-    df = make_df([[], []])
-
-    for n in [1, 2, 3]:
-        rdf = even_repartition(df, n, [])
+        rdf = even_repartition(df, 1, [])
         res = rdf.map_partitions(tr, meta={"v": str}).compute()
-        assert [json.loads(x) for x in sorted(res.v)] == []
+        assert [json.loads(x) for x in sorted(res.v)] == [[0, 1, 1, 2, 3, 4]]
 
+        assert df is even_repartition(df, 0, [])
 
-def test_even_repartition_cols(fugue_dask_client):
-    def tr(df: pd.DataFrame):
-        if len(df) == 0:
-            return pd.DataFrame(dict(v=pd.Series(dtype="string")))
-        return pd.DataFrame(
-            dict(v=[json.dumps(list(df.aa.drop_duplicates().sort_values()))])
-        )
+        df = make_df([[], []])
 
-    df = make_df([[0, 1], [], [1, 2, 3, 4]])
+        for n in [1, 2, 3]:
+            rdf = even_repartition(df, n, [])
+            res = rdf.map_partitions(tr, meta={"v": str}).compute()
+            assert [json.loads(x) for x in sorted(res.v)] == []
 
-    for n in [0, 5, 6]:
-        rdf = even_repartition(df, n, ["aa", "bb"])
+    def test_even_repartition_cols(self):
+        def tr(df: pd.DataFrame):
+            if len(df) == 0:
+                return pd.DataFrame(dict(v=pd.Series(dtype="string")))
+            return pd.DataFrame(
+                dict(v=[json.dumps(list(df.aa.drop_duplicates().sort_values()))])
+            )
+
+        df = make_df([[0, 1], [], [1, 2, 3, 4]])
+
+        for n in [0, 5, 6]:
+            rdf = even_repartition(df, n, ["aa", "bb"])
+            res = rdf.map_partitions(tr, meta={"v": str}).compute()
+            assert [json.loads(x) for x in sorted(res.v)] == [[0], [1], [2], [3], [4]]
+
+        rdf = even_repartition(df, 3, ["aa", "bb"])
         res = rdf.map_partitions(tr, meta={"v": str}).compute()
-        assert [json.loads(x) for x in sorted(res.v)] == [[0], [1], [2], [3], [4]]
+        assert [json.loads(x) for x in sorted(res.v)] == [[0, 1], [2, 3], [4]]
 
-    rdf = even_repartition(df, 3, ["aa", "bb"])
-    res = rdf.map_partitions(tr, meta={"v": str}).compute()
-    assert [json.loads(x) for x in sorted(res.v)] == [[0, 1], [2, 3], [4]]
-
-    rdf = even_repartition(df, 1, ["aa", "bb"])
-    res = rdf.map_partitions(tr, meta={"v": str}).compute()
-    assert [json.loads(x) for x in sorted(res.v)] == [[0, 1, 2, 3, 4]]
-
-    df = make_df([[0, 1], [], [1, 2, 3, 4]], with_emtpy=True)
-
-    for n in [0, 5, 6]:
-        rdf = even_repartition(df, n, ["aa", "bb"])
+        rdf = even_repartition(df, 1, ["aa", "bb"])
         res = rdf.map_partitions(tr, meta={"v": str}).compute()
-        assert [json.loads(x) for x in sorted(res.v)] == [[0], [1], [2], [3], [4]]
+        assert [json.loads(x) for x in sorted(res.v)] == [[0, 1, 2, 3, 4]]
 
+        df = make_df([[0, 1], [], [1, 2, 3, 4]], with_emtpy=True)
 
-def test_hash_repartition(fugue_dask_client):
-    def tr(df: pd.DataFrame):
-        if len(df) == 0:
-            return pd.DataFrame(dict(v=pd.Series(dtype="string")))
-        return pd.DataFrame(dict(v=[json.dumps(list(df.aa.sort_values()))]))
+        for n in [0, 5, 6]:
+            rdf = even_repartition(df, n, ["aa", "bb"])
+            res = rdf.map_partitions(tr, meta={"v": str}).compute()
+            assert [json.loads(x) for x in sorted(res.v)] == [[0], [1], [2], [3], [4]]
 
-    df = make_df([[0, 1], [], [1, 2, 3, 4]])
+    def test_hash_repartition(self):
+        def tr(df: pd.DataFrame):
+            if len(df) == 0:
+                return pd.DataFrame(dict(v=pd.Series(dtype="string")))
+            return pd.DataFrame(dict(v=[json.dumps(list(df.aa.sort_values()))]))
 
-    for n in [105, 107]:
-        rdf = hash_repartition(df, n, [])
+        df = make_df([[0, 1], [], [1, 2, 3, 4]])
+
+        for n in [105, 107]:
+            rdf = hash_repartition(df, n, [])
+            res = rdf.map_partitions(tr, meta={"v": str}).compute()
+            assert [json.loads(x) for x in sorted(res.v)] == [
+                [0],
+                [1, 1],
+                [2],
+                [3],
+                [4],
+            ]
+
+        rdf = hash_repartition(df, 3, [])
+        res = rdf.map_partitions(tr, meta={"v": str}).compute()
+        assert [json.loads(x) for x in sorted(res.v)] == [[0, 3], [1, 1, 4], [2]]
+
+        rdf = hash_repartition(df, 3, ["aa"])
+        res = rdf.map_partitions(tr, meta={"v": str}).compute()
+        assert [json.loads(x) for x in sorted(res.v)] == [[0, 2], [1, 1, 3, 4]]
+
+        rdf = hash_repartition(df, 1, [])
+        res = rdf.map_partitions(tr, meta={"v": str}).compute()
+        assert [json.loads(x) for x in sorted(res.v)] == [[0, 1, 1, 2, 3, 4]]
+
+        assert df is hash_repartition(df, 0, [])
+        assert df is hash_repartition(df, 0, ["aa"])
+
+        df = make_df([[], []])
+
+        for n in [1, 2, 3]:
+            rdf = hash_repartition(df, n, ["aa"])
+            res = rdf.map_partitions(tr, meta={"v": str}).compute()
+            assert [json.loads(x) for x in sorted(res.v)] == []
+
+    def test_rand_repartition(self):
+        def tr(df: pd.DataFrame):
+            if len(df) == 0:
+                return pd.DataFrame(dict(v=pd.Series(dtype="string")))
+            return pd.DataFrame(dict(v=[json.dumps(list(df.aa.sort_values()))]))
+
+        df = make_df([[0, 1], [], [1, 2, 3, 4]])
+
+        rdf = rand_repartition(df, 105, [], seed=0)
+        res = rdf.map_partitions(tr, meta={"v": str}).compute()
+        assert [json.loads(x) for x in sorted(res.v)] == [[0, 1], [1, 2], [3], [4]]
+
+        rdf = rand_repartition(df, 2, [], seed=0)
+        res = rdf.map_partitions(tr, meta={"v": str}).compute()
+        assert [json.loads(x) for x in sorted(res.v)] == [[0, 1, 4], [1, 2, 3]]
+
+        rdf = rand_repartition(df, 105, ["aa", "bb"], seed=0)
         res = rdf.map_partitions(tr, meta={"v": str}).compute()
         assert [json.loads(x) for x in sorted(res.v)] == [[0], [1, 1], [2], [3], [4]]
 
-    rdf = hash_repartition(df, 3, [])
-    res = rdf.map_partitions(tr, meta={"v": str}).compute()
-    assert [json.loads(x) for x in sorted(res.v)] == [[0, 3], [1, 1, 4], [2]]
-
-    rdf = hash_repartition(df, 3, ["aa"])
-    res = rdf.map_partitions(tr, meta={"v": str}).compute()
-    assert [json.loads(x) for x in sorted(res.v)] == [[0, 2], [1, 1, 3, 4]]
-
-    rdf = hash_repartition(df, 1, [])
-    res = rdf.map_partitions(tr, meta={"v": str}).compute()
-    assert [json.loads(x) for x in sorted(res.v)] == [[0, 1, 1, 2, 3, 4]]
-
-    assert df is hash_repartition(df, 0, [])
-    assert df is hash_repartition(df, 0, ["aa"])
-
-    df = make_df([[], []])
-
-    for n in [1, 2, 3]:
-        rdf = hash_repartition(df, n, ["aa"])
+        rdf = rand_repartition(df, 3, ["aa", "bb"], seed=0)
         res = rdf.map_partitions(tr, meta={"v": str}).compute()
-        assert [json.loads(x) for x in sorted(res.v)] == []
+        assert [json.loads(x) for x in sorted(res.v)] == [[0, 2], [1, 1, 3], [4]]
 
+        assert df is rand_repartition(df, 0, [])
+        assert df is rand_repartition(df, 0, ["aa"])
 
-def test_rand_repartition(fugue_dask_client):
-    def tr(df: pd.DataFrame):
-        if len(df) == 0:
-            return pd.DataFrame(dict(v=pd.Series(dtype="string")))
-        return pd.DataFrame(dict(v=[json.dumps(list(df.aa.sort_values()))]))
+        df = make_df([[], []])
 
-    df = make_df([[0, 1], [], [1, 2, 3, 4]])
-
-    rdf = rand_repartition(df, 105, [], seed=0)
-    res = rdf.map_partitions(tr, meta={"v": str}).compute()
-    assert [json.loads(x) for x in sorted(res.v)] == [[0, 1], [1, 2], [3], [4]]
-
-    rdf = rand_repartition(df, 2, [], seed=0)
-    res = rdf.map_partitions(tr, meta={"v": str}).compute()
-    assert [json.loads(x) for x in sorted(res.v)] == [[0, 1, 4], [1, 2, 3]]
-
-    rdf = rand_repartition(df, 105, ["aa", "bb"], seed=0)
-    res = rdf.map_partitions(tr, meta={"v": str}).compute()
-    assert [json.loads(x) for x in sorted(res.v)] == [[0], [1, 1], [2], [3], [4]]
-
-    rdf = rand_repartition(df, 3, ["aa", "bb"], seed=0)
-    res = rdf.map_partitions(tr, meta={"v": str}).compute()
-    assert [json.loads(x) for x in sorted(res.v)] == [[0, 2], [1, 1, 3], [4]]
-
-    assert df is rand_repartition(df, 0, [])
-    assert df is rand_repartition(df, 0, ["aa"])
-
-    df = make_df([[], []])
-
-    for n in [1, 2, 3]:
-        rdf = rand_repartition(df, n, ["aa"])
-        res = rdf.map_partitions(tr, meta={"v": str}).compute()
-        assert [json.loads(x) for x in sorted(res.v)] == []
+        for n in [1, 2, 3]:
+            rdf = rand_repartition(df, n, ["aa"])
+            res = rdf.map_partitions(tr, meta={"v": str}).compute()
+            assert [json.loads(x) for x in sorted(res.v)] == []
 
 
 def make_df(data, with_emtpy=False):

@@ -24,12 +24,6 @@ def test_importless(spark_session):
         """
         ).run(engine)
 
-        dag = FugueWorkflow()
-        idf = dag.df([[0], [1]], "a:int").as_ibis()
-        idf[idf.a < 1].as_fugue().show()
-
-        dag.run(engine)
-
 
 def test_is_sparksql():
     assert _is_sparksql(("sparksql", "abc"))

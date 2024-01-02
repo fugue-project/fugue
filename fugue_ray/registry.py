@@ -14,6 +14,7 @@ from fugue.plugins import as_fugue_dataset, infer_execution_engine
 
 from .dataframe import RayDataFrame
 from .execution_engine import RayExecutionEngine
+from .tester import RayTestBackend  # noqa: F401  # pylint: disable-all
 
 
 @infer_execution_engine.candidate(
