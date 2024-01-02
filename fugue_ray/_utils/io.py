@@ -3,6 +3,7 @@ import pathlib
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 import pyarrow as pa
+import ray
 import ray.data as rd
 from pyarrow import csv as pacsv
 from pyarrow import json as pajson
@@ -196,6 +197,10 @@ class RayIO(object):
         parse_options: Dict[str, Any] = {}
 
         def _read_json() -> RayDataFrame:
+            if ray.__version__ >= "2.9":
+                params: Dict[str, Any] = {"file_extensions": None}
+            else:  # pragma: no cover
+                params = {}
             return RayDataFrame(
                 rd.read_json(
                     p,
@@ -205,6 +210,7 @@ class RayIO(object):
                     partition_filter=_FileFiler(
                         file_extensions=["json"], exclude=["_SUCCESS"]
                     ),
+                    **params,
                 )
             )
 
