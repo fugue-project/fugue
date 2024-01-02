@@ -37,6 +37,26 @@ def _load_all_backends() -> None:
 
 
 def with_backend(ctx: Any, *other: Any, skip_missing: bool = False) -> Any:
+    """The decorator to set the backend context for the test function
+
+    :param ctx: the object to specify the backend
+    :param other: more objects to specify the additional backends
+    :param skip_missing: skip if an object can't be converted to a backend,
+        defaults to False
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            import fugue.test as ft
+            import fugue.api as fa
+
+            @ft.with_backend("pandas", "spark")
+            def test_spark(path_fixture):
+                # test load and count under spark and pandas
+                df = fa.load(path_fixture)
+                assert fa.count(df) == 3
+    """
     import pytest
 
     _load_all_backends()
@@ -48,6 +68,28 @@ def with_backend(ctx: Any, *other: Any, skip_missing: bool = False) -> Any:
 
 
 def fugue_test_backend(cls: Type["FugueTestBackend"]) -> Type["FugueTestBackend"]:
+    """The decorator to register a Fugue test backend. Most Fugue users don't need
+    to use this decorator.
+
+    :param cls: the FugueTestBackend class
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            import fugue.test as ft
+
+            @ft.fugue_test_backend
+            class MyBackend(ft.FugueTestBackend):
+                name = "my_backend"  # the name of the backend
+
+                @classmethod
+                @contextmanager
+                def session_context(cls, session_conf: Dict[str, Any]) -> Iterator[Any]:
+                    # create a session object
+                    yield session
+
+    """
     assert_or_throw(
         issubclass(cls, FugueTestBackend),
         ValueError(f"{cls} is not a FugueTestBackend"),
@@ -66,6 +108,27 @@ def fugue_test_backend(cls: Type["FugueTestBackend"]) -> Type["FugueTestBackend"
 
 
 class FugueTestSuite:
+    """The base class for Fugue test suite. Most Fugue users don't need to use this
+    class or the decorator :func:`~.fugue_test_suite`. The dccorator and the class
+    are often used together.
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            import fugue.test as ft
+
+            @ft.fugue_test_suite("pandas")
+            class MyTest(ft.FugueTestSuite):
+                def test_pandas(self):
+                    # test pandas
+                    pass
+
+                def test_spark(self):
+                    # test spark
+                    pass
+    """
+
     backend: Any
     tmp_path: Path
 
@@ -80,10 +143,12 @@ class FugueTestSuite:
 
     @property
     def context(self) -> "FugueTestContext":
+        """The ``FugueTestContext`` object"""
         return self._test_context
 
     @property
     def engine(self) -> Any:
+        """The engine object inside the ``FugueTestContext``"""
         return self.context.engine
 
 
@@ -107,12 +172,40 @@ def fugue_test_suite(backend: Any, mark_test: Optional[bool] = None) -> Any:
 
 @dataclass
 class FugueTestContext:
+    """The context object for Fugue test
+
+    :param engine: the Fugue ExecutionEngine object
+    :param session: the original session wrapped by the Fugue ExecutionEngine
+    :param name: the backend name
+    """
+
     engine: Any
     session: Any
     name: str
 
 
 class FugueTestBackend:
+    """The base class for Fugue test backend. Most Fugue users don't need to use this
+    class or the decorator :func:`~.fugue_test_backend`. The dccorator and the class
+    are often used together.
+
+    .. admonition:: Examples
+
+        .. code-block:: python
+
+            import fugue.test as ft
+
+            @ft.fugue_test_backend
+            class MyBackend(ft.FugueTestBackend):
+                name = "my_backend"  # the name of the backend
+
+                @classmethod
+                @contextmanager
+                def session_context(cls, session_conf: Dict[str, Any]) -> Iterator[Any]:
+                    # create a session object
+                    yield session
+    """
+
     name = ""
     default_session_conf: Dict[str, Any] = {}
     default_fugue_conf: Dict[str, Any] = {}
@@ -121,16 +214,33 @@ class FugueTestBackend:
 
     @classmethod
     def transform_session_conf(cls, conf: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract and transform the ``conf`` and keep the ones specific to
+        this backend. The default implementation will extract the configuration
+        prefixed with ``<backend name>.`` and remove the prefix.
+
+        :param conf: the raw configuration
+        :return: the transformed configuration
+        """
         return extract_conf(conf, cls.name + ".", remove_prefix=True)
 
     @classmethod
     @contextmanager
     def session_context(cls, session_conf: Dict[str, Any]) -> Iterator[Any]:
+        """Create the backend native session object
+
+        :param session_conf: the configuration for this backend
+        :yield: the session object
+        """
         raise NotImplementedError  # pragma: no cover
 
     @classmethod
     @contextmanager
     def generate_session_fixture(cls) -> Iterator[Any]:
+        """Generate the session fixture for this backend from the default backend
+        configuration and then the pytest ini configuration under ``fugue_test_conf``
+
+        :yield: the session object
+        """
         session_conf = _merge_dicts(
             cls.default_session_conf,
             cls.transform_session_conf(_FUGUE_TEST_ALL_INI_CONF),
@@ -143,6 +253,15 @@ class FugueTestBackend:
     def generate_context_fixture(
         cls, session: object, extra_fugue_conf: Dict[str, Any]
     ) -> Iterator[FugueTestContext]:
+        """Generate the ``FugueTestContext`` fixture for this backend from the
+        default backend configuration and then the pytest ini configuration under
+        ``fugue_test_conf`` and then ``extra_fugue_conf``.
+
+        :param session: the session object
+        :param extra_fugue_conf: the extra fugue configuration
+
+        :yield: the ``FugueTestContext`` object
+        """
         import fugue.api as fa
 
         fugue_conf = _merge_dicts(
@@ -157,6 +276,15 @@ class FugueTestBackend:
 def extract_conf(
     conf: Dict[str, Any], prefix: str, remove_prefix: bool
 ) -> Dict[str, Any]:
+    """Extract the configuration prefixed with ``prefix`` and optionally remove the
+    prefix
+
+    :param conf: the raw configuration
+    :param prefix: the prefix
+    :param remove_prefix: whether to remove the prefix
+
+    :return: the extracted configuration
+    """
     res: Dict[str, Any] = {}
     for k, v in conf.items():
         if k.startswith(prefix):
