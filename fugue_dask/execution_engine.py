@@ -506,6 +506,17 @@ class DaskExecutionEngine(ExecutionEngine):
                 ).head(n)
 
         else:
+            if len(_presort.keys()) == 0 and n == 1:
+                return DaskDataFrame(
+                    d.drop_duplicates(
+                        subset=partition_spec.partition_by,
+                        ignore_index=True,
+                        keep="first",
+                    ),
+                    df.schema,
+                    type_safe=False,
+                )
+
             d = (
                 d.groupby(partition_spec.partition_by, dropna=False)
                 .apply(_partition_take, n=n, presort=_presort, meta=meta)

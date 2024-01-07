@@ -674,6 +674,11 @@ class SparkExecutionEngine(ExecutionEngine):
 
         # If partition exists
         else:
+            if len(_presort.keys()) == 0 and n == 1:
+                return self._to_spark_df(
+                    d.dropDuplicates(subset=partition_spec.partition_by), df.schema
+                )
+
             w = Window.partitionBy([col(x) for x in partition_spec.partition_by])
 
             if len(_presort.keys()) > 0:
