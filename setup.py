@@ -4,6 +4,13 @@ from setuptools import find_packages, setup
 
 from fugue_version import __version__
 
+SQL_DEPENDENCIES = [
+    "qpd>=0.4.4",
+    "fugue-sql-antlr>=0.2.0",
+    "sqlglot",
+    "jinja2",
+]
+
 with open("README.md") as f:
     _text = ["# Fugue"] + f.read().splitlines()[1:]
     LONG_DESCRIPTION = "\n".join(_text)
@@ -33,19 +40,9 @@ setup(
     install_requires=[
         "triad>=0.9.3",
         "adagio>=0.2.4",
-        # sql dependencies
-        "qpd>=0.4.4",
-        "fugue-sql-antlr>=0.2.0",
-        "sqlglot",
-        "jinja2",
     ],
     extras_require={
-        "sql": [
-            "qpd>=0.4.4",
-            "fugue-sql-antlr>=0.2.0",
-            "sqlglot",
-            "jinja2",
-        ],
+        "sql": SQL_DEPENDENCIES,
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.2.0"],
         "spark": ["pyspark>=3.1.1"],
         "dask": [
@@ -54,17 +51,16 @@ setup(
             "pandas>=2.0.2",
         ],
         "ray": ["ray[data]>=2.4.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
-        "duckdb": [
+        "duckdb": SQL_DEPENDENCIES
+        + [
             "duckdb>=0.5.0",
             "numpy",
         ],
         "polars": ["polars"],
-        "ibis": ["ibis-framework>=3.2.0,<6"],
+        "ibis": SQL_DEPENDENCIES + ["ibis-framework>=3.2.0,<6"],
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
-        "all": [
-            "sqlglot",
-            "jinja2",
-            "fugue-sql-antlr[cpp]>=0.2.0",
+        "all": SQL_DEPENDENCIES
+        + [
             "pyspark>=3.1.1",
             "dask[distributed,dataframe]>=2023.5.0",
             "dask-sql",
