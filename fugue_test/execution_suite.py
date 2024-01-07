@@ -842,6 +842,17 @@ class ExecutionEngineTests(object):
                 throw=False,
             )
             assert case1 or case2
+            j = fa.take(a, n=2, partition="a", presort=None)
+            df_eq(
+                j,
+                [
+                    ["a", 2, 3],
+                    [None, 4, 2],
+                    [None, 2, 1],
+                ],
+                "a:str,b:int,c:long",
+                throw=True,
+            )
             raises(ValueError, lambda: fa.take(a, n=0.5, presort=None))
 
         def test_sample_n(self):
