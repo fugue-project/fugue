@@ -507,8 +507,14 @@ class DaskExecutionEngine(ExecutionEngine):
 
         else:
             if len(_presort.keys()) == 0 and n == 1:
-                return d.drop_duplicates(
-                    subset=partition_spec.partition_by, ignore_index=True, keep="first"
+                return DaskDataFrame(
+                    d.drop_duplicates(
+                        subset=partition_spec.partition_by,
+                        ignore_index=True,
+                        keep="first",
+                    ),
+                    df.schema,
+                    type_safe=False,
                 )
 
             d = (
