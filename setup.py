@@ -57,7 +57,7 @@ setup(
             "numpy",
         ],
         "polars": ["polars"],
-        "ibis": SQL_DEPENDENCIES + ["ibis-framework>=3.2.0,<6"],
+        "ibis": SQL_DEPENDENCIES + ["ibis-framework"],
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
         "all": SQL_DEPENDENCIES
         + [
@@ -71,7 +71,7 @@ setup(
             "duckdb>=0.5.0",
             "pyarrow>=6.0.1",
             "pandas>=2.0.2",
-            "ibis-framework>=3.2.0,<6",
+            "ibis-framework",
             "polars",
         ],
     },

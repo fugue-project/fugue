@@ -96,7 +96,7 @@ class IbisSQLEngine(SQLEngine):
             suffixes: Dict[str, Any] = dict(suffixes=("", _JOIN_RIGHT_SUFFIX))
         else:  # pragma: no cover
             # breaking change in ibis 6.0
-            suffixes = dict(lname="", rname=_JOIN_RIGHT_SUFFIX)
+            suffixes = dict(lname="", rname="{name}" + _JOIN_RIGHT_SUFFIX)
         if how.lower() == "cross":
             tb = _df1.native.cross_join(_df2.native, **suffixes)
         elif how.lower() == "right_outer":
