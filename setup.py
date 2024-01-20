@@ -50,7 +50,12 @@ setup(
             "pyarrow>=7.0.0",
             "pandas>=2.0.2",
         ],
-        "ray": ["ray[data]>=2.4.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
+        "ray": [
+            "ray[data]>=2.4.0",
+            "duckdb>=0.5.0",
+            "pyarrow>=6.0.1",
+            "pandas<2.2",
+        ],
         "duckdb": SQL_DEPENDENCIES
         + [
             "duckdb>=0.5.0",
@@ -70,7 +75,7 @@ setup(
             "ipython>=7.10.0",
             "duckdb>=0.5.0",
             "pyarrow>=6.0.1",
-            "pandas>=2.0.2",
+            "pandas>=2.0.2,<2.2",  # because of Ray
             "ibis-framework",
             "polars",
         ],
