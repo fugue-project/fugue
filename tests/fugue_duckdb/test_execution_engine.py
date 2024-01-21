@@ -3,7 +3,6 @@ import pickle
 import duckdb
 import pandas as pd
 import pyarrow as pa
-import pytest
 from pytest import raises
 
 import fugue.api as fa
@@ -11,7 +10,6 @@ import fugue.test as ft
 from fugue import ArrowDataFrame, DataFrame, FugueWorkflow, fsql
 from fugue.api import engine_context
 from fugue.plugins import infer_execution_engine
-from fugue_duckdb import DuckExecutionEngine
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
@@ -109,39 +107,55 @@ def test_builtin_connection():
 
 
 def test_configs():
-    dag = FugueWorkflow()
-    df = dag.df([[None], [1]], "a:double")
-    df = dag.select("SELECT * FROM ", df, "ORDER BY a LIMIT 1")
-    df.assert_eq(dag.df([[None]], "a:double"))
-
-    dag.run(
-        "duckdb",
-        {
-            "fugue.duckdb.pragma.threads": 2,
-            "fugue.duckdb.pragma.default_null_order": "NULLS FIRST",
-        },
+    df = fa.as_pandas(
+        fa.fugue_sql(
+            """
+    SELECT name, value FROM duckdb_settings()
+    WHERE name IN ('threads')       
+    """,
+            engine="duckdb",
+            engine_conf={"fugue.duckdb.pragma.threads": 1},
+        )
     )
+    assert df.value.iloc[0] == "1"
 
-    dag = FugueWorkflow()
-    df = dag.df([[None], [1]], "a:double")
-    df = dag.select("SELECT * FROM ", df, "ORDER BY a LIMIT 1")
-    df.assert_eq(dag.df([[1]], "a:double"))
-
-    dag.run(
-        "duckdb",
-        {
-            "fugue.duckdb.pragma.threads": 2,
-            "fugue.duckdb.pragma.default_null_order": "NULLS LAST",
-        },
+    df = fa.as_pandas(
+        fa.fugue_sql(
+            """
+    SELECT name, value FROM duckdb_settings()
+    WHERE name IN ('threads')       
+    """,
+            engine="duckdb",
+            engine_conf={"fugue.duckdb.pragma.threads": 3},
+        )
     )
+    assert df.value.iloc[0] == "3"
 
     with raises(ValueError):
         # invalid config format
-        dag.run("duckdb", {"fugue.duckdb.pragma.threads;xx": 2})
+        df = fa.as_pandas(
+            fa.fugue_sql(
+                """
+        SELECT name, value FROM duckdb_settings()
+        WHERE name IN ('threads')       
+        """,
+                engine="duckdb",
+                engine_conf={"fugue.duckdb.pragma.threads;xx": 3},
+            )
+        )
 
     with raises(Exception):
         # non-existent config
-        dag.run("duckdb", {"fugue.duckdb.pragma.threads_xx": 2})
+        df = fa.as_pandas(
+            fa.fugue_sql(
+                """
+        SELECT name, value FROM duckdb_settings()
+        WHERE name IN ('threads')       
+        """,
+                engine="duckdb",
+                engine_conf={"fugue.duckdb.pragma.threads_xx": 3},
+            )
+        )
 
 
 def test_annotations():

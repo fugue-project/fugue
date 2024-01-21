@@ -38,7 +38,7 @@ setup(
     keywords="distributed spark dask ray sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
     install_requires=[
-        "triad>=0.9.3",
+        "triad>=0.9.4",
         "adagio>=0.2.4",
     ],
     extras_require={
@@ -50,14 +50,19 @@ setup(
             "pyarrow>=7.0.0",
             "pandas>=2.0.2",
         ],
-        "ray": ["ray[data]>=2.4.0", "duckdb>=0.5.0", "pyarrow>=6.0.1"],
+        "ray": [
+            "ray[data]>=2.4.0",
+            "duckdb>=0.5.0",
+            "pyarrow>=6.0.1",
+            "pandas<2.2",
+        ],
         "duckdb": SQL_DEPENDENCIES
         + [
             "duckdb>=0.5.0",
             "numpy",
         ],
         "polars": ["polars"],
-        "ibis": SQL_DEPENDENCIES + ["ibis-framework>=3.2.0,<6"],
+        "ibis": SQL_DEPENDENCIES + ["ibis-framework"],
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
         "all": SQL_DEPENDENCIES
         + [
@@ -70,8 +75,8 @@ setup(
             "ipython>=7.10.0",
             "duckdb>=0.5.0",
             "pyarrow>=6.0.1",
-            "pandas>=2.0.2",
-            "ibis-framework>=3.2.0,<6",
+            "pandas>=2.0.2,<2.2",  # because of Ray
+            "ibis-framework",
             "polars",
         ],
     },
