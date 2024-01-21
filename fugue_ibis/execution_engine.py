@@ -92,9 +92,9 @@ class IbisSQLEngine(SQLEngine):
         _df2 = self.to_df(df2)
         key_schema, end_schema = get_join_schemas(_df1, _df2, how=how, on=on)
         on_fields = [_df1.native[k] == _df2.native[k] for k in key_schema]
-        if ibis.__version__ < "6":
+        if ibis.__version__ < "6":  # pragma: no cover
             suffixes: Dict[str, Any] = dict(suffixes=("", _JOIN_RIGHT_SUFFIX))
-        else:  # pragma: no cover
+        else:
             # breaking change in ibis 6.0
             suffixes = dict(lname="", rname="{name}" + _JOIN_RIGHT_SUFFIX)
         if how.lower() == "cross":
