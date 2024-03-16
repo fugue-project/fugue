@@ -23,8 +23,8 @@ from ._compat import IbisTable
 from ._utils import to_ibis_schema
 from .dataframe import IbisDataFrame
 
-_JOIN_RIGHT_SUFFIX = "_ibis_y__"
-_GEN_TABLE_NAMES = (f"_fugue_temp_table_{i:d}" for i in itertools.count())
+_JOIN_RIGHT_SUFFIX = "_ibis_y__".upper()
+_GEN_TABLE_NAMES = (f"_fugue_temp_table_{i:d}".upper() for i in itertools.count())
 
 
 class IbisSQLEngine(SQLEngine):
@@ -224,7 +224,7 @@ class IbisSQLEngine(SQLEngine):
             _presort = parse_presort_exp(presort)
         else:
             _presort = partition_spec.presort
-        tbn = "_temp"
+        tbn = "_TEMP"
         idf = self.to_df(df)
 
         if len(_presort) == 0:
