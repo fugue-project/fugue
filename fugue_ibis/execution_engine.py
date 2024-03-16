@@ -233,9 +233,10 @@ class IbisSQLEngine(SQLEngine):
             pcols = ", ".join(
                 self.encode_column_name(x) for x in partition_spec.partition_by
             )
+            dummy_order_by = self._dummy_window_order_by()
             sql = (
                 f"SELECT * FROM ("
-                f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {pcols}) "
+                f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {pcols} {dummy_order_by}) "
                 f"AS __fugue_take_param FROM {tbn}"
                 f") WHERE __fugue_take_param<={n}"
             )
@@ -289,6 +290,12 @@ class IbisSQLEngine(SQLEngine):
 
     def load_table(self, table: str, **kwargs: Any) -> DataFrame:
         return self.to_df(self.backend.table(table))
+
+    def _dummy_window_order_by(self) -> str:
+        """Return a dummy window order by clause, this is required for
+        some SQL backends when there is no real order by clause in window
+        """
+        return ""
 
 
 class IbisMapEngine(MapEngine):
