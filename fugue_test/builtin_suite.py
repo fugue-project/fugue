@@ -56,7 +56,6 @@ from fugue import (
 from fugue.column import col
 from fugue.column import functions as ff
 from fugue.column import lit
-from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import (
     FugueInterfacelessError,
     FugueWorkflowCompileError,
@@ -81,7 +80,7 @@ class BuiltInTests(object):
     class Tests(ft.FugueTestSuite):
         def test_workflows(self):
             a = FugueWorkflow().df([[0]], "a:int")
-            df_eq(a.compute(self.engine), [[0]], "a:int")
+            self.df_eq(a.compute(self.engine), [[0]], "a:int")
 
         def test_create_show(self):
             with FugueWorkflow() as dag:
@@ -1690,7 +1689,7 @@ class BuiltInTests(object):
                 """,
                     x=sdf3,
                 ).run()
-                df_eq(
+                self.df_eq(
                     res["res"],
                     [[3, 4, 13]],
                     schema="a:long,b:int,c:long",
@@ -1723,9 +1722,9 @@ class BuiltInTests(object):
                 df1 = pd.DataFrame([[0, 1], [2, 3]], columns=["a b", " "])
                 df2 = pd.DataFrame([[0, 10], [20, 3]], columns=["a b", "d"])
                 r = fa.inner_join(df1, df2, as_fugue=True)
-                df_eq(r, [[0, 1, 10]], "`a b`:long,` `:long,d:long", throw=True)
+                self.df_eq(r, [[0, 1, 10]], "`a b`:long,` `:long,d:long", throw=True)
                 r = fa.transform(r, tr)
-                df_eq(
+                self.df_eq(
                     r,
                     [[0, 1, 10, 2]],
                     "`a b`:long,` `:long,d:long,`c *`:long",
@@ -1739,7 +1738,7 @@ class BuiltInTests(object):
                     col("d"),
                     col("c *").cast(int),
                 )
-                df_eq(
+                self.df_eq(
                     r,
                     [[0, 1, 10, 2]],
                     "`a b `:long,`x y`:long,d:long,`c *`:long",
@@ -1748,13 +1747,13 @@ class BuiltInTests(object):
                 r = fa.rename(r, {"a b ": "a b"})
                 fa.save(r, f_csv, header=True, force_single=True)
                 fa.save(r, f_parquet)
-                df_eq(
+                self.df_eq(
                     fa.load(f_parquet, columns=["x y", "d", "c *"], as_fugue=True),
                     [[1, 10, 2]],
                     "`x y`:long,d:long,`c *`:long",
                     throw=True,
                 )
-                df_eq(
+                self.df_eq(
                     fa.load(
                         f_csv,
                         header=True,
@@ -1766,7 +1765,7 @@ class BuiltInTests(object):
                     "d:str,`c *`:str",
                     throw=True,
                 )
-                df_eq(
+                self.df_eq(
                     fa.load(
                         f_csv,
                         header=True,
@@ -1786,14 +1785,14 @@ class BuiltInTests(object):
                 """,
                     as_fugue=True,
                 )
-                df_eq(r, [[0, 1, 10]], "`a b`:long,` `:long,d:long", throw=True)
+                self.df_eq(r, [[0, 1, 10]], "`a b`:long,` `:long,d:long", throw=True)
                 r = fa.fugue_sql(
                     """
                 TRANSFORM r USING tr SCHEMA *,`c *`:long
                 """,
                     as_fugue=True,
                 )
-                df_eq(
+                self.df_eq(
                     r,
                     [[0, 1, 10, 2]],
                     "`a b`:long,` `:long,d:long,`c *`:long",
@@ -1805,7 +1804,7 @@ class BuiltInTests(object):
                 """,
                     as_fugue=True,
                 )
-                df_eq(
+                self.df_eq(
                     r,
                     [[0, 1, 10, 2]],
                     "`a b`:long,` `:long,d:long,`c *`:long",
@@ -1826,19 +1825,19 @@ class BuiltInTests(object):
                     f_parquet=f_parquet,
                     f_csv=f_csv,
                 ).run()
-                df_eq(
+                self.df_eq(
                     res["r1"],
                     [[1, 10, 2]],
                     "`x y`:long,d:long,`c *`:long",
                     throw=True,
                 )
-                df_eq(
+                self.df_eq(
                     res["r2"],
                     [["1", "10", "2"]],
                     "`x y`:str,d:str,`c *`:str",
                     throw=True,
                 )
-                df_eq(
+                self.df_eq(
                     res["r3"],
                     [[0, 1, 10, 2]],
                     "`a b`:long,`x y`:long,d:long,`c *`:long",
