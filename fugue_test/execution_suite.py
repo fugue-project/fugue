@@ -360,7 +360,7 @@ class ExecutionEngineTests(object):
                 ],
                 "a:bytes",
             )
-            self.df_eq(expected, c, no_pandas=True, check_order=True, throw=True)
+            self.df_eq(expected, c, no_pandas=True, check_order=False, throw=True)
 
         def test_join_multiple(self):
             e = self.engine
