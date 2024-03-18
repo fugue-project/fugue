@@ -10,7 +10,6 @@ from pytest import raises
 import fugue.api as fi
 import fugue.test as ft
 from fugue.dataframe import ArrowDataFrame, DataFrame
-from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 
 
@@ -121,7 +120,7 @@ class DataFrameTests(object):
             assert [[1]] == fi.as_array(df, type_safe=True)
 
             df = self.df([["a", 1, 2]], "a:str,b:int,c:int")
-            df_eq(
+            self.df_eq(
                 fi.as_fugue_df(fi.select_columns(df, ["c", "a"])),
                 [[2, "a"]],
                 "a:str,c:int",
@@ -132,13 +131,13 @@ class DataFrameTests(object):
                 df = self.df(data, "a:str,b:int")
                 df2 = fi.rename(df, columns=dict(a="aa"))
                 assert fi.get_schema(df) == "a:str,b:int"
-                df_eq(fi.as_fugue_df(df2), data, "aa:str,b:int", throw=True)
+                self.df_eq(fi.as_fugue_df(df2), data, "aa:str,b:int", throw=True)
 
             for data in [[["a", 1]], []]:
                 df = self.df(data, "a:str,b:int")
                 df3 = fi.rename(df, columns={})
                 assert fi.get_schema(df3) == "a:str,b:int"
-                df_eq(fi.as_fugue_df(df3), data, "a:str,b:int", throw=True)
+                self.df_eq(fi.as_fugue_df(df3), data, "a:str,b:int", throw=True)
 
         def test_rename_invalid(self):
             df = self.df([["a", 1]], "a:str,b:int")

@@ -23,8 +23,8 @@ from ._compat import IbisTable
 from ._utils import to_ibis_schema
 from .dataframe import IbisDataFrame
 
-_JOIN_RIGHT_SUFFIX = "_ibis_y__"
-_GEN_TABLE_NAMES = (f"_fugue_temp_table_{i:d}" for i in itertools.count())
+_JOIN_RIGHT_SUFFIX = "_ibis_y__".upper()
+_GEN_TABLE_NAMES = (f"_fugue_temp_table_{i:d}".upper() for i in itertools.count())
 
 
 class IbisSQLEngine(SQLEngine):
@@ -224,7 +224,7 @@ class IbisSQLEngine(SQLEngine):
             _presort = parse_presort_exp(presort)
         else:
             _presort = partition_spec.presort
-        tbn = "_temp"
+        tbn = "_TEMP"
         idf = self.to_df(df)
 
         if len(_presort) == 0:
@@ -233,9 +233,10 @@ class IbisSQLEngine(SQLEngine):
             pcols = ", ".join(
                 self.encode_column_name(x) for x in partition_spec.partition_by
             )
+            dummy_order_by = self._dummy_window_order_by()
             sql = (
                 f"SELECT * FROM ("
-                f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {pcols}) "
+                f"SELECT *, ROW_NUMBER() OVER (PARTITION BY {pcols} {dummy_order_by}) "
                 f"AS __fugue_take_param FROM {tbn}"
                 f") WHERE __fugue_take_param<={n}"
             )
@@ -289,6 +290,12 @@ class IbisSQLEngine(SQLEngine):
 
     def load_table(self, table: str, **kwargs: Any) -> DataFrame:
         return self.to_df(self.backend.table(table))
+
+    def _dummy_window_order_by(self) -> str:
+        """Return a dummy window order by clause, this is required for
+        some SQL backends when there is no real order by clause in window
+        """
+        return ""
 
 
 class IbisMapEngine(MapEngine):

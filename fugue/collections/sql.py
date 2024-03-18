@@ -15,7 +15,7 @@ class TempTableName:
     """Generating a temporary, random and globaly unique table name"""
 
     def __init__(self):
-        self.key = "_" + str(uuid4())[:5]
+        self.key = "_" + str(uuid4())[:5].upper()
 
     def __repr__(self) -> str:
         return _TEMP_TABLE_EXPR_PREFIX + self.key + _TEMP_TABLE_EXPR_SUFFIX

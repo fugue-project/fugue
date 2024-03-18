@@ -21,22 +21,6 @@ normalize_dataframe_column_names = normalize_column_names
 rename_dataframe_column_names = rename
 
 
-def _pa_type_eq(t1: pa.DataType, t2: pa.DataType) -> bool:
-    # should ignore the name difference of list
-    # e.g. list<item: string> == list<l: string>
-    if pa.types.is_list(t1) and pa.types.is_list(t2):  # pragma: no cover
-        return _pa_type_eq(t1.value_type, t2.value_type)
-    return t1 == t2
-
-
-def _schema_eq(s1: Schema, s2: Schema) -> bool:
-    if s1 == s2:
-        return True
-    return s1.names == s2.names and all(
-        _pa_type_eq(f1.type, f2.type) for f1, f2 in zip(s1.fields, s2.fields)
-    )
-
-
 def _df_eq(
     df: DataFrame,
     data: Any,
@@ -46,6 +30,7 @@ def _df_eq(
     check_schema: bool = True,
     check_content: bool = True,
     no_pandas: bool = False,
+    equal_type_groups: Optional[List[List[Any]]] = None,
     throw=False,
 ) -> bool:
     """Compare if two dataframes are equal. Is for internal, unit test
@@ -66,6 +51,7 @@ def _df_eq(
     :param no_pandas: if true, it will compare the string representations of the
       dataframes, otherwise, it will convert both to pandas dataframe to compare,
       defaults to False
+    :param equal_type_groups: the groups to treat as equal types, defaults to None.
     :param throw: if to throw error if not equal, defaults to False
     :return: if they equal
     """
@@ -78,8 +64,8 @@ def _df_eq(
         assert (
             df1.count() == df2.count()
         ), f"count mismatch {df1.count()}, {df2.count()}"
-        assert not check_schema or _schema_eq(
-            df.schema, df2.schema
+        assert not check_schema or df.schema.is_like(
+            df2.schema, equal_groups=equal_type_groups
         ), f"schema mismatch {df.schema.pa_schema}, {df2.schema.pa_schema}"
         if not check_content:
             return True
