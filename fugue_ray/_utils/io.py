@@ -3,8 +3,8 @@ import pathlib
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 import pyarrow as pa
-import ray
 import ray.data as rd
+from packaging import version
 from pyarrow import csv as pacsv
 from pyarrow import json as pajson
 from ray.data.datasource import FileExtensionFilter
@@ -18,6 +18,8 @@ from fugue._utils.io import FileParser, save_df
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame
 from fugue_ray.dataframe import RayDataFrame
+
+from .._constants import RAY_VERSION
 
 
 class RayIO(object):
@@ -197,7 +199,7 @@ class RayIO(object):
         parse_options: Dict[str, Any] = {}
 
         def _read_json() -> RayDataFrame:
-            if ray.__version__ >= "2.9":
+            if RAY_VERSION >= version.parse("2.9"):
                 params: Dict[str, Any] = {"file_extensions": None}
             else:  # pragma: no cover
                 params = {}
