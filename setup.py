@@ -46,7 +46,7 @@ setup(
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.2.0"],
         "spark": ["pyspark>=3.1.1"],
         "dask": [
-            "dask[distributed,dataframe]>=2023.5.0",
+            "dask[distributed,dataframe]>=2024.4.1",
             "pyarrow>=7.0.0",
             "pandas>=2.0.2",
         ],
@@ -67,7 +67,7 @@ setup(
         "all": SQL_DEPENDENCIES
         + [
             "pyspark>=3.1.1",
-            "dask[distributed,dataframe]>=2023.5.0",
+            "dask[distributed,dataframe]>=2024.4.1",
             "dask-sql",
             "ray[data]>=2.4.0",
             "notebook",
