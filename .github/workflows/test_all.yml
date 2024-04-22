@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, "3.10", "3.11.8"]
+        python-version: [3.8, "3.10", "3.11.8"]  # TODO: remove .8 when dask-sql updates
 
     steps:
     - uses: actions/checkout@v2
