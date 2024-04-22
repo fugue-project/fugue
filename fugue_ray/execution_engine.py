@@ -20,7 +20,7 @@ from fugue.constants import KEYWORD_PARALLELISM, KEYWORD_ROWCOUNT
 from fugue_duckdb.dataframe import DuckDataFrame
 from fugue_duckdb.execution_engine import DuckExecutionEngine
 
-from ._constants import FUGUE_RAY_DEFAULT_BATCH_SIZE, FUGUE_RAY_ZERO_COPY, RAY_VERSION
+from ._constants import FUGUE_RAY_DEFAULT_BATCH_SIZE, FUGUE_RAY_ZERO_COPY
 from ._utils.cluster import get_default_partitions, get_default_shuffle_partitions
 from ._utils.dataframe import add_coarse_partition_key, add_partition_key
 from ._utils.io import RayIO
@@ -191,8 +191,7 @@ class RayMapEngine(MapEngine):
             mb_args["batch_size"] = self.conf.get_or_throw(
                 FUGUE_RAY_DEFAULT_BATCH_SIZE, int
             )
-        if RAY_VERSION >= version.parse("2.3"):
-            mb_args["zero_copy_batch"] = self.conf.get(FUGUE_RAY_ZERO_COPY, True)
+        mb_args["zero_copy_batch"] = self.conf.get(FUGUE_RAY_ZERO_COPY, True)
         sdf = rdf.native.map_batches(
             _udf,
             batch_format="pyarrow",

@@ -15,7 +15,4 @@ FUGUE_RAY_DEFAULT_CONF: Dict[str, Any] = {
 }
 RAY_VERSION = version.parse(ray.__version__)
 
-if RAY_VERSION >= version.parse("2.3"):
-    _ZERO_COPY: Dict[str, Any] = {"zero_copy_batch": True}
-else:  # pragma: no cover
-    _ZERO_COPY = {}
+_ZERO_COPY: Dict[str, Any] = {"zero_copy_batch": True}
