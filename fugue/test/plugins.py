@@ -182,7 +182,7 @@ class FugueTestSuite:
         return self.context.engine
 
     def get_equal_type_groups(self) -> Optional[List[List[Any]]]:
-        return None
+        return None  # pragma: no cover
 
     def df_eq(self, *args: Any, **kwargs: Any) -> bool:
         """A wrapper of :func:`~fugue.dataframe.utils.df_eq`"""

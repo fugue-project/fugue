@@ -151,12 +151,12 @@ class RayIO(object):
         if infer_schema and columns is not None and not isinstance(columns, list):
             raise ValueError("can't set columns as a schema when infer schema is true")
 
-        if RAY_VERSION >= version.parse("2.10"):  # pragma: no cover
+        if RAY_VERSION >= version.parse("2.10"):
             if len(p) == 1 and isfile(p[0]):  # TODO: very hacky
                 params: Dict[str, Any] = {}
             else:
                 params = {"file_extensions": ["csv"]}
-        else:
+        else:  # pragma: no cover
             params = {
                 "partition_filter": _FileFiler(
                     file_extensions=["csv"], exclude=["_SUCCESS"]
@@ -250,7 +250,7 @@ class RayIO(object):
         return {"num_cpus": 1}
 
 
-class _FileFiler(FileExtensionFilter):
+class _FileFiler(FileExtensionFilter):  # pragma: no cover
     def __init__(self, file_extensions: Union[str, List[str]], exclude: Iterable[str]):
         super().__init__(file_extensions, allow_if_no_extension=True)
         self._exclude = set(exclude)
