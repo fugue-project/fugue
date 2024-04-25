@@ -49,6 +49,8 @@ jobs:
         python-version: "3.10"
     - name: Install dependencies
       run: make devenv
+    - name: Install latest dask-sql
+      run: pip install git+https://github.com/dask-contrib/dask-sql.git
     - name: Test
       run: make testdask
 
@@ -67,6 +69,6 @@ jobs:
     - name: Setup Dask
       run: pip install -U dask[dataframe,distributed] pyarrow pandas
     - name: Remove Dask SQL
-      run: pip uninstall -y dask-sql
+      run: pip uninstall -y dask-sql qpd fugue-sql-antlr sqlglot
     - name: Test
       run: make testdask
