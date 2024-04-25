@@ -1,5 +1,9 @@
 # Release Notes
 
+## 0.9.0
+
+
+
 ## 0.8.7
 
 -   [488](https://github.com/fugue-project/fugue/issues/488) Migrate from fs to fsspec
