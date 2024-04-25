@@ -6,7 +6,7 @@ from fsspec import AbstractFileSystem
 from triad.collections.dict import ParamDict
 from triad.collections.schema import Schema
 from triad.utils.assertion import assert_or_throw
-from triad.utils.io import join, makedirs, url_to_fs
+from triad.utils.io import isfile, join, makedirs, url_to_fs
 
 from fugue._utils.io import FileParser, _get_single_files
 from fugue_dask.dataframe import DaskDataFrame
@@ -100,9 +100,11 @@ def _save_csv(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
 
 
 def _safe_load_csv(path: str, **kwargs: Any) -> dd.DataFrame:
+    if not isfile(path):
+        return dd.read_csv(join(path, "*.csv"), **kwargs)
     try:
         return dd.read_csv(path, **kwargs)
-    except (IsADirectoryError, PermissionError):
+    except (IsADirectoryError, PermissionError):  # pragma: no cover
         return dd.read_csv(join(path, "*.csv"), **kwargs)
 
 
@@ -148,11 +150,12 @@ def _save_json(df: DaskDataFrame, p: FileParser, **kwargs: Any) -> None:
 
 
 def _safe_load_json(path: str, **kwargs: Any) -> dd.DataFrame:
+    if not isfile(path):
+        return dd.read_json(join(path, "*.json"), **kwargs)
     try:
         return dd.read_json(path, **kwargs)
-    except (IsADirectoryError, PermissionError):
-        x = dd.read_json(join(path, "*.json"), **kwargs)
-        return x
+    except (IsADirectoryError, PermissionError):  # pragma: no cover
+        return dd.read_json(join(path, "*.json"), **kwargs)
 
 
 def _load_json(
