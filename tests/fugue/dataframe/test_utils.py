@@ -12,7 +12,6 @@ from triad.exceptions import InvalidOperationError, NoneArgumentError
 from fugue import ArrayDataFrame, IterableDataFrame, PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dataframe.utils import (
-    _schema_eq,
     deserialize_df,
     get_column_names,
     get_join_schemas,
@@ -20,23 +19,6 @@ from fugue.dataframe.utils import (
     rename,
     serialize_df,
 )
-
-
-def test_schema_eq():
-    assert not _schema_eq(Schema("a:int"), Schema("a:int8"))
-    assert not _schema_eq(Schema("a:int"), Schema("b:int"))
-    assert not _schema_eq(Schema("a:int,b:int"), Schema("a:int"))
-
-    f1 = pa.field("a", pa.list_(pa.field("x", pa.string())))
-    f2 = pa.field("a", pa.list_(pa.field("y", pa.string())))
-    s1 = Schema([f1, pa.field("b", pa.int64())])
-    s2 = Schema([f2, pa.field("b", pa.int64())])
-    assert _schema_eq(s1, s2)
-
-    # nested
-    s1 = Schema([pa.field("a", pa.list_(f1)), pa.field("b", pa.int64())])
-    s2 = Schema([pa.field("a", pa.list_(f2)), pa.field("b", pa.int64())])
-    assert _schema_eq(s1, s2)
 
 
 def test_df_eq():

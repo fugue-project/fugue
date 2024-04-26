@@ -53,7 +53,7 @@ def hash_repartition(df: dd.DataFrame, num: int, cols: List[Any]) -> dd.DataFram
     if num < 1:
         return df
     if num == 1:
-        return df.repartition(1)
+        return df.repartition(npartitions=1)
     df = df.reset_index(drop=True).clear_divisions()
     idf, ct = _add_hash_index(df, num, cols)
     return _postprocess(idf, ct, num)
@@ -76,7 +76,7 @@ def even_repartition(df: dd.DataFrame, num: int, cols: List[Any]) -> dd.DataFram
         the number of partitions will be the number of groups.
     """
     if num == 1:
-        return df.repartition(1)
+        return df.repartition(npartitions=1)
     if len(cols) == 0 and num <= 0:
         return df
     df = df.reset_index(drop=True).clear_divisions()
@@ -111,7 +111,7 @@ def rand_repartition(
     if num < 1:
         return df
     if num == 1:
-        return df.repartition(1)
+        return df.repartition(npartitions=1)
     df = df.reset_index(drop=True).clear_divisions()
     if len(cols) == 0:
         idf, ct = _add_random_index(df, num=num, seed=seed)
@@ -124,7 +124,7 @@ def rand_repartition(
 def _postprocess(idf: dd.DataFrame, ct: int, num: int) -> dd.DataFrame:
     parts = min(ct, num)
     if parts <= 1:
-        return idf.repartition(1)
+        return idf.repartition(npartitions=1)
     divisions = list(np.arange(ct, step=math.ceil(ct / parts)))
     divisions.append(ct - 1)
     return idf.repartition(divisions=divisions, force=True)

@@ -3,21 +3,23 @@ import pathlib
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 import pyarrow as pa
-import ray
 import ray.data as rd
+from packaging import version
 from pyarrow import csv as pacsv
 from pyarrow import json as pajson
 from ray.data.datasource import FileExtensionFilter
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
-from triad.utils.io import exists, makedirs, rm
+from triad.utils.io import exists, makedirs, rm, isfile
 
 from fugue import ExecutionEngine
 from fugue._utils.io import FileParser, save_df
 from fugue.collections.partition import PartitionSpec
 from fugue.dataframe import DataFrame
 from fugue_ray.dataframe import RayDataFrame
+
+from .._constants import RAY_VERSION
 
 
 class RayIO(object):
@@ -149,6 +151,18 @@ class RayIO(object):
         if infer_schema and columns is not None and not isinstance(columns, list):
             raise ValueError("can't set columns as a schema when infer schema is true")
 
+        if RAY_VERSION >= version.parse("2.10"):
+            if len(p) == 1 and isfile(p[0]):  # TODO: very hacky
+                params: Dict[str, Any] = {}
+            else:
+                params = {"file_extensions": ["csv"]}
+        else:  # pragma: no cover
+            params = {
+                "partition_filter": _FileFiler(
+                    file_extensions=["csv"], exclude=["_SUCCESS"]
+                ),
+            }
+
         def _read_csv(to_str: bool) -> RayDataFrame:
             res = rd.read_csv(
                 p,
@@ -156,9 +170,7 @@ class RayIO(object):
                 read_options=pacsv.ReadOptions(**read_options),
                 parse_options=pacsv.ParseOptions(**parse_options),
                 convert_options=pacsv.ConvertOptions(**convert_options),
-                partition_filter=_FileFiler(
-                    file_extensions=["csv"], exclude=["_SUCCESS"]
-                ),
+                **params,
             )
             if to_str:
                 _schema = res.schema(fetch_if_missing=True)
@@ -196,20 +208,31 @@ class RayIO(object):
         read_options: Dict[str, Any] = {"use_threads": False}
         parse_options: Dict[str, Any] = {}
 
-        def _read_json() -> RayDataFrame:
-            if ray.__version__ >= "2.9":
-                params: Dict[str, Any] = {"file_extensions": None}
+        def _read_json() -> RayDataFrame:  # pragma: no cover
+            if RAY_VERSION >= version.parse("2.10"):
+                if len(p) == 1 and isfile(p[0]):  # TODO: very hacky
+                    params: Dict[str, Any] = {"file_extensions": None}
+                else:
+                    params = {"file_extensions": ["json"]}
+            elif RAY_VERSION >= version.parse("2.9"):  # pragma: no cover
+                params = {
+                    "file_extensions": None,
+                    "partition_filter": _FileFiler(
+                        file_extensions=["json"], exclude=["_SUCCESS"]
+                    ),
+                }
             else:  # pragma: no cover
-                params = {}
+                params = {
+                    "partition_filter": _FileFiler(
+                        file_extensions=["json"], exclude=["_SUCCESS"]
+                    ),
+                }
             return RayDataFrame(
                 rd.read_json(
                     p,
                     ray_remote_args=self._remote_args(),
                     read_options=pajson.ReadOptions(**read_options),
                     parse_options=pajson.ParseOptions(**parse_options),
-                    partition_filter=_FileFiler(
-                        file_extensions=["json"], exclude=["_SUCCESS"]
-                    ),
                     **params,
                 )
             )
@@ -227,7 +250,7 @@ class RayIO(object):
         return {"num_cpus": 1}
 
 
-class _FileFiler(FileExtensionFilter):
+class _FileFiler(FileExtensionFilter):  # pragma: no cover
     def __init__(self, file_extensions: Union[str, List[str]], exclude: Iterable[str]):
         super().__init__(file_extensions, allow_if_no_extension=True)
         self._exclude = set(exclude)

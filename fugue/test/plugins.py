@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type
-
+from fugue.dataframe.utils import _df_eq
 from triad import assert_or_throw, run_once
 from triad.utils.entry_points import load_entry_point
 
@@ -160,6 +160,7 @@ class FugueTestSuite:
 
     backend: Any
     tmp_path: Path
+    equal_type_groups: Any = None
 
     __test__ = False
     _test_context: Any = None
@@ -179,6 +180,15 @@ class FugueTestSuite:
     def engine(self) -> Any:
         """The engine object inside the ``FugueTestContext``"""
         return self.context.engine
+
+    def get_equal_type_groups(self) -> Optional[List[List[Any]]]:
+        return None  # pragma: no cover
+
+    def df_eq(self, *args: Any, **kwargs: Any) -> bool:
+        """A wrapper of :func:`~fugue.dataframe.utils.df_eq`"""
+        if "equal_type_groups" not in kwargs:
+            kwargs["equal_type_groups"] = self.equal_type_groups
+        return _df_eq(*args, **kwargs)
 
 
 def fugue_test_suite(backend: Any, mark_test: Optional[bool] = None) -> Any:

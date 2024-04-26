@@ -1,6 +1,7 @@
 from typing import Any, Dict
 
 import ray
+from packaging import version
 
 FUGUE_RAY_CONF_SHUFFLE_PARTITIONS = "fugue.ray.shuffle.partitions"
 FUGUE_RAY_DEFAULT_PARTITIONS = "fugue.ray.default.partitions"
@@ -12,8 +13,6 @@ FUGUE_RAY_DEFAULT_CONF: Dict[str, Any] = {
     FUGUE_RAY_DEFAULT_PARTITIONS: 0,
     FUGUE_RAY_ZERO_COPY: True,
 }
+RAY_VERSION = version.parse(ray.__version__)
 
-if ray.__version__ >= "2.3":
-    _ZERO_COPY: Dict[str, Any] = {"zero_copy_batch": True}
-else:  # pragma: no cover
-    _ZERO_COPY = {}
+_ZERO_COPY: Dict[str, Any] = {"zero_copy_batch": True}

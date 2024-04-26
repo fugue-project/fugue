@@ -1,5 +1,17 @@
 # Release Notes
 
+## 0.9.0
+
+-   [482](https://github.com/fugue-project/fugue/issues/482) Move Fugue SQL dependencies into extra `[sql]` and functions to become soft dependencies
+-   [504](https://github.com/fugue-project/fugue/issues/504) Create Fugue pytest fixtures and plugins
+-   [541](https://github.com/fugue-project/fugue/issues/541) Change table temp view names to uppercase
+-   [540](https://github.com/fugue-project/fugue/issues/540) Fix Ray 2.10+ compatibility issues
+-   [539](https://github.com/fugue-project/fugue/issues/539) Fix compatibility issues with Dask 2024.4+
+-   [534](https://github.com/fugue-project/fugue/issues/534) Remove ibis version cap
+-   [505](https://github.com/fugue-project/fugue/issues/505) Deprecate `as_ibis` in FugueWorkflow
+-   [387](https://github.com/fugue-project/fugue/issues/387) Improve test coverage on 3.10, add tests for 3.11
+-   [269](https://github.com/fugue-project/fugue/issues/269) Spark and Dask Take 1 row without sorting optimization
+
 ## 0.8.7
 
 -   [488](https://github.com/fugue-project/fugue/issues/488) Migrate from fs to fsspec

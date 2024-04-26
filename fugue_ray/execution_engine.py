@@ -191,8 +191,7 @@ class RayMapEngine(MapEngine):
             mb_args["batch_size"] = self.conf.get_or_throw(
                 FUGUE_RAY_DEFAULT_BATCH_SIZE, int
             )
-        if ray.__version__ >= "2.3":
-            mb_args["zero_copy_batch"] = self.conf.get(FUGUE_RAY_ZERO_COPY, True)
+        mb_args["zero_copy_batch"] = self.conf.get(FUGUE_RAY_ZERO_COPY, True)
         sdf = rdf.native.map_batches(
             _udf,
             batch_format="pyarrow",

@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import pyarrow as pa
-import ray
 import ray.data as rd
 from triad import Schema
 
@@ -31,31 +30,21 @@ def get_dataset_format(df: rd.Dataset) -> Tuple[Optional[str], rd.Dataset]:
     df = materialize(df)
     if df.count() == 0:
         return None, df
-    if ray.__version__ < "2.5.0":  # pragma: no cover
-        if hasattr(df, "_dataset_format"):  # pragma: no cover
-            return df._dataset_format(), df  # ray<2.2
-        ctx = rd.context.DatasetContext.get_current()
-        ctx.use_streaming_executor = False
-        return df.dataset_format(), df  # ray>=2.2
-    else:
-        schema = df.schema(fetch_if_missing=True)
-        if schema is None:  # pragma: no cover
-            return None, df
-        if isinstance(schema.base_schema, pa.Schema):
-            return "arrow", df
-        return "pandas", df
+    schema = df.schema(fetch_if_missing=True)
+    if schema is None:  # pragma: no cover
+        return None, df
+    if isinstance(schema.base_schema, pa.Schema):
+        return "arrow", df
+    return "pandas", df
 
 
 def to_schema(schema: Any) -> Schema:  # pragma: no cover
     if isinstance(schema, pa.Schema):
         return Schema(schema)
-    if ray.__version__ >= "2.5.0":
-        if isinstance(schema, rd.Schema):
-            if hasattr(schema, "base_schema") and isinstance(
-                schema.base_schema, pa.Schema
-            ):
-                return Schema(schema.base_schema)
-            return Schema(list(zip(schema.names, schema.types)))
+    if isinstance(schema, rd.Schema):
+        if hasattr(schema, "base_schema") and isinstance(schema.base_schema, pa.Schema):
+            return Schema(schema.base_schema)
+        return Schema(list(zip(schema.names, schema.types)))
     raise ValueError(f"{schema} is not supported")
 
 

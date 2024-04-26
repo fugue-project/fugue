@@ -37,8 +37,8 @@ jobs:
     - name: Test
       run: make testdask
 
-  test_dask_latest:
-    name: Dask Latest
+  test_dask_sql_latest:
+    name: Dask with SQL Latest
     runs-on: ubuntu-latest
 
     steps:
@@ -49,7 +49,24 @@ jobs:
         python-version: "3.10"
     - name: Install dependencies
       run: make devenv
+    - name: Test
+      run: make testdask
+
+  test_dask_latest:
+    name: Dask without SQL Latest
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v1
+      with:
+        python-version: "3.11"
+    - name: Install dependencies
+      run: make devenv
     - name: Setup Dask
       run: pip install -U dask[dataframe,distributed] pyarrow pandas
+    - name: Remove Dask SQL
+      run: pip uninstall -y dask-sql qpd fugue-sql-antlr sqlglot
     - name: Test
       run: make testdask

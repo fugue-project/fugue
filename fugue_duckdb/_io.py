@@ -140,6 +140,7 @@ class DuckDBIO:
         else:
             if header:
                 kw["ALL_VARCHAR"] = 1
+                kw["auto_detect"] = 1
                 if columns is None:
                     cols = "*"
                 elif isinstance(columns, list):
