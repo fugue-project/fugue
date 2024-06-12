@@ -20,6 +20,7 @@ from triad.collections.function_wrapper import (
     PositionalParam,
     function_wrapper,
 )
+from triad.utils.convert import compare_annotations
 from triad.utils.iter import EmptyAwareIterable, make_empty_aware
 
 from ..constants import FUGUE_ENTRYPOINT
@@ -35,6 +36,14 @@ from .dataframe_iterable_dataframe import (
 from .dataframes import DataFrames
 from .iterable_dataframe import IterableDataFrame
 from .pandas_dataframe import PandasDataFrame
+
+
+def _compare_iter(tp: Any) -> Any:
+    return lambda x: compare_annotations(
+        x, Iterable[tp]  # type:ignore
+    ) or compare_annotations(
+        x, Iterator[tp]  # type:ignore
+    )
 
 
 @function_wrapper(FUGUE_ENTRYPOINT)
@@ -228,10 +237,7 @@ class _ListListParam(_LocalNoSchemaDataFrameParam):
         return len(df)
 
 
-@fugue_annotated_param(
-    Iterable[List[Any]],
-    matcher=lambda x: x == Iterable[List[Any]] or x == Iterator[List[Any]],
-)
+@fugue_annotated_param(Iterable[List[Any]], matcher=_compare_iter(List[Any]))
 class _IterableListParam(_LocalNoSchemaDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> Iterable[List[Any]]:
@@ -288,10 +294,7 @@ class _ListDictParam(_LocalNoSchemaDataFrameParam):
         return len(df)
 
 
-@fugue_annotated_param(
-    Iterable[Dict[str, Any]],
-    matcher=lambda x: x == Iterable[Dict[str, Any]] or x == Iterator[Dict[str, Any]],
-)
+@fugue_annotated_param(Iterable[Dict[str, Any]], matcher=_compare_iter(Dict[str, Any]))
 class _IterableDictParam(_LocalNoSchemaDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> Iterable[Dict[str, Any]]:
@@ -360,10 +363,7 @@ class _PandasParam(LocalDataFrameParam):
         return "pandas"
 
 
-@fugue_annotated_param(
-    Iterable[pd.DataFrame],
-    matcher=lambda x: x == Iterable[pd.DataFrame] or x == Iterator[pd.DataFrame],
-)
+@fugue_annotated_param(Iterable[pd.DataFrame], matcher=_compare_iter(pd.DataFrame))
 class _IterablePandasParam(LocalDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> Iterable[pd.DataFrame]:
@@ -419,10 +419,7 @@ class _PyArrowTableParam(LocalDataFrameParam):
         return "pyarrow"
 
 
-@fugue_annotated_param(
-    Iterable[pa.Table],
-    matcher=lambda x: x == Iterable[pa.Table] or x == Iterator[pa.Table],
-)
+@fugue_annotated_param(Iterable[pa.Table], matcher=_compare_iter(pa.Table))
 class _IterableArrowParam(LocalDataFrameParam):
     @no_type_check
     def to_input_data(self, df: DataFrame, ctx: Any) -> Iterable[pa.Table]:
