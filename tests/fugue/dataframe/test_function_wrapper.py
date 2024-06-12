@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import copy
+import sys
 from typing import Any, Dict, Iterable, Iterator, List
 
 import pandas as pd
@@ -26,7 +29,6 @@ from fugue.dataframe.function_wrapper import (
 )
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dev import DataFrameFunctionWrapper
-import sys
 
 
 def test_function_wrapper():
