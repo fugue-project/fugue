@@ -24,6 +24,8 @@ from fugue_dask.dataframe import DaskDataFrame
 from fugue_dask.execution_engine import DaskExecutionEngine
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests
+from fugue.column import col, all_cols
+import fugue.column.functions as ff
 
 _CONF = {
     "fugue.rpc.server": "fugue.rpc.flask.FlaskRPCServer",
@@ -49,6 +51,40 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
 
     def test__join_outer_pandas_incompatible(self):
         return
+
+    # TODO: dask-sql 2024.5.0 has a bug, can't pass the HAVING tests
+    def test_select(self):
+        a = ArrayDataFrame(
+            [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
+        )
+
+        # simple
+        b = fa.select(a, col("b"), (col("b") + 1).alias("c").cast(str))
+        self.df_eq(
+            b,
+            [[2, "3"], [2, "3"], [1, "2"], [4, "5"], [4, "5"]],
+            "b:int,c:str",
+            throw=True,
+        )
+
+        # with distinct
+        b = fa.select(
+            a, col("b"), (col("b") + 1).alias("c").cast(str), distinct=True
+        )
+        self.df_eq(
+            b,
+            [[2, "3"], [1, "2"], [4, "5"]],
+            "b:int,c:str",
+            throw=True,
+        )
+
+        # wildcard
+        b = fa.select(a, all_cols(), where=col("a") + col("b") == 3)
+        self.df_eq(b, [[1, 2]], "a:double,b:int", throw=True)
+
+        # aggregation
+        b = fa.select(a, col("a"), ff.sum(col("b")).cast(float).alias("b"))
+        self.df_eq(b, [[1, 2], [3, 4], [None, 7]], "a:double,b:double", throw=True)
 
     def test_to_df(self):
         e = self.engine
