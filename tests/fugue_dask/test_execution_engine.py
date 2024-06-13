@@ -55,6 +55,7 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
     # TODO: dask-sql 2024.5.0 has a bug, can't pass the HAVING tests
     def test_select(self):
         try:
+            import qpd
             import dask_sql
         except ImportError:
             return
