@@ -54,6 +54,11 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
 
     # TODO: dask-sql 2024.5.0 has a bug, can't pass the HAVING tests
     def test_select(self):
+        try:
+            import dask_sql
+        except ImportError:
+            return
+
         a = ArrayDataFrame(
             [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
         )
