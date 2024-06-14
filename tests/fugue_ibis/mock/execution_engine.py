@@ -81,15 +81,17 @@ class MockDuckSQLEngine(IbisSQLEngine):
                 f"one and only one of n and frac should be non-negative, {n}, {frac}"
             ),
         )
-        tn = self.get_temp_table_name()
-        if frac is not None:
-            sql = f"SELECT * FROM {tn} USING SAMPLE bernoulli({frac*100} PERCENT)"
-        else:
-            sql = f"SELECT * FROM {tn} USING SAMPLE reservoir({n} ROWS)"
-        if seed is not None:
-            sql += f" REPEATABLE ({seed})"
         idf = self.to_df(df)
-        _res = f"WITH {tn} AS ({idf.native.compile()}) " + sql
+        tn = f"({idf.native.compile()})"
+        if seed is not None:
+            _seed = f",{seed}"
+        else:
+            _seed = ""
+        if frac is not None:
+            sql = f"SELECT * FROM {tn} USING SAMPLE {frac*100}% (bernoulli{_seed})"
+        else:
+            sql = f"SELECT * FROM {tn} USING SAMPLE {n} ROWS (reservoir{_seed})"
+        _res = f"SELECT * FROM ({sql})"  # ibis has a bug to inject LIMIT
         return self.to_df(self.backend.sql(_res))
 
     def _register_df(

@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import copy
+import sys
 from typing import Any, Dict, Iterable, Iterator, List
 
 import pandas as pd
@@ -29,7 +32,10 @@ from fugue.dev import DataFrameFunctionWrapper
 
 
 def test_function_wrapper():
-    for f in [f20, f21, f212, f22, f23, f24, f25, f26, f30, f31, f32, f35, f36]:
+    fs = [f20, f21, f212, f22, f23, f24, f25, f26, f30, f31, f32, f35, f36]
+    if sys.version_info >= (3, 9):
+        fs.append(f33)
+    for f in fs:
         df = ArrayDataFrame([[0]], "a:int")
         w = DataFrameFunctionWrapper(f, "^[ldsp][ldsp]$", "[ldspq]")
         res = w.run([df], dict(a=df), ignore_unknown=False, output_schema="a:int")
@@ -366,6 +372,14 @@ def f31(
 
 def f32(
     e: List[Dict[str, Any]], a: Iterable[Dict[str, Any]]
+) -> EmptyAwareIterable[Dict[str, Any]]:
+    e += list(a)
+    arr = [[x["a"]] for x in e]
+    return ArrayDataFrame(arr, "a:int").as_dict_iterable()
+
+
+def f33(
+    e: list[dict[str, Any]], a: Iterable[dict[str, Any]]
 ) -> EmptyAwareIterable[Dict[str, Any]]:
     e += list(a)
     arr = [[x["a"]] for x in e]

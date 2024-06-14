@@ -3,7 +3,7 @@ from typing import Any
 try:
     from pyspark.sql.connect.session import SparkSession as SparkConnectSession
     from pyspark.sql.connect.dataframe import DataFrame as SparkConnectDataFrame
-except ImportError:  # pragma: no cover
+except Exception:  # pragma: no cover
     SparkConnectSession = None
     SparkConnectDataFrame = None
 import pyspark.sql as ps

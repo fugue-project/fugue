@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.9.1
+
+-   [543](https://github.com/fugue-project/fugue/issues/543) Support type hinting with standard collections
+-   [544](https://github.com/fugue-project/fugue/issues/544) Fix Spark connect import issue on worker side
+
 ## 0.9.0
 
 -   [482](https://github.com/fugue-project/fugue/issues/482) Move Fugue SQL dependencies into extra `[sql]` and functions to become soft dependencies

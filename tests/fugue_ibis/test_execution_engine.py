@@ -23,6 +23,9 @@ class IbisExecutionEngineForceIbisTests(ExecutionEngineTests.Tests):
         assert not self.engine.map_engine.is_distributed
         assert not self.engine.sql_engine.is_distributed
 
+        assert self.engine.sql_engine.get_temp_table_name(
+        ) != self.engine.sql_engine.get_temp_table_name()
+
     def test_select(self):
         # it can't work properly with DuckDB (hugeint is not recognized)
         pass
