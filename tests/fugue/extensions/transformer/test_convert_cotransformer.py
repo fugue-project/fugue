@@ -58,6 +58,8 @@ def test__to_transformer():
     assert isinstance(g, CoTransformer)
     i = _to_transformer("t7", "a:int,b:int")
     assert isinstance(i, CoTransformer)
+    j = _to_transformer("t8", "a:int,b:int")
+    assert isinstance(j, CoTransformer)
 
 
 def test__register():
@@ -133,6 +135,12 @@ def t7(
 ) -> Iterable[pd.DataFrame]:
     for df in [df1, df2]:
         yield df
+
+
+def t8(
+    df1: pd.DataFrame, df2: pd.DataFrame, c: callable, **kwargs
+) -> Dict[str, Any]:
+    return {}
 
 
 class MockTransformer(CoTransformer):

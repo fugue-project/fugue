@@ -48,6 +48,8 @@ def test__to_output_transformer():
     assert isinstance(h, Transformer)
     i = _to_output_transformer("t8")
     assert isinstance(i, Transformer)
+    j = _to_output_transformer("t9")
+    assert isinstance(j, Transformer)
 
 
 def test__register():
@@ -153,6 +155,10 @@ def t7(df: pd.DataFrame) -> Iterable[pd.DataFrame]:
 
 
 def t8(df: pd.DataFrame, c: Callable[[str], str]) -> Iterable[pd.DataFrame]:
+    pass
+
+
+def t9(df: Dict[str, Any], c: Callable[[str], str]) -> Dict[str, Any]:
     pass
 
 
