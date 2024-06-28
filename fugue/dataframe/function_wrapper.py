@@ -128,7 +128,7 @@ class DataFrameFunctionWrapper(FunctionWrapper):
 
     def _run_func(
         self,
-        rargs: dict[str, Any],
+        rargs: Dict[str, Any],
         output: bool,
         output_schema: Any,
         ctx: Any,
