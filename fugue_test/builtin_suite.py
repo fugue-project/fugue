@@ -486,6 +486,23 @@ class BuiltInTests(object):
                 dag.df([], "a:int,b:int").assert_eq(b)
             dag.run(self.engine)
 
+        def test_transform_row_wise(self):
+            def t1(row: Dict[str, Any]) -> Dict[str, Any]:
+                row["b"] = 1
+                return row
+
+            def t2(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+                return rows[0]
+
+            with fa.engine_context(self.engine):
+                a = pd.DataFrame([[3, 4], [1, 2], [3, 5]], columns=["a", "b"])
+                b = fa.transform(a, t1, schema="*")
+                assert sorted(fa.as_array(b)) == [[1, 1], [3, 1], [3, 1]]
+                b = fa.transform(
+                    a, t2, schema="*", partition={"by": "a", "presort": "b"}
+                )
+                assert sorted(fa.as_array(b)) == [[1, 2], [3, 4]]
+
         def test_transform_binary(self):
             with FugueWorkflow() as dag:
                 a = dag.df([[1, pickle.dumps([0, "a"])]], "a:int,b:bytes")
@@ -547,6 +564,8 @@ class BuiltInTests(object):
                 )
                 e = dag.df([[1, 2, 1, 10]], "a:int,ct1:int,ct2:int,x:int")
                 e.assert_eq(c)
+
+                a.zip(b).transform(mock_co_tf1_d, params=dict(p=10)).assert_eq(e)
 
                 # interfaceless
                 c = dag.transform(
@@ -676,6 +695,13 @@ class BuiltInTests(object):
                 incr()
                 yield pa.Table.from_pandas(df)
 
+            def t11(row: Dict[str, Any]) -> Dict[str, Any]:
+                incr()
+                return row
+
+            def t12(row: Dict[str, Any]) -> None:
+                incr()
+
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 2], [3, 4]], "a:double,b:int")
                 a.out_transform(t1)  # +2
@@ -688,6 +714,8 @@ class BuiltInTests(object):
                 a.out_transform(t8, ignore_errors=[NotImplementedError])  # +1
                 a.out_transform(t9)  # +1
                 a.out_transform(t10)  # +1
+                a.out_transform(t11)  # +2
+                a.out_transform(t12)  # +2
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t2))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t3))
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(t4))
@@ -695,7 +723,7 @@ class BuiltInTests(object):
                 raises(FugueWorkflowCompileValidationError, lambda: a.out_transform(T7))
             dag.run(self.engine)
 
-            assert 13 <= incr()
+            assert 17 <= incr()
 
         def test_out_cotransform(self):  # noqa: C901
             tmpdir = str(self.tmpdir)
@@ -1999,6 +2027,13 @@ def mock_co_tf1(
     df1: List[Dict[str, Any]], df2: List[List[Any]], p=1, col="p"
 ) -> List[List[Any]]:
     return [[df1[0]["a"], len(df1), len(df2), p]]
+
+
+@cotransformer(lambda dfs, **kwargs: "a:int,ct1:int,ct2:int,x:int")
+def mock_co_tf1_d(
+    df1: List[Dict[str, Any]], df2: List[List[Any]], p=1
+) -> Dict[str, Any]:
+    return dict(a=df1[0]["a"], ct1=len(df1), ct2=len(df2), x=p)
 
 
 def mock_co_tf2(dfs: DataFrames, p=1) -> List[List[Any]]:

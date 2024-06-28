@@ -66,6 +66,10 @@ def test__to_transformer():
     assert isinstance(j, Transformer)
     k = _to_transformer("t10")
     assert isinstance(k, Transformer)
+    l = _to_transformer("t11")
+    assert isinstance(l, Transformer)
+    m = _to_transformer("t12")
+    assert isinstance(m, Transformer)
 
 
 def test__register():
@@ -251,6 +255,16 @@ def t9(df: pd.DataFrame) -> Iterable[pd.DataFrame]:
 # schema: *
 def t10(df: pd.DataFrame, c: callable) -> pd.DataFrame:
     yield df
+
+
+# schema: *
+def t11(row: Dict[str, Any]) -> pd.DataFrame:
+    yield pd.DataFrame([row])
+
+
+# schema: *
+def t12(df: pd.DataFrame) -> Dict[str, Any]:
+    return df.to_dict("records")[0]
 
 
 class MockTransformer(Transformer):

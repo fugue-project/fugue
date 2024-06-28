@@ -375,7 +375,7 @@ class _FuncAsTransformer(Transformer):
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsTransformer()
         tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
-            func, "^[lspq][fF]?x*z?$", "^[lspq]$"
+            func, "^[lspqr][fF]?x*z?$", "^[lspqr]$"
         )
         tr._output_schema_arg = schema  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
@@ -410,7 +410,7 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
         validation_rules.update(parse_validation_rules_from_comment(func))
         tr = _FuncAsOutputTransformer()
         tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
-            func, "^[lspq][fF]?x*z?$", "^[lspnq]$"
+            func, "^[lspqr][fF]?x*z?$", "^[lspnqr]$"
         )
         tr._output_schema_arg = None  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
@@ -503,7 +503,7 @@ class _FuncAsCoTransformer(CoTransformer):
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsCoTransformer()
         tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
-            func, "^(c|[lspq]+)[fF]?x*z?$", "^[lspq]$"
+            func, "^(c|[lspq]+)[fF]?x*z?$", "^[lspqr]$"
         )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
         tr._output_schema_arg = schema  # type: ignore
@@ -562,7 +562,7 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
 
         tr = _FuncAsOutputCoTransformer()
         tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
-            func, "^(c|[lspq]+)[fF]?x*z?$", "^[lspnq]$"
+            func, "^(c|[lspq]+)[fF]?x*z?$", "^[lspnqr]$"
         )
         tr._dfs_input = tr._wrapper.input_code[0] == "c"  # type: ignore
         tr._output_schema_arg = None  # type: ignore
