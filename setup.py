@@ -39,7 +39,7 @@ setup(
     url="http://github.com/fugue-project/fugue",
     install_requires=[
         "triad>=0.9.7",
-        "adagio>=0.2.4",
+        "adagio>=0.2.6",
     ],
     extras_require={
         "sql": SQL_DEPENDENCIES,
