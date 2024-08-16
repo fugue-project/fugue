@@ -39,7 +39,7 @@ setup(
     url="http://github.com/fugue-project/fugue",
     install_requires=[
         "triad>=0.9.7",
-        "adagio>=0.2.4",
+        "adagio>=0.2.6",
     ],
     extras_require={
         "sql": SQL_DEPENDENCIES,
@@ -63,7 +63,7 @@ setup(
             "numpy",
         ],
         "polars": ["polars"],
-        "ibis": SQL_DEPENDENCIES + ["ibis-framework", "pandas<2.2"],
+        "ibis": SQL_DEPENDENCIES + ["ibis-framework[pandas]", "pandas<2.2"],
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
         "all": SQL_DEPENDENCIES
         + [
@@ -77,7 +77,7 @@ setup(
             "duckdb>=0.5.0",
             "pyarrow>=6.0.1",
             "pandas>=2.0.2,<2.2",  # because of Ray and ibis
-            "ibis-framework",
+            "ibis-framework[pandas]",
             "polars",
         ],
     },
@@ -92,6 +92,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3 :: Only",
     ],
     python_requires=">=3.8",
