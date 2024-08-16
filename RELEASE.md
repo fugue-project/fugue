@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.9.2
+
+-   [545](https://github.com/fugue-project/fugue/issues/545) Support Python 3.12
+-   [548](https://github.com/fugue-project/fugue/issues/548) Support single dict[str,Any] as transformer input and output
+
 ## 0.9.1
 
 -   [543](https://github.com/fugue-project/fugue/issues/543) Support type hinting with standard collections
