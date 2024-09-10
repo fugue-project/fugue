@@ -154,6 +154,7 @@ fugue_annotated_param = DataFrameFunctionWrapper.annotated_param
         annotation == Callable
         or annotation == callable  # pylint: disable=comparison-with-callable
         or str(annotation).startswith("typing.Callable")
+        or str(annotation).startswith("collections.abc.Callable")
     ),
 )
 class _CallableParam(AnnotatedParam):
@@ -168,6 +169,9 @@ class _CallableParam(AnnotatedParam):
         or annotation == Optional[callable]
         or str(annotation).startswith("typing.Union[typing.Callable")  # 3.8-
         or str(annotation).startswith("typing.Optional[typing.Callable")  # 3.9+
+        or str(annotation).startswith(
+            "typing.Optional[collections.abc.Callable]"
+        )  # 3.9+
     ),
 )
 class _OptionalCallableParam(AnnotatedParam):
