@@ -33,6 +33,11 @@ class IbisExecutionEngineForceIbisTests(ExecutionEngineTests.Tests):
     def test_get_parallelism(self):
         assert self.engine.get_current_parallelism() == 1
 
+    def test_union(self):
+        if sys.version_info >= (3, 9):
+            # ibis 3.8 support no longer works
+            return super().test_union()
+
 
 @ft.fugue_test_suite("mockibisduck", mark_test=True)
 class DuckBuiltInTests(BuiltInTests.Tests):
