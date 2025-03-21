@@ -19,7 +19,7 @@ class ContextWrapper(Context):
         self,
         table_name: str,
         input_table: dd.DataFrame,
-        format: Optional[str] = None,
+        format: Optional[str] = None,  # noqa
         persist: bool = False,
         schema_name: Optional[str] = None,
         statistics: Optional[Statistics] = None,
