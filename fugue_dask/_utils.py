@@ -5,7 +5,7 @@ import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from dask.dataframe.core import DataFrame
+from dask.dataframe import DataFrame
 from dask.delayed import delayed
 from dask.distributed import Client, get_client
 from triad.utils.pandas_like import PD_UTILS, PandasLikeUtils

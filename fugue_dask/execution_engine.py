@@ -9,9 +9,10 @@ from triad.collections import Schema
 from triad.collections.dict import IndexedOrderedDict, ParamDict
 from triad.utils.assertion import assert_or_throw
 from triad.utils.hash import to_uuid
+from triad.utils.io import makedirs
 from triad.utils.pandas_like import PandasUtils
 from triad.utils.threading import RunOnce
-from triad.utils.io import makedirs
+
 from fugue import StructuredRawSQL
 from fugue.collections.partition import (
     PartitionCursor,
@@ -61,14 +62,9 @@ class DaskSQLEngine(SQLEngine):
         return True
 
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
-        try:
-            from dask_sql import Context
-        except ImportError:  # pragma: no cover
-            raise ImportError(
-                "dask-sql is not installed. "
-                "Please install it with `pip install dask-sql`"
-            )
-        ctx = Context()
+        from .dask_sql_wrapper import ContextWrapper
+
+        ctx = ContextWrapper()
         _dfs: Dict[str, dd.DataFrame] = {k: self._to_safe_df(v) for k, v in dfs.items()}
         sql = statement.construct(dialect=self.dialect, log=self.log)
         res = ctx.sql(
