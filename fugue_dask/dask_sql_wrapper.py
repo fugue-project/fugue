@@ -24,7 +24,7 @@ if not HAS_DASK_EXPR:  # pragma: no cover
     ContextWrapper = Context
 else:
 
-    class ContextWrapper(Context):
+    class ContextWrapper(Context):  # type: ignore
         def create_table(
             self,
             table_name: str,
