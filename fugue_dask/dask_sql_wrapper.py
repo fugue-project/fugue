@@ -5,24 +5,28 @@ import dask.dataframe as dd
 try:
     from dask.dataframe.dask_expr.io.parquet import ReadParquet
 
-    HAS_DASK_EXPR = True
+    HAS_DASK_EXPR = True  # newer dask
 except ImportError:  # pragma: no cover
-    HAS_DASK_EXPR = False
-
-from triad.utils.assertion import assert_or_throw
-
-try:
-    from dask_sql import Context
-    from dask_sql.datacontainer import Statistics
-    from dask_sql.input_utils import InputUtil
-except ImportError:  # pragma: no cover
-    raise ImportError(
-        "dask-sql is not installed. Please install it with `pip install dask-sql`"
-    )
+    HAS_DASK_EXPR = False  # older dask
 
 if not HAS_DASK_EXPR:  # pragma: no cover
-    ContextWrapper = Context
+    try:
+        from dask_sql import Context as ContextWrapper  # pylint: disable-all
+    except ImportError:  # pragma: no cover
+        raise ImportError(
+            "dask-sql is not installed. Please install it with `pip install dask-sql`"
+        )
 else:
+    from triad.utils.assertion import assert_or_throw
+
+    try:
+        from dask_sql import Context
+        from dask_sql.datacontainer import Statistics
+        from dask_sql.input_utils import InputUtil
+    except ImportError:  # pragma: no cover
+        raise ImportError(
+            "dask-sql is not installed. Please install it with `pip install dask-sql`"
+        )
 
     class ContextWrapper(Context):  # type: ignore
         def create_table(
