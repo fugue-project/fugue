@@ -33,7 +33,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: pip install -r requirements.txt
-    - name: Install pyarrow
-      run: pip install pyarrow==8.0.0
+    # - name: Install pyarrow
+    #  run: pip install pyarrow==8.0.0
     - name: Test
       run: python -m pytest --reruns 2 --only-rerun 'Overflow in cast' tests/fugue tests/fugue_dask tests/fugue_ibis tests/fugue_duckdb
