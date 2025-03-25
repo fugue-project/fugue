@@ -63,7 +63,7 @@ setup(
             "numpy",
         ],
         "polars": ["polars"],
-        "ibis": SQL_DEPENDENCIES + ["ibis-framework[pandas]", "pandas<2.2"],
+        "ibis": SQL_DEPENDENCIES + ["ibis-framework[pandas,pyarrow]", "pandas<2.2"],
         "notebook": ["notebook", "jupyterlab", "ipython>=7.10.0"],
         "all": SQL_DEPENDENCIES
         + [
