@@ -77,7 +77,7 @@ setup(
             "duckdb>=0.5.0",
             "pyarrow>=6.0.1",
             "pandas>=2.0.2,<2.2",  # because of Ray and ibis
-            "ibis-framework[pandas]",
+            "ibis-framework[pandas,pyarrow]",
             "polars",
         ],
     },
