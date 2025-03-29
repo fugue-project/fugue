@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   test_dask_lower_bound:
-    name: Dask 2023.5.0
+    name: Dask 2024.4.0
     runs-on: ubuntu-latest
 
     steps:
@@ -33,7 +33,7 @@ jobs:
     - name: Install dependencies
       run: make devenv
     - name: Setup Dask
-      run: pip install pyarrow==7.0.0 pandas==2.0.2 dask[dataframe,distributed]==2023.5.0
+      run: pip install pyarrow==7.0.0 pandas==2.0.2 dask[dataframe,distributed]==2024.4.0
     - name: Test
       run: make testdask
 

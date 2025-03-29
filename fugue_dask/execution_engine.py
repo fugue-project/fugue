@@ -62,7 +62,7 @@ class DaskSQLEngine(SQLEngine):
         return True
 
     def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
-        from .dask_sql_wrapper import ContextWrapper
+        from ._dask_sql_wrapper import ContextWrapper
 
         ctx = ContextWrapper()
         _dfs: Dict[str, dd.DataFrame] = {k: self._to_safe_df(v) for k, v in dfs.items()}

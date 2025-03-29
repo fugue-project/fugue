@@ -39,7 +39,7 @@ else:
             statistics: Optional[Statistics] = None,
             gpu: bool = False,
             **kwargs: Any,
-        ) -> None:
+        ) -> None:  # pragma: no cover
             assert_or_throw(
                 isinstance(input_table, dd.DataFrame),
                 lambda: ValueError(
