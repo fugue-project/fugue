@@ -92,7 +92,8 @@ class IbisSQLEngine(SQLEngine):
         _df2 = self.to_df(df2)
         key_schema, end_schema = get_join_schemas(_df1, _df2, how=how, on=on)
         on_fields = [_df1.native[k] == _df2.native[k] for k in key_schema]
-        if ibis.__version__ < "6":  # pragma: no cover
+        version = int(ibis.__version__.split(".")[0])
+        if version < 6:  # pragma: no cover
             suffixes: Dict[str, Any] = dict(suffixes=("", _JOIN_RIGHT_SUFFIX))
         else:
             # breaking change in ibis 6.0
@@ -113,7 +114,7 @@ class IbisSQLEngine(SQLEngine):
                     cols.append(
                         ibis.coalesce(tb[k], tb[k + _JOIN_RIGHT_SUFFIX]).name(k)
                     )
-            tb = tb[cols]
+            tb = tb.select(*cols)
         elif how.lower() in ["semi", "left_semi"]:
             tb = _df1.native.semi_join(_df2.native, on_fields, **suffixes)
         elif how.lower() in ["anti", "left_anti"]:
@@ -153,7 +154,7 @@ class IbisSQLEngine(SQLEngine):
         self,
         df: DataFrame,
         how: str = "any",
-        thresh: int = None,
+        thresh: Optional[int] = None,
         subset: Optional[List[str]] = None,
     ) -> DataFrame:
         schema = df.schema
@@ -161,7 +162,7 @@ class IbisSQLEngine(SQLEngine):
             schema = schema.extract(subset)
         _df = self.to_df(df)
         if thresh is None:
-            tb = _df.native.dropna(subset=subset, how=how)
+            tb = _df.native.drop_null(subset, how=how)
             return self.to_df(tb, df.schema)
         assert_or_throw(
             how == "any", ValueError("when thresh is set, how must be 'any'")
@@ -204,7 +205,7 @@ class IbisSQLEngine(SQLEngine):
             ibis.coalesce(tb[f], ibis.literal(vd[f])).name(f) if f in names else tb[f]
             for f in df.columns
         ]
-        return self.to_df(tb[cols], schema=df.schema)
+        return self.to_df(tb.select(cols), schema=df.schema)
 
     def take(
         self,
@@ -241,7 +242,7 @@ class IbisSQLEngine(SQLEngine):
                 f") WHERE __fugue_take_param<={n}"
             )
             tb = self.query_to_table(sql, {tbn: idf})
-            return self.to_df(tb[df.columns], schema=df.schema)
+            return self.to_df(tb.select(*df.columns), schema=df.schema)
 
         sorts: List[str] = []
         for k, v in _presort.items():

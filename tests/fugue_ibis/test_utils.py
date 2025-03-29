@@ -95,8 +95,8 @@ def test_materialize():
 
 
 def _test_expr(func, **dfs):
-    con = ibis.pandas.connect(dfs)
-    kwargs = {k: con.table(k) for k in dfs.keys()}
+    con = ibis.duckdb.connect()
+    kwargs = {k: con.create_table(k, v, overwrite=True) for k, v in dfs.items()}
     expected = func(**kwargs).execute()
 
     lkwargs = {k: LazyIbisObject(k) for k in dfs.keys()}

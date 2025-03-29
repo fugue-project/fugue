@@ -3,7 +3,7 @@ from typing import Any, Iterable, List, Optional, Union
 import ibis
 import pyarrow as pa
 from triad import assert_or_throw
-
+from uuid import uuid4
 from fugue import (
     ArrowDataFrame,
     DataFrame,
@@ -97,7 +97,8 @@ class MockDuckSQLEngine(IbisSQLEngine):
     def _register_df(
         self, df: pa.Table, name: Optional[str] = None, schema: Any = None
     ) -> MockDuckDataFrame:
-        tb = self.backend.register(df, name)
+        name = name or "_" + str(uuid4())[:5]
+        tb = self.backend.create_table(name, df, overwrite=True)
         return MockDuckDataFrame(tb)
 
 

@@ -13,15 +13,16 @@ from fugue_test.dataframe_suite import DataFrameTests
 
 from .mock.dataframe import MockDuckDataFrame
 from .mock.tester import mockibisduck_session  # noqa: F401  # pylint: disable-all
+from uuid import uuid4
 
 
 @ft.fugue_test_suite("mockibisduck", mark_test=True)
 class IbisDataFrameTests(DataFrameTests.Tests):
     def df(self, data: Any = None, schema: Any = None) -> MockDuckDataFrame:
         df = ArrowDataFrame(data, schema)
-        name = f"_{id(df.native)}"
+        name = "_" + str(uuid4())[:5]
         con = self.context.engine.sql_engine.backend
-        con.register(df.native, name)
+        con.create_table(name, df.native, overwrite=True)
         return MockDuckDataFrame(con.table(name), schema=schema)
 
     def test_init_df(self):
