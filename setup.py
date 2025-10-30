@@ -51,7 +51,7 @@ setup(
             "pandas>=2.0.2",
         ],
         "ray": [
-            "ray[data]>=2.5.0",
+            "ray[data]>=2.30.0",
             "duckdb>=0.5.0",
             "pyarrow>=7.0.0",
             "pandas<2.2",
@@ -69,7 +69,7 @@ setup(
             "pyspark>=3.1.1",
             "dask[distributed,dataframe]>=2024.4.0",
             "dask-sql",
-            "ray[data]>=2.5.0",
+            "ray[data]>=2.30.0",
             "notebook",
             "jupyterlab",
             "ipython>=7.10.0",

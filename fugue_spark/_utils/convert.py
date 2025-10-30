@@ -191,7 +191,7 @@ def to_pandas(df: ps.DataFrame) -> pd.DataFrame:
             return pd.concat(pickle.loads(x.data) for x in sdf.collect())
 
     pdf = _to_df()
-    if hasattr(pdf, "attrs") and "metrics" in pdf.attrs:
+    if hasattr(pdf, "attrs") and "metrics" in pdf.attrs:  # pragma: no cover
         del pdf.attrs["metrics"]
     return pdf
 

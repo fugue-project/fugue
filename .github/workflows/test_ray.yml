@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   test_ray_lower_bound:
-    name: Ray 2.5.0
+    name: Ray 2.30.0
     runs-on: ubuntu-latest
 
     steps:
@@ -33,7 +33,7 @@ jobs:
     - name: Install dependencies
       run: make devenv
     - name: Setup Ray
-      run: pip install ray[data]==2.5.0 pyarrow==7.0.0 "duckdb<0.9" pandas==1.5.3 'pydantic<2'
+      run: pip install ray[data]==2.30.0
     - name: Test
       run: make testray
 

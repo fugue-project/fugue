@@ -91,7 +91,9 @@ class DataFrameFunctionWrapper(FunctionWrapper):
                         isinstance(p[k], DataFrame),
                         lambda: TypeError(f"{p[k]} is not a DataFrame"),
                     )
-                    if v.is_per_row:
+                    if v.is_per_row:  # pragma: no cover
+                        # TODO: this branch is used only if row annotations
+                        # are allowed as input
                         assert_or_throw(
                             row_param_info is None,
                             lambda: ValueError("only one row parameter is allowed"),
@@ -110,7 +112,9 @@ class DataFrameFunctionWrapper(FunctionWrapper):
             raise ValueError(f"{p} are not acceptable parameters")
         if row_param_info is None:
             return self._run_func(rargs, output, output_schema, ctx, raw=False)
-        else:  # input contains row parameter
+        else:  # pragma: no cover
+            # input contains row parameter
+            # TODO: this branch is used only if row annotations are allowed as input
 
             def _dfs() -> Iterable[Any]:
                 k, v, df = row_param_info
@@ -247,7 +251,8 @@ class RowParam(_DataFrameParamBase):
 
 
 @fugue_annotated_param(Dict[str, Any])
-class DictParam(RowParam):
+class DictParam(RowParam):  # pragma: no cover
+    # TODO: this class is used only if row annotations are allowed as input
     def to_input_rows(self, df: DataFrame, ctx: Any) -> Iterable[Any]:
         yield from df.as_dict_iterable()
 
