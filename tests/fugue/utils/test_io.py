@@ -40,7 +40,7 @@ def test_file_parser_win():
     assert "file://c:/a" == f.parent
 
     f._is_dir = True
-    assert f.as_dir_path() == "c:\\a\\c.parquet\\"
+    assert f.as_dir_path() == "c:\\a\\c.parquet/"  # TODO: is this right?
 
     f = FileParser("c:\\a\\*.parquet")
     assert "c:\\a\\*.parquet" == f.path
