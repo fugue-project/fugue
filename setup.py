@@ -67,7 +67,7 @@ setup(
         "all": SQL_DEPENDENCIES
         + [
             "pyspark>=3.1.1",
-            "dask[distributed,dataframe]>=2023.5.0",
+            "dask[distributed,dataframe]>=2024.4.0",
             "dask-sql",
             "ray[data]>=2.5.0",
             "notebook",
