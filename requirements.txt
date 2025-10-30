@@ -8,7 +8,7 @@ black>=22.3.0
 mypy
 flake8
 autopep8
-pylint==2.16.2
+pylint==3.2.6
 pytest
 pytest-cov
 pytest-mock

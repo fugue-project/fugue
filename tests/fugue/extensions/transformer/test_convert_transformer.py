@@ -258,7 +258,7 @@ def t10(df: pd.DataFrame, c: callable) -> pd.DataFrame:
 
 
 # schema: *
-def t11(row: Dict[str, Any]) -> pd.DataFrame:
+def t11(row: list[Dict[str, Any]]) -> pd.DataFrame:
     yield pd.DataFrame([row])
 
 

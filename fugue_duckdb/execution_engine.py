@@ -108,7 +108,7 @@ class DuckDBEngine(SQLEngine):
         try:
             for k, v in dfs.items():
                 duckdb.from_arrow(v.as_arrow(), connection=conn).create_view(k)
-            return ArrowDataFrame(_duck_as_arrow(conn.execute(statement)))
+            return ArrowDataFrame(_duck_as_arrow(conn.sql(statement)))
         finally:
             conn.close()
 

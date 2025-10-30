@@ -165,7 +165,7 @@ def test_annotations():
         return c.query("SELECT 1 AS a")
 
     def pr(df: duckdb.DuckDBPyRelation) -> pa.Table:
-        return df.arrow()
+        return df.fetch_arrow_table()
 
     def ot(df: duckdb.DuckDBPyRelation) -> None:
         assert 1 == df.df().shape[0]

@@ -1,6 +1,6 @@
 {
 	"name": "Fugue Development Environment",
-	"image": "mcr.microsoft.com/vscode/devcontainers/python:3.10",
+	"image": "mcr.microsoft.com/vscode/devcontainers/python:3.11-bookworm",
 	"customizations": {
 		"vscode": {
 			"settings": {
@@ -38,7 +38,7 @@
 	],
 	"postCreateCommand": "make devenv",
 	"features": {
-		"ghcr.io/devcontainers/features/docker-in-docker:2.11.0": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:2.12.4": {},
 		"ghcr.io/devcontainers/features/java:1": {
 			"version": "11"
 		}

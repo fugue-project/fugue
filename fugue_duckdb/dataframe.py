@@ -165,7 +165,7 @@ def _duck_as_local(df: DuckDBPyRelation) -> DuckDBPyRelation:
 
 @as_arrow.candidate(lambda df: isinstance(df, DuckDBPyRelation))
 def _duck_as_arrow(df: DuckDBPyRelation) -> pa.Table:
-    _df = df.arrow()
+    _df = df.fetch_arrow_table()
     _df = replace_types_in_table(_df, LARGE_TYPES_REPLACEMENT, recursive=True)
     return _df
 
@@ -216,7 +216,7 @@ def _drop_duckdb_columns(df: DuckDBPyRelation, columns: List[str]) -> DuckDBPyRe
 def _duck_as_array(
     df: DuckDBPyRelation, columns: Optional[List[str]] = None, type_safe: bool = False
 ) -> List[Any]:
-    return pa_table_as_array(df.arrow(), columns=columns)
+    return pa_table_as_array(df.fetch_arrow_table(), columns=columns)
 
 
 @as_array_iterable.candidate(
@@ -225,14 +225,14 @@ def _duck_as_array(
 def _duck_as_array_iterable(
     df: DuckDBPyRelation, columns: Optional[List[str]] = None, type_safe: bool = False
 ) -> Iterable[Any]:
-    yield from pa_table_as_array_iterable(df.arrow(), columns=columns)
+    yield from pa_table_as_array_iterable(df.fetch_arrow_table(), columns=columns)
 
 
 @as_dicts.candidate(lambda df, *args, **kwargs: isinstance(df, DuckDBPyRelation))
 def _duck_as_dicts(
     df: DuckDBPyRelation, columns: Optional[List[str]] = None
 ) -> List[Dict[str, Any]]:
-    return pa_table_as_dicts(df.arrow(), columns=columns)
+    return pa_table_as_dicts(df.fetch_arrow_table(), columns=columns)
 
 
 @as_dict_iterable.candidate(
@@ -241,7 +241,7 @@ def _duck_as_dicts(
 def _duck_as_dict_iterable(
     df: DuckDBPyRelation, columns: Optional[List[str]] = None
 ) -> Iterable[Dict[str, Any]]:
-    yield from pa_table_as_dict_iterable(df.arrow(), columns=columns)
+    yield from pa_table_as_dict_iterable(df.fetch_arrow_table(), columns=columns)
 
 
 def _assert_no_missing(df: DuckDBPyRelation, columns: Iterable[Any]) -> None:
