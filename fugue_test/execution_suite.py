@@ -9,6 +9,7 @@ except ImportError:  # pragma: no cover
 import copy
 import os
 import pickle
+import sys
 from datetime import datetime
 
 import pandas as pd
@@ -1194,6 +1195,7 @@ class ExecutionEngineTests(object):
             )
             self.df_eq(c, [[1.1, 6.1], [7.1, 2.1]], "a:double,c:double", throw=True)
 
+        @pytest.mark.skipif(sys.platform == "win32", reason="skip on Windows")
         def test_load_csv_folder(self):
             native = NativeExecutionEngine()
             a = ArrayDataFrame([[6.1, 1.1]], "c:double,a:double")

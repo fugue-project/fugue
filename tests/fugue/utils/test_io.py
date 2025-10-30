@@ -9,6 +9,7 @@ from fugue._utils.io import _FORMAT_MAP, FileParser, load_df, save_df
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.pandas_dataframe import PandasDataFrame
 from fugue.dataframe.utils import _df_eq as df_eq
+import pytest
 
 
 @pytest.mark.skipif(sys.platform.startswith("win"), reason="not a test for windows")
@@ -19,6 +20,12 @@ def test_file_parser_linux():
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "file:///a/b" == f.parent
+
+    with pytest.raises(AssertionError):
+        f.as_dir_path()
+
+    f._is_dir = True
+    assert f.as_dir_path() == "/a/b/c.parquet/"
 
 
 @pytest.mark.skipif(
@@ -31,6 +38,9 @@ def test_file_parser_win():
     assert "parquet" == f.file_format
     assert not f.has_glob
     assert "file://c:/a" == f.parent
+
+    f._is_dir = True
+    assert f.as_dir_path() == "c:\\a\\c.parquet\\"
 
     f = FileParser("c:\\a\\*.parquet")
     assert "c:\\a\\*.parquet" == f.path

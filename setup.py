@@ -11,7 +11,7 @@ SQL_DEPENDENCIES = [
     "jinja2",
 ]
 
-with open("README.md") as f:
+with open("README.md", encoding="utf-8") as f:
     _text = ["# Fugue"] + f.read().splitlines()[1:]
     LONG_DESCRIPTION = "\n".join(_text)
 
