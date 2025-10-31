@@ -2,8 +2,12 @@
 
 ## 0.9.2
 
--   [545](https://github.com/fugue-project/fugue/issues/545) Support Python 3.12
--   [548](https://github.com/fugue-project/fugue/issues/548) Support single dict[str,Any] as transformer input and output
+-   Add dict[str,Any] as supported input and output by @goodwanghan in https://github.com/fugue-project/fugue/pull/547
+-   Fix compatibility issues, remove row(dict) annotation support from transformer input by @goodwanghan in https://github.com/fugue-project/fugue/pull/561
+-   Support python 3.12 by @goodwanghan in https://github.com/fugue-project/fugue/pull/549
+-   Issue 551: Added support for `collections.abc.Callable` in function_wrapper.py by @kondziolka9ld in https://github.com/fugue-project/fugue/pull/552
+-   Fix Ibis test in python 3.8 by @goodwanghan in https://github.com/fugue-project/fugue/pull/553
+-   Fix compatibility issues by @goodwanghan in https://github.com/fugue-project/fugue/pull/556
 
 ## 0.9.1
 
