@@ -241,7 +241,8 @@ class DataFrameParam(_DataFrameParamBase):
 
 
 @fugue_annotated_param(DataFrame, "r", child_can_reuse_code=True)
-class RowParam(_DataFrameParamBase):
+class RowParam(_DataFrameParamBase):  # pragma: no cover
+    # TODO: this class is used only if row annotations are allowed as input
     @property
     def is_per_row(self) -> bool:
         return True

@@ -486,7 +486,7 @@ class BuiltInTests(object):
                 dag.df([], "a:int,b:int").assert_eq(b)
             dag.run(self.engine)
 
-        def _test_transform_row_wise(self):
+        def _test_transform_row_wise(self):  # pragma: no cover
             # TODO: currently disabled because we don't support Dict[str, Any]
             # as dataframe input
             def t1(row: Dict[str, Any]) -> Dict[str, Any]:
