@@ -20,6 +20,10 @@ class FileParser(object):
         self._has_glob = "*" in path or "?" in path
         self._raw_path = path
         self._fs, self._fs_path = url_to_fs(path)
+        if not self._has_glob and self._fs.isdir(self._fs_path):
+            self._is_dir = True
+        else:
+            self._is_dir = False
         if not self.is_local:
             self._path = self._fs.unstrip_protocol(self._fs_path)
         else:
@@ -43,11 +47,15 @@ class FileParser(object):
         return self
 
     @property
-    def has_glob(self):
+    def is_dir(self) -> bool:
+        return self._is_dir
+
+    @property
+    def has_glob(self) -> bool:
         return self._has_glob
 
     @property
-    def is_local(self):
+    def is_local(self) -> bool:
         return isinstance(self._fs, LocalFileSystem)
 
     def join(self, path: str, format_hint: Optional[str] = None) -> "FileParser":
@@ -64,6 +72,10 @@ class FileParser(object):
     @property
     def path(self) -> str:
         return self._path
+
+    def as_dir_path(self) -> str:
+        assert_or_throw(self.is_dir, f"{self.raw_path} is not a directory")
+        return self.path + self._fs.sep
 
     @property
     def raw_path(self) -> str:

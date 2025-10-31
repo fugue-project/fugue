@@ -8,7 +8,7 @@ black>=22.3.0
 mypy
 flake8
 autopep8
-pylint==2.16.2
+pylint==3.2.6
 pytest
 pytest-cov
 pytest-mock
@@ -29,9 +29,10 @@ s3fs
 pyspark[connect]
 duckdb-engine>=0.6.4
 sqlalchemy==2.0.10  # 2.0.11 has a bug
-ray[data]>=2.5.0
+ray[data]>=2.30.0
 pydantic<2.5  # 2.5.0+ doesn't work with ray 2.8
 # pyarrow==7.0.0
+dask[distributed,dataframe]==2025.3.0
 dask-sql
 
 # publish to pypi

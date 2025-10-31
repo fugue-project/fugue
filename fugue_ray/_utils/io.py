@@ -74,7 +74,7 @@ class RayIO(object):
             len(fmts) == 1, NotImplementedError("can't support multiple formats")
         )
         fmt = fmts[0]
-        files = [f.path for f in fp]
+        files = [f.as_dir_path() if f.is_dir else f.path for f in fp]
         return self._loads[fmt](files, columns, **kwargs)
 
     def save_df(

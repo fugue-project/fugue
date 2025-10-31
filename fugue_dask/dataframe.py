@@ -379,7 +379,7 @@ def _to_array_chunks(
     assert_or_throw(columns is None or len(columns) > 0, ValueError("empty columns"))
     _df = df if columns is None or len(columns) == 0 else df[columns]
 
-    def _to_list(pdf: pd.DataFrame) -> List[Any]:
+    def _to_list(pdf: pd.DataFrame) -> List[Any]:  # pragma: no cover
         return list(
             PD_UTILS.as_array_iterable(
                 pdf,

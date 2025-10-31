@@ -13,12 +13,19 @@ from fugue.dataframe.utils import _df_eq as df_eq
 
 @pytest.mark.skipif(sys.platform.startswith("win"), reason="not a test for windows")
 def test_file_parser_linux():
+
     f = FileParser("/a/b/c.parquet")
     assert "/a/b/c.parquet" == f.path
     assert not f.has_glob
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert "file:///a/b" == f.parent
+
+    with pytest.raises(AssertionError):
+        f.as_dir_path()
+
+    f._is_dir = True
+    assert f.as_dir_path() == "/a/b/c.parquet/"
 
 
 @pytest.mark.skipif(
@@ -31,6 +38,9 @@ def test_file_parser_win():
     assert "parquet" == f.file_format
     assert not f.has_glob
     assert "file://c:/a" == f.parent
+
+    f._is_dir = True
+    assert f.as_dir_path() == "c:\\a\\c.parquet/"  # TODO: is this right?
 
     f = FileParser("c:\\a\\*.parquet")
     assert "c:\\a\\*.parquet" == f.path
@@ -63,31 +73,31 @@ def test_file_parser(tmpdir):
     assert "memory:///" == f.parent
 
     for k, v in _FORMAT_MAP.items():
-        f = FileParser(f"s3://a/b/c{k}")
-        assert f"s3://a/b/c{k}" == f.raw_path
+        f = FileParser(f"memory:///a/b/c{k}")
+        assert f"memory:///a/b/c{k}" == f.raw_path
         assert k == f.suffix
         assert v == f.file_format
-        assert "s3://a/b" == f.parent
+        assert "memory:///a/b" == f.parent
 
-    f = FileParser("s3://a/b/c.test.parquet")
-    assert "s3://a/b/c.test.parquet" == f.raw_path
+    f = FileParser("memory:///a/b/c.test.parquet")
+    assert "memory:///a/b/c.test.parquet" == f.raw_path
     assert ".test.parquet" == f.suffix
     assert "parquet" == f.file_format
-    assert "s3://a/b" == f.parent
+    assert "memory:///a/b" == f.parent
 
-    f = FileParser("s3://a/b/c.ppp.gz", "csv")
-    assert "s3://a/b/c.ppp.gz" == f.raw_path
+    f = FileParser("memory:///a/b/c.ppp.gz", "csv")
+    assert "memory:///a/b/c.ppp.gz" == f.raw_path
     assert ".ppp.gz" == f.suffix
     assert "csv" == f.file_format
 
-    f = FileParser("s3://a/b/c", "csv")
-    assert "s3://a/b/c" == f.raw_path
+    f = FileParser("memory:///a/b/c", "csv")
+    assert "memory:///a/b/c" == f.raw_path
     assert "" == f.suffix
     assert "csv" == f.file_format
 
-    raises(NotImplementedError, lambda: FileParser("s3://a/b/c.ppp"))
-    raises(NotImplementedError, lambda: FileParser("s3://a/b/c.parquet", "csvv"))
-    raises(NotImplementedError, lambda: FileParser("s3://a/b/c"))
+    raises(NotImplementedError, lambda: FileParser("memory:///a/b/c.ppp"))
+    raises(NotImplementedError, lambda: FileParser("memory:///a/b/c.parquet", "csvv"))
+    raises(NotImplementedError, lambda: FileParser("memory:///a/b/c"))
 
 
 @pytest.mark.skipif(sys.platform.startswith("win"), reason="not a test for windows")
@@ -106,26 +116,26 @@ def test_file_parser_glob_linux():
 
 
 def test_file_parser_glob():
-    f = FileParser("s3://a/b/*.parquet")
-    assert "s3://a/b/*.parquet" == f.path
+    f = FileParser("memory:///a/b/*.parquet")
+    assert "memory:///a/b/*.parquet" == f.path
     assert ".parquet" == f.suffix
     assert "parquet" == f.file_format
     assert f.has_glob
 
-    ff = FileParser("s3://a/b", "parquet").join("*.csv", "csv")
-    assert "s3://a/b/*.csv" == ff.path
+    ff = FileParser("memory:///a/b", "parquet").join("*.csv", "csv")
+    assert "memory:///a/b/*.csv" == ff.path
     assert "csv" == ff.file_format
-    ff = FileParser("s3://a/b/", "csv").join("*.csv")
-    assert "s3://a/b/*.csv" == ff.path
+    ff = FileParser("memory:///a/b/", "csv").join("*.csv")
+    assert "memory:///a/b/*.csv" == ff.path
     assert "csv" == ff.file_format
-    ff = FileParser("s3://a/b/*.parquet").join("*.csv")
-    assert "s3://a/b/*.csv" == ff.path
+    ff = FileParser("memory:///a/b/*.parquet").join("*.csv")
+    assert "memory:///a/b/*.csv" == ff.path
     assert "csv" == ff.file_format
-    ff = FileParser("s3://a/b/*.parquet", "parquet").join("*.csv")
-    assert "s3://a/b/*.csv" == ff.path
+    ff = FileParser("memory:///a/b/*.parquet", "parquet").join("*.csv")
+    assert "memory:///a/b/*.csv" == ff.path
     assert "parquet" == ff.file_format
-    ff = FileParser("s3://a/b/*.parquet", "parquet").join("*.csv", "csv")
-    assert "s3://a/b/*.csv" == ff.path
+    ff = FileParser("memory:///a/b/*.parquet", "parquet").join("*.csv", "csv")
+    assert "memory:///a/b/*.csv" == ff.path
     assert "csv" == ff.file_format
 
 

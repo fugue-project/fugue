@@ -375,7 +375,7 @@ class _FuncAsTransformer(Transformer):
         assert_arg_not_none(schema, "schema")
         tr = _FuncAsTransformer()
         tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
-            func, "^[lspqr][fF]?x*z?$", "^[lspqr]$"
+            func, "^[lspq][fF]?x*z?$", "^[lspqr]$"
         )
         tr._output_schema_arg = schema  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore
@@ -410,7 +410,7 @@ class _FuncAsOutputTransformer(_FuncAsTransformer):
         validation_rules.update(parse_validation_rules_from_comment(func))
         tr = _FuncAsOutputTransformer()
         tr._wrapper = DataFrameFunctionWrapper(  # type: ignore
-            func, "^[lspqr][fF]?x*z?$", "^[lspnqr]$"
+            func, "^[lspq][fF]?x*z?$", "^[lspnqr]$"
         )
         tr._output_schema_arg = None  # type: ignore
         tr._validation_rules = validation_rules  # type: ignore

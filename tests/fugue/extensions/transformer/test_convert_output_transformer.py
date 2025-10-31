@@ -158,7 +158,7 @@ def t8(df: pd.DataFrame, c: Callable[[str], str]) -> Iterable[pd.DataFrame]:
     pass
 
 
-def t9(df: Dict[str, Any], c: Callable[[str], str]) -> Dict[str, Any]:
+def t9(df: list[Dict[str, Any]], c: Callable[[str], str]) -> Dict[str, Any]:
     pass
 
 

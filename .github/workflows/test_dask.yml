@@ -64,8 +64,6 @@ jobs:
         python-version: "3.11"
     - name: Install dependencies
       run: make devenv
-    - name: Setup Dask
-      run: pip install -U dask[dataframe,distributed] pyarrow pandas
     - name: Remove Dask SQL
       run: pip uninstall -y dask-sql qpd fugue-sql-antlr sqlglot
     - name: Test

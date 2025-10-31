@@ -21,19 +21,19 @@ concurrency:
 
 jobs:
   test_ray_lower_bound:
-    name: Ray 2.5.0
+    name: Ray 2.30.0
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python 3.9
+    - name: Set up Python 3.10
       uses: actions/setup-python@v1
       with:
-        python-version: 3.9
+        python-version: "3.10"
     - name: Install dependencies
       run: make devenv
     - name: Setup Ray
-      run: pip install ray[data]==2.5.0 pyarrow==7.0.0 "duckdb<0.9" pandas==1.5.3 'pydantic<2'
+      run: pip install ray[data]==2.30.0
     - name: Test
       run: make testray
 
@@ -43,10 +43,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python 3.9
+    - name: Set up Python 3.10
       uses: actions/setup-python@v1
       with:
-        python-version: 3.9
+        python-version: "3.10"
     - name: Install dependencies
       run: make devenv
     - name: Setup Ray

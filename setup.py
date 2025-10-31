@@ -11,7 +11,7 @@ SQL_DEPENDENCIES = [
     "jinja2",
 ]
 
-with open("README.md") as f:
+with open("README.md", encoding="utf-8") as f:
     _text = ["# Fugue"] + f.read().splitlines()[1:]
     LONG_DESCRIPTION = "\n".join(_text)
 
@@ -38,7 +38,7 @@ setup(
     keywords="distributed spark dask ray sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
     install_requires=[
-        "triad>=0.9.7",
+        "triad>=1.0.0",
         "adagio>=0.2.6",
     ],
     extras_require={
@@ -51,7 +51,7 @@ setup(
             "pandas>=2.0.2",
         ],
         "ray": [
-            "ray[data]>=2.5.0",
+            "ray[data]>=2.30.0",
             "duckdb>=0.5.0",
             "pyarrow>=7.0.0",
             "pandas<2.2",
@@ -67,9 +67,9 @@ setup(
         "all": SQL_DEPENDENCIES
         + [
             "pyspark>=3.1.1",
-            "dask[distributed,dataframe]>=2023.5.0",
+            "dask[distributed,dataframe]>=2024.4.0",
             "dask-sql",
-            "ray[data]>=2.5.0",
+            "ray[data]>=2.30.0",
             "notebook",
             "jupyterlab",
             "ipython>=7.10.0",

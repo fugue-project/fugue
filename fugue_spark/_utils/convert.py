@@ -174,20 +174,26 @@ def pd_to_spark_df(
 
 
 def to_pandas(df: ps.DataFrame) -> pd.DataFrame:
-    if version.parse(pd.__version__) < version.parse("2.0.0") or not any(
-        isinstance(x.dataType, (pt.TimestampType, TimestampNTZType))
-        for x in df.schema.fields
-    ):
-        return df.toPandas()
-    else:  # pragma: no cover
+    def _to_df() -> pd.DataFrame:
+        if version.parse(pd.__version__) < version.parse("2.0.0") or not any(
+            isinstance(x.dataType, (pt.TimestampType, TimestampNTZType))
+            for x in df.schema.fields
+        ):
+            return df.toPandas()
+        else:  # pragma: no cover
 
-        def serialize(dfs):
-            for df in dfs:
-                data = pickle.dumps(df)
-                yield pd.DataFrame([[data]], columns=["data"])
+            def serialize(dfs):
+                for df in dfs:
+                    data = pickle.dumps(df)
+                    yield pd.DataFrame([[data]], columns=["data"])
 
-        sdf = df.mapInPandas(serialize, schema="data binary")
-        return pd.concat(pickle.loads(x.data) for x in sdf.collect())
+            sdf = df.mapInPandas(serialize, schema="data binary")
+            return pd.concat(pickle.loads(x.data) for x in sdf.collect())
+
+    pdf = _to_df()
+    if hasattr(pdf, "attrs") and "metrics" in pdf.attrs:  # pragma: no cover
+        del pdf.attrs["metrics"]
+    return pdf
 
 
 def to_arrow(df: ps.DataFrame) -> pa.Table:

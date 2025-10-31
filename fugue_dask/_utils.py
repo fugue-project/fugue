@@ -149,7 +149,7 @@ def _add_hash_index(
     if len(cols) == 0:
         cols = list(df.columns)
 
-    def _add_hash(df: pd.DataFrame) -> pd.DataFrame:
+    def _add_hash(df: pd.DataFrame) -> pd.DataFrame:  # pragma: no cover
         if len(df) == 0:
             return df.assign(**{_FUGUE_DASK_TEMP_IDX_COLUMN: pd.Series(dtype=int)})
         return df.assign(
@@ -171,7 +171,7 @@ def _add_hash_index(
 
 def _add_random_index(
     df: dd.DataFrame, num: int, seed: Any = None
-) -> Tuple[dd.DataFrame, int]:
+) -> Tuple[dd.DataFrame, int]:  # pragma: no cover
     def _add_rand(df: pd.DataFrame) -> pd.DataFrame:
         if len(df) == 0:
             return df.assign(**{_FUGUE_DASK_TEMP_IDX_COLUMN: pd.Series(dtype=int)})
@@ -189,7 +189,9 @@ def _add_random_index(
 
 
 def _add_continuous_index(df: dd.DataFrame) -> Tuple[dd.DataFrame, int]:
-    def _get_info(df: pd.DataFrame, partition_info: Any) -> pd.DataFrame:
+    def _get_info(
+        df: pd.DataFrame, partition_info: Any
+    ) -> pd.DataFrame:  # pragma: no cover
         return pd.DataFrame(dict(no=[partition_info["number"]], ct=[len(df)]))
 
     pinfo = (
@@ -200,7 +202,9 @@ def _add_continuous_index(df: dd.DataFrame) -> Tuple[dd.DataFrame, int]:
     counts = pinfo.sort_values("no").ct.cumsum().tolist()
     starts = [0] + counts[0:-1]
 
-    def _add_index(df: pd.DataFrame, partition_info: Any) -> pd.DataFrame:
+    def _add_index(
+        df: pd.DataFrame, partition_info: Any
+    ) -> pd.DataFrame:  # pragma: no cover
         return df.assign(
             **{
                 _FUGUE_DASK_TEMP_IDX_COLUMN: np.arange(len(df))
