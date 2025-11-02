@@ -60,6 +60,7 @@ class FlaskRPCServer(RPCServer):
             -1.0 if timeout is None else to_timedelta(timeout).total_seconds()
         )
         self._server: Optional[FlaskRPCServer._Thread] = None
+        self._log = logging.getLogger()
 
     def make_client(self, handler: Any) -> RPCClient:
         """Add ``handler`` and correspondent :class:`~.FlaskRPCClient`
@@ -77,6 +78,12 @@ class FlaskRPCServer(RPCServer):
 
     def start_server(self) -> None:
         """Start Flask RPC server"""
+        self._log.warning(
+            f"Starting RPC server on {self._host}:{self._port}. "
+            f"This server has no authentication and relies on network isolation. "
+            f"Ensure proper VPC/firewall configuration in production. "
+            f"See https://fugue-tutorials.readthedocs.io/tutorials/resources/security/index.html"
+        )
         app = Flask("FlaskRPCServer")
         app.route("/invoke", methods=["POST"])(self._invoke)
         self._server = FlaskRPCServer._Thread(app, self._host, self._port)
