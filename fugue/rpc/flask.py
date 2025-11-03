@@ -78,15 +78,14 @@ class FlaskRPCServer(RPCServer):
 
     def start_server(self) -> None:
         """Start Flask RPC server"""
-        self._log.warning(
+        msg = (
             "Starting RPC server on %s:%s. "
             "This server has no authentication and relies on network isolation. "
             "Ensure proper VPC/firewall configuration in production. "
             "See https://fugue-tutorials.readthedocs.io/tutorials/resources/"
-            "security.html",
-            self._host,
-            self._port,
+            "security.html"
         )
+        self._log.warning(msg, self._host, self._port)
         app = Flask("FlaskRPCServer")
         app.route("/invoke", methods=["POST"])(self._invoke)
         self._server = FlaskRPCServer._Thread(app, self._host, self._port)
