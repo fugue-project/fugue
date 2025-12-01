@@ -1,6 +1,5 @@
-import base64
 import logging
-import cloudpickle
+import json
 from threading import Thread
 from typing import Any, Optional, Tuple, Dict, List
 
@@ -131,10 +130,12 @@ class FlaskRPCClient(RPCClient):
 
 
 def _encode(*args: Any, **kwargs: Any) -> str:
-    data = base64.b64encode(cloudpickle.dumps(dict(args=args, kwargs=kwargs)))
-    return data.decode("ascii")
+    # data = base64.b64encode(cloudpickle.dumps(dict(args=args, kwargs=kwargs)))
+    data = json.dumps(dict(args=args, kwargs=kwargs))
+    return data
 
 
 def _decode(data: str) -> Tuple[List[Any], Dict[str, Any]]:
-    data = cloudpickle.loads(base64.b64decode(data.encode("ascii")))
+    # data = cloudpickle.loads(base64.b64decode(data.encode("ascii")))
+    data = json.loads(data)
     return data["args"], data["kwargs"]  # type: ignore
