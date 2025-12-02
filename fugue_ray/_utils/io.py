@@ -153,6 +153,10 @@ class RayIO(object):
     def _load_parquet(
         self, p: List[str], columns: Any = None, **kwargs: Any
     ) -> DataFrame:
+        # in 2.52.0 the default changes to ["parquet"]
+        if "file_extensions" not in kwargs:
+            kwargs = kwargs.copy()
+            kwargs["file_extensions"] = None
         sdf = rd.read_parquet(p, ray_remote_args=self._remote_args(), **kwargs)
         if columns is None:
             return RayDataFrame(sdf)

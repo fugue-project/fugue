@@ -39,9 +39,7 @@
 	"postCreateCommand": "make devenv",
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:2.12.4": {},
-		"ghcr.io/devcontainers/features/java:1": {
-			"version": "11"
-		},
+		"ghcr.io/devcontainers/features/java:1.6.3": {},
         "ghcr.io/devcontainers/features/node:1.6.3": {}
 	}
 }
