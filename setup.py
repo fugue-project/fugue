@@ -7,7 +7,7 @@ from fugue_version import __version__
 SQL_DEPENDENCIES = [
     "qpd>=0.4.4",
     "fugue-sql-antlr>=0.2.0",
-    "sqlglot<28",
+    "sqlglot<28",  # TODO: 28 breaks ibis, fix it
     "jinja2",
 ]
 
