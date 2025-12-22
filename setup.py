@@ -54,7 +54,7 @@ setup(
             "ray[data]>=2.30.0",
             "duckdb>=0.5.0",
             "pyarrow>=7.0.0",
-            "pandas<2.2",
+            "pandas>=2.0.2",
         ],
         "duckdb": SQL_DEPENDENCIES
         + [
