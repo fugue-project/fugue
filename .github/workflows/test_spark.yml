@@ -25,8 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        spark-version: ["3.4.0","3.5.7"]
-        pandas-version: ["2.1.0","2.3.3"]
+        spark-version: ["3.4.0","3.5.7","4.0.1"]
+        pandas-version: ["2.3.3"]
 
     steps:
     - uses: actions/checkout@v2
