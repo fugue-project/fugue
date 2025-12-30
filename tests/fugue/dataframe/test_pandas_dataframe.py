@@ -142,14 +142,14 @@ def test_as_array():
     # prevent pandas auto type casting
     df = PandasDataFrame([[1.0, 1.1]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array()
-    assert isinstance(df.as_array()[0][0], (float, np.float_))
+    assert isinstance(df.as_array()[0][0], (float, np.float64))
     assert isinstance(df.as_array()[0][1], (int, np.integer))
     assert [[1.0, 1]] == df.as_array(["a", "b"])
     assert [[1, 1.0]] == df.as_array(["b", "a"])
 
     df = PandasDataFrame([[np.float64(1.0), 1.1]], "a:double,b:int")
     assert [[1.0, 1]] == df.as_array()
-    assert isinstance(df.as_array()[0][0], (float, np.float_))
+    assert isinstance(df.as_array()[0][0], (float, np.float64))
     assert isinstance(df.as_array()[0][1], (int, np.integer))
 
     df = PandasDataFrame([[pd.Timestamp("2020-01-01"), 1.1]], "a:datetime,b:int")
