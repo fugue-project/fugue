@@ -8,7 +8,7 @@ try:
     if int(SPARK_VERSION[0]) >= 4:
         from pyspark.sql import SparkSession as SparkConnectSession
         from pyspark.sql import DataFrame as SparkConnectDataFrame
-    else:
+    else:  # pragma: no cover
         from pyspark.sql.connect.session import SparkSession as SparkConnectSession
         from pyspark.sql.connect.dataframe import DataFrame as SparkConnectDataFrame
 except Exception:  # pragma: no cover
