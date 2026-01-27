@@ -1,8 +1,13 @@
 from typing import Any
+from pyspark import __version__
 
 try:
-    from pyspark.sql.connect.session import SparkSession as SparkConnectSession
-    from pyspark.sql.connect.dataframe import DataFrame as SparkConnectDataFrame
+    if __version__ >= "4.0.0":
+        from pyspark.sql import SparkSession as SparkConnectSession
+        from pyspark.sql import DataFrame as SparkConnectDataFrame
+    else:
+        from pyspark.sql.connect.session import SparkSession as SparkConnectSession
+        from pyspark.sql.connect.dataframe import DataFrame as SparkConnectDataFrame
 except Exception:  # pragma: no cover
     SparkConnectSession = None
     SparkConnectDataFrame = None
