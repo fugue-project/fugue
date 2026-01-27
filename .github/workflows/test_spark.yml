@@ -58,12 +58,12 @@ jobs:
     - name: Set up Python 3.10
       uses: actions/setup-python@v1
       with:
-        python-version: "3.10"
+        python-version: "3.12"
     - name: Install dependencies
       run: make devenv
     - name: Setup Spark
       run: |
-        pip install "pyspark==3.5.7"
+        pip install "pyspark==4.1.1"
         make sparkconnect
     - name: Test
       run: make testsparkconnect
