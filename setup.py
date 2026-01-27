@@ -40,7 +40,7 @@ setup(
     install_requires=[
         "triad>=1.0.0",
         "adagio>=0.2.6",
-        "pandas<3",  # TODO: remove upper bound on 0.9.6
+        "pandas<3",  # TODO: remove upper bound on 0.9.7
     ],
     extras_require={
         "sql": SQL_DEPENDENCIES,
