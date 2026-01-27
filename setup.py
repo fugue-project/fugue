@@ -38,7 +38,7 @@ setup(
     keywords="distributed spark dask ray sql dsl domain specific language",
     url="http://github.com/fugue-project/fugue",
     install_requires=[
-        "triad>=1.0.0",
+        "triad==1.0.1.dev1",
         "adagio>=0.2.6",
     ],
     extras_require={
