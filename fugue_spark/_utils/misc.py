@@ -16,7 +16,7 @@ except Exception:  # pragma: no cover
     SparkConnectDataFrame = None
 
 
-def is_spark_connect(session: Any) -> bool:
+def is_spark_connect(session: Any) -> bool:  # pragma: no cover
     if int(SPARK_VERSION[0]) >= 4:
         return False
     return SparkConnectSession is not None and isinstance(
