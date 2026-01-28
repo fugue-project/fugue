@@ -1,15 +1,24 @@
+import pyspark.sql as ps
 from typing import Any
+from importlib.metadata import version
+
+SPARK_VERSION = version("pyspark").split(".")
 
 try:
-    from pyspark.sql.connect.session import SparkSession as SparkConnectSession
-    from pyspark.sql.connect.dataframe import DataFrame as SparkConnectDataFrame
+    if int(SPARK_VERSION[0]) >= 4:
+        from pyspark.sql import SparkSession as SparkConnectSession
+        from pyspark.sql import DataFrame as SparkConnectDataFrame
+    else:  # pragma: no cover
+        from pyspark.sql.connect.session import SparkSession as SparkConnectSession
+        from pyspark.sql.connect.dataframe import DataFrame as SparkConnectDataFrame
 except Exception:  # pragma: no cover
     SparkConnectSession = None
     SparkConnectDataFrame = None
-import pyspark.sql as ps
 
 
-def is_spark_connect(session: Any) -> bool:
+def is_spark_connect(session: Any) -> bool:  # pragma: no cover
+    if int(SPARK_VERSION[0]) >= 4:
+        return False
     return SparkConnectSession is not None and isinstance(
         session, (SparkConnectSession, SparkConnectDataFrame)
     )

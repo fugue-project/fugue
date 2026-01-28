@@ -40,11 +40,12 @@ setup(
     install_requires=[
         "triad>=1.0.0",
         "adagio>=0.2.6",
+        "pandas<3",  # TODO: remove upper bound on 0.9.7
     ],
     extras_require={
         "sql": SQL_DEPENDENCIES,
         "cpp_sql_parser": ["fugue-sql-antlr[cpp]>=0.2.0"],
-        "spark": ["pyspark>=3.1.1"],
+        "spark": ["pyspark>=3.1.1", "zstandard>=0.25.0"],
         "dask": [
             "dask[distributed,dataframe]>=2024.4.0",
             "pyarrow>=7.0.0",
