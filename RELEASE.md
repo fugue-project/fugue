@@ -1,5 +1,9 @@
 # Release Notes
 
+## 0.9.6
+
+-   Add version cap for pandas to < 3.0.0 by @goodwanghan
+
 ## 0.9.4
 
 -   Fix compatibility issues by @goodwanghan in https://github.com/fugue-project/fugue/pull/567
