@@ -1,8 +1,9 @@
 import pyspark.sql as ps
+import pyspark
 from typing import Any
-from importlib.metadata import version
 
-SPARK_VERSION = version("pyspark").split(".")
+
+SPARK_VERSION = pyspark.__version__.split(".")
 
 try:
     if int(SPARK_VERSION[0]) >= 4:
