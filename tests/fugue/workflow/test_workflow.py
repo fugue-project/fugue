@@ -166,7 +166,7 @@ class MockSQLEngine(QPDPandasEngine):
         table: str,
         mode: str = "overwrite",
         partition_spec: Optional[PartitionSpec] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         path = os.path.join(
             self.conf[FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH], table + ".parquet"

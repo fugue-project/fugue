@@ -18,7 +18,7 @@ def test_encode_value_to_expr():
     assert "TRUE" == encode_value_to_expr(np.bool_(1))
     assert "E'abc'" == encode_value_to_expr("abc")
     assert "E'abc\\n;def'" == encode_value_to_expr("abc\n;def")
-    assert "'\\xcaABC'::BLOB" == encode_value_to_expr(b"\xCAABC")
+    assert "'\\xcaABC'::BLOB" == encode_value_to_expr(b"\xcaABC")
     assert "NULL" == encode_value_to_expr(None)
     assert "NULL" == encode_value_to_expr(float("nan"))
     assert "NULL" == encode_value_to_expr(pd.NA)

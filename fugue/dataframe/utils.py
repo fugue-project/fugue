@@ -61,9 +61,9 @@ def _df_eq(
     else:
         df2 = as_fugue_df(data).as_local_bounded()
     try:
-        assert (
-            df1.count() == df2.count()
-        ), f"count mismatch {df1.count()}, {df2.count()}"
+        assert df1.count() == df2.count(), (
+            f"count mismatch {df1.count()}, {df2.count()}"
+        )
         assert not check_schema or df.schema.is_like(
             df2.schema, equal_groups=equal_type_groups
         ), f"schema mismatch {df.schema.pa_schema}, {df2.schema.pa_schema}"

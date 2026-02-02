@@ -64,7 +64,9 @@ class DuckDBEngine(SQLEngine):
         if isinstance(self.execution_engine, DuckExecutionEngine):
             con = self.execution_engine.connection
             tdf: DuckDataFrame = _to_duck_df(
-                self.execution_engine, df, create_view=False  # type: ignore
+                self.execution_engine,
+                df,
+                create_view=False,  # type: ignore
             )
             et = self._get_table(table)
             if et is not None:
@@ -96,7 +98,9 @@ class DuckDBEngine(SQLEngine):
         name_map: Dict[str, str] = {}
         for k, v in dfs.items():
             tdf: DuckDataFrame = _to_duck_df(
-                self.execution_engine, v, create_view=True  # type: ignore
+                self.execution_engine,
+                v,
+                create_view=True,  # type: ignore
             )
             name_map[k] = tdf.alias
         query = statement.construct(name_map, dialect=self.dialect, log=self.log)
@@ -415,7 +419,7 @@ class DuckExecutionEngine(ExecutionEngine):
         )
         tb = TempTableName()
         if frac is not None:
-            sql = f"SELECT * FROM {tb} USING SAMPLE bernoulli({frac*100} PERCENT)"
+            sql = f"SELECT * FROM {tb} USING SAMPLE bernoulli({frac * 100} PERCENT)"
         else:
             sql = f"SELECT * FROM {tb} USING SAMPLE reservoir({n} ROWS)"
         if seed is not None:

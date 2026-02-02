@@ -81,7 +81,7 @@ html_theme_options = {
 
 master_doc = "index"
 
-html_favicon = '_static/fugue_logo_trimmed.svg'
+html_favicon = "_static/fugue_logo_trimmed.svg"
 
 intersphinx_mapping = {
     "triad": ("https://triad.readthedocs.io/en/latest", None),

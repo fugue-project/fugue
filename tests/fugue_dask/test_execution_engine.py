@@ -74,9 +74,7 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
         )
 
         # with distinct
-        b = fa.select(
-            a, col("b"), (col("b") + 1).alias("c").cast(str), distinct=True
-        )
+        b = fa.select(a, col("b"), (col("b") + 1).alias("c").cast(str), distinct=True)
         self.df_eq(
             b,
             [[2, "3"], [1, "2"], [4, "5"]],

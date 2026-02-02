@@ -1,45 +1,61 @@
 {
 	"name": "Fugue Development Environment",
-	"image": "mcr.microsoft.com/vscode/devcontainers/python:3.11-bookworm",
-	"customizations": {
-		"vscode": {
-			"settings": {
-				"terminal.integrated.shell.linux": "/bin/bash",
-				"python.pythonPath": "/usr/local/bin/python",
-				"python.defaultInterpreterPath": "/usr/local/bin/python",
-				"editor.defaultFormatter": "ms-python.black-formatter",
-				"isort.interpreter": [
-					"/usr/local/bin/python"
-				],
-				"flake8.interpreter": [
-					"/usr/local/bin/python"
-				],
-				"pylint.interpreter": [
-					"/usr/local/bin/python"
-				],
-				"black-formatter.interpreter": [
-					"/usr/local/bin/python"
-				]
-			},
-			"extensions": [
-				"ms-python.python",
-				"ms-python.isort",
-				"ms-python.flake8",
-				"ms-python.pylint",
-				"ms-python.mypy",
-				"ms-python.black-formatter",
-				"GitHub.copilot",
-				"njpwerner.autodocstring"
-			]
-		}
-	},
-	"forwardPorts": [
-		8888
-	],
-	"postCreateCommand": "make devenv",
-	"features": {
-		"ghcr.io/devcontainers/features/docker-in-docker:2.12.4": {},
+    "image": "mcr.microsoft.com/vscode/devcontainers/python:3.11",
+    "hostRequirements": {
+        "cpus": 4,
+        "memory": "16gb",
+        "storage": "32gb"
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.shell.linux": "/bin/bash",
+                "python.terminal.activateEnvInCurrentTerminal": true,
+                "python.defaultInterpreterPath": ".venv/bin/python",
+                "python.pythonPath": ".venv/bin/python",
+                "[python]": {
+                    "editor.defaultFormatter": "charliermarsh.ruff",
+                    "editor.formatOnSave": true,
+                    "editor.codeActionsOnSave": {
+                        "source.fixAll": "explicit",
+                        "source.organizeImports": "explicit"
+                    }
+                },
+                "notebook.python.defaultInterpreterPath": ".venv/bin/python",
+                "notebook.codeActionsOnSave": {
+                    "source.fixAll": "explicit",
+                    "source.organizeImports": "explicit"
+                },
+                "ruff.nativeServer": "on",
+                "python.languageServer": "Default",
+                "debug.internalConsoleOptions": "neverOpen",
+                "extensions.ignoreRecommendations": true,
+                "files.insertFinalNewline": true
+            },
+            "extensions": [
+                "ms-python.python",
+                "ms-python.mypy",
+                "ms-python.vscode-pylance",
+                "ms-toolsai.jupyter",
+                "charliermarsh.ruff",
+                "GitHub.copilot",
+                "tamasfe.even-better-toml",
+                "anthropic.claude-code"
+            ]
+        }
+    },
+    "forwardPorts": [
+        8888
+    ],
+    "containerEnv": {
+        "UV_NO_SYNC": "1"
+    },
+    //"onCreateCommand": "make devenv",
+    //"postCreateCommand": "make init_codespace",
+    //"waitFor": "postCreateCommand",
+    "features": {
+        "ghcr.io/va-h/devcontainers-features/uv:1.1.4": {},
 		"ghcr.io/devcontainers/features/java:1.6.3": {},
-        "ghcr.io/devcontainers/features/node:1.6.3": {}
-	}
+        "ghcr.io/devcontainers/features/node:1.7.1": {}
+    }
 }

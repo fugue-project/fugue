@@ -55,12 +55,16 @@ def test_to_validation_rules():
             "presort_is": [("c", False), "d"],
         }
     )
-    assert {"input_has": ["a", "b:str"],} == to_validation_rules(
+    assert {
+        "input_has": ["a", "b:str"],
+    } == to_validation_rules(
         {
             "input_has": ["a", " b : str "],
         }
     )
-    assert {"input_has": ["a", "b:str"],} == to_validation_rules(
+    assert {
+        "input_has": ["a", "b:str"],
+    } == to_validation_rules(
         {
             "input_has": "a, b : str",
         }

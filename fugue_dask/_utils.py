@@ -255,7 +255,7 @@ class DaskUtils(PandasLikeUtils[dd.DataFrame, dd.Series]):
         schema: pa.Schema,
         use_extension_types: bool = True,
         use_arrow_dtype: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> DataFrame:
         output_dtypes = to_pandas_dtype(
             schema,
@@ -268,7 +268,7 @@ class DaskUtils(PandasLikeUtils[dd.DataFrame, dd.Series]):
             use_extension_types=use_extension_types,
             use_arrow_dtype=use_arrow_dtype,
             meta=output_dtypes,
-            **kwargs
+            **kwargs,
         )
 
 

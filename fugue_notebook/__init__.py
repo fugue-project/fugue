@@ -1,7 +1,8 @@
 # flake8: noqa
 from typing import Any
+from importlib.metadata import version
 
-from fugue_version import __version__
+__version__ = version("fugue")
 from IPython import get_ipython
 from IPython.display import Javascript, display
 

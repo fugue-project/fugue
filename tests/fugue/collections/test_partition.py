@@ -9,7 +9,6 @@ from triad.collections.dict import IndexedOrderedDict
 
 
 def test_parse_presort_exp():
-
     assert parse_presort_exp(None) == IndexedOrderedDict()
     assert parse_presort_exp(IndexedOrderedDict([("c", True)])) == IndexedOrderedDict(
         [("c", True)]
@@ -35,9 +34,9 @@ def test_parse_presort_exp():
     assert parse_presort_exp("`` desc, `a b` asc, ````, `中国`") == IndexedOrderedDict(
         [("", False), ("a b", True), ("`", True), ("中国", True)]
     )
-    assert parse_presort_exp([("", False), ("a b", True), "中国"]) == IndexedOrderedDict(
-        [("", False), ("a b", True), ("中国", True)]
-    )
+    assert parse_presort_exp(
+        [("", False), ("a b", True), "中国"]
+    ) == IndexedOrderedDict([("", False), ("a b", True), ("中国", True)])
 
     with raises(SyntaxError):
         parse_presort_exp("b dsc, c asc")  # mispelling of desc

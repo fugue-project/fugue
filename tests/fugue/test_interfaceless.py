@@ -41,9 +41,7 @@ def test_transform():
     result = transform(pdf, f2, partition=dict(by=["a"]))
     assert isinstance(result, pd.DataFrame)
     assert sorted(result.values.tolist(), key=lambda x: x[0]) == [[0, 0], [1, 1]]
-    result = transform(
-        pdf, f2, partition=dict(by=["a"]), as_fugue=True
-    )
+    result = transform(pdf, f2, partition=dict(by=["a"]), as_fugue=True)
     assert isinstance(result, DataFrame)
 
     ppdf = PandasDataFrame(pdf)
@@ -106,6 +104,7 @@ def test_transform_from_file(tmpdir):
 def test_transform_to_file(tmpdir):
     fp = os.path.join(tmpdir, "t.parquet")
     tdf = pd.DataFrame(dict(a=[2]))
+
     # schema: *,x:int
     def f(df: pd.DataFrame) -> pd.DataFrame:
         return df.assign(x=1)
@@ -115,9 +114,7 @@ def test_transform_to_file(tmpdir):
     )
 
     # checkpoint is True, save_path is None
-    result = transform(
-        tdf, f, as_fugue=True, checkpoint=True, engine=engine
-    )
+    result = transform(tdf, f, as_fugue=True, checkpoint=True, engine=engine)
     assert result.as_array() == [[2, 1]]
 
     # checkpoint is True, save_path is not None

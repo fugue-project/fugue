@@ -204,7 +204,9 @@ class FugueTask(TaskSpec, ABC):
 
             # add caller traceback
             ctb = modify_traceback(
-                sys.exc_info()[2].tb_next, None, self._traceback  # type: ignore
+                sys.exc_info()[2].tb_next,
+                None,
+                self._traceback,  # type: ignore
             )
             if ctb is None:  # pragma: no cover
                 raise

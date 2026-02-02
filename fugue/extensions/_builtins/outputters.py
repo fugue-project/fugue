@@ -67,7 +67,7 @@ class Save(Outputter):
             mode=mode,
             partition_spec=partition_spec,
             force_single=force_single,
-            **kwargs
+            **kwargs,
         )
 
 

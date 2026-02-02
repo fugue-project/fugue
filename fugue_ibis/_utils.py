@@ -149,7 +149,7 @@ class LazyIbisAttr(LazyIbisObject):
             self._super_lazy_internal_objs["parent"],
             self._super_lazy_internal_objs["name"],
             *args,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -196,7 +196,7 @@ def _materialize(obj: Any, context: Dict[int, Any]) -> Any:
         )
         v = f(
             *_materialize(obj._super_lazy_internal_objs["args"], context),
-            **_materialize(obj._super_lazy_internal_objs["kwargs"], context)
+            **_materialize(obj._super_lazy_internal_objs["kwargs"], context),
         )
     elif isinstance(obj, LazyIbisAttr):
         v = getattr(

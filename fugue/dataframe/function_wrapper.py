@@ -40,9 +40,11 @@ from .pandas_dataframe import PandasDataFrame
 
 def _compare_iter(tp: Any) -> Any:
     return lambda x: compare_annotations(
-        x, Iterable[tp]  # type:ignore
+        x,
+        Iterable[tp],  # type:ignore
     ) or compare_annotations(
-        x, Iterator[tp]  # type:ignore
+        x,
+        Iterator[tp],  # type:ignore
     )
 
 

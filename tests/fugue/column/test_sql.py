@@ -167,7 +167,9 @@ def test_select():
     cols = SelectColumns(all_cols())
     assert "SELECT * FROM !x!" == _to_sql(gen.select(cols, "x"))
 
-    cols = SelectColumns(col("a b"), lit(1).alias("b"), (col("b") + col("c")).alias("x"))
+    cols = SelectColumns(
+        col("a b"), lit(1).alias("b"), (col("b") + col("c")).alias("x")
+    )
     where = (col("a b") > 5).alias("aa")
     assert "SELECT `a b`, 1 AS b, b+c AS x FROM !t! WHERE `a b`>5" == _to_sql(
         gen.select(cols, "t", where=where)

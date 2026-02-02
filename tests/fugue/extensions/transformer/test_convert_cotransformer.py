@@ -137,9 +137,7 @@ def t7(
         yield df
 
 
-def t8(
-    df1: pd.DataFrame, df2: pd.DataFrame, c: callable, **kwargs
-) -> Dict[str, Any]:
+def t8(df1: pd.DataFrame, df2: pd.DataFrame, c: callable, **kwargs) -> Dict[str, Any]:
     return {}
 
 

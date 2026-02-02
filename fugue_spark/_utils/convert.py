@@ -81,8 +81,9 @@ def to_cast_expression(
             name_match or allow_name_mismatch,
             lambda: ValueError(f"schema name mismatch: {schema1}, {schema2}"),
         )
-        n1, n2 = quote_name(schema1[i].name, quote="`"), quote_name(
-            schema2[i].name, quote="`"
+        n1, n2 = (
+            quote_name(schema1[i].name, quote="`"),
+            quote_name(schema2[i].name, quote="`"),
         )
         if schema1[i].dataType != schema2[i].dataType:
             type2 = schema2[i].dataType.simpleString()
@@ -90,9 +91,7 @@ def to_cast_expression(
                 schema2[i].dataType, (pt.StringType, pt.IntegralType)
             ):
                 expr.append(
-                    f"CAST(IF(isnan({n1}) OR {n1} IS NULL"
-                    f", NULL, {n1})"
-                    f" AS {type2}) {n2}"
+                    f"CAST(IF(isnan({n1}) OR {n1} IS NULL, NULL, {n1}) AS {type2}) {n2}"
                 )
             else:
                 expr.append(f"CAST({n1} AS {type2}) {n2}")

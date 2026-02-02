@@ -35,7 +35,6 @@ def fill_sql_template(sql: str, params: Dict[str, Any]):
         template = Template(new_sql)
 
     except jinja2.exceptions.TemplateSyntaxError:
-
         template = Template(sql)
 
     return template.render(**params)
