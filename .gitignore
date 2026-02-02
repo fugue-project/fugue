@@ -145,3 +145,5 @@ spark-warehourse
 
 # DS_Store
 *.DS_Store
+
+.ruff_cache/
