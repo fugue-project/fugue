@@ -53,9 +53,8 @@ from fugue import (
     register_transformer,
     transformer,
 )
-from fugue.column import col
+from fugue.column import col, lit
 from fugue.column import functions as ff
-from fugue.column import lit
 from fugue.exceptions import (
     FugueInterfacelessError,
     FugueWorkflowCompileError,

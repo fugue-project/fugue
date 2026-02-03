@@ -2430,7 +2430,7 @@ dev = [
     { name = "notebook", specifier = "<7" },
     { name = "pre-commit" },
     { name = "psutil" },
-    { name = "pydantic", specifier = ">2.5" },
+    { name = "pydantic", specifier = ">2" },
     { name = "pylint", specifier = "==3.2.6" },
     { name = "pyspark", extras = ["connect"] },
     { name = "pytest" },

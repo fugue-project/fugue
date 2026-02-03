@@ -1,6 +1,8 @@
 from typing import Any, Callable, Dict, Iterable, List
 
 import pandas as pd
+from triad.utils.hash import to_uuid
+
 from fugue.extensions.transformer import (
     Transformer,
     _to_output_transformer,
@@ -9,7 +11,6 @@ from fugue.extensions.transformer import (
     register_output_transformer,
 )
 from fugue.extensions.transformer.constants import OUTPUT_TRANSFORMER_DUMMY_SCHEMA
-from triad.utils.hash import to_uuid
 
 
 def test_transformer():
@@ -50,6 +51,10 @@ def test__to_output_transformer():
     assert isinstance(i, Transformer)
     j = _to_output_transformer("t9")
     assert isinstance(j, Transformer)
+    assert "F" in j._wrapper.input_code
+    k = _to_output_transformer("t10")
+    assert isinstance(k, Transformer)
+    assert "f" in k._wrapper.input_code
 
 
 def test__register():
@@ -159,6 +164,10 @@ def t8(df: pd.DataFrame, c: Callable[[str], str]) -> Iterable[pd.DataFrame]:
 
 
 def t9(df: list[Dict[str, Any]], c: Callable[[str], str]) -> Dict[str, Any]:
+    pass
+
+
+def t10(df: list[Dict[str, Any]], c: Callable[[str], str] | None) -> Dict[str, Any]:
     pass
 
 

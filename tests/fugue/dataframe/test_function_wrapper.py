@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import sys
-from typing import Any, Dict, Iterable, Iterator, List
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional
 
 import pandas as pd
 import pyarrow as pa
@@ -26,6 +26,8 @@ from fugue.dataframe.function_wrapper import (
     _IterablePandasParam,
     _PandasParam,
     _PyArrowTableParam,
+    _is_optional_callable,
+    _is_required_callable,
 )
 from fugue.dataframe.utils import _df_eq as df_eq
 from fugue.dev import DataFrameFunctionWrapper
@@ -396,3 +398,36 @@ def f36(e: pd.DataFrame, a: LocalDataFrame) -> Iterable[pa.Table]:
     e = PandasDataFrame(e, "a:int").as_arrow()
     a = ArrayDataFrame(a, "a:int").as_arrow()
     return iter([e, a])
+
+
+def test_is_required_callable():
+    # Required callables
+    assert _is_required_callable(Callable)
+    assert _is_required_callable(callable)
+    assert _is_required_callable(Callable[[int], str])
+    assert _is_required_callable(Callable[[int, str], bool])
+
+    # Not required callables (optional or not callable)
+    assert not _is_required_callable(Optional[Callable])
+    assert not _is_required_callable(Callable[[int], str] | None)
+    assert not _is_required_callable(str)
+    assert not _is_required_callable(int)
+    assert not _is_required_callable(None)
+
+
+def test_is_optional_callable():
+    # Optional callables
+    assert _is_optional_callable(Optional[Callable])
+    assert _is_optional_callable(Optional[callable])
+    assert _is_optional_callable(Callable | None)
+    assert _is_optional_callable(Callable[[int], str] | None)
+    assert _is_optional_callable(Optional[Callable[[int, str], bool]])
+
+    # Not optional callables (required or not callable)
+    assert not _is_optional_callable(Callable)
+    assert not _is_optional_callable(callable)
+    assert not _is_optional_callable(Callable[[int], str])
+    assert not _is_optional_callable(str)
+    assert not _is_optional_callable(Optional[str])
+    assert not _is_optional_callable(str | None)
+    assert not _is_optional_callable(None)
