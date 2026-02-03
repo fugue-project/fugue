@@ -25,15 +25,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v1
+    - name: Clone repo
+      uses: actions/checkout@v5
+
+    - name: Setup uv 3.10
+      uses: astral-sh/setup-uv@v5
       with:
+        enable-cache: false
+        cache-dependency-glob: "pyproject.toml"
         python-version: "3.10"
+
     - name: Install dependencies
-      run: make devenv
+      run: |
+        make devenv
+
     - name: Setup Dask
-      run: pip install dask[dataframe,distributed]==2024.4.0
+      run: uv pip install dask[dataframe,distributed]==2024.4.0
+
     - name: Test
       run: make testdask
 
@@ -42,13 +50,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v1
+    - name: Clone repo
+      uses: actions/checkout@v5
+
+    - name: Setup uv 3.11
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: "3.10"
+        enable-cache: false
+        cache-dependency-glob: "pyproject.toml"
+        python-version: "3.11"
+
     - name: Install dependencies
-      run: make devenv
+      run: |
+        make devenv
+
+    - name: Setup Dask
+      run: uv pip install dask[dataframe,distributed]==2024.4.0
+
     - name: Test
       run: make testdask
 
@@ -57,14 +75,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v1
+    - name: Clone repo
+      uses: actions/checkout@v5
+
+    - name: Setup uv 3.11
+      uses: astral-sh/setup-uv@v5
       with:
+        enable-cache: false
+        cache-dependency-glob: "pyproject.toml"
         python-version: "3.11"
+
     - name: Install dependencies
-      run: make devenv
+      run: |
+        make devenv
+
     - name: Remove Dask SQL
-      run: pip uninstall -y dask-sql qpd fugue-sql-antlr sqlglot
+      run: uv pip uninstall -y dask-sql qpd fugue-sql-antlr sqlglot
+
     - name: Test
       run: make testdask
