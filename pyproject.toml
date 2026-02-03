@@ -130,7 +130,7 @@ dev = [
     "pyspark[connect]",
     "duckdb-engine>=0.6.4",
     "sqlalchemy==2.0.10",
-    "ray[data]>=2.30.0",
+    "ray[data]>=2.30.0; python_version<'3.14'",
     "pydantic<2.5",
     "dask[distributed,dataframe]",
     "dask-sql",
