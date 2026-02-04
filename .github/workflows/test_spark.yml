@@ -58,18 +58,35 @@ jobs:
   test_connect:
     name: Spark Connect
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+        spark-version: ["3.4.0","3.5.8","4.1.1"]
+        pandas-version: ["2.3.3"]
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v1
+    - name: Clone repo
+      uses: actions/checkout@v5
+
+    - name: Setup uv ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: "3.12"
+        enable-cache: false
+        cache-dependency-glob: "pyproject.toml"
+        python-version: ${{ matrix.python-version }}
+
+    - name: Set Spark==3.5.8
+      run: uv add "pyspark==3.5.8"
+
+    - name: Update Pandas
+      if: matrix.pandas-version != 'latest'
+      run: uv add "pandas==${{ matrix.pandas-version }}"
+
     - name: Install dependencies
-      run: make devenv
-    - name: Setup Spark
       run: |
-        pip install "pyspark==3.5.8"
-        make sparkconnect
+        make devenv upgrade=1
+
     - name: Test
-      run: make testsparkconnect
+      run: |
+        make sparkconnect
+        make testsparkconnect
