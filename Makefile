@@ -39,6 +39,7 @@ clean:
 
 devenv:
 	uv sync --quiet --dev --all-extras $(if $(upgrade),--upgrade,--frozen)
+	uv pip freeze
 	uv run --no-sync pre-commit install
 
 init_codespace:

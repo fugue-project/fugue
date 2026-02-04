@@ -20,57 +20,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test_dask_lower_bound:
-    name: Dask 2024.4.0
+  test:
+    name: Test Dask ${{ matrix.dask-version }} Pandas ${{ matrix.pandas-version }} Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+        dask-version: ["latest", "2024.4.0"]
+        pandas-version: ["2.3.3"]
 
     steps:
     - name: Clone repo
       uses: actions/checkout@v5
 
-    - name: Setup uv 3.10
+    - name: Setup uv ${{ matrix.python-version }}
       uses: astral-sh/setup-uv@v5
       with:
         enable-cache: false
         cache-dependency-glob: "pyproject.toml"
-        python-version: "3.10"
+        python-version: ${{ matrix.python-version }}
+
+    - name: Update Dask
+      if: matrix.dask-version != 'latest'
+      run: uv add "dask[dataframe,distributed]==${{ matrix.dask-version }}"
+
+    - name: Update Pandas
+      if: matrix.pandas-version != 'latest'
+      run: uv add "pandas==${{ matrix.pandas-version }}"
 
     - name: Install dependencies
       run: |
-        make devenv
-
-    - name: Setup Dask
-      run: uv pip install dask[dataframe,distributed]==2024.4.0
+        make devenv upgrade=1
 
     - name: Test
       run: make testdask
 
-  test_dask_sql_latest:
-    name: Dask with SQL Latest
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Clone repo
-      uses: actions/checkout@v5
-
-    - name: Setup uv 3.11
-      uses: astral-sh/setup-uv@v5
-      with:
-        enable-cache: false
-        cache-dependency-glob: "pyproject.toml"
-        python-version: "3.11"
-
-    - name: Install dependencies
-      run: |
-        make devenv
-
-    - name: Setup Dask
-      run: uv pip install -U dask[dataframe,distributed]
-
-    - name: Test
-      run: make testdask
-
-  test_dask_latest:
+  test_dask_no_sql:
     name: Dask without SQL Latest
     runs-on: ubuntu-latest
 
@@ -87,10 +72,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        make devenv
-
-    - name: Setup Dask
-      run: uv pip install -U dask[dataframe,distributed]
+        make devenv upgrade=1
 
     - name: Remove Dask SQL
       run: uv pip uninstall dask-sql qpd fugue-sql-antlr sqlglot
