@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   test:
-    name: Test Ray {{ matrix.ray-version }}
+    name: Test Ray ${{ matrix.ray-version }} Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
