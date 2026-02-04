@@ -39,15 +39,13 @@ jobs:
         cache-dependency-glob: "pyproject.toml"
         python-version: ${{ matrix.python-version }}
 
+    - name: Add Ray version
+      if: matrix.ray-version != 'latest'
+      run: uv add "ray[data]==${{ matrix.ray-version }}"
+
     - name: Install dependencies
       run: |
-        make devenv
-
-        if [ "${{ matrix.ray-version }}" != "latest" ]; then
-          uv add "ray[data]==${{ matrix.ray-version }}"
-        fi
-
-        uv sync --upgrade
+        make devenv upgrade=1
 
     - name: Test
       run: make testray

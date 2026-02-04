@@ -38,7 +38,7 @@ clean:
 	find . -name "__pycache__" |xargs rm -rf
 
 devenv:
-	uv sync --quiet --dev --all-extras --frozen
+	uv sync --quiet --dev --all-extras $(if $(upgrade),--upgrade,--frozen)
 	uv run --no-sync pre-commit install
 
 init_codespace:
