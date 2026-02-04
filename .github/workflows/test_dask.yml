@@ -64,6 +64,9 @@ jobs:
       run: |
         make devenv
 
+    - name: Setup Dask
+      run: uv pip install -U dask[dataframe,distributed]
+
     - name: Test
       run: make testdask
 
@@ -85,6 +88,9 @@ jobs:
     - name: Install dependencies
       run: |
         make devenv
+
+    - name: Setup Dask
+      run: uv pip install -U dask[dataframe,distributed]
 
     - name: Remove Dask SQL
       run: uv pip uninstall dask-sql qpd fugue-sql-antlr sqlglot
