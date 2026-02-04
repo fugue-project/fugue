@@ -26,7 +26,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11"]
-        ray-version: ["latest", "2.30.0"]
+        ray-version: ["latest", "2.41.0"]
         pandas-version: ["2.3.3"]
 
     steps:
