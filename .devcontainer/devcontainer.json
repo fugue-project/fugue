@@ -55,7 +55,9 @@
     "waitFor": "postCreateCommand",
     "features": {
         "ghcr.io/va-h/devcontainers-features/uv:1.1.4": {},
-		"ghcr.io/devcontainers/features/java:1.6.3": {},
+		"ghcr.io/devcontainers/features/java:1.6.3": {
+            "version": "21"
+        },
         "ghcr.io/devcontainers/features/node:1.7.1": {}
     }
 }

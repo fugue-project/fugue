@@ -20,36 +20,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test_ray_lower_bound:
-    name: Ray 2.30.0
+  test:
+    name: Test Ray {{ matrix.ray-version }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+        ray-version: ["latest", "2.30.0"]
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v1
-      with:
-        python-version: "3.10"
-    - name: Install dependencies
-      run: make devenv
-    - name: Setup Ray
-      run: pip install ray[data]==2.30.0
-    - name: Test
-      run: make testray
+    - name: Clone repo
+      uses: actions/checkout@v5
 
-  test_ray_latest:
-    name: Ray Latest
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v1
+    - name: Setup uv ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: "3.10"
+        enable-cache: false
+        cache-dependency-glob: "pyproject.toml"
+        python-version: ${{ matrix.python-version }}
+
     - name: Install dependencies
-      run: make devenv
-    - name: Setup Ray
-      run: pip install -U ray[data]
+      run: |
+        make devenv
+
+        if [ "${{ matrix.ray-version }}" != "latest" ]; then
+          uv add "ray[data]==${{ matrix.ray-version }}"
+        fi
+
+        uv sync --upgrade
+
     - name: Test
       run: make testray
