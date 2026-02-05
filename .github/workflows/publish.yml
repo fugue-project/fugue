@@ -1,32 +1,43 @@
-# This workflows will upload a Python Package using Twine when a release is created
-# For more information see: https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
-
-name: Publish
+name: Publish to PyPI
 
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - 'v*'
 
 jobs:
-  deploy:
+  publish:
+    name: Publish to PyPI
     runs-on: ubuntu-latest
+    environment:
+      name: release
+      url: https://pypi.org/p/fugue
+    permissions:
+      contents: read
+      id-token: write  # Required for trusted publishing (OIDC)
+    env:
+      UV_PYTHON: "3.11"
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: '3.10'
-    - name: Install dependencies
-      run: make devenv
-    - name: Test
-      if: "!github.event.release.prerelease"
-      run: make test
-    - name: Build and publish
-      env:
-        RELEASE_TAG: ${{ github.event.release.tag_name }}
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      run: |
-        make package
-        twine upload dist/*
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Setup devenv
+        run: >
+          make devenv
+
+      - name: Validate release tag
+        run: >
+          uv run -m scripts.validate_release
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish to PyPI
+        run: uv publish

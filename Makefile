@@ -117,3 +117,14 @@ dockerspark:
 
 sparkconnect:
 	bash scripts/setupsparkconnect.sh
+
+release_branch:
+	uv pip install -e .
+	$(eval VERSION := $(shell python -c "import fugue; print(fugue.__version__)"))
+	@if echo "$(VERSION)" | grep -q "dev"; then \
+		git tag v$(VERSION); \
+		git push origin v$(VERSION); \
+	else \
+		echo "Error: Can only release dev versions (current: $(VERSION))"; \
+		exit 1; \
+	fi
