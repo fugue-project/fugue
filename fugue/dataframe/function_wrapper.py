@@ -43,12 +43,15 @@ from .pandas_dataframe import PandasDataFrame
 
 
 def _compare_iter(tp: Any) -> Any:
-    return lambda x: compare_annotations(
-        x,
-        Iterable[tp],  # type:ignore
-    ) or compare_annotations(
-        x,
-        Iterator[tp],  # type:ignore
+    return lambda x: (
+        compare_annotations(
+            x,
+            Iterable[tp],  # type:ignore
+        )
+        or compare_annotations(
+            x,
+            Iterator[tp],  # type:ignore
+        )
     )
 
 
@@ -68,7 +71,7 @@ def _is_required_callable(annotation) -> bool:
         return False
 
     # Check direct equality
-    if annotation == Callable or annotation == callable:
+    if annotation == Callable or annotation == callable:  # pylint: disable=comparison-with-callable
         return True
 
     # Check if it's a generic Callable like Callable[[int], str]
@@ -86,13 +89,13 @@ def _is_optional_callable(annotation) -> bool:
     non_none_types = [arg for arg in args if arg is not type(None)]
 
     # Should have exactly one non-None type, and it should be Callable
-    if len(non_none_types) != 1:
+    if len(non_none_types) != 1:  # pragma: no cover
         return False
 
     inner_type = non_none_types[0]
 
     # Check if the inner type is Callable
-    if inner_type == Callable or inner_type == callable:
+    if inner_type == Callable or inner_type == callable:  # pylint: disable=comparison-with-callable
         return True
 
     # Check if it's a generic Callable like Callable[[int], str]
