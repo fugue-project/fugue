@@ -73,37 +73,38 @@ lab:
 	uv run jupyter lab --port=8888 --ip=0.0.0.0 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*'
 
 test:
-	uv run pytest --reruns 2 --only-rerun 'Overflow in cast' --only-rerun 'Table or view not found' tests/
+	uv run --active pytest --reruns 2 --only-rerun 'Overflow in cast' --only-rerun 'Table or view not found' tests/
 
 testnospark:
-	uv run pytest --ignore=tests/fugue_spark tests/
+	uv run --active pytest --ignore=tests/fugue_spark tests/
 
 testcore:
-	uv run pytest tests/fugue
+	uv run --active pytest tests/fugue
 
 testspark:
-	uv run pytest --reruns 2 --only-rerun 'Table or view not found' tests/fugue_spark
+	uv run --active pytest --reruns 2 --only-rerun 'Table or view not found' tests/fugue_spark
 
 testsparkconnect:
-	uv run pytest --reruns 2 --only-rerun 'Table or view not found' -k SparkConnect tests/fugue_spark/test_spark_connect.py
+	uv run --active pytest --reruns 2 --only-rerun 'Table or view not found' -k SparkConnect tests/fugue_spark/test_spark_connect.py
 
 testdask:
-	uv run pytest tests/fugue_dask
+	uv run --active pytest tests/fugue_dask
 
+# https://github.com/ray-project/ray/issues/53848
 testray:
-	uv run pytest tests/fugue_ray
+	uv run --active pytest tests/fugue_ray
 
 testnosql:
-	uv run pytest --reruns 2 --only-rerun 'Table or view not found' tests/fugue tests/fugue_spark tests/fugue_dask tests/fugue_ray
+	uv run --active pytest --reruns 2 --only-rerun 'Table or view not found' tests/fugue tests/fugue_spark tests/fugue_dask tests/fugue_ray
 
 testduck:
-	uv run pytest --reruns 2 --only-rerun 'Overflow in cast' tests/fugue_duckdb
+	uv run --active pytest --reruns 2 --only-rerun 'Overflow in cast' tests/fugue_duckdb
 
 testibis:
-	uv run pytest tests/fugue_ibis
+	uv run --active pytest tests/fugue_ibis
 
 testpolars:
-	uv run pytest tests/fugue_polars
+	uv run --active pytest tests/fugue_polars
 
 testnotebook:
 	uv run jupyter contrib nbextension install --user
