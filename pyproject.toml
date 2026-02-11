@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fugue"
-version = "0.9.7.dev0"
-description = "An abstraction layer for distributed computation"
+version = "0.9.7.dev1"
+description = "An abstraction layer for distributed computing"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [

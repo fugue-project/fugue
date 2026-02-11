@@ -120,7 +120,7 @@ sparkconnect:
 
 release_branch:
 	uv pip install -e .
-	$(eval VERSION := $(shell python -c "import fugue; print(fugue.__version__)"))
+	$(eval VERSION := $(shell uv pip show fugue | grep "^Version:" | cut -d' ' -f2))
 	@if echo "$(VERSION)" | grep -q "dev"; then \
 		git tag v$(VERSION); \
 		git push origin v$(VERSION); \

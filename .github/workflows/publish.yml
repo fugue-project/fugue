@@ -7,37 +7,6 @@ on:
 
 jobs:
   publish:
-    name: Publish to PyPI
-    runs-on: ubuntu-latest
-    environment:
-      name: release
-      url: https://pypi.org/p/fugue
-    permissions:
-      contents: read
-      id-token: write  # Required for trusted publishing (OIDC)
-    env:
-      UV_PYTHON: "3.11"
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: false
-          cache-dependency-glob: "pyproject.toml"
-
-      - name: Setup devenv
-        run: >
-          make devenv
-
-      - name: Validate release tag
-        run: >
-          uv run -m scripts.validate_release
-
-      - name: Build package
-        run: uv build
-
-      - name: Publish to PyPI
-        run: uv publish
+    uses: fugue-project/.common/.github/workflows/pypi-publish.yml@main
+    secrets:
+      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
