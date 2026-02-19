@@ -56,6 +56,7 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
     def test_select(self):
         try:
             import dask_sql
+            import sqlglot
         except ImportError:
             return
 
