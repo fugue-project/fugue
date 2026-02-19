@@ -1,6 +1,6 @@
 # pylint: disable-all
 try:
-    import qpd_pandas  # noqa: F401
+    import duckdb  # noqa: F401
 
     HAS_DEFAULT_SQL_ENGINE = True
 except ImportError:  # pragma: no cover
@@ -613,7 +613,6 @@ class ExecutionEngineTests(object):
                 "a:double,b:double,c:int",
                 throw=True,
             )
-            # TODO: EXCEPT ALL is not implemented (QPD issue)
             # c = fa.subtract(a, b, distinct=False)
             # self.df_eq(
             #     c,
@@ -656,7 +655,6 @@ class ExecutionEngineTests(object):
                 "a:double,b:double,c:int",
                 throw=True,
             )
-            # TODO: INTERSECT ALL is not implemented (QPD issue)
             # c = fa.intersect(a, b, distinct=False)
             # self.df_eq(
             #     c,

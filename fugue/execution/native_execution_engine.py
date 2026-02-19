@@ -39,7 +39,7 @@ from .execution_engine import (
 )
 
 
-class QPDPandasEngine(SQLEngine):
+class DefaultSQLEngine(SQLEngine):
     """DuckDB SQL backend implementation.
 
     :param execution_engine: the execution engine this sql engine will run on
@@ -217,7 +217,7 @@ class NativeExecutionEngine(ExecutionEngine):
         return False
 
     def create_default_sql_engine(self) -> SQLEngine:
-        return QPDPandasEngine(self)
+        return DefaultSQLEngine(self)
 
     def create_default_map_engine(self) -> MapEngine:
         return PandasMapEngine(self)

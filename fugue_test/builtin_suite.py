@@ -1,6 +1,6 @@
 # pylint: disable-all
 try:
-    import qpd_pandas  # noqa: F401
+    import duckdb  # noqa: F401
 
     HAS_DEFAULT_SQL_ENGINE = True
 except ImportError:  # pragma: no cover
@@ -29,6 +29,7 @@ from fugue import (
     CoTransformer,
     DataFrame,
     DataFrames,
+    DefaultSQLEngine,
     ExecutionEngine,
     FugueWorkflow,
     LocalDataFrame,
@@ -38,7 +39,6 @@ from fugue import (
     PandasDataFrame,
     PartitionSpec,
     Processor,
-    QPDPandasEngine,
     Schema,
     Transformer,
     cotransformer,
@@ -958,7 +958,7 @@ class BuiltInTests(object):
             not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
         )
         def test_select(self):
-            class MockEngine(QPDPandasEngine):
+            class MockEngine(DefaultSQLEngine):
                 def __init__(self, execution_engine, p: int = 0):
                     super().__init__(execution_engine)
                     self.p = p
@@ -995,7 +995,7 @@ class BuiltInTests(object):
                     "AS t1 INNER JOIN",
                     b,
                     "AS t2 ON t1.x=t2.x",
-                    sql_engine="qpdpandas",
+                    sql_engine="default",
                 ).assert_eq(c)
 
                 # specify sql engine and params
@@ -1069,7 +1069,6 @@ class BuiltInTests(object):
                         "x:long,y:double",
                     )
                 )
-                # TODO: INTERSECT ALL is not implemented (QPD issue)
                 # a.intersect(b, distinct=False).assert_eq(
                 #     ArrayDataFrame(
                 #         [[2, None], [2, None]],
@@ -1101,7 +1100,6 @@ class BuiltInTests(object):
                         "x:long,y:double",
                     )
                 )
-                # # TODO: EXCEPT ALL is not implemented (QPD issue)
                 # a.subtract(c, distinct=False).assert_eq(
                 #     ArrayDataFrame(
                 #         [[2, None], [2, None]],
@@ -1644,7 +1642,7 @@ class BuiltInTests(object):
                 df.partition(by=["a"]).out_transform(t12)
                 raises(
                     FugueInterfacelessError,
-                    lambda: (df.partition(by=["a"]).out_transform(t1)),
+                    lambda: df.partition(by=["a"]).out_transform(t1),
                 )  # for t1, callback must be provided
                 df.assert_eq(res)
             dag.run(self.engine)

@@ -75,7 +75,7 @@ jobs:
         make devenv upgrade=1
 
     - name: Remove Dask SQL
-      run: uv pip uninstall dask-sql qpd fugue-sql-antlr sqlglot
+      run: uv pip uninstall dask-sql duckdb fugue-sql-antlr sqlglot
 
     - name: Test
       run: make testdask

@@ -55,7 +55,7 @@ from fugue.execution.factory import (
 from fugue.execution.native_execution_engine import (
     NativeExecutionEngine,
     PandasMapEngine,
-    QPDPandasEngine,
+    DefaultSQLEngine,
 )
 from fugue.extensions.creator import Creator, creator, register_creator
 from fugue.extensions.outputter import Outputter, outputter, register_outputter

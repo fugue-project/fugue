@@ -43,7 +43,7 @@ jobs:
         make devenv
 
     - name: Remove SQL dependencies
-      run: uv pip uninstall qpd fugue-sql-antlr sqlglot
+      run: uv pip uninstall duckdb fugue-sql-antlr sqlglot
 
     - name: Test
       run: make testnosql
