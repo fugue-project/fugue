@@ -103,7 +103,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "pytest-mock",
-    "pytest-rerunfailures==10.2",
+    "pytest-rerunfailures>10.2",
     # Additional test dependencies
     "flask",
     "psutil",
