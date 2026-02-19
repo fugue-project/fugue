@@ -1547,7 +1547,7 @@ all = [
     { name = "sqlglot" },
 ]
 cpp-sql-parser = [
-    { name = "fugue-sql-antlr", extra = ["cpp"], marker = "sys_platform != 'win32'" },
+    { name = "fugue-sql-antlr", extra = ["cpp"] },
 ]
 dask = [
     { name = "dask", extra = ["dataframe", "distributed"] },
@@ -1640,11 +1640,11 @@ requires-dist = [
     { name = "duckdb", marker = "extra == 'duckdb'", specifier = ">=0.5.0" },
     { name = "duckdb", marker = "extra == 'ray'", specifier = ">=0.5.0" },
     { name = "duckdb", marker = "extra == 'sql'", specifier = ">=0.5.0" },
-    { name = "fugue-sql-antlr", marker = "extra == 'all'", specifier = ">=0.2.3" },
-    { name = "fugue-sql-antlr", marker = "extra == 'duckdb'", specifier = ">=0.2.3" },
-    { name = "fugue-sql-antlr", marker = "extra == 'ibis'", specifier = ">=0.2.3" },
-    { name = "fugue-sql-antlr", marker = "extra == 'sql'", specifier = ">=0.2.3" },
-    { name = "fugue-sql-antlr", extras = ["cpp"], marker = "sys_platform != 'win32' and extra == 'cpp-sql-parser'", specifier = ">=0.2.3" },
+    { name = "fugue-sql-antlr", marker = "extra == 'all'", specifier = ">=0.2.4" },
+    { name = "fugue-sql-antlr", marker = "extra == 'duckdb'", specifier = ">=0.2.4" },
+    { name = "fugue-sql-antlr", marker = "extra == 'ibis'", specifier = ">=0.2.4" },
+    { name = "fugue-sql-antlr", marker = "extra == 'sql'", specifier = ">=0.2.4" },
+    { name = "fugue-sql-antlr", extras = ["cpp"], marker = "extra == 'cpp-sql-parser'", specifier = ">=0.2.4" },
     { name = "ibis-framework", extras = ["pandas"], marker = "extra == 'ibis'" },
     { name = "ibis-framework", extras = ["pandas", "duckdb"], marker = "extra == 'all'" },
     { name = "ipython", marker = "extra == 'all'", specifier = ">=7.10.0" },
@@ -1714,7 +1714,7 @@ dev = [
 
 [[package]]
 name = "fugue-sql-antlr"
-version = "0.2.3"
+version = "0.2.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "antlr4-python3-runtime" },
@@ -1722,7 +1722,7 @@ dependencies = [
     { name = "packaging" },
     { name = "triad" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/15/0e/6ee72a82be9073995430f285fcd491ec2562a48192ad4a25c583f48de4b7/fugue_sql_antlr-0.2.3.tar.gz", hash = "sha256:d9a3226d39fdb2601fa317766ab0ab2b5d008161a93e6d79185ccd3a7d25a3a9", size = 158976, upload-time = "2026-02-16T05:30:41.333Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/67/a9719eb2fc568f39dd9b7f6063d5844d6c4b348aeb86bae0777a9462693d/fugue_sql_antlr-0.2.4.tar.gz", hash = "sha256:688cec1f76ff88dd1b1a714629e097989384b27e54c0a672cc3d6adcbed824d2", size = 158964, upload-time = "2026-02-19T14:04:55.265Z" }
 
 [package.optional-dependencies]
 cpp = [
@@ -1731,7 +1731,7 @@ cpp = [
 
 [[package]]
 name = "fugue-sql-antlr-cpp"
-version = "0.2.3"
+version = "0.2.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "antlr4-python3-runtime" },
@@ -1739,7 +1739,37 @@ dependencies = [
     { name = "packaging" },
     { name = "triad" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/45/5d/68aaaac3a3c7d7b119b0d9a101e92d86d1af4a895b6e25b37bfe64d3519d/fugue_sql_antlr_cpp-0.2.3.tar.gz", hash = "sha256:a824d20c7714da3f30395f64295213de14bc3b3b5a9640bc91c0afa21528e373", size = 531401, upload-time = "2026-02-16T05:38:15.774Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/01/00f1cc46660f0caefab88f425ab74c65f8c16425b1f10ca233e0bf489e93/fugue_sql_antlr_cpp-0.2.4.tar.gz", hash = "sha256:638c5d072229cfced47849201ee468f5972cdd59d3f458654ccad14460f41048", size = 532179, upload-time = "2026-02-19T14:14:00.686Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/77/cb/07282afe46a85a3c36f2a1dfa07e352380d5a016823b18f43ed99970c8f7/fugue_sql_antlr_cpp-0.2.4-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:c6639e37aa4558f9d9934a388d9f84d7f21484b481f718369ab6fbfb9b353431", size = 1531498, upload-time = "2026-02-19T14:13:00.183Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/06/86bec152fd74042651477ae3e3268eab6a30ebbdc6bbb0bcf169957da820/fugue_sql_antlr_cpp-0.2.4-cp310-cp310-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:a9ad400ebb02f133fff4379479204f65d97da2650c8f05af394614060a8bf191", size = 13670593, upload-time = "2026-02-19T14:13:01.873Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/40/35ee62f47423ad50583766f85d6b230fb2a50ee405740844ab3ab896984c/fugue_sql_antlr_cpp-0.2.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:25b9cfcf16a127cf43c3355ce1227bf049b8f6f9c9fb6e6572673fc49af5830a", size = 14004203, upload-time = "2026-02-19T14:13:04.085Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/c2/9a3d33c94af7c7473ebd962cc7546482745eb1e6f7d5cc79e07daf4ef333/fugue_sql_antlr_cpp-0.2.4-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:053437599c18ded6d224285bb4f546904afd3b11442d7ca434a32ba997ca8dcc", size = 13761072, upload-time = "2026-02-19T14:13:06.348Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/90/57af96d622920d18d2702f954db2993821de5c22466d98b550c7ec98e427/fugue_sql_antlr_cpp-0.2.4-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:89e0f1a7d779994129a21e734eb5ee4d5d12d5b0388e55a6473a25e302327241", size = 13849116, upload-time = "2026-02-19T14:13:08.601Z" },
+    { url = "https://files.pythonhosted.org/packages/52/b6/4c7381a760b8cd961b86997b952548c704d4236f9d87dc2988d880c0cf56/fugue_sql_antlr_cpp-0.2.4-cp310-cp310-win32.whl", hash = "sha256:df1c03454fdcb9fd92663c1ea3199ff384eaaeaaab4ecff06abafcd432c9d7bc", size = 1087487, upload-time = "2026-02-19T14:13:13.735Z" },
+    { url = "https://files.pythonhosted.org/packages/79/61/3bf6a2d2cba976790feeee732f471f6f424da8929865bd5fdb21bff68583/fugue_sql_antlr_cpp-0.2.4-cp310-cp310-win_amd64.whl", hash = "sha256:45de272a483ac3fb02b95b234e86d884b31a0c34747754389106856e3c6b0c23", size = 1111166, upload-time = "2026-02-19T14:13:14.85Z" },
+    { url = "https://files.pythonhosted.org/packages/12/81/731ba50b6c4083c20d42efeb6ad2f86fb3a018515e38eb24ef542849ba9c/fugue_sql_antlr_cpp-0.2.4-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:b49e07a36a4d9b2854a8e0c6a7547f5269b1aca0b7cae68f0aab5edde1309a5a", size = 1531600, upload-time = "2026-02-19T14:13:16.398Z" },
+    { url = "https://files.pythonhosted.org/packages/b9/f0/420c7a93c19af2d54045174d351b85fc7aa7be9b8434e771311aab0cd143/fugue_sql_antlr_cpp-0.2.4-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:7b1e75b28300dd553396a580ef9a47bf7258a2a9c21b133753d8c3f5b67fecd8", size = 13670471, upload-time = "2026-02-19T14:13:19.109Z" },
+    { url = "https://files.pythonhosted.org/packages/42/f8/22901a6243f78e31277897750b80481b11ad29b2b5556bdceb6c4ac80743/fugue_sql_antlr_cpp-0.2.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:df9db18626fa2720b9da89aa53821e53522bbf776a67af29a5f411bc11bee442", size = 14003971, upload-time = "2026-02-19T14:13:21.062Z" },
+    { url = "https://files.pythonhosted.org/packages/88/f2/7853bfeeee4ccbc531eb2c5b13943485343fad14d0a9adb387051a5a93d6/fugue_sql_antlr_cpp-0.2.4-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:97705168a51e2cc24d076d14abba9123fa14e48df6cfb120b3ddb6fbcc0bde99", size = 13760912, upload-time = "2026-02-19T14:13:23.044Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/d6/3ef5606b343c961888be6b0fac0e2617d7632408b4b5bef535d00c009152/fugue_sql_antlr_cpp-0.2.4-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:38fe22dc4a04752aa9c00c34214882dbb53b3de2179144c33112672e19d761bb", size = 13849002, upload-time = "2026-02-19T14:13:26.05Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/89/1a4c971a3bfdb4145e74423040d0213c740fc0d607c17afb1adbb6c90978/fugue_sql_antlr_cpp-0.2.4-cp311-cp311-win32.whl", hash = "sha256:4ee3c8da5710165f1299531a0b7826fbfb6447a06b8134b94378f397951f51f1", size = 1087495, upload-time = "2026-02-19T14:13:28.123Z" },
+    { url = "https://files.pythonhosted.org/packages/58/53/86721252baed2f14809064d9783131520d8c1eb337d96d09ef6870009ec6/fugue_sql_antlr_cpp-0.2.4-cp311-cp311-win_amd64.whl", hash = "sha256:73223fa688ab6f25de262fad4323783f887b04167ce5364051fbdf60cdebdb64", size = 1111146, upload-time = "2026-02-19T14:13:29.35Z" },
+    { url = "https://files.pythonhosted.org/packages/b4/2a/b6ec5ed1a29e2ce71126ff3127d077daca0505d4055934d5c74eb6fc5a9a/fugue_sql_antlr_cpp-0.2.4-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:20aaea2fa2d52b4a9bffe5a134c28283edbc78e42ba3904f3828f55ffb74b9d2", size = 1531582, upload-time = "2026-02-19T14:13:30.989Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/bf/c0942428d81990e437db55750676588cf8d392a737457a2931ddfe09fbd1/fugue_sql_antlr_cpp-0.2.4-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:de6b72046dcffbc8f283aa164cc3f29cb4da93b4c06de1d4006f5debff2d300f", size = 13667531, upload-time = "2026-02-19T14:13:32.557Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/aa/ebe3c39e5105e43fdbdcee09e4b7fdeae4f645dd7ae58f8628e51f435237/fugue_sql_antlr_cpp-0.2.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:33c2ce4fc6ae4da38b7b93e6672de52ea9e273d4c24562e2c25a93dc7a1666cd", size = 13999438, upload-time = "2026-02-19T14:13:35.086Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/33/9b11292287ccc455af5fe16d854f30323f3829734d51db10c43e0269bbd1/fugue_sql_antlr_cpp-0.2.4-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:1d29dec449546e2a53e9d404ddc423c85ce60629a4735684a3542f1126216644", size = 13756933, upload-time = "2026-02-19T14:13:37.763Z" },
+    { url = "https://files.pythonhosted.org/packages/99/e8/6abc17a229a98d40bd9cc6f00ad9299caaca734b56034bbd848625a3a82e/fugue_sql_antlr_cpp-0.2.4-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:c926029522b745e60bd1b65ab793cdd8037c892e1547a5929c5d435521e41d85", size = 13846025, upload-time = "2026-02-19T14:13:39.902Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/aa/68977d9a220d2d69a59f2becdb66bcbe591633e5b01de8bcd1d989bdb5f9/fugue_sql_antlr_cpp-0.2.4-cp312-cp312-win32.whl", hash = "sha256:d4791a296bc7f343cf771dcdc5cd729767e53db921f0150bda462c10bb1be79f", size = 1087623, upload-time = "2026-02-19T14:13:42.019Z" },
+    { url = "https://files.pythonhosted.org/packages/55/85/0d78d58d99c2427e0c25c3efcb049034f18ae3781db1623cad05c7b16c68/fugue_sql_antlr_cpp-0.2.4-cp312-cp312-win_amd64.whl", hash = "sha256:340eb15b816d63fb9d155b65b9636620b416be3ce33c61284cc893feaf9a8be0", size = 1111311, upload-time = "2026-02-19T14:13:44.743Z" },
+    { url = "https://files.pythonhosted.org/packages/77/ec/fd8c40d55ab72f531b6f960f73cb8c989a6eeee4d5436f622bdfa28b0fc9/fugue_sql_antlr_cpp-0.2.4-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:a524dd6ca180b179ce7062487c7f1877465d4ca64cd31e0d548a35b9281f1b43", size = 1531700, upload-time = "2026-02-19T14:13:46.558Z" },
+    { url = "https://files.pythonhosted.org/packages/db/7d/b3505becc0375e6ca66b3ef36d5241a8124448a89709dd74e0245ede0be8/fugue_sql_antlr_cpp-0.2.4-cp313-cp313-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:ccf84ec812f9a463e01f404791e50e6d9c44f737dd20cf1427e0bb761c48d82d", size = 13666854, upload-time = "2026-02-19T14:13:48.176Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/90/6ae9b393704c9d8389ff4d1b5a9e98cc16445bd21dd655a6961066384f32/fugue_sql_antlr_cpp-0.2.4-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:17acdd6d51c7cf2cb552115094e5d40841af058a8d8915bc8e5668e710102772", size = 13999257, upload-time = "2026-02-19T14:13:51.285Z" },
+    { url = "https://files.pythonhosted.org/packages/c2/7a/2de3c0cfb2f322f9db5fbbba8cd0841d460179129d9b937bbe47dcea85d9/fugue_sql_antlr_cpp-0.2.4-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:ae68e964632f81e6d50197a1e1482437c6a56b2b9a09857b6131042d2d1b0ed4", size = 13756977, upload-time = "2026-02-19T14:13:53.648Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/c1/34d214e90eaba8f11ebd489d2224be14f97dcfaeaa7cfe8ffce4d2b4b167/fugue_sql_antlr_cpp-0.2.4-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:a1246c79476044313e4ec256e2460a2780ee0b3238724025115c24a23aafd6d5", size = 13846052, upload-time = "2026-02-19T14:13:55.694Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/fb/e15dc98033a779e6d57a0b439bf9b3e5663e25fd6eea99be9681500b51a1/fugue_sql_antlr_cpp-0.2.4-cp313-cp313-win32.whl", hash = "sha256:c0fc9c94fb696ed385269488a69617b2a41decf4bc675126cfcc4ec39c63d6ab", size = 1087616, upload-time = "2026-02-19T14:13:57.766Z" },
+    { url = "https://files.pythonhosted.org/packages/b2/0b/8985806b9a8317f2bcd0c45510c326e1896ee5f56fdb766430ec7c43b175/fugue_sql_antlr_cpp-0.2.4-cp313-cp313-win_amd64.whl", hash = "sha256:772b3f98066772c8e33830d717d4afaad23973a5ae9e358ea28ab06623a5c0d0", size = 1111335, upload-time = "2026-02-19T14:13:59.172Z" },
+]
 
 [[package]]
 name = "furo"
