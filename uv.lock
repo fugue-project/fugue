@@ -231,11 +231,11 @@ wheels = [
 
 [[package]]
 name = "antlr4-python3-runtime"
-version = "4.11.1"
+version = "4.13.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e0/64/c548678120cccf784f555972ed37cedcf4f026abeec30ab0340c3af4ea07/antlr4-python3-runtime-4.11.1.tar.gz", hash = "sha256:a53de701312f9bdacc5258a6872cd6c62b90d3a90ae25e494026f76267333b60", size = 116945, upload-time = "2022-09-04T21:37:45.242Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/33/5f/2cdf6f7aca3b20d3f316e9f505292e1f256a32089bd702034c29ebde6242/antlr4_python3_runtime-4.13.2.tar.gz", hash = "sha256:909b647e1d2fc2b70180ac586df3933e38919c85f98ccc656a96cd3f25ef3916", size = 117467, upload-time = "2024-08-03T19:00:12.757Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/3a/4f2e9d67277cc255a17a34c1b54e02d939ca5991bc596dee3d63e587e512/antlr4_python3_runtime-4.11.1-py3-none-any.whl", hash = "sha256:ff1954eda1ca9072c02bf500387d0c86cb549bef4dbb3b64f39468b547ec5f6b", size = 144186, upload-time = "2022-09-04T21:37:43.264Z" },
+    { url = "https://files.pythonhosted.org/packages/89/03/a851e84fcbb85214dc637b6378121ef9a0dd61b4c65264675d8a5c9b1ae7/antlr4_python3_runtime-4.13.2-py3-none-any.whl", hash = "sha256:fe3835eb8d33daece0e799090eda89719dbccee7aa39ef94eed3818cafa5a7e8", size = 144462, upload-time = "2024-08-03T19:00:11.134Z" },
 ]
 
 [[package]]
@@ -1543,7 +1543,6 @@ all = [
     { name = "polars" },
     { name = "pyarrow" },
     { name = "pyspark" },
-    { name = "qpd" },
     { name = "ray", extra = ["data"], marker = "python_full_version < '3.14'" },
     { name = "sqlglot" },
 ]
@@ -1561,14 +1560,12 @@ duckdb = [
     { name = "jinja2" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "qpd" },
     { name = "sqlglot" },
 ]
 ibis = [
     { name = "fugue-sql-antlr" },
     { name = "ibis-framework" },
     { name = "jinja2" },
-    { name = "qpd" },
     { name = "sqlglot" },
 ]
 notebook = [
@@ -1593,7 +1590,6 @@ spark = [
 sql = [
     { name = "fugue-sql-antlr" },
     { name = "jinja2" },
-    { name = "qpd" },
     { name = "sqlglot" },
 ]
 
@@ -1642,11 +1638,11 @@ requires-dist = [
     { name = "duckdb", marker = "extra == 'all'", specifier = ">=0.5.0" },
     { name = "duckdb", marker = "extra == 'duckdb'", specifier = ">=0.5.0" },
     { name = "duckdb", marker = "extra == 'ray'", specifier = ">=0.5.0" },
-    { name = "fugue-sql-antlr", marker = "extra == 'all'", specifier = ">=0.2.0" },
-    { name = "fugue-sql-antlr", marker = "extra == 'duckdb'", specifier = ">=0.2.0" },
-    { name = "fugue-sql-antlr", marker = "extra == 'ibis'", specifier = ">=0.2.0" },
-    { name = "fugue-sql-antlr", marker = "extra == 'sql'", specifier = ">=0.2.0" },
-    { name = "fugue-sql-antlr", extras = ["cpp"], marker = "extra == 'cpp-sql-parser'", specifier = ">=0.2.0" },
+    { name = "fugue-sql-antlr", marker = "extra == 'all'", specifier = ">=0.2.3" },
+    { name = "fugue-sql-antlr", marker = "extra == 'duckdb'", specifier = ">=0.2.3" },
+    { name = "fugue-sql-antlr", marker = "extra == 'ibis'", specifier = ">=0.2.3" },
+    { name = "fugue-sql-antlr", marker = "extra == 'sql'", specifier = ">=0.2.3" },
+    { name = "fugue-sql-antlr", extras = ["cpp"], marker = "extra == 'cpp-sql-parser'", specifier = ">=0.2.3" },
     { name = "ibis-framework", extras = ["pandas"], marker = "extra == 'ibis'" },
     { name = "ibis-framework", extras = ["pandas", "duckdb"], marker = "extra == 'all'" },
     { name = "ipython", marker = "extra == 'all'", specifier = ">=7.10.0" },
@@ -1671,10 +1667,6 @@ requires-dist = [
     { name = "pyarrow", marker = "extra == 'ray'", specifier = ">=7.0.0" },
     { name = "pyspark", marker = "extra == 'all'", specifier = ">=3.1.1" },
     { name = "pyspark", marker = "extra == 'spark'", specifier = ">=3.1.1" },
-    { name = "qpd", marker = "extra == 'all'", specifier = ">=0.4.4" },
-    { name = "qpd", marker = "extra == 'duckdb'", specifier = ">=0.4.4" },
-    { name = "qpd", marker = "extra == 'ibis'", specifier = ">=0.4.4" },
-    { name = "qpd", marker = "extra == 'sql'", specifier = ">=0.4.4" },
     { name = "ray", extras = ["data"], marker = "python_full_version < '3.14' and extra == 'all'", specifier = ">=2.30.0" },
     { name = "ray", extras = ["data"], marker = "python_full_version < '3.14' and extra == 'ray'", specifier = ">=2.30.0" },
     { name = "sqlglot", marker = "extra == 'all'", specifier = "<28" },
@@ -1720,7 +1712,7 @@ dev = [
 
 [[package]]
 name = "fugue-sql-antlr"
-version = "0.2.2"
+version = "0.2.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "antlr4-python3-runtime" },
@@ -1728,7 +1720,7 @@ dependencies = [
     { name = "packaging" },
     { name = "triad" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/85/c0/382c5bace6b6961d4246739c3d3d0c2c3cc5771ef47e226e9a635b0a34a0/fugue-sql-antlr-0.2.2.tar.gz", hash = "sha256:22af96a6aa295441425482c6619daac1702de222c942ede12b36bc2e2993aa40", size = 154682, upload-time = "2024-08-15T07:25:57.574Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/15/0e/6ee72a82be9073995430f285fcd491ec2562a48192ad4a25c583f48de4b7/fugue_sql_antlr-0.2.3.tar.gz", hash = "sha256:d9a3226d39fdb2601fa317766ab0ab2b5d008161a93e6d79185ccd3a7d25a3a9", size = 158976, upload-time = "2026-02-16T05:30:41.333Z" }
 
 [package.optional-dependencies]
 cpp = [
@@ -1737,7 +1729,7 @@ cpp = [
 
 [[package]]
 name = "fugue-sql-antlr-cpp"
-version = "0.2.2"
+version = "0.2.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "antlr4-python3-runtime" },
@@ -1745,30 +1737,7 @@ dependencies = [
     { name = "packaging" },
     { name = "triad" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/95/29/c45837d84346c32cd7042a32bf54692250dc796d9e95f2f16791beb39eed/fugue-sql-antlr-cpp-0.2.2.tar.gz", hash = "sha256:a68836967ff6a6e8956311f25dbb8e50430656cf3b182a0641a0de5bd21dcd8c", size = 525542, upload-time = "2024-08-15T07:36:18.796Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/16/d9185e976ddd0acd902c85af687e88a046488d39bea7ec29173c95844845/fugue_sql_antlr_cpp-0.2.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b212c1013dc65ef591a7b87b2c1cc73bc0214bf7ead593f161ae50d9c41b032d", size = 1563548, upload-time = "2024-08-15T07:35:11.006Z" },
-    { url = "https://files.pythonhosted.org/packages/c3/30/01db5b799c89cfc7f477902b8b04a177d2da361d6b582872ac40fb21bc24/fugue_sql_antlr_cpp-0.2.2-cp310-cp310-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:e95f862fec1e219de702306249e808f8f3b83cd79ee11ae244fea3e4e5e3ff4a", size = 13428526, upload-time = "2024-08-15T07:35:13.054Z" },
-    { url = "https://files.pythonhosted.org/packages/1f/36/a5fdcd31b66c48676b696aeab7cdfb3a742df3f090ff14c1c971173d155d/fugue_sql_antlr_cpp-0.2.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c11a964b8b30105058d1ac4d366e0ec534501212e410548cbdd88dbb1136476f", size = 13808918, upload-time = "2024-08-15T07:35:15.459Z" },
-    { url = "https://files.pythonhosted.org/packages/8c/33/56e3c31ac27d22182e8d7789452db5ee5e97377791d3df0440eb44ec5fd5/fugue_sql_antlr_cpp-0.2.2-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:54e14b1ca5133e214d8ad77114358d75792012acb14dbfa38ea94ef0ebd3b2ff", size = 13537616, upload-time = "2024-08-15T07:35:18.143Z" },
-    { url = "https://files.pythonhosted.org/packages/51/f4/85ac5bc577825eee6bdd545f0517511c55a13279596000e05930b1029c29/fugue_sql_antlr_cpp-0.2.2-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:75c4ec9056dbe7ff9d6e237959814862bccb12864895fbd167f1ea9cfe1f64c7", size = 13722814, upload-time = "2024-08-15T07:35:20.194Z" },
-    { url = "https://files.pythonhosted.org/packages/f7/9d/f4710e37bdd8b36ed310b042905eba3a281c83826b262ef03ebc74bff90c/fugue_sql_antlr_cpp-0.2.2-cp310-cp310-win32.whl", hash = "sha256:073044ec3f8248f2c1400badcd3db679af045b6bca14efab822279c8b88bbe67", size = 1079801, upload-time = "2024-08-15T07:35:22.334Z" },
-    { url = "https://files.pythonhosted.org/packages/db/b2/74c216e0ca81eff36bc9b3335442c6c74b89696d7c11fbe120de400113ae/fugue_sql_antlr_cpp-0.2.2-cp310-cp310-win_amd64.whl", hash = "sha256:aa330f809730f176c03805534a52e15281eb4d0b4b3a8957e3be3a6b2ddab99b", size = 1100044, upload-time = "2024-08-15T07:35:23.702Z" },
-    { url = "https://files.pythonhosted.org/packages/6d/96/c4de825d81086495d971beedc2d82a4fec36f1326dddfac3f3b9a72bafd9/fugue_sql_antlr_cpp-0.2.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:4a01ecb3f327a80882ee4957a4e40887ca9b7cf593e3a2145860cd6daa274cb5", size = 1563565, upload-time = "2024-08-15T07:35:25.33Z" },
-    { url = "https://files.pythonhosted.org/packages/b0/6d/be8d31bace94eca3cdce914a108f6edcf70a06f1efba32b3859d28e4acb3/fugue_sql_antlr_cpp-0.2.2-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:6e4e44f21c98dddd9813582c0e78bf5f5ec55f39369ac104cb560785983e606c", size = 13428204, upload-time = "2024-08-15T07:35:26.834Z" },
-    { url = "https://files.pythonhosted.org/packages/56/4a/f2f6813f71b7849d62d0d63b9a274500b1d6ef3abb8e238beaf84e753601/fugue_sql_antlr_cpp-0.2.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e3e8893bf0a65927e16e86d3681613ed3049d8debd28305c06a2f2a535325db1", size = 13808193, upload-time = "2024-08-15T07:35:29.405Z" },
-    { url = "https://files.pythonhosted.org/packages/32/20/e3cf40d849e29f2098089d99e913a4b7eb3562e4231450a9e5a1f34b492e/fugue_sql_antlr_cpp-0.2.2-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:912637446b47fcfe545f8b78ff374ae5b9dff2a108a2786766551fb761ef981a", size = 13537708, upload-time = "2024-08-15T07:35:31.58Z" },
-    { url = "https://files.pythonhosted.org/packages/12/0f/ba80f9609f0965accb75c4cb8532f4ef4b3cedf3b7060ede89733308f1ba/fugue_sql_antlr_cpp-0.2.2-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:d5ae681c4c53cb8fe6d2653423896a946e0d2e9115d18b24c7637c4ab73af91c", size = 13722150, upload-time = "2024-08-15T07:35:34.044Z" },
-    { url = "https://files.pythonhosted.org/packages/cd/45/91749ec5de62b21171a50652029f82394e8578f3644a60e71d218ca112d5/fugue_sql_antlr_cpp-0.2.2-cp311-cp311-win32.whl", hash = "sha256:3e1d1b14d6c54613a7a5ff3300cdadb5c8810016cec012cb40069462d80a6672", size = 1079585, upload-time = "2024-08-15T07:35:36.222Z" },
-    { url = "https://files.pythonhosted.org/packages/a5/32/4249ee4add37879538412a3ad7f6d0112f606924bdd2a666d9cea9a4a202/fugue_sql_antlr_cpp-0.2.2-cp311-cp311-win_amd64.whl", hash = "sha256:e8a846dd8c4f0fb07a72b28c89fae27100cb991446a176cf8c88f34c44ea08a6", size = 1099783, upload-time = "2024-08-15T07:35:37.448Z" },
-    { url = "https://files.pythonhosted.org/packages/44/28/64b7a9c8ea613d482ac12a4c1886bdc28540a5b9136bc3f2ad2f09d46edb/fugue_sql_antlr_cpp-0.2.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:ab28aaea927a4625ba220bf5bdfc2fb00be42e30245f6b5c654b6e31de9b82f8", size = 1563826, upload-time = "2024-08-15T07:35:38.916Z" },
-    { url = "https://files.pythonhosted.org/packages/81/2d/4f7317e626468be25826430a6acf9fe5433f6a8df50aa6ad53022bd2ab50/fugue_sql_antlr_cpp-0.2.2-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:d3ed0f4d07d2f1574e7169fd19fefc00de841b396d9b990bd297af38c4048d17", size = 13422624, upload-time = "2024-08-15T07:35:40.261Z" },
-    { url = "https://files.pythonhosted.org/packages/db/bd/2da78a5eee6e725c0f2f45ed30bf0439db3ee0a69e5ecb0a1b92b8a2551e/fugue_sql_antlr_cpp-0.2.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:53612e79ec6471deaca92391b5b7a8a9237d1b6e4abab7f9f1b1d5a71e998cc6", size = 13803610, upload-time = "2024-08-15T07:35:42.693Z" },
-    { url = "https://files.pythonhosted.org/packages/b2/e3/aba0b144d292df5720b02735164c20dad452c972bcbcb3a8126cdf1b7d52/fugue_sql_antlr_cpp-0.2.2-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:b5e7f5991a94f4048496c96dc33d0c9d0f0cc06ab2f5d481a0e64c9cca58f214", size = 13535240, upload-time = "2024-08-15T07:35:44.67Z" },
-    { url = "https://files.pythonhosted.org/packages/54/47/710e2bc0b0471d8b528493e218d5031773b18650ce03f0cebd801bcfe81b/fugue_sql_antlr_cpp-0.2.2-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:2f9429491cb5e2e50ff3fb35cf8d589d610823e3b29cb6684a4656620a89998e", size = 13716797, upload-time = "2024-08-15T07:35:47.03Z" },
-    { url = "https://files.pythonhosted.org/packages/a0/41/8324bb0dd549fa4c22f54432f65a4767f7ad31d32d52d404e610f4a85c30/fugue_sql_antlr_cpp-0.2.2-cp312-cp312-win32.whl", hash = "sha256:66d3d157445aa8c1aa32b855689dbd62cab2e3e49279938f331f94c158d1ace1", size = 1079713, upload-time = "2024-08-15T07:35:49.368Z" },
-    { url = "https://files.pythonhosted.org/packages/7e/ed/ee7e02ddf14f637abc7367a832b1963e060907ee937f62cd385c91c02147/fugue_sql_antlr_cpp-0.2.2-cp312-cp312-win_amd64.whl", hash = "sha256:91761fd9a6a37275232f01a14e8cec0fb09fbb495f04a2c51d0972f19346eaff", size = 1100041, upload-time = "2024-08-15T07:35:50.497Z" },
-]
+sdist = { url = "https://files.pythonhosted.org/packages/45/5d/68aaaac3a3c7d7b119b0d9a101e92d86d1af4a895b6e25b37bfe64d3519d/fugue_sql_antlr_cpp-0.2.3.tar.gz", hash = "sha256:a824d20c7714da3f30395f64295213de14bc3b3b5a9640bc91c0afa21528e373", size = 531401, upload-time = "2026-02-16T05:38:15.774Z" }
 
 [[package]]
 name = "furo"
@@ -4620,33 +4589,18 @@ wheels = [
 ]
 
 [[package]]
-name = "qpd"
-version = "0.4.4"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "adagio" },
-    { name = "antlr4-python3-runtime" },
-    { name = "pandas" },
-    { name = "triad" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/81/51/82f1751e3aea61edf0c36e1bb8284e57f0856b550f9bc44be42d61335bf2/qpd-0.4.4.tar.gz", hash = "sha256:e0ed05b88e321ea9935874377bda11339c90f1469f34344e9b41d16b8088e136", size = 159073, upload-time = "2023-07-12T05:46:30.908Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/1f/909bff3b693dc50e0e4318922a93d3047c948acd3011a8c39665cc125d19/qpd-0.4.4-py3-none-any.whl", hash = "sha256:fc02b53d990f505353ec495682fbc107dfc06c59e66d2206b5d2db2b5700b629", size = 169196, upload-time = "2023-07-12T05:46:29.155Z" },
-]
-
-[[package]]
 name = "ray"
 version = "2.53.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "filelock" },
-    { name = "jsonschema" },
-    { name = "msgpack" },
-    { name = "packaging" },
-    { name = "protobuf" },
-    { name = "pyyaml" },
-    { name = "requests" },
+    { name = "click", marker = "python_full_version < '3.14'" },
+    { name = "filelock", marker = "python_full_version < '3.14'" },
+    { name = "jsonschema", marker = "python_full_version < '3.14'" },
+    { name = "msgpack", marker = "python_full_version < '3.14'" },
+    { name = "packaging", marker = "python_full_version < '3.14'" },
+    { name = "protobuf", marker = "python_full_version < '3.14'" },
+    { name = "pyyaml", marker = "python_full_version < '3.14'" },
+    { name = "requests", marker = "python_full_version < '3.14'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2f/99/21986c7f8135dafbf7c49229c52faaa9d2d365db7d86fffe978dde8ee967/ray-2.53.0-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:4db914a0a6dd608fa49c066929a1282745a2dbd73caee67d7b80fe684ca65bdd", size = 69473649, upload-time = "2025-12-20T16:05:40.58Z" },
@@ -4668,11 +4622,11 @@ wheels = [
 
 [package.optional-dependencies]
 data = [
-    { name = "fsspec" },
+    { name = "fsspec", marker = "python_full_version < '3.14'" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "pandas" },
-    { name = "pyarrow" },
+    { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "pandas", marker = "python_full_version < '3.14'" },
+    { name = "pyarrow", marker = "python_full_version < '3.14'" },
 ]
 
 [[package]]

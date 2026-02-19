@@ -2,9 +2,9 @@
 try:
     import qpd_pandas  # noqa: F401
 
-    HAS_QPD = True
+    HAS_DEFAULT_SQL_ENGINE = True
 except ImportError:  # pragma: no cover
-    HAS_QPD = False
+    HAS_DEFAULT_SQL_ENGINE = False
 
 import datetime
 import os
@@ -858,7 +858,9 @@ class BuiltInTests(object):
                 ).assert_eq(d)
             dag.run(self.engine)
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_df_select(self):
             with FugueWorkflow() as dag:
                 # wildcard
@@ -910,7 +912,9 @@ class BuiltInTests(object):
                 dag.select("select * from", a).assert_eq(b)
             dag.run(self.engine, {"fugue.sql.compile.ignore_case": True})
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_df_filter(self):
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
@@ -918,7 +922,9 @@ class BuiltInTests(object):
                 a.filter((col("y") > 15) & (col("y") < 25)).assert_eq(b)
             dag.run(self.engine)
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_df_assign(self):
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
@@ -932,7 +938,9 @@ class BuiltInTests(object):
                 a.assign(lit("x").alias("y"), z=(col("y") + 1).cast(float)).assert_eq(b)
             dag.run(self.engine)
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_aggregate(self):
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [1, 200], [3, 30]], "x:int,y:int")
@@ -946,7 +954,9 @@ class BuiltInTests(object):
                 ).assert_eq(c)
             dag.run(self.engine)
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_select(self):
             class MockEngine(QPDPandasEngine):
                 def __init__(self, execution_engine, p: int = 0):
@@ -1691,7 +1701,9 @@ class BuiltInTests(object):
 
             assert 4 == cb3.n
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_sql_api(self):
             def tr(df: pd.DataFrame, n=1) -> pd.DataFrame:
                 return df + n
@@ -1738,7 +1750,9 @@ class BuiltInTests(object):
                 assert fa.is_local(sdf4)
 
         @pytest.mark.skipif(os.name == "nt", reason="Skip Windows")
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_any_column_name(self):
             f_parquet = os.path.join(str(self.tmpdir), "a.parquet")
             f_csv = os.path.join(str(self.tmpdir), "a.csv")

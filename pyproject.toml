@@ -7,11 +7,17 @@ name = "fugue"
 version = "0.9.7.dev0"
 description = "An abstraction layer for distributed computation"
 readme = "README.md"
-license = {text = "Apache-2.0"}
-authors = [
-    {name = "The Fugue Development Team", email = "hello@fugue.ai"}
+license = { text = "Apache-2.0" }
+authors = [{ name = "The Fugue Development Team", email = "hello@fugue.ai" }]
+keywords = [
+    "distributed",
+    "spark",
+    "dask",
+    "ray",
+    "sql",
+    "dsl",
+    "domain specific language",
 ]
-keywords = ["distributed", "spark", "dask", "ray", "sql", "dsl", "domain specific language"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -25,28 +31,16 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
 ]
 requires-python = ">=3.10"
-dependencies = [
-    "triad>=1.0.1",
-    "adagio>=0.2.6",
-    "pandas<3",
-]
+dependencies = ["triad>=1.0.1", "adagio>=0.2.6", "pandas<3"]
 
 [project.urls]
 Homepage = "http://github.com/fugue-project/fugue"
 Repository = "http://github.com/fugue-project/fugue"
 
 [project.optional-dependencies]
-sql = [
-    "qpd>=0.4.4",
-    "fugue-sql-antlr>=0.2.0",
-    "sqlglot<28",
-    "jinja2",
-]
-cpp_sql_parser = ["fugue-sql-antlr[cpp]>=0.2.0"]
-spark = [
-    "pyspark>=3.1.1",
-    "zstandard>=0.25.0",
-]
+sql = ["fugue-sql-antlr>=0.2.3", "sqlglot<28", "jinja2"]
+cpp_sql_parser = ["fugue-sql-antlr[cpp]>=0.2.3"]
+spark = ["pyspark>=3.1.1", "zstandard>=0.25.0"]
 dask = [
     "dask[distributed,dataframe]>=2024.4.0",
     "pyarrow>=7.0.0",
@@ -59,8 +53,7 @@ ray = [
     "pandas",
 ]
 duckdb = [
-    "qpd>=0.4.4",
-    "fugue-sql-antlr>=0.2.0",
+    "fugue-sql-antlr>=0.2.3",
     "sqlglot<28",
     "jinja2",
     "duckdb>=0.5.0",
@@ -68,20 +61,14 @@ duckdb = [
 ]
 polars = ["polars"]
 ibis = [
-    "qpd>=0.4.4",
-    "fugue-sql-antlr>=0.2.0",
+    "fugue-sql-antlr>=0.2.3",
     "sqlglot<28",
     "jinja2",
     "ibis-framework[pandas]",
 ]
-notebook = [
-    "notebook",
-    "jupyterlab",
-    "ipython>=7.10.0",
-]
+notebook = ["notebook", "jupyterlab", "ipython>=7.10.0"]
 all = [
-    "qpd>=0.4.4",
-    "fugue-sql-antlr>=0.2.0",
+    "fugue-sql-antlr>=0.2.3",
     "sqlglot<28",
     "jinja2",
     "pyspark>=3.1.1",
@@ -148,7 +135,7 @@ fugue_test = "fugue_test"
 fugue_test_fixtures = "fugue_test.fixtures"
 
 [tool.setuptools]
-packages = {find = {include = ["fugue*"]}}
+packages = { find = { include = ["fugue*"] } }
 
 [tool.setuptools.package-data]
 fugue = ["py.typed"]
@@ -156,7 +143,8 @@ fugue_notebook = ["nbextension/*"]
 
 [tool.pytest.ini_options]
 addopts = [
-    "-p", "pytest_cov",
+    "-p",
+    "pytest_cov",
     "--cov=fugue",
     "--cov=fugue_test",
     "--cov=fugue_spark",
