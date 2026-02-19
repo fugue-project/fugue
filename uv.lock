@@ -1519,7 +1519,7 @@ wheels = [
 
 [[package]]
 name = "fugue"
-version = "0.9.7.dev0"
+version = "0.9.7.dev1"
 source = { editable = "." }
 dependencies = [
     { name = "adagio" },
@@ -1547,7 +1547,7 @@ all = [
     { name = "sqlglot" },
 ]
 cpp-sql-parser = [
-    { name = "fugue-sql-antlr", extra = ["cpp"] },
+    { name = "fugue-sql-antlr", extra = ["cpp"], marker = "sys_platform != 'win32'" },
 ]
 dask = [
     { name = "dask", extra = ["dataframe", "distributed"] },
@@ -1588,6 +1588,7 @@ spark = [
     { name = "zstandard" },
 ]
 sql = [
+    { name = "duckdb" },
     { name = "fugue-sql-antlr" },
     { name = "jinja2" },
     { name = "sqlglot" },
@@ -1638,11 +1639,12 @@ requires-dist = [
     { name = "duckdb", marker = "extra == 'all'", specifier = ">=0.5.0" },
     { name = "duckdb", marker = "extra == 'duckdb'", specifier = ">=0.5.0" },
     { name = "duckdb", marker = "extra == 'ray'", specifier = ">=0.5.0" },
+    { name = "duckdb", marker = "extra == 'sql'", specifier = ">=0.5.0" },
     { name = "fugue-sql-antlr", marker = "extra == 'all'", specifier = ">=0.2.3" },
     { name = "fugue-sql-antlr", marker = "extra == 'duckdb'", specifier = ">=0.2.3" },
     { name = "fugue-sql-antlr", marker = "extra == 'ibis'", specifier = ">=0.2.3" },
     { name = "fugue-sql-antlr", marker = "extra == 'sql'", specifier = ">=0.2.3" },
-    { name = "fugue-sql-antlr", extras = ["cpp"], marker = "extra == 'cpp-sql-parser'", specifier = ">=0.2.3" },
+    { name = "fugue-sql-antlr", extras = ["cpp"], marker = "sys_platform != 'win32' and extra == 'cpp-sql-parser'", specifier = ">=0.2.3" },
     { name = "ibis-framework", extras = ["pandas"], marker = "extra == 'ibis'" },
     { name = "ibis-framework", extras = ["pandas", "duckdb"], marker = "extra == 'all'" },
     { name = "ipython", marker = "extra == 'all'", specifier = ">=7.10.0" },
@@ -1700,7 +1702,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
-    { name = "pytest-rerunfailures", specifier = "==10.2" },
+    { name = "pytest-rerunfailures", specifier = ">10.2" },
     { name = "ray", extras = ["data"], marker = "python_full_version < '3.14'", specifier = ">=2.30.0" },
     { name = "s3fs" },
     { name = "seaborn" },
@@ -4349,15 +4351,15 @@ wheels = [
 
 [[package]]
 name = "pytest-rerunfailures"
-version = "10.2"
+version = "16.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "packaging" },
     { name = "pytest" },
-    { name = "setuptools" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/83/07/4b24f61f9700bd0d11cad641180898d48f602f156254a43376ee759fb904/pytest-rerunfailures-10.2.tar.gz", hash = "sha256:9e1e1bad51e07642c5bbab809fc1d4ec8eebcb7de86f90f1a26e6ef9de446697", size = 15863, upload-time = "2021-09-17T06:08:25.903Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/04/71e9520551fc8fe2cf5c1a1842e4e600265b0815f2016b7c27ec85688682/pytest_rerunfailures-16.1.tar.gz", hash = "sha256:c38b266db8a808953ebd71ac25c381cb1981a78ff9340a14bcb9f1b9bff1899e", size = 30889, upload-time = "2025-10-10T07:06:01.238Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/cc/f8782fb91a6a9e1b593c22e3b1a7354a9dbd6d632e63ddf122b2da49037b/pytest_rerunfailures-10.2-py3-none-any.whl", hash = "sha256:d31d8e828dfd39363ad99cd390187bf506c7a433a89f15c3126c7d16ab723fe2", size = 11342, upload-time = "2021-09-17T06:08:24.46Z" },
+    { url = "https://files.pythonhosted.org/packages/77/54/60eabb34445e3db3d3d874dc1dfa72751bfec3265bd611cb13c8b290adea/pytest_rerunfailures-16.1-py3-none-any.whl", hash = "sha256:5d11b12c0ca9a1665b5054052fcc1084f8deadd9328962745ef6b04e26382e86", size = 14093, upload-time = "2025-10-10T07:06:00.019Z" },
 ]
 
 [[package]]

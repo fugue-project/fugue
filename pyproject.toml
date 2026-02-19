@@ -38,7 +38,7 @@ Homepage = "http://github.com/fugue-project/fugue"
 Repository = "http://github.com/fugue-project/fugue"
 
 [project.optional-dependencies]
-sql = ["fugue-sql-antlr>=0.2.3", "sqlglot<28", "jinja2"]
+sql = ["duckdb>=0.5.0", "fugue-sql-antlr>=0.2.3", "sqlglot<28", "jinja2"]
 cpp_sql_parser = ["fugue-sql-antlr[cpp]>=0.2.3; platform_system != 'Windows'"]
 spark = ["pyspark>=3.1.1", "zstandard>=0.25.0"]
 dask = [

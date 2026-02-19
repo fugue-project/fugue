@@ -1,6 +1,7 @@
 # pylint: disable-all
 try:
     import duckdb  # noqa: F401
+    import sqlglot  # noqa: F401
 
     HAS_DEFAULT_SQL_ENGINE = True
 except ImportError:  # pragma: no cover
