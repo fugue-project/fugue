@@ -15,7 +15,9 @@ from fugue_test.dataframe_suite import DataFrameTests
 class DuckDataFrameTests(DataFrameTests.Tests):
     def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
         df = ArrowDataFrame(data, schema)
-        return DuckDataFrame(duckdb.from_arrow(df.native, connection=self.context.session))
+        return DuckDataFrame(
+            duckdb.from_arrow(df.native, connection=self.context.session)
+        )
 
     def test_as_array_special_values(self):
         for func in [
@@ -69,7 +71,9 @@ class DuckDataFrameTests(DataFrameTests.Tests):
 class NativeDuckDataFrameTests(DataFrameTests.NativeTests):
     def df(self, data: Any = None, schema: Any = None) -> DuckDataFrame:
         df = ArrowDataFrame(data, schema)
-        return DuckDataFrame(duckdb.from_arrow(df.native, connection=self.context.session)).native
+        return DuckDataFrame(
+            duckdb.from_arrow(df.native, connection=self.context.session)
+        ).native
 
     def to_native_df(self, pdf: pd.DataFrame) -> Any:
         return duckdb.from_df(pdf)

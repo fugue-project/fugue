@@ -26,7 +26,7 @@ Community
 Please join the `Fugue Slack <http://slack.fugue.ai>`_
 to ask questions. We will try to reply as soon as possible.
 
-For contributing, start with the `contributing guide <https://github.com/fugue-project/fugue/blob/master/CONTRIBUTING.md>`_
+For contributing, start with the `contributing guide <https://github.com/fugue-project/fugue/blob/main/CONTRIBUTING.md>`_
 
 
 .. toctree::

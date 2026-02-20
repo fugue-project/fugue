@@ -1,4 +1,8 @@
 # flake8: noqa
+from importlib.metadata import version
+
+__version__ = version("fugue")
+
 from triad.collections import Schema
 
 from fugue.api import out_transform, transform
@@ -51,7 +55,7 @@ from fugue.execution.factory import (
 from fugue.execution.native_execution_engine import (
     NativeExecutionEngine,
     PandasMapEngine,
-    QPDPandasEngine,
+    DefaultSQLEngine,
 )
 from fugue.extensions.creator import Creator, creator, register_creator
 from fugue.extensions.outputter import Outputter, outputter, register_outputter
@@ -83,7 +87,6 @@ from fugue.sql.workflow import FugueSQLWorkflow
 from fugue.workflow._workflow_context import FugueWorkflowContext
 from fugue.workflow.module import module
 from fugue.workflow.workflow import FugueWorkflow, WorkflowDataFrame, WorkflowDataFrames
-from fugue_version import __version__
 
 from .dev import *
 

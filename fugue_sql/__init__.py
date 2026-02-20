@@ -1,6 +1,8 @@
 # flake8: noqa
 # TODO: This folder is to be deprecated
-from fugue_version import __version__
+from importlib.metadata import version
+
+__version__ = version("fugue")
 
 import warnings
 from fugue import FugueSQLWorkflow, fsql

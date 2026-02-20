@@ -2,15 +2,12 @@ import json
 from datetime import datetime
 from typing import Any
 
-import numpy as np
-import pandas as pd
 from pytest import raises
-from triad.collections.schema import Schema, SchemaError
+from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 
 import fugue.test as ft
 from fugue.dataframe import IterableDataFrame, PandasDataFrame
-from fugue.dataframe.utils import _df_eq as df_eq
 from fugue_test.dataframe_suite import DataFrameTests
 
 
@@ -124,3 +121,4 @@ def _test_as_array_perf():
         res = df.as_array(type_safe=True)
         ts += (datetime.now() - t).total_seconds()
     print(nts, ts)
+

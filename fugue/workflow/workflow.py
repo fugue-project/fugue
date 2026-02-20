@@ -1468,7 +1468,8 @@ class WorkflowDataFrames(DataFrames):
         super().__setitem__(key, value, *args, **kwds)
 
     def __getitem__(  # pylint: disable=W0235
-        self, key: Union[str, int]  # type: ignore
+        self,
+        key: Union[str, int],  # type: ignore
     ) -> WorkflowDataFrame:
         return super().__getitem__(key)  # type: ignore
 
@@ -1791,8 +1792,7 @@ class FugueWorkflow:
                 )
             )
         raise FugueWorkflowCompileError(
-            f"Input data of type {type(data)} can't "
-            "be converted to WorkflowDataFrame"
+            f"Input data of type {type(data)} can't be converted to WorkflowDataFrame"
         )
 
     def df(

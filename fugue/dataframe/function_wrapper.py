@@ -1,4 +1,5 @@
 import inspect
+from collections.abc import Callable as AbcCallable
 from typing import (
     Any,
     Callable,
@@ -7,6 +8,9 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Union,
+    get_args,
+    get_origin,
     no_type_check,
 )
 
@@ -39,11 +43,64 @@ from .pandas_dataframe import PandasDataFrame
 
 
 def _compare_iter(tp: Any) -> Any:
-    return lambda x: compare_annotations(
-        x, Iterable[tp]  # type:ignore
-    ) or compare_annotations(
-        x, Iterator[tp]  # type:ignore
+    return lambda x: (
+        compare_annotations(
+            x,
+            Iterable[tp],  # type:ignore
+        )
+        or compare_annotations(
+            x,
+            Iterator[tp],  # type:ignore
+        )
     )
+
+
+def _is_optional(annotation) -> bool:
+    origin = get_origin(annotation)
+
+    # Check if it's a Union type
+    if origin is Union:
+        args = get_args(annotation)
+        # Optional[T] is Union[T, None]
+        return type(None) in args
+
+
+def _is_required_callable(annotation) -> bool:
+    """Check if annotation is a required (non-optional) Callable type."""
+    if _is_optional(annotation):
+        return False
+
+    # Check direct equality
+    if annotation == Callable or annotation == callable:  # pylint: disable=comparison-with-callable
+        return True
+
+    # Check if it's a generic Callable like Callable[[int], str]
+    origin = get_origin(annotation)
+    return origin is AbcCallable or origin is type(Callable)
+
+
+def _is_optional_callable(annotation) -> bool:
+    """Check if annotation is an optional Callable type (Optional[Callable] or Callable | None)."""
+    if not _is_optional(annotation):
+        return False
+
+    # Get the non-None types from the Union
+    args = get_args(annotation)
+    non_none_types = [arg for arg in args if arg is not type(None)]
+
+    # Should have exactly one non-None type, and it should be Callable
+    if len(non_none_types) != 1:  # pragma: no cover
+        return False
+
+    inner_type = non_none_types[0]
+
+    # Check if the inner type is Callable
+    if inner_type == Callable or inner_type == callable:  # pylint: disable=comparison-with-callable
+        return True
+
+    # Check if it's a generic Callable like Callable[[int], str]
+    origin = get_origin(inner_type)
+    return origin is AbcCallable or origin is type(Callable)
 
 
 @function_wrapper(FUGUE_ENTRYPOINT)
@@ -154,12 +211,7 @@ fugue_annotated_param = DataFrameFunctionWrapper.annotated_param
 @fugue_annotated_param(
     "Callable",
     "F",
-    lambda annotation: (
-        annotation == Callable
-        or annotation == callable  # pylint: disable=comparison-with-callable
-        or str(annotation).startswith("typing.Callable")
-        or str(annotation).startswith("collections.abc.Callable")
-    ),
+    _is_required_callable,
 )
 class _CallableParam(AnnotatedParam):
     pass
@@ -168,15 +220,7 @@ class _CallableParam(AnnotatedParam):
 @fugue_annotated_param(
     "Callable",
     "f",
-    lambda annotation: (
-        annotation == Optional[Callable]
-        or annotation == Optional[callable]
-        or str(annotation).startswith("typing.Union[typing.Callable")  # 3.8-
-        or str(annotation).startswith("typing.Optional[typing.Callable")  # 3.9+
-        or str(annotation).startswith(
-            "typing.Optional[collections.abc.Callable]"
-        )  # 3.9+
-    ),
+    _is_optional_callable,
 )
 class _OptionalCallableParam(AnnotatedParam):
     pass

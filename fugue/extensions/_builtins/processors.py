@@ -314,7 +314,7 @@ class SaveAndUse(Processor):
             mode=mode,
             partition_spec=partition_spec,
             force_single=force_single,
-            **kwargs
+            **kwargs,
         )
         return self.execution_engine.load_df(path=path, format_hint=format_hint)
 

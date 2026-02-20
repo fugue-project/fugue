@@ -3,6 +3,7 @@ import pytest
 from fugue import FugueWorkflow, fsql
 import fugue.test as ft
 
+
 @ft.with_backend("dask")
 def test_importless(backend_context):
     pytest.importorskip("fugue_sql_antlr")

@@ -55,8 +55,8 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
     # TODO: dask-sql 2024.5.0 has a bug, can't pass the HAVING tests
     def test_select(self):
         try:
-            import qpd
             import dask_sql
+            import sqlglot
         except ImportError:
             return
 
@@ -74,9 +74,7 @@ class DaskExecutionEngineTests(ExecutionEngineTests.Tests):
         )
 
         # with distinct
-        b = fa.select(
-            a, col("b"), (col("b") + 1).alias("c").cast(str), distinct=True
-        )
+        b = fa.select(a, col("b"), (col("b") + 1).alias("c").cast(str), distinct=True)
         self.df_eq(
             b,
             [[2, "3"], [1, "2"], [4, "5"]],

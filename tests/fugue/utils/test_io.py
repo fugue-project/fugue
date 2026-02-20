@@ -13,7 +13,6 @@ from fugue.dataframe.utils import _df_eq as df_eq
 
 @pytest.mark.skipif(sys.platform.startswith("win"), reason="not a test for windows")
 def test_file_parser_linux():
-
     f = FileParser("/a/b/c.parquet")
     assert "/a/b/c.parquet" == f.path
     assert not f.has_glob

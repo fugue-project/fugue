@@ -136,6 +136,7 @@ def processor(
     Please read
     :doc:`Processor Tutorial <tutorial:tutorials/extensions/processor>`
     """
+
     # TODO: validation of schema if without * should be done at compile time
     def deco(func: Callable) -> "_FuncAsProcessor":
         return _FuncAsProcessor.from_func(

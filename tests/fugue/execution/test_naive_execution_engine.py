@@ -5,7 +5,7 @@ import pyarrow as pa
 
 import fugue.api as fa
 import fugue.test as ft
-from fugue import FugueWorkflow, NativeExecutionEngine, PandasDataFrame, QPDPandasEngine
+from fugue import FugueWorkflow, PandasDataFrame
 from fugue.execution.execution_engine import _get_file_threshold
 from fugue_test.builtin_suite import BuiltInTests
 from fugue_test.execution_suite import ExecutionEngineTests

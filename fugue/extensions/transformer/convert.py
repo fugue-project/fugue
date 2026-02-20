@@ -546,7 +546,10 @@ class _FuncAsOutputCoTransformer(_FuncAsCoTransformer):
             p = dict(dfs)
             p.update(self.params)
             self._wrapper.run(
-                [] + cb, p, ignore_unknown=False, output=False  # type: ignore
+                [] + cb,
+                p,
+                ignore_unknown=False,
+                output=False,  # type: ignore
             )
         return ArrayDataFrame([], OUTPUT_TRANSFORMER_DUMMY_SCHEMA)
 

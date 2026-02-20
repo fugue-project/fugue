@@ -5,12 +5,12 @@ name: Test Windows
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
     paths-ignore:
       - 'docs/**'
       - '**.md'
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
     paths-ignore:
       - 'docs/**'
       - '**.md'
@@ -24,16 +24,22 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.11"]
+
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+    - name: Clone repo
+      uses: actions/checkout@v5
+
+    - name: Setup uv ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@v5
       with:
+        enable-cache: false
+        cache-dependency-glob: "pyproject.toml"
         python-version: ${{ matrix.python-version }}
+
     - name: Install dependencies
-      run: pip install -r requirements.txt
-    # - name: Install pyarrow
-    #  run: pip install pyarrow==8.0.0
+      run: |
+        make devenv
+
     - name: Test
-      run: python -m pytest --reruns 2 --only-rerun 'Overflow in cast' tests/fugue tests/fugue_dask tests/fugue_duckdb
+      run: uv run --active pytest --reruns 2 --only-rerun 'Overflow in cast' tests/fugue tests/fugue_dask tests/fugue_duckdb

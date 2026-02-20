@@ -23,6 +23,4 @@ def import_or_throw(package_name: str, message: str) -> Any:
 
 
 def import_fsql_dependency(package_name: str) -> Any:
-    return import_or_throw(
-        package_name, "Please try to install the package by `pip install fugue[sql]`."
-    )
+    return import_or_throw(package_name, "Please pip install with extra `fugue[sql]`.")

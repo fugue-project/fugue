@@ -1,10 +1,11 @@
 # pylint: disable-all
 try:
-    import qpd_pandas  # noqa: F401
+    import duckdb  # noqa: F401
+    import sqlglot  # noqa: F401
 
-    HAS_QPD = True
+    HAS_DEFAULT_SQL_ENGINE = True
 except ImportError:  # pragma: no cover
-    HAS_QPD = False
+    HAS_DEFAULT_SQL_ENGINE = False
 
 import datetime
 import os
@@ -29,6 +30,7 @@ from fugue import (
     CoTransformer,
     DataFrame,
     DataFrames,
+    DefaultSQLEngine,
     ExecutionEngine,
     FugueWorkflow,
     LocalDataFrame,
@@ -38,7 +40,6 @@ from fugue import (
     PandasDataFrame,
     PartitionSpec,
     Processor,
-    QPDPandasEngine,
     Schema,
     Transformer,
     cotransformer,
@@ -53,9 +54,8 @@ from fugue import (
     register_transformer,
     transformer,
 )
-from fugue.column import col
+from fugue.column import col, lit
 from fugue.column import functions as ff
-from fugue.column import lit
 from fugue.exceptions import (
     FugueInterfacelessError,
     FugueWorkflowCompileError,
@@ -859,7 +859,9 @@ class BuiltInTests(object):
                 ).assert_eq(d)
             dag.run(self.engine)
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_df_select(self):
             with FugueWorkflow() as dag:
                 # wildcard
@@ -911,7 +913,9 @@ class BuiltInTests(object):
                 dag.select("select * from", a).assert_eq(b)
             dag.run(self.engine, {"fugue.sql.compile.ignore_case": True})
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_df_filter(self):
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
@@ -919,7 +923,9 @@ class BuiltInTests(object):
                 a.filter((col("y") > 15) & (col("y") < 25)).assert_eq(b)
             dag.run(self.engine)
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_df_assign(self):
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [2, 20], [3, 30]], "x:int,y:int")
@@ -933,7 +939,9 @@ class BuiltInTests(object):
                 a.assign(lit("x").alias("y"), z=(col("y") + 1).cast(float)).assert_eq(b)
             dag.run(self.engine)
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_aggregate(self):
             with FugueWorkflow() as dag:
                 a = dag.df([[1, 10], [1, 200], [3, 30]], "x:int,y:int")
@@ -947,9 +955,11 @@ class BuiltInTests(object):
                 ).assert_eq(c)
             dag.run(self.engine)
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_select(self):
-            class MockEngine(QPDPandasEngine):
+            class MockEngine(DefaultSQLEngine):
                 def __init__(self, execution_engine, p: int = 0):
                     super().__init__(execution_engine)
                     self.p = p
@@ -986,7 +996,7 @@ class BuiltInTests(object):
                     "AS t1 INNER JOIN",
                     b,
                     "AS t2 ON t1.x=t2.x",
-                    sql_engine="qpdpandas",
+                    sql_engine="default",
                 ).assert_eq(c)
 
                 # specify sql engine and params
@@ -1060,7 +1070,6 @@ class BuiltInTests(object):
                         "x:long,y:double",
                     )
                 )
-                # TODO: INTERSECT ALL is not implemented (QPD issue)
                 # a.intersect(b, distinct=False).assert_eq(
                 #     ArrayDataFrame(
                 #         [[2, None], [2, None]],
@@ -1092,7 +1101,6 @@ class BuiltInTests(object):
                         "x:long,y:double",
                     )
                 )
-                # # TODO: EXCEPT ALL is not implemented (QPD issue)
                 # a.subtract(c, distinct=False).assert_eq(
                 #     ArrayDataFrame(
                 #         [[2, None], [2, None]],
@@ -1635,7 +1643,7 @@ class BuiltInTests(object):
                 df.partition(by=["a"]).out_transform(t12)
                 raises(
                     FugueInterfacelessError,
-                    lambda: (df.partition(by=["a"]).out_transform(t1)),
+                    lambda: df.partition(by=["a"]).out_transform(t1),
                 )  # for t1, callback must be provided
                 df.assert_eq(res)
             dag.run(self.engine)
@@ -1692,7 +1700,9 @@ class BuiltInTests(object):
 
             assert 4 == cb3.n
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_sql_api(self):
             def tr(df: pd.DataFrame, n=1) -> pd.DataFrame:
                 return df + n
@@ -1739,7 +1749,9 @@ class BuiltInTests(object):
                 assert fa.is_local(sdf4)
 
         @pytest.mark.skipif(os.name == "nt", reason="Skip Windows")
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_any_column_name(self):
             f_parquet = os.path.join(str(self.tmpdir), "a.parquet")
             f_csv = os.path.join(str(self.tmpdir), "a.csv")

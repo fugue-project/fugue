@@ -23,7 +23,7 @@ from fugue import (
     register_sql_engine,
 )
 from fugue.exceptions import FugueSQLError
-from fugue.execution.native_execution_engine import QPDPandasEngine
+from fugue.execution.native_execution_engine import DefaultSQLEngine
 from fugue.extensions.transformer.convert import _to_output_transformer
 from fugue.sql._visitors import FugueSQLHooks, _Extensions
 
@@ -426,7 +426,7 @@ def test_select_with():
 
 
 def test_select_plus_engine():
-    class MockEngine(QPDPandasEngine):
+    class MockEngine(DefaultSQLEngine):
         def __init__(self, execution_engine, p: int = 0):
             super().__init__(execution_engine)
             self.p = p

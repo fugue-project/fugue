@@ -1,0 +1,213 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fugue"
+version = "0.9.7"
+description = "An abstraction layer for distributed computing"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "The Fugue Development Team", email = "hello@fugue.ai" }]
+keywords = [
+    "distributed",
+    "spark",
+    "dask",
+    "ray",
+    "duckdb",
+    "sql",
+    "dsl",
+    "domain specific language",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3 :: Only",
+]
+requires-python = ">=3.10"
+dependencies = ["triad>=1.0.1", "adagio>=0.2.6", "pandas<3"]
+
+[project.urls]
+Homepage = "http://github.com/fugue-project/fugue"
+Repository = "http://github.com/fugue-project/fugue"
+
+[project.optional-dependencies]
+sql = ["duckdb>=0.5.0", "fugue-sql-antlr>=0.2.4", "sqlglot<28", "jinja2"]
+cpp_sql_parser = ["fugue-sql-antlr[cpp]>=0.2.4"]
+spark = ["pyspark>=3.1.1", "zstandard>=0.25.0"]
+dask = [
+    "dask[distributed,dataframe]>=2024.4.0",
+    "pyarrow>=7.0.0",
+    "pandas>=2.0.2",
+]
+ray = [
+    "ray[data]>=2.30.0; python_version<'3.14'",
+    "duckdb>=0.5.0",
+    "pyarrow>=7.0.0",
+    "pandas",
+]
+duckdb = [
+    "fugue-sql-antlr>=0.2.4",
+    "sqlglot<28",
+    "jinja2",
+    "duckdb>=0.5.0",
+    "numpy",
+]
+polars = ["polars"]
+ibis = [
+    "fugue-sql-antlr>=0.2.4",
+    "sqlglot<28",
+    "jinja2",
+    "ibis-framework[pandas]",
+]
+notebook = ["notebook", "jupyterlab", "ipython>=7.10.0"]
+all = [
+    "fugue-sql-antlr>=0.2.4",
+    "sqlglot<28",
+    "jinja2",
+    "pyspark>=3.1.1",
+    "dask[distributed,dataframe]>=2024.4.0",
+    "dask-sql",
+    "ray[data]>=2.30.0; python_version<'3.14'",
+    "notebook",
+    "jupyterlab",
+    "ipython>=7.10.0",
+    "duckdb>=0.5.0",
+    "pyarrow>=6.0.1",
+    "pandas>=2.0.2",
+    "ibis-framework[pandas,duckdb]",
+    "polars",
+]
+
+[dependency-groups]
+dev = [
+    # Documentation
+    "furo",
+    "sphinx>=2.4.0",
+    "sphinx-rtd-theme",
+    "sphinx-autodoc-typehints",
+    # Linting and formatting
+    "pre-commit",
+    "black>=22.3.0",
+    "mypy",
+    "flake8",
+    "autopep8",
+    "pylint==3.2.6",
+    # Testing
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-rerunfailures>10.2",
+    # Additional test dependencies
+    "flask",
+    "psutil",
+    "matplotlib",
+    "seaborn",
+    "notebook<7",
+    "jupyter_contrib_nbextensions",
+    "s3fs",
+    # Specific versions for compatibility
+    "pyspark[connect]",
+    "duckdb-engine>=0.6.4",
+    "sqlalchemy==2.0.10",
+    "ray[data]>=2.30.0; python_version<'3.14'",
+    "pydantic>2",
+    "dask[distributed,dataframe]",
+    "dask-sql",
+]
+
+[project.entry-points."fugue.plugins"]
+ibis = "fugue_ibis"
+duckdb = "fugue_duckdb.registry"
+spark = "fugue_spark.registry"
+dask = "fugue_dask.registry"
+ray = "fugue_ray.registry"
+polars = "fugue_polars.registry"
+
+[project.entry-points.pytest11]
+fugue_test = "fugue_test"
+fugue_test_fixtures = "fugue_test.fixtures"
+
+[tool.setuptools]
+packages = { find = { include = ["fugue*"] } }
+
+[tool.setuptools.package-data]
+fugue = ["py.typed"]
+fugue_notebook = ["nbextension/*"]
+
+[tool.pytest.ini_options]
+addopts = [
+    "-p",
+    "pytest_cov",
+    "--cov=fugue",
+    "--cov=fugue_test",
+    "--cov=fugue_spark",
+    "--cov=fugue_dask",
+    "--cov=fugue_ray",
+    "--cov=fugue_duckdb",
+    "--cov=fugue_ibis",
+    "--cov=fugue_polars",
+    "--ignore=tests/fugue_spark/test_spark_connect.py",
+    "--cov-report=term-missing:skip-covered",
+    "-vvv",
+]
+spark_options = [
+    "spark.master: local[*]",
+    "spark.sql.catalogImplementation: in-memory",
+    "spark.sql.shuffle.partitions: 4",
+    "spark.default.parallelism: 4",
+    "spark.executor.cores: 4",
+    "spark.sql.execution.arrow.pyspark.enabled: true",
+    "spark.sql.adaptive.enabled: false",
+]
+fugue_test_conf = [
+    "# don't move for testing purpose",
+    "fugue.test.dummy=dummy",
+    "fugue.test:bool=true",
+    "# ray settings",
+    "ray.num_cpus:int=2",
+    "# dask settings",
+    "dask.processes:bool=true",
+    "dask.n_workers:int=3",
+    "dask.threads_per_worker:int=1",
+]
+
+[tool.coverage.run]
+omit = [
+    "fugue_sql/_antlr/*",
+    "fugue_test/plugins/*",
+    "fugue_test/fixtures.py",
+    "fugue_test/__init__.py",
+]
+
+#[tool.flake8]
+#ignore = ["E24", "E203", "W503", "C401", "C408", "C420", "A001", "A003", "A005", "W504", "C407", "C405", "B023", "B028"]
+#max-line-length = 88
+#format = "pylint"
+#exclude = [".svc", "CVS", ".bzr", ".hg", ".git", "__pycache__", "venv", "tests/*", "docs/*"]
+#max-complexity = 10
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = py39,py310,py311,py312
+
+[testenv]
+setenv =
+    COV_CORE_SOURCE=
+    COV_CORE_CONFIG=.coveragerc
+    COV_CORE_DATAFILE=.coverage
+"""

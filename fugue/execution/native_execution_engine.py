@@ -11,7 +11,6 @@ from triad.utils.io import makedirs
 from triad.utils.pandas_like import PandasUtils
 
 from fugue._utils.io import load_df, save_df
-from fugue._utils.misc import import_fsql_dependency
 from fugue.collections.partition import (
     PartitionCursor,
     PartitionSpec,
@@ -21,6 +20,7 @@ from fugue.collections.sql import StructuredRawSQL
 from fugue.constants import KEYWORD_PARALLELISM, KEYWORD_ROWCOUNT
 from fugue.dataframe import (
     AnyDataFrame,
+    ArrowDataFrame,
     DataFrame,
     DataFrames,
     LocalBoundedDataFrame,
@@ -39,31 +39,53 @@ from .execution_engine import (
 )
 
 
-class QPDPandasEngine(SQLEngine):
-    """QPD execution implementation.
+class DefaultSQLEngine(SQLEngine):
+    """DuckDB SQL backend implementation.
 
     :param execution_engine: the execution engine this sql engine will run on
     """
 
     @property
     def dialect(self) -> Optional[str]:
-        return "spark"
+        return "duckdb"
 
-    def to_df(self, df: AnyDataFrame, schema: Any = None) -> DataFrame:
-        return _to_native_execution_engine_df(df, schema)
+    def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
+        import duckdb
+
+        from fugue_duckdb.dataframe import _duck_as_arrow
+
+        _dfs, _sql = self.encode(dfs, statement)
+
+        with duckdb.connect() as conn:
+            for k, v in _dfs.items():
+                duckdb.from_arrow(v.as_arrow(), connection=conn).create_view(k)
+            return ArrowDataFrame(_duck_as_arrow(conn.sql(_sql)))
+
+    def table_exists(self, table: str) -> bool:  # pragma: no cover
+        raise NotImplementedError(
+            "table_exists can only be used with DuckExecutionEngine"
+        )
+
+    def save_table(
+        self,
+        df: DataFrame,
+        table: str,
+        mode: str = "overwrite",
+        partition_spec: Optional[PartitionSpec] = None,
+        **kwargs: Any,
+    ) -> None:  # pragma: no cover
+        raise NotImplementedError(
+            "save_table can only be used with DuckExecutionEngine"
+        )
+
+    def load_table(self, table: str, **kwargs: Any) -> DataFrame:  # pragma: no cover
+        raise NotImplementedError(
+            "load_table can only be used with DuckExecutionEngine"
+        )
 
     @property
     def is_distributed(self) -> bool:
         return False
-
-    def select(self, dfs: DataFrames, statement: StructuredRawSQL) -> DataFrame:
-        qpd_pandas = import_fsql_dependency("qpd_pandas")
-
-        _dfs, _sql = self.encode(dfs, statement)
-        _dd = {k: self.to_df(v).as_pandas() for k, v in _dfs.items()}  # type: ignore
-
-        df = qpd_pandas.run_sql_on_pandas(_sql, _dd, ignore_case=True)
-        return self.to_df(df)
 
 
 class PandasMapEngine(MapEngine):
@@ -148,8 +170,9 @@ class PandasMapEngine(MapEngine):
                 output_df = PandasDataFrame(output_df.native, output_schema)
             assert_or_throw(
                 output_df.schema == output_schema,
-                lambda: f"map output {output_df.schema} "
-                f"mismatches given {output_schema}",
+                lambda: (
+                    f"map output {output_df.schema} mismatches given {output_schema}"
+                ),
             )
             return self.to_df(output_df)  # type: ignore
 
@@ -194,7 +217,7 @@ class NativeExecutionEngine(ExecutionEngine):
         return False
 
     def create_default_sql_engine(self) -> SQLEngine:
-        return QPDPandasEngine(self)
+        return DefaultSQLEngine(self)
 
     def create_default_map_engine(self) -> MapEngine:
         return PandasMapEngine(self)

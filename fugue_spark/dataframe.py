@@ -178,9 +178,7 @@ class SparkDataFrame(DataFrame):
         self, n: int, columns: Optional[List[str]] = None
     ) -> LocalBoundedDataFrame:
         sdf = self._select_columns(columns)
-        return SparkDataFrame(
-            sdf.native.limit(n), sdf.schema
-        ).as_local()  # type: ignore
+        return SparkDataFrame(sdf.native.limit(n), sdf.schema).as_local()  # type: ignore
 
     @property
     def _first(self) -> Optional[List[Any]]:

@@ -11,9 +11,9 @@ from triad.exceptions import InvalidOperationError
 from fugue import (
     ArrayDataFrame,
     DataFrame,
+    DefaultSQLEngine,
     FugueWorkflow,
     NativeExecutionEngine,
-    QPDPandasEngine,
     PandasDataFrame,
     WorkflowDataFrames,
 )
@@ -153,7 +153,7 @@ def test_compile_conf():
     assert dag.conf.get_or_throw(FUGUE_CONF_WORKFLOW_EXCEPTION_HIDE, str) != ""
 
 
-class MockSQLEngine(QPDPandasEngine):
+class MockSQLEngine(DefaultSQLEngine):
     def table_exists(self, table: str) -> bool:
         path = os.path.join(
             self.conf[FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH], table + ".parquet"
@@ -166,7 +166,7 @@ class MockSQLEngine(QPDPandasEngine):
         table: str,
         mode: str = "overwrite",
         partition_spec: Optional[PartitionSpec] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         path = os.path.join(
             self.conf[FUGUE_CONF_WORKFLOW_CHECKPOINT_PATH], table + ".parquet"

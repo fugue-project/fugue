@@ -1,10 +1,11 @@
 # pylint: disable-all
 try:
-    import qpd_pandas  # noqa: F401
+    import duckdb  # noqa: F401
+    import sqlglot  # noqa: F401
 
-    HAS_QPD = True
+    HAS_DEFAULT_SQL_ENGINE = True
 except ImportError:  # pragma: no cover
-    HAS_QPD = False
+    HAS_DEFAULT_SQL_ENGINE = False
 
 import copy
 import os
@@ -81,7 +82,9 @@ class ExecutionEngineTests(object):
             pdf = pdf[pdf.a < 0]
             self.df_eq(o, fa.as_fugue_engine_df(e, pdf), throw=True)
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_filter(self):
             a = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]],
@@ -94,7 +97,9 @@ class ExecutionEngineTests(object):
             c = fa.filter(a, col("a") + col("b") == 3)
             self.df_eq(c, [[1, 2]], "a:double,b:int", throw=True)
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_select(self):
             a = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
@@ -153,7 +158,9 @@ class ExecutionEngineTests(object):
                 b, [[1, "1", 2], [None, "1", 7]], "a:double,o:str,c:double", throw=True
             )
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_assign(self):
             a = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
@@ -173,7 +180,9 @@ class ExecutionEngineTests(object):
                 throw=True,
             )
 
-        @pytest.mark.skipif(not HAS_QPD, reason="qpd not working")
+        @pytest.mark.skipif(
+            not HAS_DEFAULT_SQL_ENGINE, reason="Default sql engine not available"
+        )
         def test_aggregate(self):
             a = ArrayDataFrame(
                 [[1, 2], [None, 2], [None, 1], [3, 4], [None, 4]], "a:double,b:int"
@@ -605,7 +614,6 @@ class ExecutionEngineTests(object):
                 "a:double,b:double,c:int",
                 throw=True,
             )
-            # TODO: EXCEPT ALL is not implemented (QPD issue)
             # c = fa.subtract(a, b, distinct=False)
             # self.df_eq(
             #     c,
@@ -648,7 +656,6 @@ class ExecutionEngineTests(object):
                 "a:double,b:double,c:int",
                 throw=True,
             )
-            # TODO: INTERSECT ALL is not implemented (QPD issue)
             # c = fa.intersect(a, b, distinct=False)
             # self.df_eq(
             #     c,

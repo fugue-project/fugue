@@ -59,9 +59,7 @@ class DataFrame(Dataset):
             assert isinstance(self._schema, Schema)
             return self._schema  # type: ignore
         with self._lazy_schema_lock:
-            self._schema = _input_schema(
-                self._schema()
-            ).assert_not_empty()  # type: ignore
+            self._schema = _input_schema(self._schema()).assert_not_empty()  # type: ignore
             self._schema.set_readonly()
             self._schema_discovered = True
             return self._schema

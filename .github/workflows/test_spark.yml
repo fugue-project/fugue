@@ -5,12 +5,12 @@ name: Spark Tests
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
     paths-ignore:
       - 'docs/**'
       - '**.md'
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
     paths-ignore:
       - 'docs/**'
       - '**.md'
@@ -21,49 +21,72 @@ concurrency:
 
 jobs:
   test_combinations:
-    name: Spark ${{ matrix.spark-version }} Pandas ${{ matrix.pandas-version }}
+    name: Test Spark ${{ matrix.spark-version }} Pandas ${{ matrix.pandas-version }} Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        python-version: ["3.11"]
         spark-version: ["3.4.0","3.5.8","4.1.1"]
         pandas-version: ["2.2.0", "2.3.3"]
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v1
+    - name: Clone repo
+      uses: actions/checkout@v5
+
+    - name: Setup uv ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: "3.10"
+        enable-cache: false
+        cache-dependency-glob: "pyproject.toml"
+        python-version: ${{ matrix.python-version }}
+
+    - name: Update Spark
+      if: matrix.spark-version != 'latest'
+      run: uv add "pyspark==${{ matrix.spark-version }}"
+
+    - name: Update Pandas
+      if: matrix.pandas-version != 'latest'
+      run: uv add "pandas==${{ matrix.pandas-version }}"
+
     - name: Install dependencies
-      run: make devenv
-    - name: Install Spark ${{ matrix.spark-version }}
-      run: pip install "pyspark==${{ matrix.spark-version }}"
-    - name: Install Pandas ${{ matrix.pandas-version }}
-      run: pip install "pandas==${{ matrix.pandas-version }}"
-    - name: Install Numpy if Pandas<2.2
-      if: matrix.pandas-version < '2.2.0'
-      run: pip install "numpy<2"
-    - name: Downgrade Ibis
-      if: matrix.spark-version < '3.4.0'
-      run: pip install "ibis-framework<5"
+      run: |
+        make devenv upgrade=1
+
     - name: Test
       run: make testspark
 
   test_connect:
     name: Spark Connect
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+        spark-version: ["3.4.0","3.5.8","4.1.1"]
+        pandas-version: ["2.3.3"]
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v1
+    - name: Clone repo
+      uses: actions/checkout@v5
+
+    - name: Setup uv ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: "3.12"
+        enable-cache: false
+        cache-dependency-glob: "pyproject.toml"
+        python-version: ${{ matrix.python-version }}
+
+    - name: Set Spark==3.5.8
+      run: uv add "pyspark==3.5.8"
+
+    - name: Update Pandas
+      if: matrix.pandas-version != 'latest'
+      run: uv add "pandas==${{ matrix.pandas-version }}"
+
     - name: Install dependencies
-      run: make devenv
-    - name: Setup Spark
       run: |
-        pip install "pyspark==3.5.8"
-        make sparkconnect
+        make devenv upgrade=1
+
     - name: Test
-      run: make testsparkconnect
+      run: |
+        make sparkconnect
+        make testsparkconnect

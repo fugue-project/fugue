@@ -36,76 +36,39 @@ Lastly, there is documentation. Note that tutorials live in another [repository]
 
 ## Setting up the dev environment
 
-There are three steps to setting-up a development environment
+Fugue uses [uv](https://docs.astral.sh/uv/) to manage dependencies and virtual environments. If you don't have `uv` installed, follow the [installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
 
-1.  Create a virtual environment with your choice of environment manager
-2.  Install the requirements
-3.  Install the pre-commit hooks
+### Setting up with make
 
-### Creating an environment
-
-Below are examples for how to create and activate an environment in virtualenv and conda.
-
-**Using virtualenv**
+The simplest way to set up the full dev environment (dependencies + pre-commit hooks) is:
 
 ```bash
-python3 -m venv venv
-. venv/bin/activate
+make devenv
 ```
 
-**Using conda**
+This runs `uv sync` to install all dependencies into a managed virtual environment and installs the pre-commit hooks automatically.
+
+To upgrade all dependencies to their latest allowed versions, pass the `upgrade` flag:
 
 ```bash
-conda create --name fugue-dev
-conda activate fugue-dev
+make devenv upgrade=1
 ```
 
-### Installing requirements
+### Setting up manually
 
-The Fugue repo has a Makefile that can be used to install the requirements. It supports installation in both pip and conda. Instructions to install `make` for Windows users can be found later.
-
-**Pip install requirements**
+If you prefer not to use `make`, you can run the underlying commands directly:
 
 ```bash
-make setupinpip
+uv sync --dev --all-extras
+uv run pre-commit install
 ```
-
-**Conda install requirements**
-
-```bash
-make setupinconda
-```
-
-**Manually install requirements**
-
-For Windows users who don't have the `make` command, you can use your package manager of choice. For pip:
-
-```bash
-pip3 install -r requirements.txt
-```
-
-For Anaconda users, first install `pip` in the newly created environment. If pip install is used without installing pip, conda will use the system-wide pip
-
-```bash
-conda install pip
-pip install -r requirements.txt
-```
-
-**Notes for Windows Users**
-For Windows users, you will need to download Microsoft C++ Build Tools found [here](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-
-`make` is a GNU command that does not come with Windows. An installer can be downloaded [here](http://gnuwin32.sourceforge.net/packages/make.htm)
-
-After installing, add the bin to your PATH environment variable.
 
 ### Installing pre-commit hooks
 
-Fugue has pre-commit hooks to check if code is appropriate to be committed. The previous `make` command installs this.
-
-If you installed the requirements manually, install the git hook scripts with:
+Pre-commit hooks are installed automatically by `make devenv`. If you need to install them separately:
 
 ```bash
-pre-commit install
+uv run pre-commit install
 ```
 
 ## Running Tests

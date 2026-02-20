@@ -55,8 +55,7 @@ def hash_repartition(df: dd.DataFrame, num: int, cols: List[Any]) -> dd.DataFram
     if num == 1:
         return df.repartition(npartitions=1)
     df = df.reset_index(drop=True).clear_divisions()
-    idf, ct = _add_hash_index(df, num, cols)
-    return _postprocess(idf, ct, num)
+    return _add_hash_index(df, num, cols)
 
 
 def even_repartition(df: dd.DataFrame, num: int, cols: List[Any]) -> dd.DataFrame:
@@ -81,13 +80,9 @@ def even_repartition(df: dd.DataFrame, num: int, cols: List[Any]) -> dd.DataFram
         return df
     df = df.reset_index(drop=True).clear_divisions()
     if len(cols) == 0:
-        idf, ct = _add_continuous_index(df)
+        return _add_continuous_index(df, num=num)
     else:
-        idf, ct = _add_group_index(df, cols, shuffle=False)
-        # when cols are set and num is not set, we use the number of groups
-        if num <= 0:
-            num = ct
-    return _postprocess(idf, ct, num)
+        return _add_group_index(df, cols, shuffle=False, num=num)
 
 
 def rand_repartition(
@@ -114,25 +109,30 @@ def rand_repartition(
         return df.repartition(npartitions=1)
     df = df.reset_index(drop=True).clear_divisions()
     if len(cols) == 0:
-        idf, ct = _add_random_index(df, num=num, seed=seed)
+        return _add_random_index(df, num=num, seed=seed)
     else:
-        idf, ct = _add_group_index(df, cols, shuffle=True, seed=seed)
-        # when cols are set and num is not set, we use the number of groups
-    return _postprocess(idf, ct, num)
+        return _add_group_index(df, cols, shuffle=True, num=num, seed=seed)
 
 
-def _postprocess(idf: dd.DataFrame, ct: int, num: int) -> dd.DataFrame:
-    parts = min(ct, num)
+def _safe_set_index(df: dd.DataFrame, key_ct: int, num_partitions: int) -> dd.DataFrame:
+    if num_partitions <= 0:
+        num_partitions = key_ct
+    parts = min(key_ct, num_partitions)
     if parts <= 1:
-        return idf.repartition(npartitions=1)
-    divisions = list(np.arange(ct, step=math.ceil(ct / parts)))
-    divisions.append(ct - 1)
-    return idf.repartition(divisions=divisions, force=True)
+        return df.set_index(
+            _FUGUE_DASK_TEMP_IDX_COLUMN, drop=True, sort=True, npartitions=1
+        )
+    divisions = np.arange(key_ct, step=int(math.ceil(key_ct / parts))).tolist()
+    # divisions.append(ct - 1)
+    divisions.append(key_ct)
+    return df.set_index(
+        _FUGUE_DASK_TEMP_IDX_COLUMN, drop=True, sort=True, divisions=divisions
+    )
 
 
 def _add_group_index(
-    df: dd.DataFrame, cols: List[str], shuffle: bool, seed: Any = None
-) -> Tuple[dd.DataFrame, int]:
+    df: dd.DataFrame, cols: List[str], shuffle: bool, num: int, seed: Any = None
+) -> dd.DataFrame:
     keys = df[cols].drop_duplicates().compute()
     if shuffle:
         keys = keys.sample(frac=1, random_state=seed)
@@ -140,12 +140,10 @@ def _add_group_index(
         **{_FUGUE_DASK_TEMP_IDX_COLUMN: pd.Series(range(len(keys)), dtype=int)}
     )
     df = df.merge(dd.from_pandas(keys, npartitions=1), on=cols, broadcast=True)
-    return df.set_index(_FUGUE_DASK_TEMP_IDX_COLUMN, drop=True), len(keys)
+    return _safe_set_index(df, len(keys), num)
 
 
-def _add_hash_index(
-    df: dd.DataFrame, num: int, cols: List[str]
-) -> Tuple[dd.DataFrame, int]:
+def _add_hash_index(df: dd.DataFrame, num: int, cols: List[str]) -> dd.DataFrame:
     if len(cols) == 0:
         cols = list(df.columns)
 
@@ -165,13 +163,13 @@ def _add_hash_index(
     orig_schema = list(df.dtypes.to_dict().items())
     idf = df.map_partitions(
         _add_hash, meta=orig_schema + [(_FUGUE_DASK_TEMP_IDX_COLUMN, int)]
-    ).set_index(_FUGUE_DASK_TEMP_IDX_COLUMN, drop=True)
-    return idf, num
+    )
+    return _safe_set_index(idf, num, num)
 
 
 def _add_random_index(
     df: dd.DataFrame, num: int, seed: Any = None
-) -> Tuple[dd.DataFrame, int]:  # pragma: no cover
+) -> dd.DataFrame:  # pragma: no cover
     def _add_rand(df: pd.DataFrame) -> pd.DataFrame:
         if len(df) == 0:
             return df.assign(**{_FUGUE_DASK_TEMP_IDX_COLUMN: pd.Series(dtype=int)})
@@ -184,11 +182,11 @@ def _add_random_index(
     orig_schema = list(df.dtypes.to_dict().items())
     idf = df.map_partitions(
         _add_rand, meta=orig_schema + [(_FUGUE_DASK_TEMP_IDX_COLUMN, int)]
-    ).set_index(_FUGUE_DASK_TEMP_IDX_COLUMN, drop=True)
-    return idf, num
+    )
+    return _safe_set_index(idf, num, num)
 
 
-def _add_continuous_index(df: dd.DataFrame) -> Tuple[dd.DataFrame, int]:
+def _add_continuous_index(df: dd.DataFrame, num: int) -> dd.DataFrame:
     def _get_info(
         df: pd.DataFrame, partition_info: Any
     ) -> pd.DataFrame:  # pragma: no cover
@@ -216,8 +214,7 @@ def _add_continuous_index(df: dd.DataFrame) -> Tuple[dd.DataFrame, int]:
     idf = df.map_partitions(
         _add_index, meta=orig_schema + [(_FUGUE_DASK_TEMP_IDX_COLUMN, int)]
     )
-    idf = idf.set_index(_FUGUE_DASK_TEMP_IDX_COLUMN, drop=True)
-    return idf, counts[-1]
+    return _safe_set_index(idf, counts[-1], num)
 
 
 class DaskUtils(PandasLikeUtils[dd.DataFrame, dd.Series]):
@@ -255,7 +252,7 @@ class DaskUtils(PandasLikeUtils[dd.DataFrame, dd.Series]):
         schema: pa.Schema,
         use_extension_types: bool = True,
         use_arrow_dtype: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> DataFrame:
         output_dtypes = to_pandas_dtype(
             schema,
@@ -268,7 +265,7 @@ class DaskUtils(PandasLikeUtils[dd.DataFrame, dd.Series]):
             use_extension_types=use_extension_types,
             use_arrow_dtype=use_arrow_dtype,
             meta=output_dtypes,
-            **kwargs
+            **kwargs,
         )
 
 

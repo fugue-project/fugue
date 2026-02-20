@@ -147,7 +147,8 @@ class RayIO(object):
                 f"prepartitioning by keys {by} is not supported by ray, will ignore"
             )
         return self._engine.repartition(
-            rdf, partition_spec=partition_spec  # type: ignore
+            rdf,
+            partition_spec=partition_spec,  # type: ignore
         )
 
     def _load_parquet(

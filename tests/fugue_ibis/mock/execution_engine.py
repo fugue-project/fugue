@@ -88,7 +88,7 @@ class MockDuckSQLEngine(IbisSQLEngine):
         else:
             _seed = ""
         if frac is not None:
-            sql = f"SELECT * FROM {tn} USING SAMPLE {frac*100}% (bernoulli{_seed})"
+            sql = f"SELECT * FROM {tn} USING SAMPLE {frac * 100}% (bernoulli{_seed})"
         else:
             sql = f"SELECT * FROM {tn} USING SAMPLE {n} ROWS (reservoir{_seed})"
         _res = f"SELECT * FROM ({sql})"  # ibis has a bug to inject LIMIT

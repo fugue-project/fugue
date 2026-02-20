@@ -820,7 +820,6 @@ class _Extensions(_VisitorBase):
 
     def visitSetOperation(self, ctx: fp.SetOperationContext) -> Iterable[Any]:
         def get_sub(_ctx: Tree) -> List[Any]:
-
             sub = list(
                 self.visitFugueTerm(_ctx)
                 if isinstance(_ctx, fp.FugueTermContext)
