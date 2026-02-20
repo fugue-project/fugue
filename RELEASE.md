@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.9.7
+
+-   Migrated to UV, removed QPD by @goodwanghan
+-   Renamed master branch to main by @goodwanghan
+-   Stopped supporting python < 3.10 by @goodwanghan
+
 ## 0.9.6
 
 -   Add version cap for pandas to < 3.0.0 by @goodwanghan
