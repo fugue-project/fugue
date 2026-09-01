@@ -1,4 +1,8 @@
+import os
+
 import fugue.test as ft
+from fugue_spark._utils.misc import is_spark_connect
+from fugue_spark.execution_engine import SparkExecutionEngine
 
 from .test_dataframe import NativeSparkDataFrameTestsBase as _NativeDataFrameTests
 from .test_dataframe import SparkDataFrameTestsBase as _DataFrameTests
@@ -23,6 +27,14 @@ class SparkConnectNativeDataFrameTests(_NativeDataFrameTests):
 
 @ft.fugue_test_suite("sparkconnect", mark_test=True)
 class SparkConnectExecutionEngineTests(_EngineTests):
+    def test_spark_connect_detection(self):
+        expected_version = os.environ.get("FUGUE_SPARK_VERSION")
+        if expected_version is not None:
+            assert self.spark_session.version == expected_version
+        assert is_spark_connect(self.spark_session)
+        assert is_spark_connect(self.spark_session.range(1))
+        assert SparkExecutionEngine(self.spark_session).is_spark_connect
+
     def test_using_pandas_udf(self):
         return
 
