@@ -27,6 +27,17 @@ class SparkConnectNativeDataFrameTests(_NativeDataFrameTests):
 
 @ft.fugue_test_suite("sparkconnect", mark_test=True)
 class SparkConnectExecutionEngineTests(_EngineTests):
+    def test_get_parallelism(self):
+        assert self.engine.get_current_parallelism() > 0
+
+    def test_get_parallelism_with_unavailable_configs(self, mocker):
+        mocker.patch.object(
+            type(self.spark_session.conf),
+            "get",
+            side_effect=RuntimeError("configuration is not available"),
+        )
+        assert self.engine.get_current_parallelism() == 200
+
     def test_spark_connect_detection(self):
         expected_version = os.environ.get("FUGUE_SPARK_VERSION")
         if expected_version is not None:

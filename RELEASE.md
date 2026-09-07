@@ -2,7 +2,7 @@
 
 ## 0.9.7
 
--   Fixed Spark 4 Connect detection and test coverage
+-   Fixed Spark 4 Connect detection, configuration fallback, and test coverage
 -   Migrated to UV, removed QPD by @goodwanghan
 -   Renamed master branch to main by @goodwanghan
 -   Stopped supporting python < 3.10 by @goodwanghan
