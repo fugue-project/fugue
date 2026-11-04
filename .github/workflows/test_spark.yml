@@ -58,6 +58,8 @@ jobs:
   test_connect:
     name: Spark Connect
     runs-on: ubuntu-latest
+    env:
+      FUGUE_SPARK_VERSION: ${{ matrix.spark-version }}
     strategy:
       matrix:
         python-version: ["3.11"]
@@ -75,8 +77,8 @@ jobs:
         cache-dependency-glob: "pyproject.toml"
         python-version: ${{ matrix.python-version }}
 
-    - name: Set Spark==3.5.8
-      run: uv add "pyspark==3.5.8"
+    - name: Update Spark
+      run: uv add "pyspark[connect]==${{ matrix.spark-version }}"
 
     - name: Update Pandas
       if: matrix.pandas-version != 'latest'
