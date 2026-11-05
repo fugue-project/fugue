@@ -1,17 +1,17 @@
 import os
 import pathlib
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union
+from collections.abc import Callable, Iterable
+from typing import Any
 
 import pyarrow as pa
 import ray.data as rd
 from packaging import version
 from pyarrow import csv as pacsv
 from pyarrow import json as pajson
-
 from triad.collections import Schema
 from triad.collections.dict import ParamDict
 from triad.utils.assertion import assert_or_throw
-from triad.utils.io import exists, makedirs, rm, isfile
+from triad.utils.io import exists, isfile, makedirs, rm
 
 from fugue import ExecutionEngine
 from fugue._utils.io import FileParser, save_df
@@ -25,9 +25,7 @@ try:
     from ray.data.datasource import FileExtensionFilter
 
     class _FileFiler(FileExtensionFilter):  # pragma: no cover
-        def __init__(
-            self, file_extensions: Union[str, List[str]], exclude: Iterable[str]
-        ):
+        def __init__(self, file_extensions: str | list[str], exclude: Iterable[str]):
             super().__init__(file_extensions, allow_if_no_extension=True)
             self._exclude = set(exclude)
 
@@ -36,23 +34,23 @@ try:
                 path
             ).name not in self._exclude and self._file_has_extension(path)
 
-        def __call__(self, paths: List[str]) -> List[str]:
+        def __call__(self, paths: list[str]) -> list[str]:
             return [path for path in paths if self._is_valid(path)]
 
 except ImportError:  # pragma: no cover
     pass  # ray >=2.10
 
 
-class RayIO(object):
+class RayIO:
     def __init__(self, engine: ExecutionEngine):
         self._engine = engine
         self._logger = engine.log
-        self._loads: Dict[str, Callable[..., DataFrame]] = {
+        self._loads: dict[str, Callable[..., DataFrame]] = {
             "csv": self._load_csv,
             "parquet": self._load_parquet,
             "json": self._load_json,
         }
-        self._saves: Dict[str, Callable[..., None]] = {
+        self._saves: dict[str, Callable[..., None]] = {
             "csv": self._save_csv,
             "parquet": self._save_parquet,
             "json": self._save_json,
@@ -60,8 +58,8 @@ class RayIO(object):
 
     def load_df(
         self,
-        uri: Union[str, List[str]],
-        format_hint: Optional[str] = None,
+        uri: str | list[str],
+        format_hint: str | None = None,
         columns: Any = None,
         **kwargs: Any,
     ) -> DataFrame:
@@ -81,8 +79,8 @@ class RayIO(object):
         self,
         df: RayDataFrame,
         uri: str,
-        format_hint: Optional[str] = None,
-        partition_spec: Optional[PartitionSpec] = None,
+        format_hint: str | None = None,
+        partition_spec: PartitionSpec | None = None,
         mode: str = "overwrite",
         force_single: bool = False,
         **kwargs: Any,
@@ -122,7 +120,7 @@ class RayIO(object):
         if "header" in kw:
             kw["include_header"] = kw.pop("header")
 
-        def _fn() -> Dict[str, Any]:  # pragma: no cover
+        def _fn() -> dict[str, Any]:  # pragma: no cover
             return dict(write_options=pacsv.WriteOptions(**kw))
 
         df.native.write_csv(
@@ -152,7 +150,7 @@ class RayIO(object):
         )
 
     def _load_parquet(
-        self, p: List[str], columns: Any = None, **kwargs: Any
+        self, p: list[str], columns: Any = None, **kwargs: Any
     ) -> DataFrame:
         # in 2.52.0 the default changes to ["parquet"]
         if "file_extensions" not in kwargs:
@@ -164,12 +162,12 @@ class RayIO(object):
         # fsspec HTTPFileSystem import when listing multiple paths. Use V1.
         ctx = rd.DataContext.get_current()
         use_v2 = getattr(ctx, "use_datasource_v2", None)
-        if use_v2:
+        if use_v2:  # pragma: no cover
             ctx.use_datasource_v2 = False
         try:
             sdf = rd.read_parquet(p, ray_remote_args=self._remote_args(), **kwargs)
         finally:
-            if use_v2:
+            if use_v2:  # pragma: no cover
                 ctx.use_datasource_v2 = use_v2
         if columns is None:
             return RayDataFrame(sdf)
@@ -178,20 +176,18 @@ class RayIO(object):
         schema = Schema(columns)
         return RayDataFrame(sdf)[schema.names].alter_columns(schema)
 
-    def _load_csv(  # noqa: C901
-        self, p: List[str], columns: Any = None, **kwargs: Any
-    ) -> DataFrame:
+    def _load_csv(self, p: list[str], columns: Any = None, **kwargs: Any) -> DataFrame:
         kw = ParamDict(kwargs)
         infer_schema = kw.get("infer_schema", False)
-        read_options: Dict[str, Any] = {"use_threads": False}
-        parse_options: Dict[str, Any] = {}
-        convert_options: Dict[str, Any] = {}
+        read_options: dict[str, Any] = {"use_threads": False}
+        parse_options: dict[str, Any] = {}
+        convert_options: dict[str, Any] = {}
         if infer_schema and columns is not None and not isinstance(columns, list):
             raise ValueError("can't set columns as a schema when infer schema is true")
 
         if RAY_VERSION >= version.parse("2.10"):
             if len(p) == 1 and isfile(p[0]):  # TODO: very hacky
-                params: Dict[str, Any] = {}
+                params: dict[str, Any] = {}
             else:
                 params = {"file_extensions": ["csv"]}
         else:  # pragma: no cover
@@ -242,14 +238,14 @@ class RayIO(object):
         else:  # pragma: no cover
             raise NotImplementedError(f"{header} is not supported")
 
-    def _load_json(self, p: List[str], columns: Any = None, **kwargs: Any) -> DataFrame:
-        read_options: Dict[str, Any] = {"use_threads": False}
-        parse_options: Dict[str, Any] = {}
+    def _load_json(self, p: list[str], columns: Any = None, **kwargs: Any) -> DataFrame:
+        read_options: dict[str, Any] = {"use_threads": False}
+        parse_options: dict[str, Any] = {}
 
         def _read_json() -> RayDataFrame:  # pragma: no cover
             if RAY_VERSION >= version.parse("2.10"):
                 if len(p) == 1 and isfile(p[0]):  # TODO: very hacky
-                    params: Dict[str, Any] = {"file_extensions": None}
+                    params: dict[str, Any] = {"file_extensions": None}
                 else:
                     params = {"file_extensions": ["json"]}
             elif RAY_VERSION >= version.parse("2.9"):  # pragma: no cover
@@ -284,5 +280,5 @@ class RayIO(object):
             schema = Schema(columns)
             return _read_json()[schema.names].alter_columns(schema)
 
-    def _remote_args(self) -> Dict[str, Any]:
+    def _remote_args(self) -> dict[str, Any]:
         return {"num_cpus": 1}
