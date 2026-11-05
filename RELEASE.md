@@ -1,5 +1,9 @@
 # Release Notes
 
+## 0.9.9
+
+-   Dropped Python 3.10 support
+
 ## 0.9.8
 
 -   Fixed Spark 4 Connect detection, configuration fallback, and test coverage in https://github.com/fugue-project/fugue/pull/594
@@ -9,7 +13,6 @@
 -   Migrated to UV, removed QPD by @goodwanghan
 -   Renamed master branch to main by @goodwanghan
 -   Stopped supporting python < 3.10 by @goodwanghan
--   Dropped Python 3.10 support
 
 ## 0.9.6
 
