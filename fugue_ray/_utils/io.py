@@ -158,7 +158,19 @@ class RayIO(object):
         if "file_extensions" not in kwargs:
             kwargs = kwargs.copy()
             kwargs["file_extensions"] = None
-        sdf = rd.read_parquet(p, ray_remote_args=self._remote_args(), **kwargs)
+        # ray>=2.60 routes read_parquet to the V2 datasource by default, which
+        # (1) forces file_extensions=None to ["parquet"], so single files without
+        # extension can't be read, and (2) may raise ImportError from a threaded
+        # fsspec HTTPFileSystem import when listing multiple paths. Use V1.
+        ctx = rd.DataContext.get_current()
+        use_v2 = getattr(ctx, "use_datasource_v2", None)
+        if use_v2:
+            ctx.use_datasource_v2 = False
+        try:
+            sdf = rd.read_parquet(p, ray_remote_args=self._remote_args(), **kwargs)
+        finally:
+            if use_v2:
+                ctx.use_datasource_v2 = use_v2
         if columns is None:
             return RayDataFrame(sdf)
         if isinstance(columns, list):  # column names
