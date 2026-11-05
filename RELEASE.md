@@ -9,6 +9,7 @@
 -   Migrated to UV, removed QPD by @goodwanghan
 -   Renamed master branch to main by @goodwanghan
 -   Stopped supporting python < 3.10 by @goodwanghan
+-   Dropped Python 3.10 support
 
 ## 0.9.6
 
