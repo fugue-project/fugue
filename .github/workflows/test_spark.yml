@@ -42,12 +42,7 @@ jobs:
 
     - name: Update Spark
       if: matrix.spark-version != 'latest'
-      run: |
-        if [[ "${{ matrix.spark-version }}" == 3.* ]]; then
-          uv add "pyspark==${{ matrix.spark-version }}" "pyarrow<23"
-        else
-          uv add "pyspark==${{ matrix.spark-version }}"
-        fi
+      run: uv add "pyspark==${{ matrix.spark-version }}"
 
     - name: Update Pandas
       if: matrix.pandas-version != 'latest'
@@ -83,12 +78,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Update Spark
-      run: |
-        if [[ "${{ matrix.spark-version }}" == 3.* ]]; then
-          uv add "pyspark[connect]==${{ matrix.spark-version }}" "pyarrow<23"
-        else
-          uv add "pyspark[connect]==${{ matrix.spark-version }}"
-        fi
+      run: uv add "pyspark[connect]==${{ matrix.spark-version }}"
 
     - name: Update Pandas
       if: matrix.pandas-version != 'latest'
