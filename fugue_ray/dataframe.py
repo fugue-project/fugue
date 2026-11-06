@@ -10,7 +10,11 @@ from triad.utils.pyarrow import cast_pa_table
 
 from fugue.dataframe import ArrowDataFrame, DataFrame, LocalBoundedDataFrame
 from fugue.dataframe.dataframe import _input_schema
-from fugue.dataframe.utils import pa_table_as_array, pa_table_as_dicts
+from fugue.dataframe.utils import (
+    normalize_large_types_in_table,
+    pa_table_as_array,
+    pa_table_as_dicts,
+)
 from fugue.exceptions import FugueDataFrameOperationError, FugueDatasetEmptyError
 from fugue.plugins import (
     as_array,
@@ -140,7 +144,8 @@ class RayDataFrame(DataFrame):
 
     @property
     def num_partitions(self) -> int:
-        return _rd_num_partitions(self.native)
+        self._native = materialize(self._native)
+        return self._native.num_blocks()
 
     def _drop_cols(self, cols: List[str]) -> DataFrame:
         cols = (self.schema - cols).names
@@ -263,7 +268,7 @@ def _rd_is_df(df: rd.Dataset) -> bool:
 
 @get_num_partitions.candidate(lambda df: isinstance(df, rd.Dataset))
 def _rd_num_partitions(df: rd.Dataset) -> int:
-    return df.num_blocks()
+    return materialize(df).num_blocks()
 
 
 @as_local_bounded.candidate(lambda df: isinstance(df, rd.Dataset))
@@ -305,7 +310,7 @@ def _rd_as_pandas(df: rd.Dataset) -> pd.DataFrame:
 
 @as_arrow.candidate(lambda df: isinstance(df, rd.Dataset))
 def _rd_as_arrow(df: rd.Dataset) -> pa.Table:
-    return pa.concat_tables(_get_arrow_tables(df))
+    return normalize_large_types_in_table(pa.concat_tables(_get_arrow_tables(df)))
 
 
 @as_array.candidate(lambda df, *args, **kwargs: isinstance(df, rd.Dataset))

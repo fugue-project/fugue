@@ -6,6 +6,8 @@ import pyarrow as pa
 import ray.data as rd
 from triad import Schema
 
+from fugue.dataframe.utils import normalize_large_types_in_schema
+
 from .._constants import _ZERO_COPY
 
 _RAY_NULL_REPR = "__RAY_NULL__"
@@ -40,10 +42,10 @@ def get_dataset_format(df: rd.Dataset) -> Tuple[Optional[str], rd.Dataset]:
 
 def to_schema(schema: Any) -> Schema:  # pragma: no cover
     if isinstance(schema, pa.Schema):
-        return Schema(schema)
+        return Schema(normalize_large_types_in_schema(schema))
     if isinstance(schema, rd.Schema):
         if hasattr(schema, "base_schema") and isinstance(schema.base_schema, pa.Schema):
-            return Schema(schema.base_schema)
+            return Schema(normalize_large_types_in_schema(schema.base_schema))
         return Schema(list(zip(schema.names, schema.types)))
     raise ValueError(f"{schema} is not supported")
 

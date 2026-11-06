@@ -2,7 +2,6 @@ import logging
 import os
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
-import numpy as np
 import pandas as pd
 from triad import Schema
 from triad.collections.dict import IndexedOrderedDict
@@ -149,7 +148,7 @@ class PandasMapEngine(MapEngine):
                 )
                 dfs: List[DataFrame] = []
                 for p, subdf in enumerate(
-                    np.array_split(input_df.as_pandas(), partitions)
+                    _split_pandas(input_df.as_pandas(), partitions)
                 ):
                     if len(subdf) > 0:
                         tdf = PandasDataFrame(subdf, df.schema, pandas_df_wrapper=True)
@@ -443,3 +442,15 @@ class _NativeExecutionEngineParam(ExecutionEngineParam):
 def _to_native_execution_engine_df(df: AnyDataFrame, schema: Any = None) -> DataFrame:
     fdf = as_fugue_df(df) if schema is None else as_fugue_df(df, schema=schema)
     return fdf.as_local_bounded()
+
+
+def _split_pandas(df: pd.DataFrame, n: int) -> List[pd.DataFrame]:
+    # same chunk sizes as np.array_split, which returns ndarrays on pandas 3
+    size, extra = divmod(len(df), n)
+    res: List[pd.DataFrame] = []
+    start = 0
+    for i in range(n):
+        end = start + size + (1 if i < extra else 0)
+        res.append(df.iloc[start:end].reset_index(drop=True))
+        start = end
+    return res

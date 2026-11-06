@@ -26,8 +26,8 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11"]
-        dask-version: ["latest", "2025.4.0"]
-        pandas-version: ["2.3.3"]
+        dask-version: ["latest", "2025.12.0"]
+        pandas-version: ["2.3.3", "latest"]
 
     steps:
     - name: Clone repo
@@ -46,7 +46,7 @@ jobs:
 
     - name: Update Pandas
       if: matrix.pandas-version != 'latest'
-      run: uv add "pandas==${{ matrix.pandas-version }}"
+      run: uv add "pandas==${{ matrix.pandas-version }}; python_version<'3.15'"
 
     - name: Install dependencies
       run: |

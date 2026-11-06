@@ -35,6 +35,8 @@ from .api import (
 )
 from .dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
 from .utils import (
+    normalize_large_types_in_schema,
+    normalize_large_types_in_table,
     pa_table_as_array,
     pa_table_as_array_iterable,
     pa_table_as_dict_iterable,
@@ -73,6 +75,7 @@ class ArrowDataFrame(LocalBoundedDataFrame):
                 schema is None,
                 InvalidOperationError("can't reset schema for pa.Table"),
             )
+            df = normalize_large_types_in_table(df)
             self._native = df
             super().__init__(Schema(df.schema))
             return
@@ -253,6 +256,7 @@ def _pa_table_as_dict_iterable(
 def _pa_table_alter_columns(
     df: pa.Table, columns: Any, as_fugue: bool = False
 ) -> pa.Table:
+    df = normalize_large_types_in_table(df)
     schema = Schema(df.schema)
     new_schema = schema.alter(columns)
     if schema != new_schema:
@@ -302,7 +306,7 @@ def _get_pyarrow_table_columns(df: pa.Table) -> List[Any]:
 
 @get_schema.candidate(lambda df: isinstance(df, pa.Table))
 def _get_pyarrow_table_schema(df: pa.Table) -> Schema:
-    return Schema(df.schema)
+    return Schema(normalize_large_types_in_schema(df.schema))
 
 
 @rename.candidate(lambda df, *args, **kwargs: isinstance(df, pa.Table))

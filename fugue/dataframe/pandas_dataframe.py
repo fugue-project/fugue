@@ -109,7 +109,17 @@ class PandasDataFrame(LocalBoundedDataFrame):
 
     def peek_array(self) -> List[Any]:
         self.assert_not_empty()
-        return self.native.iloc[0].values.tolist()
+        arr = self.native.iloc[0].values.tolist()
+        # missing non-float values may come back as nan / pd.NA
+        return [
+            (
+                None
+                if (v is pd.NA or (isinstance(v, float) and v != v))
+                and not pa.types.is_floating(t)
+                else v
+            )
+            for v, t in zip(arr, self.schema.types)
+        ]
 
     def count(self) -> int:
         return self.native.shape[0]

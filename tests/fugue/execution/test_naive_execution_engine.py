@@ -1,5 +1,6 @@
 from typing import Any, Iterable, List
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 
@@ -91,6 +92,15 @@ class NativeExecutionEngineBuiltInTests(BuiltInTests.Tests):
 
         res = fa.transform(df, num_part, schema="*,b:long", partition=2)
         assert res.values.tolist() == [[1, 2], [2, 2], [3, 1]]
+
+    def test_num_partitions_keeps_dtypes(self):
+        def tr(df: pd.DataFrame) -> pd.DataFrame:
+            assert df.a.dtype == np.int32
+            return df.assign(b=len(df))
+
+        df = pd.DataFrame(dict(a=np.arange(10, dtype=np.int32)))
+        res = fa.transform(df, tr, schema="*,b:long", partition=3)
+        assert res.b.tolist() == [4] * 4 + [3] * 6
 
     def test_pandas_df_convert(self):
         def tr(df: pd.DataFrame) -> pd.DataFrame:

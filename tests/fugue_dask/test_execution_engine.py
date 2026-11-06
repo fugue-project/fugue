@@ -356,11 +356,7 @@ def test_multiple_transforms(backend_context):
         return pd.concat([df, df])
 
     def t2(df: pd.DataFrame) -> pd.DataFrame:
-        return (
-            df.groupby(["a", "b"], as_index=False, dropna=False)
-            .apply(lambda x: x.head(1))
-            .reset_index(drop=True)
-        )
+        return df.groupby(["a", "b"], dropna=False).head(1).reset_index(drop=True)
 
     def compute(df: pd.DataFrame, engine) -> pd.DataFrame:
         with fa.engine_context(engine):
@@ -426,3 +422,61 @@ def assert_match(df: List[List[Any]], values: List[int]) -> None:
 def assert_all_n(df: List[List[Any]], n, l) -> None:
     assert all(x[0] == n for x in df), str([x[0] for x in df])
     assert l == len(df)
+
+
+def _sorted_rows(rows: List[List[Any]]) -> List[List[Any]]:
+    return sorted(rows, key=lambda r: [str(x) for x in r])
+
+
+def _identity(df: pd.DataFrame) -> pd.DataFrame:
+    return df
+
+
+@ft.with_backend("dask")
+def test_map_default_algo_keeps_keys(backend_context):
+    data = [[1, 10], [None, 20], [1, 30], [2, 40]]
+    df = ArrayDataFrame(data, "a:int,b:int")
+    with fa.engine_context(backend_context.session):
+        res = fa.transform(df, _identity, schema="*", partition={"by": ["a"]})
+        assert _sorted_rows(fa.as_array(res, type_safe=True)) == _sorted_rows(data)
+
+
+@ft.with_backend("dask")
+def test_map_multi_key_keeps_keys(backend_context):
+    data = [["x", 1, 10], [None, 2, 20], ["x", 1, 30], ["y", None, 40]]
+    df = ArrayDataFrame(data, "a:str,c:int,b:int")
+    with fa.engine_context(backend_context.session):
+        res = fa.transform(df, _identity, schema="*", partition={"by": ["a", "c"]})
+        assert fa.get_schema(res) == "a:str,c:int,b:int"
+        assert _sorted_rows(fa.as_array(res, type_safe=True)) == _sorted_rows(data)
+
+
+@ft.with_backend("dask")
+def test_take_by_keys_keeps_keys(backend_context):
+    df = ArrayDataFrame(
+        [["x", 1], ["x", 3], [None, 2], [None, 5], ["y", 4]], "a:str,b:int"
+    )
+    with fa.engine_context(backend_context.session):
+        res = fa.take(df, n=1, presort="b desc", partition={"by": ["a"]})
+        assert _sorted_rows(fa.as_array(res, type_safe=True)) == _sorted_rows(
+            [["x", 3], [None, 5], ["y", 4]]
+        )
+
+
+class _KeyIsNone(Transformer):
+    def get_output_schema(self, df):
+        return "k:str,is_none:bool"
+
+    def transform(self, df):
+        key = self.cursor.key_value_array[0]
+        return ArrayDataFrame([[key, key is None]], self.output_schema)
+
+
+@ft.with_backend("dask")
+def test_partition_missing_string_key_is_none(backend_context):
+    df = ArrayDataFrame([["x", 1], [None, 2]], "k:str,v:int")
+    with fa.engine_context(backend_context.session):
+        res = fa.transform(df, _KeyIsNone, partition={"by": ["k"]})
+        assert _sorted_rows(fa.as_array(res, type_safe=True)) == _sorted_rows(
+            [["x", False], [None, True]]
+        )

@@ -169,7 +169,7 @@ class DaskMapEngine(MapEngine):
                     sort=False,
                     group_keys=False,
                     dropna=False,
-                ).apply(_map, meta=output_dtypes)
+                )[list(df.native.columns)].apply(_map, meta=output_dtypes)
             elif partition_spec.algo == "coarse":
                 result = pdf.native.map_partitions(  # type: ignore
                     _map, meta=output_dtypes
@@ -515,7 +515,7 @@ class DaskExecutionEngine(ExecutionEngine):
                 )
 
             d = (
-                d.groupby(partition_spec.partition_by, dropna=False)
+                d.groupby(partition_spec.partition_by, dropna=False)[list(d.columns)]
                 .apply(_partition_take, n=n, presort=_presort, meta=meta)
                 .reset_index(drop=True)
             )

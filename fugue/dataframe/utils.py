@@ -10,7 +10,12 @@ from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_arg_not_none
 from triad.utils.assertion import assert_or_throw as aot
 from triad.utils.io import url_to_fs
-from triad.utils.pyarrow import pa_batch_to_dicts
+from triad.utils.pyarrow import (
+    LARGE_TYPES_REPLACEMENT,
+    cast_pa_table,
+    pa_batch_to_dicts,
+    replace_type,
+)
 
 from .api import as_fugue_df, get_column_names, normalize_column_names, rename
 from .dataframe import DataFrame, LocalBoundedDataFrame
@@ -289,3 +294,38 @@ def _pa_table_as_dicts_chunks(
     _df = df if columns is None or len(columns) == 0 else df.select(columns)
     for batch in _df.to_batches():
         yield pa_batch_to_dicts(batch)
+
+
+def normalize_large_types_in_schema(schema: pa.Schema) -> pa.Schema:
+    """Replace pyarrow large types (pandas 3 default) with the regular ones,
+    keeping nullability and metadata. Returns ``schema`` itself when nothing
+    is replaced.
+    """
+    fields = [_normalize_large_types_in_field(f) for f in schema]
+    if all(f is None for f in fields):
+        return schema
+    return pa.schema(
+        [f or schema.field(i) for i, f in enumerate(fields)], metadata=schema.metadata
+    )
+
+
+def normalize_large_types_in_table(df: pa.Table) -> pa.Table:
+    """Cast pyarrow large types (pandas 3 default) to the regular ones,
+    keeping nullability and metadata. Returns ``df`` itself when nothing
+    is replaced.
+    """
+    schema = normalize_large_types_in_schema(df.schema)
+    return df if schema is df.schema else cast_pa_table(df, schema)
+
+
+def _normalize_large_types_in_field(field: pa.Field) -> Optional[pa.Field]:
+    # None if nothing to replace
+    tp = field.type
+    for is_type, convert_type in LARGE_TYPES_REPLACEMENT:
+        tp = replace_type(
+            tp,
+            is_type if callable(is_type) else is_type.equals,
+            convert_type if callable(convert_type) else lambda _, t=convert_type: t,
+            recursive=True,
+        )
+    return None if tp == field.type else field.with_type(tp)

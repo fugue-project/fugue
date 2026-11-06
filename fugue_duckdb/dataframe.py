@@ -4,11 +4,11 @@ import pandas as pd
 import pyarrow as pa
 from duckdb import DuckDBPyRelation
 from triad import Schema, assert_or_throw
-from triad.utils.pyarrow import LARGE_TYPES_REPLACEMENT, replace_types_in_table
 
 from fugue import ArrowDataFrame, DataFrame, LocalBoundedDataFrame
 from fugue.dataframe.arrow_dataframe import _pa_table_as_pandas
 from fugue.dataframe.utils import (
+    normalize_large_types_in_table,
     pa_table_as_array,
     pa_table_as_array_iterable,
     pa_table_as_dict_iterable,
@@ -166,8 +166,7 @@ def _duck_as_local(df: DuckDBPyRelation) -> DuckDBPyRelation:
 @as_arrow.candidate(lambda df: isinstance(df, DuckDBPyRelation))
 def _duck_as_arrow(df: DuckDBPyRelation) -> pa.Table:
     _df = df.fetch_arrow_table()
-    _df = replace_types_in_table(_df, LARGE_TYPES_REPLACEMENT, recursive=True)
-    return _df
+    return normalize_large_types_in_table(_df)
 
 
 @as_pandas.candidate(lambda df: isinstance(df, DuckDBPyRelation))

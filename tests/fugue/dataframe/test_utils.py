@@ -16,6 +16,8 @@ from fugue.dataframe.utils import (
     get_column_names,
     get_join_schemas,
     normalize_dataframe_column_names,
+    normalize_large_types_in_schema,
+    normalize_large_types_in_table,
     rename,
     serialize_df,
 )
@@ -173,3 +175,40 @@ def test_normalize_dataframe_column_names():
     df, names = normalize_dataframe_column_names(df)
     assert get_column_names(df) == ["_1", "_2_1", "_2", "_1_1"]
     assert names == {"_1": "1", "_2_1": "2", "_1_1": "大"}
+
+
+def test_normalize_large_types():
+    schema = pa.schema(
+        [
+            pa.field("a", pa.large_string(), nullable=False, metadata={"k": "v"}),
+            pa.field("b", pa.int64()),
+            pa.field("c", pa.large_list(pa.large_string())),
+            pa.field("d", pa.struct([pa.field("x", pa.large_binary())])),
+            pa.field("e", pa.map_(pa.large_string(), pa.large_list(pa.int32()))),
+        ],
+        metadata={"m": "n"},
+    )
+    res = normalize_large_types_in_schema(schema)
+    assert res == pa.schema(
+        [
+            pa.field("a", pa.string(), nullable=False),
+            pa.field("b", pa.int64()),
+            pa.field("c", pa.list_(pa.string())),
+            pa.field("d", pa.struct([pa.field("x", pa.binary())])),
+            pa.field("e", pa.map_(pa.string(), pa.list_(pa.int32()))),
+        ]
+    )
+    assert res.field("a").metadata == {b"k": b"v"}
+    assert res.metadata == {b"m": b"n"}
+
+    small = pa.schema([pa.field("a", pa.string()), pa.field("b", pa.int64())])
+    assert normalize_large_types_in_schema(small) is small
+
+    tb = pa.Table.from_pandas(pd.DataFrame(dict(a=["x", None]), index=[3, 4]))
+    tb = tb.cast(tb.schema.set(0, pa.field("a", pa.large_string())))
+    assert tb.schema.metadata is not None
+    res = normalize_large_types_in_table(tb)
+    assert res.schema.field("a").type == pa.string()
+    assert res.schema.metadata == tb.schema.metadata
+    assert res.to_pandas().index.tolist() == [3, 4]
+    assert normalize_large_types_in_table(res) is res
