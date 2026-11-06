@@ -403,10 +403,17 @@ class SparkExecutionEngine(ExecutionEngine):
     def get_current_parallelism(self) -> int:
         spark = self.spark_session
         if self.is_spark_connect:  # pragma: no cover
-            num = spark.conf.get("spark.default.parallelism", "")
-            if num != "":
-                return int(num)
-            return int(spark.conf.get("spark.sql.shuffle.partitions", "200"))
+            for key in (
+                "spark.default.parallelism",
+                "spark.sql.shuffle.partitions",
+            ):
+                try:
+                    value = spark.conf.get(key, "")
+                except Exception:
+                    continue
+                if value != "":
+                    return int(value)
+            return 200
         e_cores = int(spark.conf.get("spark.executor.cores", "1"))
         tc = int(spark.conf.get("spark.task.cpus", "1"))
         sc = spark._jsc.sc()

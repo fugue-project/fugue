@@ -26,7 +26,11 @@ from fugue.extensions.transformer import Transformer, transformer
 from fugue.plugins import infer_execution_engine
 from fugue.workflow.workflow import FugueWorkflow
 from fugue_spark._utils.convert import to_pandas, to_spark_df
-from fugue_spark._utils.misc import is_spark_dataframe, is_spark_session
+from fugue_spark._utils.misc import (
+    is_spark_connect,
+    is_spark_dataframe,
+    is_spark_session,
+)
 from fugue_spark.dataframe import SparkDataFrame
 from fugue_spark.execution_engine import SparkExecutionEngine
 from fugue_test.builtin_suite import BuiltInTests
@@ -44,6 +48,10 @@ class SparkExecutionEngineTests(ExecutionEngineTests.Tests):
         assert self.engine.is_distributed
         assert self.engine.map_engine.is_distributed
         assert self.engine.sql_engine.is_distributed
+
+    def test_spark_connect_detection(self):
+        assert not is_spark_connect(self.spark_session)
+        assert not is_spark_connect(self.spark_session.range(1))
 
     def test_get_parallelism(self):
         assert fa.get_current_parallelism() == 4
