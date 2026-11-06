@@ -1,6 +1,6 @@
 # Release Notes
 
-## 0.9.8
+## 0.9.9
 
 -   Added Python 3.15 support
 -   Added pandas 3 support (pandas 2 is still supported below Python 3.15)
@@ -8,9 +8,13 @@
 -   Ray remains unavailable on Python 3.14+
 -   Dropped Spark 3.4 support; Spark 3.5+ is required on Python <3.12 and Spark 4.0+ on Python 3.12+
 
+## 0.9.8
+
+-   Fixed Spark 4 Connect detection, configuration fallback, and test coverage in https://github.com/fugue-project/fugue/pull/594
+-   Dropped Python 3.10 support
+
 ## 0.9.7
 
--   Fixed Spark 4 Connect detection, configuration fallback, and test coverage
 -   Migrated to UV, removed QPD by @goodwanghan
 -   Renamed master branch to main by @goodwanghan
 -   Stopped supporting python < 3.10 by @goodwanghan

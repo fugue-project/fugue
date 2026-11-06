@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fugue"
-version = "0.9.7"
+version = "0.9.8"
 description = "An abstraction layer for distributed computing"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -24,7 +24,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -32,7 +31,7 @@ classifiers = [
     "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: 3 :: Only",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = ["triad>=1.0.1", "adagio>=0.2.6", "pandas; python_version<'3.15'", "pandas>=3; python_version>='3.15'", "packaging"]
 
 [project.urls]
@@ -216,7 +215,7 @@ max-complexity = 10
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py310,py311,py312,py313,py314,py315
+envlist = py311,py312,py313,py314,py315
 
 [testenv]
 setenv =
