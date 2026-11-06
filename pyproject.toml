@@ -32,7 +32,7 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
 ]
 requires-python = ">=3.11"
-dependencies = ["triad>=1.0.1", "adagio>=0.2.6", "pandas; python_version<'3.15'", "pandas>=3; python_version>='3.15'", "packaging"]
+dependencies = ["triad>=1.0.4", "adagio>=0.2.6", "pandas; python_version<'3.15'", "pandas>=3; python_version>='3.15'", "packaging"]
 
 [project.urls]
 Homepage = "http://github.com/fugue-project/fugue"

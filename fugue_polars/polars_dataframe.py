@@ -6,6 +6,7 @@ import pyarrow as pa
 from triad.collections.schema import Schema
 from triad.exceptions import InvalidOperationError
 from triad.utils.assertion import assert_or_throw
+from triad.utils.pyarrow import normalize_large_types, normalize_large_types_in_table
 
 from fugue import ArrowDataFrame
 from fugue.api import (
@@ -24,8 +25,6 @@ from fugue.api import (
 )
 from fugue.dataframe.dataframe import DataFrame, LocalBoundedDataFrame, _input_schema
 from fugue.dataframe.utils import (
-    normalize_large_types_in_schema,
-    normalize_large_types_in_table,
     pa_table_as_array,
     pa_table_as_array_iterable,
     pa_table_as_dict_iterable,
@@ -195,7 +194,7 @@ def _get_pl_columns(df: pl.DataFrame) -> List[Any]:
 @get_schema.candidate(lambda df: isinstance(df, pl.DataFrame))
 def _get_pl_schema(df: pl.DataFrame) -> Schema:
     adf = df.to_arrow()
-    return Schema(normalize_large_types_in_schema(adf.schema))
+    return Schema(normalize_large_types(adf.schema))
 
 
 @rename.candidate(lambda df, *args, **kwargs: isinstance(df, pl.DataFrame))

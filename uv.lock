@@ -1471,7 +1471,7 @@ requires-dist = [
     { name = "sqlglot", marker = "extra == 'duckdb'", specifier = "<28" },
     { name = "sqlglot", marker = "extra == 'ibis'", specifier = "<28" },
     { name = "sqlglot", marker = "extra == 'sql'", specifier = "<28" },
-    { name = "triad", specifier = ">=1.0.1" },
+    { name = "triad", specifier = ">=1.0.4" },
     { name = "zstandard", marker = "extra == 'spark'", specifier = ">=0.25.0" },
 ]
 provides-extras = ["sql", "cpp-sql-parser", "spark", "dask", "ray", "duckdb", "polars", "ibis", "notebook", "all"]
@@ -5102,19 +5102,20 @@ wheels = [
 
 [[package]]
 name = "triad"
-version = "1.0.1"
+version = "1.0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fsspec" },
     { name = "numpy" },
+    { name = "packaging" },
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
     { name = "pandas", version = "3.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
     { name = "pyarrow" },
     { name = "six" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/03/12/efca38c8980d8e424c30ce196e99999a397d892f85aaab3b9187f8c594b7/triad-1.0.1.tar.gz", hash = "sha256:c27d31219698f31e0a1f2073a9c580f4c21c1b0f0e7c42b7a1c3eb222da7db19", size = 54126, upload-time = "2026-02-02T23:23:55.831Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/57/81743f84d8cc7736f0d3e2edcd13783b443f086a235508a023a16da83c72/triad-1.0.4.tar.gz", hash = "sha256:37c5d5445356bc280b2a12a1ff9f8668afda125f82a729c48911f44d779e4721", size = 55581, upload-time = "2026-11-06T18:11:48.836Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/c4/44ebb659135b459637abd6eaa965f336bd84224c30262055e2b9c0a9af25/triad-1.0.1-py3-none-any.whl", hash = "sha256:37ea33619e831c99b8479401752b2f99956a1e496f340115a39af43c909745e9", size = 59891, upload-time = "2026-02-02T23:23:56.983Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/49/c33ff06bb643ee598de44676143a502ba7242c7ec51620a15d6fa3a006ab/triad-1.0.4-py3-none-any.whl", hash = "sha256:84d5edff10d9c50660f67ee185350453e4be366a7626568897a5441d8e563478", size = 60798, upload-time = "2026-11-06T18:11:47.616Z" },
 ]
 
 [[package]]

@@ -6,12 +6,11 @@ import ray
 import ray.data as rd
 from triad import assert_or_throw
 from triad.collections.schema import Schema
-from triad.utils.pyarrow import cast_pa_table
+from triad.utils.pyarrow import cast_pa_table, normalize_large_types_in_table
 
 from fugue.dataframe import ArrowDataFrame, DataFrame, LocalBoundedDataFrame
 from fugue.dataframe.dataframe import _input_schema
 from fugue.dataframe.utils import (
-    normalize_large_types_in_table,
     pa_table_as_array,
     pa_table_as_dicts,
 )
