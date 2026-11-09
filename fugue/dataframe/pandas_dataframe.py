@@ -1,3 +1,4 @@
+import math
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
@@ -114,7 +115,7 @@ class PandasDataFrame(LocalBoundedDataFrame):
         return [
             (
                 None
-                if (v is pd.NA or (isinstance(v, float) and v != v))
+                if (v is pd.NA or (isinstance(v, float) and math.isnan(v)))
                 and not pa.types.is_floating(t)
                 else v
             )

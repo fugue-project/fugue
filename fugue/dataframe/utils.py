@@ -289,4 +289,3 @@ def _pa_table_as_dicts_chunks(
     _df = df if columns is None or len(columns) == 0 else df.select(columns)
     for batch in _df.to_batches():
         yield pa_batch_to_dicts(batch)
-
