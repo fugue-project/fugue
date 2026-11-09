@@ -1,13 +1,16 @@
+import pytest
+
+pytest.importorskip("ray")
 from typing import Any
 
 import pandas as pd
 import pyarrow as pa
-import pytest
 import ray
 import ray.data as rd
 from pytest import raises
 from triad import Schema
 
+import fugue.api as fa
 import fugue.test as ft
 from fugue.dataframe.array_dataframe import ArrayDataFrame
 from fugue.dataframe.utils import get_column_names, rename
@@ -89,6 +92,19 @@ class RayDataFrameTests(DataFrameTests.Tests):
         rdf = rd.from_pandas(pd.DataFrame(dict(a=range(10))))
         df = RayDataFrame(rdf.repartition(5))
         assert 5 == df.num_partitions
+
+        lazy = rd.from_pandas(pd.DataFrame(dict(a=[1, 2, 3]))).map_batches(lambda b: b)
+        assert fa.get_num_partitions(lazy) >= 1
+        assert RayDataFrame(lazy).num_partitions >= 1
+
+    def test_ray_init_large_types(self):
+        rdf = rd.from_pandas(pd.DataFrame(dict(a=[1, 2, 3])))
+        df = RayDataFrame(rdf, "a:str")
+        assert df.num_partitions >= 1
+        assert df.as_array() == [["1"], ["2"], ["3"]]
+
+        df = RayDataFrame(rd.from_pandas(pd.DataFrame(dict(a=["x"]))))
+        assert df.as_arrow().schema == df.schema.pa_schema
 
     def _test_get_column_names(self):
         df = rd.from_pandas(pd.DataFrame([[0, 10, 20]], columns=["0", "1", "2"]))

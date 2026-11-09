@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fugue"
-version = "0.9.8"
+version = "0.9.9.dev0"
 description = "An abstraction layer for distributed computing"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -28,10 +28,11 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: 3 :: Only",
 ]
 requires-python = ">=3.11"
-dependencies = ["triad>=1.0.1", "adagio>=0.2.6", "pandas<3"]
+dependencies = ["triad>=1.0.4", "adagio>=0.2.6", "pandas; python_version<'3.15'", "pandas>=3; python_version>='3.15'", "packaging"]
 
 [project.urls]
 Homepage = "http://github.com/fugue-project/fugue"
@@ -40,9 +41,13 @@ Repository = "http://github.com/fugue-project/fugue"
 [project.optional-dependencies]
 sql = ["duckdb>=0.5.0", "fugue-sql-antlr>=0.2.4", "sqlglot<28", "jinja2"]
 cpp_sql_parser = ["fugue-sql-antlr[cpp]>=0.2.4"]
-spark = ["pyspark>=3.1.1", "zstandard>=0.25.0"]
+spark = [
+    "pyspark>=3.5; python_version<'3.12'",
+    "pyspark>=4.0; python_version>='3.12'",
+    "zstandard>=0.25.0",
+]
 dask = [
-    "dask[distributed,dataframe]>=2024.4.0",
+    "dask[distributed,dataframe]>=2025.12.0",
     "pyarrow>=7.0.0",
     "pandas>=2.0.2",
 ]
@@ -64,15 +69,16 @@ ibis = [
     "fugue-sql-antlr>=0.2.4",
     "sqlglot<28",
     "jinja2",
-    "ibis-framework[pandas]",
+    "ibis-framework",
 ]
 notebook = ["notebook", "jupyterlab", "ipython>=7.10.0"]
 all = [
     "fugue-sql-antlr>=0.2.4",
     "sqlglot<28",
     "jinja2",
-    "pyspark>=3.1.1",
-    "dask[distributed,dataframe]>=2024.4.0",
+    "pyspark>=3.5; python_version<'3.12'",
+    "pyspark>=4.0; python_version>='3.12'",
+    "dask[distributed,dataframe]>=2025.12.0",
     "dask-sql",
     "ray[data]>=2.30.0; python_version<'3.14'",
     "notebook",
@@ -81,7 +87,7 @@ all = [
     "duckdb>=0.5.0",
     "pyarrow>=6.0.1",
     "pandas>=2.0.2",
-    "ibis-framework[pandas,duckdb]",
+    "ibis-framework[duckdb]",
     "polars",
 ]
 
@@ -109,14 +115,15 @@ dev = [
     "psutil",
     "matplotlib",
     "seaborn",
-    "notebook<7",
-    "jupyter_contrib_nbextensions",
+    "notebook<7; python_version<'3.15'",
+    "jupyter_contrib_nbextensions; python_version<'3.15'",
     "s3fs",
     # Specific versions for compatibility
     "pyspark[connect]",
-    "pyarrow<23",  # pyarrow>=23 needs numpy>=2; pyspark 3.x pins numpy<2
     "duckdb-engine>=0.6.4",
-    "sqlalchemy==2.0.10",
+    # sqlalchemy 2.0.10 breaks on python>=3.13 (TypingOnly __firstlineno__)
+    "sqlalchemy==2.0.10; python_version<'3.13'",
+    "sqlalchemy==2.0.31; python_version>='3.13'",
     "ray[data]>=2.30.0; python_version<'3.14'",
     "pydantic>2",
     "dask[distributed,dataframe]",
@@ -194,6 +201,11 @@ omit = [
 #exclude = [".svc", "CVS", ".bzr", ".hg", ".git", "__pycache__", "venv", "tests/*", "docs/*"]
 #max-complexity = 10
 
+[tool.uv]
+# pyarrow>=26 needs numpy>=2 at import but doesn't declare it; numpy<2 comes
+# from pyspark 3.5 [connect] / pandas 2.2, which only run on python<3.12
+constraint-dependencies = ["pyarrow<26; python_version<'3.12'", "jupyter-client>=8.6.3; python_version>='3.15'"]
+
 [tool.ruff]
 line-length = 88
 
@@ -203,7 +215,7 @@ max-complexity = 10
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py311,py312,py313,py314
+envlist = py311,py312,py313,py314,py315
 
 [testenv]
 setenv =

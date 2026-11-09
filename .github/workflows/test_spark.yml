@@ -24,14 +24,25 @@ jobs:
     name: Test Spark ${{ matrix.spark-version }} Pandas ${{ matrix.pandas-version }} Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11"]
-        spark-version: ["3.4.0","3.5.8","4.3.0"]
+        spark-version: ["3.5.8", "4.0.4", "4.3.0"]
         pandas-version: ["2.2.3", "2.3.3"]
+        include:
+          - python-version: "3.11"
+            spark-version: "latest"
+            pandas-version: "latest"
 
     steps:
     - name: Clone repo
       uses: actions/checkout@v5
+
+    - name: Setup Java 17
+      uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: "17"
 
     - name: Setup uv ${{ matrix.python-version }}
       uses: astral-sh/setup-uv@v5
@@ -42,11 +53,11 @@ jobs:
 
     - name: Update Spark
       if: matrix.spark-version != 'latest'
-      run: uv add "pyspark==${{ matrix.spark-version }}"
+      run: uv add "pyspark==${{ matrix.spark-version }}; python_version=='${{ matrix.python-version }}'"
 
     - name: Update Pandas
       if: matrix.pandas-version != 'latest'
-      run: uv add "pandas==${{ matrix.pandas-version }}"
+      run: uv add "pandas==${{ matrix.pandas-version }}; python_version=='${{ matrix.python-version }}'"
 
     - name: Install dependencies
       run: |
@@ -63,12 +74,18 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11"]
-        spark-version: ["3.4.0","3.5.8","4.3.0"]
+        spark-version: ["3.5.8", "4.0.4", "4.3.0"]
         pandas-version: ["2.3.3"]
 
     steps:
     - name: Clone repo
       uses: actions/checkout@v5
+
+    - name: Setup Java 17
+      uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: "17"
 
     - name: Setup uv ${{ matrix.python-version }}
       uses: astral-sh/setup-uv@v5
@@ -78,11 +95,11 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Update Spark
-      run: uv add "pyspark[connect]==${{ matrix.spark-version }}"
+      run: uv add "pyspark[connect]==${{ matrix.spark-version }}; python_version=='${{ matrix.python-version }}'"
 
     - name: Update Pandas
       if: matrix.pandas-version != 'latest'
-      run: uv add "pandas==${{ matrix.pandas-version }}"
+      run: uv add "pandas==${{ matrix.pandas-version }}; python_version=='${{ matrix.python-version }}'"
 
     - name: Install dependencies
       run: |

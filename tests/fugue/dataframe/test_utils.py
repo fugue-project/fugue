@@ -173,3 +173,4 @@ def test_normalize_dataframe_column_names():
     df, names = normalize_dataframe_column_names(df)
     assert get_column_names(df) == ["_1", "_2_1", "_2", "_1_1"]
     assert names == {"_1": "1", "_2_1": "2", "_1_1": "大"}
+

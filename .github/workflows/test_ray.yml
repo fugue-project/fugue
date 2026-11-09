@@ -46,7 +46,7 @@ jobs:
 
     - name: Update Pandas
       if: matrix.pandas-version != 'latest'
-      run: uv add "pandas==${{ matrix.pandas-version }}"
+      run: uv add "pandas==${{ matrix.pandas-version }}; python_version<'3.15'"
 
     - name: Install dependencies
       run: |

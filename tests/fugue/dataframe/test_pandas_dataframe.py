@@ -190,6 +190,20 @@ def test_nan_none():
     assert arr[1] is None
 
 
+def test_peek_array_missing_values():
+    pdf = pd.DataFrame(dict(a=["x", None], b=[1.0, None])).iloc[1:]
+    arr = PandasDataFrame(pdf).peek_array()
+    assert arr[0] is None
+    assert math.isnan(arr[1])
+
+    pdf = pd.DataFrame(
+        dict(a=pd.Series(["x", None], dtype="string"), b=[1.0, None])
+    ).iloc[1:]
+    arr = PandasDataFrame(pdf).peek_array()
+    assert arr[0] is None
+    assert math.isnan(arr[1])
+
+
 def _test_as_array_perf():
     s = Schema()
     arr = []

@@ -1,3 +1,6 @@
+import pytest
+
+pytest.importorskip("ray")
 import pandas as pd
 import ray.data as rd
 

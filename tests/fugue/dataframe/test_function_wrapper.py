@@ -227,7 +227,11 @@ def test_arrow_dataframe_param():
 
 def test_iterable_arrow_dataframes():
     p = _IterableArrowParam(None)
-    pdf = pa.Table.from_pandas(pd.DataFrame([[0, "x"]], columns=["a", "b"]))
+    pdf = pa.Table.from_pandas(
+        pd.DataFrame([[0, "x"]], columns=["a", "b"]),
+        schema=pa.schema([("a", pa.int64()), ("b", pa.string())]),
+        preserve_index=False,
+    )
     df = ArrowDataFrame(pdf)
     data = list(p.to_input_data(df, ctx=None))
     assert 1 == len(data)

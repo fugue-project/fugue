@@ -5,6 +5,7 @@ import pandas as pd
 import pyarrow as pa
 import ray.data as rd
 from triad import Schema
+from triad.utils.pyarrow import normalize_large_types
 
 from .._constants import _ZERO_COPY
 
@@ -40,10 +41,10 @@ def get_dataset_format(df: rd.Dataset) -> Tuple[Optional[str], rd.Dataset]:
 
 def to_schema(schema: Any) -> Schema:  # pragma: no cover
     if isinstance(schema, pa.Schema):
-        return Schema(schema)
+        return Schema(normalize_large_types(schema))
     if isinstance(schema, rd.Schema):
         if hasattr(schema, "base_schema") and isinstance(schema.base_schema, pa.Schema):
-            return Schema(schema.base_schema)
+            return Schema(normalize_large_types(schema.base_schema))
         return Schema(list(zip(schema.names, schema.types)))
     raise ValueError(f"{schema} is not supported")
 

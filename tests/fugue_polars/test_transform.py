@@ -1,8 +1,10 @@
 from datetime import datetime
 from typing import Iterable, Iterator
 
+import importlib.util
+
 import polars as pl
-import ray
+import pytest
 from dask.distributed import Client
 from pyspark.sql import SparkSession
 import pandas as pd
@@ -67,7 +69,7 @@ def test_transform_empty_result():
         assert fdf.as_array() == []
 
 
-def test_polars_on_engines(spark_session, dask_session, ray_session):
+def _check_engine(engine):
     def tr1(df: pl.DataFrame) -> pl.DataFrame:
         tdf = df.with_columns(pl.lit(1, pl.Int32()).alias("c"))
         return tdf
@@ -77,21 +79,26 @@ def test_polars_on_engines(spark_session, dask_session, ray_session):
             tdf = df.with_columns(pl.lit(1, pl.Int32()).alias("c"))
             yield tdf
 
-    def test(engine):
-        for tr in [tr1, tr2]:
-            with fa.engine_context(engine):
-                df = fa.as_fugue_df(
-                    [["a", datetime(2022, 1, 1)], ["b", datetime(2022, 1, 2)]],
-                    schema="a:str,b:datetime",
-                )
-                fdf = fa.transform(df, tr, schema="*,c:int", as_fugue=True)
-                assert [
-                    ["a", datetime(2022, 1, 1), 1],
-                    ["b", datetime(2022, 1, 2), 1],
-                ] == sorted(fdf.as_array(), key=lambda x: x[0])
+    for tr in [tr1, tr2]:
+        with fa.engine_context(engine):
+            df = fa.as_fugue_df(
+                [["a", datetime(2022, 1, 1)], ["b", datetime(2022, 1, 2)]],
+                schema="a:str,b:datetime",
+            )
+            fdf = fa.transform(df, tr, schema="*,c:int", as_fugue=True)
+            assert [
+                ["a", datetime(2022, 1, 1), 1],
+                ["b", datetime(2022, 1, 2), 1],
+            ] == sorted(fdf.as_array(), key=lambda x: x[0])
 
-    test(spark_session)
 
-    test(dask_session)
+def test_polars_on_engines(spark_session, dask_session):
+    _check_engine(spark_session)
+    _check_engine(dask_session)
 
-    test(ray_session)
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("ray") is None, reason="ray is not installed"
+)
+def test_polars_on_ray(ray_session):
+    _check_engine(ray_session)

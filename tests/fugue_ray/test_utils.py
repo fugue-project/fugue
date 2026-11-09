@@ -1,3 +1,6 @@
+import pytest
+
+pytest.importorskip("ray")
 from triad import Schema
 
 import fugue.test as ft

@@ -1,3 +1,6 @@
+import pytest
+
+pytest.importorskip("ray")
 import os
 from typing import Any, List
 
