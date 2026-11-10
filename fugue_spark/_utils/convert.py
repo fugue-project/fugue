@@ -34,6 +34,27 @@ except ImportError:  # pragma: no cover
 _PYSPARK_ARROW_FRIENDLY = version.parse(pyspark.__version__) >= version.parse("3.3")
 
 
+def _combine_arrow_chunks(df: pd.DataFrame) -> pd.DataFrame:
+    # pyspark < 4.4 can't serialize multi-chunk Arrow columns
+    # (SPARK-58625 UDF output, SPARK-46776 createDataFrame).
+    # Delete once fugue requires pyspark >= 4.4.
+    cols = {}
+    for c, s in df.items():
+        d = s.dtype
+        if isinstance(d, pd.ArrowDtype) or (
+            isinstance(d, pd.StringDtype) and d.storage == "pyarrow"
+        ):
+            arr = s.array.__arrow_array__()
+            if isinstance(arr, pa.ChunkedArray) and arr.num_chunks > 1:
+                cols[c] = pd.array(arr.combine_chunks(), dtype=d)
+    if not cols:
+        return df
+    df = df.copy(deep=False)
+    for c, a in cols.items():
+        df[c] = a
+    return df
+
+
 def pandas_udf_can_accept(schema: Schema, is_input: bool) -> bool:
     try:
         # pyspark's own from_arrow_schema to_arrow_schema
