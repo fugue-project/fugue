@@ -132,7 +132,7 @@ def test_combine_arrow_chunks_merges(arr):
     c = pd.concat([df, df])
     if not (
         isinstance(c["a"].dtype, pd.ArrowDtype)
-        or getattr(c["a"].dtype, "storage", None) == "pyarrow"
+        or str(getattr(c["a"].dtype, "storage", None)).startswith("pyarrow")
     ):
         pytest.skip("not arrow-backed on this pandas")
     assert _chunks(c["a"]) == 2
@@ -142,7 +142,21 @@ def test_combine_arrow_chunks_merges(arr):
     assert out["a"].isna().to_list() == c["a"].isna().to_list()
     assert out["a"].dropna().to_list() == c["a"].dropna().to_list()
     assert out["b"].to_list() == [1, 2, 1, 2]
+    assert out.index.equals(c.index)
     assert _chunks(c["a"]) == 2  # input not mutated
+
+
+def test_combine_arrow_chunks_pyarrow_numpy():
+    try:  # pandas 2.1/2.2 only
+        dtype = pd.StringDtype("pyarrow_numpy")
+    except Exception:
+        pytest.skip("pyarrow_numpy storage unsupported on this pandas")
+    df = pd.DataFrame({"a": pd.array(["x", None], dtype=dtype)})
+    c = pd.concat([df, df])
+    assert _chunks(c["a"]) == 2
+    out = _combine_arrow_chunks(c)
+    assert _chunks(out["a"]) == 1
+    assert out["a"].dtype == c["a"].dtype
 
 
 def test_combine_arrow_chunks_noop_returns_same_object():

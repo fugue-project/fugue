@@ -42,7 +42,7 @@ def _combine_arrow_chunks(df: pd.DataFrame) -> pd.DataFrame:
     for c, s in df.items():
         d = s.dtype
         if isinstance(d, pd.ArrowDtype) or (
-            isinstance(d, pd.StringDtype) and d.storage == "pyarrow"
+            isinstance(d, pd.StringDtype) and d.storage in ("pyarrow", "pyarrow_numpy")
         ):
             arr = s.array.__arrow_array__()
             if isinstance(arr, pa.ChunkedArray) and arr.num_chunks > 1:

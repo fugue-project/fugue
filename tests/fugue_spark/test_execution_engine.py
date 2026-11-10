@@ -411,10 +411,14 @@ _EXPECTED_DUP = [["x", 1], ["x", 1], ["y", 2], ["y", 2]]
 
 @ft.with_backend("spark")
 def test_transform_multi_chunk_arrow_output(backend_context):
-    def _dup(df: pd.DataFrame) -> pd.DataFrame:
-        return pd.concat([df, df])
-
     for dtype in [None, "string[pyarrow]"]:
+
+        # dtype is applied inside the UDF: Spark hands the UDF object columns
+        def _dup(df: pd.DataFrame, dtype=dtype) -> pd.DataFrame:
+            if dtype is not None:
+                df = df.astype({"a": dtype})
+            return pd.concat([df, df])
+
         pdf = pd.DataFrame({"a": pd.Series(["x", "y"], dtype=dtype), "b": [1, 2]})
         sdf = backend_context.session.createDataFrame(pdf)
         for partition in [None, "a"]:
