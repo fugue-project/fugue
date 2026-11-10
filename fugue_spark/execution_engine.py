@@ -45,6 +45,7 @@ from fugue.execution.execution_engine import ExecutionEngine, MapEngine, SQLEngi
 from ._constants import FUGUE_SPARK_CONF_USE_PANDAS_UDF, FUGUE_SPARK_DEFAULT_CONF
 from ._utils.convert import (
     _PYSPARK_ARROW_FRIENDLY,
+    _combine_arrow_chunks,
     pandas_udf_can_accept,
     to_schema,
     to_spark_df,
@@ -864,4 +865,4 @@ class _Mapper(object):  # pragma: no cover
 
 
 def _to_safe_spark_worker_pandas(df: pd.DataFrame):  # pragma: no cover
-    return df if _PYSPARK_ARROW_FRIENDLY else df.astype(object)
+    return _combine_arrow_chunks(df) if _PYSPARK_ARROW_FRIENDLY else df.astype(object)

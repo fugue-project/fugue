@@ -187,7 +187,7 @@ def pd_to_spark_df(
     session: ps.SparkSession, df: pd.DataFrame, schema: Any = None
 ) -> ps.DataFrame:
     if _PYSPARK_ARROW_FRIENDLY:
-        return session.createDataFrame(df, schema=schema)
+        return session.createDataFrame(_combine_arrow_chunks(df), schema=schema)
     else:  # pragma: no cover
         # Not efficient for pyspark<3.3
         return session.createDataFrame(df.astype(object), schema=schema)
