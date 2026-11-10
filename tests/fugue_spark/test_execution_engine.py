@@ -406,6 +406,44 @@ def test_rdd_pd_extension_types_handling(backend_context):
         assert res == [[0.1, [1]]]
 
 
+_EXPECTED_DUP = [["x", 1], ["x", 1], ["y", 2], ["y", 2]]
+
+
+@ft.with_backend("spark")
+def test_transform_multi_chunk_arrow_output(backend_context):
+    def _dup(df: pd.DataFrame) -> pd.DataFrame:
+        return pd.concat([df, df])
+
+    for dtype in [None, "string[pyarrow]"]:
+        pdf = pd.DataFrame({"a": pd.Series(["x", "y"], dtype=dtype), "b": [1, 2]})
+        sdf = backend_context.session.createDataFrame(pdf)
+        for partition in [None, "a"]:
+            res = fa.transform(
+                sdf,
+                _dup,
+                schema="*",
+                partition=partition,
+                engine=backend_context.session,
+            )
+            assert sorted(fa.as_array(res)) == _EXPECTED_DUP
+
+
+@ft.with_backend("spark")
+def test_to_spark_df_multi_chunk_arrow(backend_context):
+    # driver path; bites only on pyspark < 4.3 (SPARK-46776)
+    key = "spark.sql.execution.arrow.pyspark.fallback.enabled"
+    spark = backend_context.session
+    old = spark.conf.get(key, "true")
+    spark.conf.set(key, "false")
+    try:
+        for dtype in [None, "string[pyarrow]"]:
+            pdf = pd.DataFrame({"a": pd.Series(["x", "y"], dtype=dtype), "b": [1, 2]})
+            sdf = to_spark_df(spark, pd.concat([pdf, pdf]), "a:str,b:long")
+            assert sorted(map(list, sdf.collect())) == _EXPECTED_DUP
+    finally:
+        spark.conf.set(key, old)
+
+
 @transformer("ct:long")
 def count_partition(df: List[List[Any]]) -> List[List[Any]]:
     return [[len(df)]]
