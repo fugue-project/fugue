@@ -1483,7 +1483,7 @@ wheels = [
 
 [[package]]
 name = "fugue"
-version = "0.9.9.dev0"
+version = "0.9.9.dev1"
 source = { editable = "." }
 dependencies = [
     { name = "adagio" },

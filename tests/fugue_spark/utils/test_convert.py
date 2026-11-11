@@ -1,10 +1,13 @@
+import pandas as pd
 import pyarrow as pa
+import pytest
 from pytest import raises
 import pyspark
 from packaging import version
 from triad import Schema
 
 from fugue_spark._utils.convert import (
+    _combine_arrow_chunks,
     pandas_udf_can_accept,
     to_cast_expression,
     to_schema,
@@ -109,3 +112,66 @@ def test_to_select_expression():
         "CAST(IF(isnan(c) OR c IS NULL, NULL, c) AS bigint) c",
     ]
     raises(KeyError, lambda: to_select_expression("a:int,b:str", "b:str,x:int"))
+
+
+def _chunks(s):
+    return s.array.__arrow_array__().num_chunks
+
+
+@pytest.mark.parametrize(
+    "arr",
+    [
+        pd.array(["x", None], dtype="string[pyarrow]"),
+        pd.array([1, None], dtype="int64[pyarrow]"),
+        pd.array(pd.to_datetime(["2020-01-01", None]), dtype="timestamp[us][pyarrow]"),
+        pd.Series(["x", None], dtype="str").array,  # pandas 3 default str
+    ],
+)
+def test_combine_arrow_chunks_merges(arr):
+    df = pd.DataFrame({"a": arr, "b": [1, 2]})
+    c = pd.concat([df, df])
+    if not (
+        isinstance(c["a"].dtype, pd.ArrowDtype)
+        or str(getattr(c["a"].dtype, "storage", None)).startswith("pyarrow")
+    ):
+        pytest.skip("not arrow-backed on this pandas")
+    assert _chunks(c["a"]) == 2
+    out = _combine_arrow_chunks(c)
+    assert _chunks(out["a"]) == 1
+    assert out["a"].dtype == c["a"].dtype
+    assert out["a"].isna().to_list() == c["a"].isna().to_list()
+    assert out["a"].dropna().to_list() == c["a"].dropna().to_list()
+    assert out["b"].to_list() == [1, 2, 1, 2]
+    assert out.index.equals(c.index)
+    assert _chunks(c["a"]) == 2  # input not mutated
+
+
+def test_combine_arrow_chunks_pyarrow_numpy():
+    try:  # pandas 2.1/2.2 only
+        dtype = pd.StringDtype("pyarrow_numpy")
+    except Exception:
+        pytest.skip("pyarrow_numpy storage unsupported on this pandas")
+    df = pd.DataFrame({"a": pd.array(["x", None], dtype=dtype)})
+    c = pd.concat([df, df])
+    assert _chunks(c["a"]) == 2
+    out = _combine_arrow_chunks(c)
+    assert _chunks(out["a"]) == 1
+    assert out["a"].dtype == c["a"].dtype
+
+
+def test_combine_arrow_chunks_noop_returns_same_object():
+    df = pd.DataFrame(
+        {
+            "o": pd.Series(["x"], dtype=object),
+            "i": pd.array([1], dtype="Int64"),
+            "s": pd.array(["x"], dtype="string[pyarrow]"),  # single chunk
+            "n": [1.0],
+        }
+    )
+    assert _combine_arrow_chunks(df) is df
+
+
+def test_combine_arrow_chunks_empty():
+    df = pd.DataFrame({"a": pd.array([], dtype="string[pyarrow]")})
+    out = _combine_arrow_chunks(pd.concat([df, df]))
+    assert len(out) == 0 and out["a"].dtype == df["a"].dtype
